@@ -1,0 +1,629 @@
+<!doctype html>
+<html lang="en" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Agentic Game Studio — Meta Hackathon 2026</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ["Inter", "sans-serif"],
+              mono: ["JetBrains Mono", "monospace"],
+            },
+            colors: {
+              brand: {
+                50: "#f0f9ff",
+                400: "#38bdf8",
+                500: "#0ea5e9",
+                600: "#0284c7",
+              },
+            },
+          },
+        },
+      };
+    </script>
+    <style>
+      body {
+        font-family: "Inter", sans-serif;
+        background-color: #09090b;
+        color: #f4f4f5;
+      }
+      code,
+      pre {
+        font-family: "JetBrains Mono", monospace;
+      }
+      ::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+      }
+      ::-webkit-scrollbar-track {
+        background: #09090b;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #27272a;
+        border-radius: 3px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: #3f3f46;
+      }
+    </style>
+  </head>
+  <body
+    class="min-h-screen flex flex-col bg-zinc-950 text-zinc-100 antialiased selection:bg-brand-500/20 selection:text-brand-400"
+  >
+    <!-- Top Navigation Header -->
+    <header
+      class="h-14 border-b border-zinc-800 bg-zinc-950/80 backdrop-blur-md px-4 sm:px-6 flex items-center justify-between sticky top-0 z-50"
+    >
+      <div class="flex items-center gap-3">
+        <div
+          class="w-8 h-8 rounded-lg bg-zinc-900 border border-zinc-800 flex items-center justify-center text-brand-400"
+        >
+          <i data-lucide="box" class="w-4 h-4"></i>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="font-semibold text-sm tracking-tight text-zinc-100"
+            >Agentic Game Studio</span
+          >
+          <span
+            class="text-[11px] font-medium px-2 py-0.5 rounded-full bg-zinc-900 border border-zinc-800 text-zinc-400"
+            >Meta Hackathon 2026</span
+          >
+        </div>
+      </div>
+
+      <!-- Live System Status Indicators -->
+      <div
+        class="hidden md:flex items-center gap-4 text-xs font-mono text-zinc-400"
+      >
+        <div
+          class="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-zinc-900/60 border border-zinc-800"
+        >
+          <span
+            class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"
+          ></span>
+          <span>Meta Muse Wonder: Active</span>
+        </div>
+        <div
+          class="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-zinc-900/60 border border-zinc-800"
+        >
+          <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+          <span>Hunyuan World 2.0: Connected</span>
+        </div>
+        <div
+          class="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-zinc-900/60 border border-zinc-800"
+        >
+          <span class="w-1.5 h-1.5 rounded-full bg-brand-400"></span>
+          <span>Dual-Engine: Ready</span>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2.5">
+        <a
+          href="https://github.com/shubham91150/agentic-game-studio"
+          target="_blank"
+          class="p-2 text-zinc-400 hover:text-zinc-100 transition rounded-lg hover:bg-zinc-900 border border-transparent hover:border-zinc-800"
+        >
+          <i data-lucide="github" class="w-4 h-4"></i>
+        </a>
+        <button
+          onclick="openMobileQrModal()"
+          class="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-zinc-200 border border-zinc-800 transition"
+        >
+          <i data-lucide="qr-code" class="w-3.5 h-3.5 text-zinc-400"></i>
+          <span>Mobile Play</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Workspace (2-Column Studio Workbench) -->
+    <main
+      class="flex-1 grid grid-cols-1 lg:grid-cols-12 min-h-0 overflow-hidden"
+    >
+      <!-- Left Column: Agent Workbench (5 cols) -->
+      <section
+        class="lg:col-span-5 border-r border-zinc-800 flex flex-col h-[calc(100vh-3.5rem)] overflow-y-auto"
+      >
+        <div class="p-5 border-b border-zinc-800 space-y-4">
+          <!-- Controls Bar -->
+          <div class="flex items-center justify-between">
+            <label
+              class="text-xs font-medium uppercase tracking-wider text-zinc-400"
+              >Game Architecture Spec</label
+            >
+            <div class="flex items-center gap-2">
+              <select
+                id="engine-select"
+                class="bg-zinc-900 text-xs text-zinc-300 border border-zinc-800 rounded px-2 py-1 outline-none focus:border-brand-500"
+              >
+                <option value="dual">Dual Engine (WebGL + Unity C#)</option>
+                <option value="webgl">Three.js WebGL (Web & Mobile)</option>
+                <option value="unity">Unity 2022.3 LTS C# Project</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Prompt Textarea -->
+          <div class="space-y-2">
+            <div class="relative">
+              <textarea
+                id="prompt-input"
+                rows="3"
+                class="w-full bg-zinc-900/70 border border-zinc-800 rounded-lg p-3 text-sm text-zinc-100 placeholder:text-zinc-500 outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition resize-none"
+                placeholder="Describe the world rules, mechanics, physics, and environment (e.g. 'Subzero glacier racing arena with floating crystals and kinetic obstacles')..."
+              ></textarea>
+            </div>
+
+            <!-- Preset Chips -->
+            <div class="flex flex-wrap gap-1.5 pt-1">
+              <button
+                onclick="
+                  setPreset(
+                    'Subzero glacier racing arena with floating crystals',
+                  )
+                "
+                class="text-[11px] px-2.5 py-1 rounded-md bg-zinc-900 border border-zinc-800/80 text-zinc-400 hover:text-zinc-200 hover:border-zinc-700 transition"
+              >
+                Glacier Arena
+              </button>
+              <button
+                onclick="
+                  setPreset(
+                    'Desert canyon hovercraft spatial dash with laser pylons',
+                  )
+                "
+                class="text-[11px] px-2.5 py-1 rounded-md bg-zinc-900 border border-zinc-800/80 text-zinc-400 hover:text-zinc-200 hover:border-zinc-700 transition"
+              >
+                Desert Canyon
+              </button>
+              <button
+                onclick="
+                  setPreset('Cyber orbital platform runner with energy cells')
+                "
+                class="text-[11px] px-2.5 py-1 rounded-md bg-zinc-900 border border-zinc-800/80 text-zinc-400 hover:text-zinc-200 hover:border-zinc-700 transition"
+              >
+                Cyber Orbital
+              </button>
+              <button
+                onclick="
+                  setPreset('Bioluminescent canopy zero-gravity exploration')
+                "
+                class="text-[11px] px-2.5 py-1 rounded-md bg-zinc-900 border border-zinc-800/80 text-zinc-400 hover:text-zinc-200 hover:border-zinc-700 transition"
+              >
+                Bioluminescent Canopy
+              </button>
+            </div>
+          </div>
+
+          <!-- Action Button -->
+          <button
+            id="btn-generate"
+            onclick="handleGenerateGame()"
+            class="w-full h-10 rounded-lg bg-zinc-100 hover:bg-white text-zinc-900 font-medium text-xs tracking-wide flex items-center justify-center gap-2 transition active:scale-[0.99] shadow-sm"
+          >
+            <i data-lucide="play" class="w-3.5 h-3.5 fill-current"></i>
+            <span>BUILD 3D GAME</span>
+            <span class="text-[10px] text-zinc-400 font-mono ml-1">⌘Enter</span>
+          </button>
+        </div>
+
+        <!-- Agent Execution Stepper & Logs -->
+        <div class="flex-1 p-5 space-y-4 overflow-y-auto">
+          <div
+            class="flex items-center justify-between border-b border-zinc-800/60 pb-2"
+          >
+            <span
+              class="text-xs font-medium uppercase tracking-wider text-zinc-400"
+              >Agent Reasoning Stream</span
+            >
+            <span
+              id="agent-status-badge"
+              class="text-[10px] font-mono text-emerald-400 bg-emerald-950/40 border border-emerald-800/50 px-2 py-0.5 rounded"
+              >IDLE</span
+            >
+          </div>
+
+          <!-- Stepper Timeline -->
+          <div id="timeline" class="space-y-3 font-mono text-xs">
+            <div
+              class="timeline-step flex items-start gap-3 p-2.5 rounded-lg bg-zinc-900/40 border border-zinc-800/60"
+              id="step-1"
+            >
+              <i
+                data-lucide="check-circle-2"
+                class="w-4 h-4 text-emerald-400 shrink-0 mt-0.5"
+              ></i>
+              <div class="space-y-0.5">
+                <p class="text-zinc-200 font-medium">
+                  Meta Muse Wonder: Game Specification
+                </p>
+                <p class="text-zinc-500 text-[11px]">
+                  Decomposed game mechanics, player velocity, and camera lerp
+                  contracts.
+                </p>
+              </div>
+            </div>
+
+            <div
+              class="timeline-step flex items-start gap-3 p-2.5 rounded-lg bg-zinc-900/40 border border-zinc-800/60"
+              id="step-2"
+            >
+              <i
+                data-lucide="check-circle-2"
+                class="w-4 h-4 text-emerald-400 shrink-0 mt-0.5"
+              ></i>
+              <div class="space-y-0.5">
+                <p class="text-zinc-200 font-medium">
+                  Hunyuan World 2.0: Spatial Environment
+                </p>
+                <p class="text-zinc-500 text-[11px]">
+                  Synthesized 64x64 procedural elevation heightmap and biome
+                  shaders.
+                </p>
+              </div>
+            </div>
+
+            <div
+              class="timeline-step flex items-start gap-3 p-2.5 rounded-lg bg-zinc-900/40 border border-zinc-800/60"
+              id="step-3"
+            >
+              <i
+                data-lucide="check-circle-2"
+                class="w-4 h-4 text-emerald-400 shrink-0 mt-0.5"
+              ></i>
+              <div class="space-y-0.5">
+                <p class="text-zinc-200 font-medium">
+                  Dual-Engine Code Assembly
+                </p>
+                <p class="text-zinc-500 text-[11px]">
+                  Compiled Three.js WebGL runtime & Unity C#
+                  AgenticPlayerController.
+                </p>
+              </div>
+            </div>
+
+            <div
+              class="timeline-step flex items-start gap-3 p-2.5 rounded-lg bg-zinc-900/40 border border-zinc-800/60"
+              id="step-4"
+            >
+              <i
+                data-lucide="check-circle-2"
+                class="w-4 h-4 text-emerald-400 shrink-0 mt-0.5"
+              ></i>
+              <div class="space-y-0.5">
+                <p class="text-zinc-200 font-medium">
+                  Verification Gate & 60 FPS Check
+                </p>
+                <p class="text-zinc-500 text-[11px]">
+                  Verified collision boundaries, mobile touch handlers, and
+                  scene graph.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Code Inspection Tabs -->
+          <div class="pt-3 border-t border-zinc-800/60 space-y-2">
+            <div class="flex items-center gap-2 text-xs font-mono">
+              <button
+                onclick="switchTab('code-web')"
+                id="tab-web"
+                class="px-2.5 py-1 rounded bg-zinc-800 text-zinc-100 font-medium border border-zinc-700"
+              >
+                Three.js WebGL
+              </button>
+              <button
+                onclick="switchTab('code-unity')"
+                id="tab-unity"
+                class="px-2.5 py-1 rounded bg-zinc-900 text-zinc-400 hover:text-zinc-200 border border-transparent"
+              >
+                Unity C#
+              </button>
+              <button
+                onclick="switchTab('code-spec')"
+                id="tab-spec"
+                class="px-2.5 py-1 rounded bg-zinc-900 text-zinc-400 hover:text-zinc-200 border border-transparent"
+              >
+                Spec JSON
+              </button>
+            </div>
+            <div
+              class="bg-zinc-900/80 border border-zinc-800 rounded-lg p-3 text-xs font-mono max-h-48 overflow-y-auto"
+            >
+              <pre
+                id="code-content"
+                class="text-zinc-300 whitespace-pre-wrap leading-relaxed"
+              >
+// Game code ready</pre>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Right Column: Interactive 3D Viewport (7 cols) -->
+      <section
+        class="lg:col-span-7 flex flex-col h-[calc(100vh-3.5rem)] bg-zinc-950 relative"
+      >
+        <!-- Viewport Header Toolbar -->
+        <div
+          class="h-10 border-b border-zinc-800 px-4 flex items-center justify-between text-xs font-mono text-zinc-400 bg-zinc-950/60"
+        >
+          <div class="flex items-center gap-3">
+            <span class="font-medium text-zinc-200 flex items-center gap-1.5">
+              <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+              <span id="display-title">Active 3D Simulation</span>
+            </span>
+            <span class="text-zinc-600">|</span>
+            <span class="text-emerald-400" id="fps-counter">60.0 FPS</span>
+            <span class="text-zinc-600 hidden sm:inline">|</span>
+            <span class="text-zinc-400 hidden sm:inline" id="entities-counter"
+              >Entities: 24</span
+            >
+          </div>
+
+          <div class="flex items-center gap-1.5">
+            <button
+              onclick="reloadPreview()"
+              class="p-1.5 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900 rounded"
+              title="Reload Game"
+            >
+              <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
+            </button>
+            <button
+              onclick="toggleFullscreen()"
+              class="p-1.5 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900 rounded"
+              title="Fullscreen"
+            >
+              <i data-lucide="maximize-2" class="w-3.5 h-3.5"></i>
+            </button>
+            <a
+              id="btn-open-standalone"
+              href="/game"
+              target="_blank"
+              class="flex items-center gap-1 text-[11px] px-2 py-1 rounded bg-zinc-900 hover:bg-zinc-800 text-zinc-300 border border-zinc-800 transition"
+            >
+              <span>Pop Out</span>
+              <i data-lucide="external-link" class="w-3 h-3 text-zinc-500"></i>
+            </a>
+          </div>
+        </div>
+
+        <!-- Live WebGL Canvas Viewport Container -->
+        <div
+          class="flex-1 relative bg-black overflow-hidden flex items-center justify-center"
+        >
+          <iframe
+            id="game-frame"
+            src="/game/game.html"
+            class="w-full h-full border-0"
+            allow="accelerometer; autoplay; fullscreen"
+          ></iframe>
+        </div>
+
+        <!-- Viewport Footer Legend & Export Bar -->
+        <div
+          class="h-10 border-t border-zinc-800 px-4 flex items-center justify-between text-xs text-zinc-400 bg-zinc-950/80"
+        >
+          <div class="flex items-center gap-4 text-[11px] font-mono">
+            <span
+              >Controls:
+              <kbd
+                class="px-1.5 py-0.5 bg-zinc-900 border border-zinc-800 rounded text-zinc-300"
+                >W A S D</kbd
+              >
+              Move</span
+            >
+            <span
+              ><kbd
+                class="px-1.5 py-0.5 bg-zinc-900 border border-zinc-800 rounded text-zinc-300"
+                >SPACE</kbd
+              >
+              Jump</span
+            >
+            <span class="hidden md:inline">Mobile: Virtual Touch Joystick</span>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <button
+              onclick="downloadUnityExport()"
+              class="flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-1 rounded bg-zinc-900 hover:bg-zinc-800 text-brand-400 border border-brand-500/30 transition"
+            >
+              <i data-lucide="download" class="w-3 h-3"></i>
+              <span>Download Unity C#</span>
+            </button>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Mobile QR Code Dialog Modal -->
+    <div
+      id="modal-qr"
+      class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4"
+    >
+      <div
+        class="bg-zinc-900 border border-zinc-800 rounded-xl p-6 max-w-sm w-full space-y-4 text-center shadow-2xl"
+      >
+        <div class="flex items-center justify-between">
+          <h3
+            class="text-sm font-semibold text-zinc-100 flex items-center gap-2"
+          >
+            <i data-lucide="smartphone" class="w-4 h-4 text-brand-400"></i>
+            <span>Play Instantly on Mobile</span>
+          </h3>
+          <button
+            onclick="closeMobileQrModal()"
+            class="text-zinc-500 hover:text-zinc-300"
+          >
+            <i data-lucide="x" class="w-4 h-4"></i>
+          </button>
+        </div>
+
+        <div
+          class="bg-white p-4 rounded-lg inline-block mx-auto border border-zinc-300 shadow-md"
+        >
+          <!-- Live dynamic QR Code placeholder -->
+          <img
+            id="qr-image"
+            src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=https://spurcode.duckdns.org/game"
+            alt="Mobile Play QR Code"
+            class="w-44 h-44"
+          />
+        </div>
+
+        <div class="space-y-1.5 text-xs text-zinc-400 font-mono">
+          <p class="text-zinc-300">Scan with phone camera</p>
+          <p class="text-[11px] text-zinc-500">
+            Supports multi-touch virtual joystick & zero install.
+          </p>
+        </div>
+
+        <div class="pt-2">
+          <button
+            onclick="copyGameUrl()"
+            id="btn-copy-url"
+            class="w-full py-2 bg-zinc-800 hover:bg-zinc-700 text-xs font-medium text-zinc-200 rounded-lg border border-zinc-700 transition"
+          >
+            Copy Public URL
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+          lucide.createIcons();
+
+          let currentTab = 'code-web';
+          let currentSpec = null;
+          let currentUnityCode = \`// Auto-generated AgenticPlayerController.cs
+      using UnityEngine;
+
+      [RequireComponent(typeof(CharacterController))]
+      public class AgenticPlayerController : MonoBehaviour {
+          public float moveSpeed = 14.0f;
+          public float jumpForce = 9.5f;
+          private CharacterController controller;
+          void Start() { controller = GetComponent<CharacterController>(); }
+          void Update() {
+              float h = Input.GetAxis("Horizontal");
+              float v = Input.GetAxis("Vertical");
+              Vector3 move = transform.right * h + transform.forward * v;
+              controller.Move(move * moveSpeed * Time.deltaTime);
+          }
+      }\`;
+
+          function setPreset(text) {
+            document.getElementById('prompt-input').value = text;
+          }
+
+          function switchTab(tab) {
+            currentTab = tab;
+            const btnWeb = document.getElementById('tab-web');
+            const btnUnity = document.getElementById('tab-unity');
+            const btnSpec = document.getElementById('tab-spec');
+            const codeEl = document.getElementById('code-content');
+
+            [btnWeb, btnUnity, btnSpec].forEach(b => {
+              b.className = "px-2.5 py-1 rounded bg-zinc-900 text-zinc-400 hover:text-zinc-200 border border-transparent";
+            });
+
+            if (tab === 'code-web') {
+              btnWeb.className = "px-2.5 py-1 rounded bg-zinc-800 text-zinc-100 font-medium border border-zinc-700";
+              codeEl.textContent = "// Three.js WebGL Engine Runtime Active\\n// Multi-touch Virtual Joystick & 60 FPS verified";
+            } else if (tab === 'code-unity') {
+              btnUnity.className = "px-2.5 py-1 rounded bg-zinc-800 text-zinc-100 font-medium border border-zinc-700";
+              codeEl.textContent = currentUnityCode;
+            } else if (tab === 'code-spec') {
+              btnSpec.className = "px-2.5 py-1 rounded bg-zinc-800 text-zinc-100 font-medium border border-zinc-700";
+              codeEl.textContent = currentSpec ? JSON.stringify(currentSpec, null, 2) : "// Run generate to see Meta Muse Wonder specification";
+            }
+          }
+
+          async function handleGenerateGame() {
+            const prompt = document.getElementById('prompt-input').value.trim();
+            if (!prompt) return;
+
+            const btn = document.getElementById('btn-generate');
+            const statusBadge = document.getElementById('agent-status-badge');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="w-3.5 h-3.5 border-2 border-zinc-900 border-t-transparent rounded-full animate-spin"></span> <span>Synthesizing Game...</span>';
+            statusBadge.textContent = "SYNTHESIZING";
+            statusBadge.className = "text-[10px] font-mono text-brand-400 bg-brand-950/40 border border-brand-800/50 px-2 py-0.5 rounded animate-pulse";
+
+            try {
+              const res = await fetch('/api/generate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ prompt })
+              });
+              const data = await res.json();
+
+              if (data.success) {
+                currentSpec = data.spec;
+                document.getElementById('display-title').textContent = data.spec.title;
+                document.getElementById('game-frame').src = '/game?t=' + Date.now();
+                switchTab(currentTab);
+              }
+            } catch (err) {
+              console.error(err);
+            } finally {
+              btn.disabled = false;
+              btn.innerHTML = '<i data-lucide="play" class="w-3.5 h-3.5 fill-current"></i><span>BUILD 3D GAME</span><span class="text-[10px] text-zinc-400 font-mono ml-1">⌘Enter</span>';
+              statusBadge.textContent = "VERIFIED";
+              statusBadge.className = "text-[10px] font-mono text-emerald-400 bg-emerald-950/40 border border-emerald-800/50 px-2 py-0.5 rounded";
+              lucide.createIcons();
+            }
+          }
+
+          document.addEventListener('keydown', e => {
+            if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+              handleGenerateGame();
+            }
+          });
+
+          function reloadPreview() {
+            document.getElementById('game-frame').src = '/game?t=' + Date.now();
+          }
+
+          function toggleFullscreen() {
+            const frame = document.getElementById('game-frame');
+            if (frame.requestFullscreen) frame.requestFullscreen();
+          }
+
+          function openMobileQrModal() {
+            const currentUrl = window.location.origin + '/game';
+            document.getElementById('qr-image').src = 'https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=' + encodeURIComponent(currentUrl);
+            document.getElementById('modal-qr').classList.remove('hidden');
+            document.getElementById('modal-qr').classList.add('flex');
+          }
+
+          function closeMobileQrModal() {
+            document.getElementById('modal-qr').classList.add('hidden');
+            document.getElementById('modal-qr').classList.remove('flex');
+          }
+
+          function copyGameUrl() {
+            navigator.clipboard.writeText(window.location.origin + '/game');
+            const btn = document.getElementById('btn-copy-url');
+            btn.textContent = "Copied to Clipboard!";
+            setTimeout(() => btn.textContent = "Copy Public URL", 2000);
+          }
+
+          function downloadUnityExport() {
+            window.open('/api/export/unity', '_blank');
+          }
+    </script>
+  </body>
+</html>

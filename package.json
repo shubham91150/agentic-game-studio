@@ -9,6 +9,7 @@
     "build": "next build",
     "web:start": "next start",
     "start": "node src/index.js",
+    "server:start": "node src/server.js",
     "test": "node --test test/**/*.test.js",
     "generate": "node src/agent/generate.js"
   },
@@ -29,11 +30,13 @@
   "dependencies": {
     "@fontsource/inter": "^5.3.0",
     "@fontsource/jetbrains-mono": "^5.3.0",
+    "clsx": "^2.1.1",
     "lucide-react": "^1.61.0",
     "next": "^16.4.3",
     "qrcode.react": "^4.2.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
+    "tailwind-merge": "^3.7.0",
     "three": "^0.186.1"
   }
 }
