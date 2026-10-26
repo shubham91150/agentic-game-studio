@@ -514,12 +514,6 @@ export default function StudioWorkbench() {
           <span className="demo-badge">Demo</span>
         </div>
 
-        <div className="system-status-list" aria-label="Illustrative system status">
-          <span className="status-chip"><span className="status-dot" />Meta Muse 1.3: Ready</span>
-          <span className="status-chip"><span className="status-dot" />Modal GPU: Connected</span>
-          <span className="status-chip"><span className="status-dot" />SAM 3.1: Active</span>
-        </div>
-
         <nav className="topbar-actions" aria-label="Main navigation">
           <button
             className="topbar-link topbar-template"
