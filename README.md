@@ -4,19 +4,26 @@
 > _Built for the Meta Global AI Developer Hackathon 2026 ($1M Global AI Challenge)_
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-[![Meta Model API](https://img.shields.io/badge/Meta%20AI-Muse%20Spark%20%7C%20SAM%203.1-0668E1)](https://dev.meta.ai/)
-[![Modal GPU](<https://img.shields.io/badge/Modal-Serverless%20GPU%20(A10G)-000000>)](https://modal.com/)
-[![Three.js](https://img.shields.io/badge/Runtime-Three.js%20%7C%20Unity%20C%23-black)](https://threejs.org/)
+[![Meta Model API](https://img.shields.io/badge/Meta%20AI-Muse%20Wonder%20%7C%20SAM%203.1-0668E1)](https://dev.meta.ai/)
+[![World Engine](https://img.shields.io/badge/World%20Engine-Hunyuan%20World%202.0-00A4FF)](https://github.com/Tencent-Hunyuan/Hunyuan3D-2)
+[![Dual Engine](https://img.shields.io/badge/Dual%20Engine-Three.js%20WebGL%20%7C%20Unity%202022.3-black)](https://unity.com/)
 
 ---
 
 ## 🌟 Overview
 
-**Agentic Game Studio** is a next-generation autonomous software engineering agent that transforms high-level natural language concepts, visual sketches, and interactive rules into **fully playable, production-grade 3D games and spatial simulations** in under 90 seconds.
+**Agentic Game Studio** is an autonomous software engineering agent that transforms high-level natural language concepts, visual sketches, and interactive rules into **fully playable 3D games and spatial simulations** with **zero human intervention**.
 
-Traditional game development requires teams of 3D modelers, texture artists, physics programmers, and UI developers. Existing AI "game generators" produce either static 2D images or broken hallucinated scripts.
+Traditional game development requires teams of 3D modelers, terrain artists, physics programmers, and UI developers. Existing AI "game tools" produce static images or broken script snippets.
 
-**Agentic Game Studio solves this bottleneck** with an end-to-end, multi-agent pipeline that unifies **Meta Muse multimodal reasoning**, **Meta SAM 3.1 computer vision**, and **Modal serverless GPU 3D reconstruction** into a verifiable, deterministic loop.
+**Agentic Game Studio solves this bottleneck** with an end-to-end, multi-agent pipeline:
+
+1. **Meta Muse Wonder**: Frontier-class multimodal reasoning for game lore, mechanics, physics equations, and scene composition.
+2. **Meta SAM 3.1**: Semantic segmentation isolating focal props and characters with clean alpha masking.
+3. **Hunyuan World 2.0**: Generative 3D spatial terrain, biomes, and architectural elevation grids.
+4. **Dual-Engine Production Compiler**:
+   - **Three.js WebGL**: Instant in-browser player with mobile virtual touch joystick and desktop controls.
+   - **Unity 2022.3 LTS**: Native C# assembly compilation (`AgenticPlayerController.cs`, `AgenticGameManager.cs`).
 
 ---
 
@@ -24,51 +31,31 @@ Traditional game development requires teams of 3D modelers, texture artists, phy
 
 ```mermaid
 graph TD
-    User([User Prompt / Concept Sketch]) --> Planner[Meta Muse Spark 1.3: Game Architect]
+    User([User Prompt / World Concept]) --> Planner[Meta Muse Wonder: Game Architect]
     Planner --> LogicAgent[Meta Muse Code: Mechanics & Physics Synthesizer]
     Planner --> VisionAgent[Meta SAM 3.1: Semantic Asset Isolator]
+    Planner --> WorldGen[Hunyuan World 2.0: 3D Terrain & Elevation Grid]
     VisionAgent --> GPU3D[Modal Serverless A10G: PBR 3D Reconstruction]
-    GPU3D --> GLBStore[(Optimized .GLB Assets)]
-    LogicAgent --> WebGL[Three.js / WebGL Dynamic Runtime]
-    GLBStore --> WebGL
-    WebGL --> Verifier[Autonomous Verification Gate: Playability & FPS]
-    Verifier -->|Pass| ProductionDeploy([Live Production Game URL])
-    Verifier -->|Fail| SelfHeal[Monotone Convergence Refinement Loop]
-    SelfHeal --> LogicAgent
+    GPU3D --> Assets[(Watertight .GLB Models)]
+    WorldGen --> DualCompiler{Dual-Engine Production Compiler}
+    LogicAgent --> DualCompiler
+    Assets --> DualCompiler
+    DualCompiler -->|Target 1| WebGL[Three.js WebGL Instant Browser Player]
+    DualCompiler -->|Target 2| Unity[Unity 2022.3 LTS Native C# Studio Project]
 ```
-
-### 1. 🧠 Orchestration & Mechanics (Meta Muse Spark & Muse Code)
-
-- Generates robust game loops, state machines, and collision handling.
-- Synthesizes responsive camera controls, mobile virtual joysticks, and desktop keyboard/mouse inputs.
-- Eliminates hallucinations using a deterministic verification gate.
-
-### 2. 👁️ Vision & Asset Segmentation (Meta SAM 3.1)
-
-- Uses **Segment Anything Model (SAM 3.1)** to isolate objects from concept images with pixel-perfect alpha masking.
-- Generates clean, centered orthographic views required for 3D reconstruction.
-
-### 3. ⚡ Serverless 3D Asset Pipeline (Modal NVIDIA A10G)
-
-- Serverless GPU worker spins up on-demand ($0 idle cost).
-- Generates lightweight, watertight 3D meshes with UV unwrapping and PBR textures.
-- Automatically exports production-ready `.glb` models optimized for real-time mobile and desktop web rendering.
-
-### 4. 🎮 Universal 3D Runtime & Verification
-
-- Cross-platform WebGL (Three.js) engine with zero-dependency loading.
-- Native Unity 2022.3 LTS C# batch export compatibility.
-- Built-in automated playability test harness measuring visual convergence, FPS stability, and touch responsiveness.
 
 ---
 
 ## 🚀 Key Features
 
-- **Zero-to-Playable in <90 Seconds:** Generates game logic, 3D assets, audio, and UI in a single automated iteration.
-- **True Cross-Platform:** Responsive HUD with multi-touch virtual joystick, gesture tracking, and adaptive screen scaling.
-- **Serverless Zero-Idle Compute:** GPU resources scale down to zero when idle, consuming compute only during active generation.
-- **Deterministic Quality Gate:** Self-healing loop that tests collision boundaries and framerates before production deployment.
-- **100% Original & Compliant:** All assets are synthetically generated or open-source licensed (CC0/MIT) — zero trademarked IP, zero policy violations.
+- **Prompt to Playable Game:** Synthesizes procedural terrain, entities, mechanics, and controls from a single sentence.
+- **Frontier Meta Muse Wonder:** High-dimensional spatial planning with mathematical physics contracts.
+- **Meta SAM 3.1 Clean Cutouts:** Removes 2D background clutter so 3D meshes remain clean and watertight.
+- **Hunyuan World Spatial Environments:** Procedural terrain heightmaps tailored to biomes (Cyber Orbital, Desert Canyon, Glacier Arena, Bioluminescent Canopy).
+- **Dual-Engine Output:**
+  - Instant WebGL for rapid review on mobile/desktop browsers without download.
+  - Full Unity 2022.3 LTS project for professional deployment.
+- **100% Original & Compliant:** Synthetic AI-generated geometry and open-source licenses — zero trademarked IP, zero policy violations.
 
 ---
 
@@ -76,70 +63,55 @@ graph TD
 
 ```
 agentic-game-studio/
-├── .github/                 # CI/CD verification workflows
 ├── src/
-│   ├── agent/               # Meta Muse planning & orchestration logic
-│   │   ├── planner.js       # Game design & mechanics decomposition
-│   │   └── synthesizer.js   # Code synthesis & physics assembly
-│   ├── pipeline/            # Modal serverless GPU & Meta SAM client
-│   │   ├── sam_segment.py   # Meta SAM 3.1 background isolation
-│   │   └── modal_gpu.py     # Serverless 3D mesh reconstruction
-│   ├── runtime/             # Core 3D game engine & WebGL player
-│   │   ├── engine.js        # Three.js scene, lighting & camera rig
-│   │   ├── controls.js      # Dual-mode (mobile touch + keyboard/mouse)
-│   │   └── physics.js       # Lightweight spatial collision system
-│   └── verifier/            # Autonomous playability verification gate
-│       ├── visual_check.js  # Headless render & pixel diff verification
-│       └── fps_monitor.js   # Performance & memory stability monitor
-├── examples/                # Pre-built procedural sample environments
-├── package.json             # Scripts & dependency manifest
-├── LICENSE                  # MIT License
-└── README.md                # Project documentation
+│   ├── agent/
+│   │   ├── muse_wonder.js     # Meta Muse Wonder director & game planner
+│   │   └── generate.js        # End-to-end CLI generation pipeline
+│   ├── pipeline/
+│   │   ├── hunyuan_world.js   # Hunyuan World 2.0 terrain & biome synthesis
+│   │   ├── sam_bridge.js      # Meta SAM 3.1 semantic cutout bridge
+│   │   └── modal_client.py    # Modal serverless GPU 3D reconstruction client
+│   ├── engine/
+│   │   ├── threejs_runtime.js # Self-contained Three.js WebGL runtime compiler
+│   │   └── unity_exporter.js  # Unity 2022.3 LTS C# batchmode exporter
+│   └── runtime/
+│       └── engine.js          # Core engine utilities
+├── package.json               # Manifest & scripts
+├── LICENSE                    # MIT License
+└── README.md                  # Project documentation
 ```
 
 ---
 
 ## ⚡ Quick Start
 
-### Prerequisites
-
-- Node.js 18+ / pnpm
-- Python 3.10+
-- Modal CLI (`pip install modal`)
-- Meta Model API Key (`dev.meta.ai`)
-
-### 1. Clone & Install
+### 1. Clone & Setup
 
 ```bash
 git clone https://github.com/shubham91150/agentic-game-studio.git
 cd agentic-game-studio
-pnpm install
 ```
 
-### 2. Configure Environment
+### 2. Generate a Complete 3D Game & World
 
 ```bash
-cp .env.example .env
-# Add your META_API_KEY and MODAL credentials in .env
+node src/agent/generate.js --prompt "Subzero glacier racing arena with floating crystals and energy orbs"
 ```
 
-### 3. Generate a Game
+### 3. Play Instantly
 
-```bash
-# Generate an interactive 3D procedural world from a natural language prompt
-node src/agent/generate.js --prompt "Futuristic neon cyber runner with dynamic obstacles and energy orbs"
-```
+- **Browser WebGL:** Open `build/web/index.html` in any browser (supports desktop WASD + mobile touch joystick).
+- **Unity Studio:** Open `build/unity/` inside Unity 2022.3 LTS.
 
 ---
 
 ## 🏆 Hackathon Alignment
 
 - **Primary Track:** Indie Developer Track ($150,000 First Prize)
-- **Target Problem Statement:** _Push the Frontier_ (giving autonomous AI agents real-world engineering and spatial 3D synthesis capabilities).
+- **Target Problem Statement:** _Push the Frontier_ (autonomous AI agent generating playable 3D spatial simulations).
 - **Target Bonus Awards:**
-  - _Best Agentic Use-Case ($5,000)_: Multi-step autonomous planning, execution, and self-verifying refinement.
-  - _Best Build on Meta Open Weight Models ($10,000)_: Meta SAM 3.1 + Muse Open weights served on serverless GPU infrastructure.
-  - _Best Creative Build ($5,000)_: Creative AI synthesis combining multimodal vision and interactive 3D spatial environments.
+  - _Best Creative Build ($5,000)_: Creative AI synthesis powered by **Meta Muse Wonder**.
+  - _Best Agentic Use-Case ($5,000)_: Multi-agent coordination (Muse Wonder + SAM 3.1 + Hunyuan World 2.0).
 
 ---
 
