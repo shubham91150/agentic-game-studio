@@ -33,7 +33,7 @@ const DEFAULT_PROMPT =
 
 const PIPELINE = [
   { title: "Architecture & Mechanics Plan", source: "Meta Muse Spark" },
-  { title: "3D Asset Synthesis & UV Baking", source: "Modal GPU" },
+
   { title: "Physics & Collision Engine Assembly", source: "" },
   { title: "Playability & Performance Verification", source: "" },
 ];
