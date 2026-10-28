@@ -198,7 +198,10 @@ const server = http.createServer(async (req, res) => {
       });
 
       let closed = false;
-      req.on("close", () => {
+      // NOTE: req "close" fires as soon as the POST body is consumed in
+      // Node 20, which would mute the whole stream. Client disconnects
+      // surface on the response object instead.
+      res.on("close", () => {
         closed = true;
       });
 
