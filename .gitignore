@@ -47,8 +47,8 @@ Thumbs.db
 storage/.work/
 
 # agent skill installs (local tooling, not the product)
-skills/
+/skills/
 skills-lock.json
-agent/
-data/
+/agent/
+/data/
 storage/cache/
