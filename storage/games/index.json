@@ -1,5 +1,56 @@
 [
   {
+    "id": "game_1793160881694_701e7e",
+    "title": "Glacier Canyon Hovercraft Race",
+    "prompt": "Glacier canyon hovercraft race with crystals",
+    "biome": "subzero-glacier",
+    "metaModel": "meta-models/muse-spark-open",
+    "createdAt": "2026-10-28T04:14:41.695Z",
+    "playUrl": "/game/game_1793160881694_701e7e",
+    "files": {
+      "html": "index.html",
+      "manifest": "manifest.json",
+      "unity": [
+        "AgenticPlayerController.cs",
+        "AgenticGameManager.cs"
+      ]
+    }
+  },
+  {
+    "id": "game_1793160866303_8d9ff2",
+    "title": "Test Prompt",
+    "prompt": "Test prompt",
+    "biome": "cyber-orbital",
+    "metaModel": "meta-models/muse-spark-open",
+    "createdAt": "2026-10-28T04:14:26.304Z",
+    "playUrl": "/game/game_1793160866303_8d9ff2",
+    "files": {
+      "html": "index.html",
+      "manifest": "manifest.json",
+      "unity": [
+        "AgenticPlayerController.cs",
+        "AgenticGameManager.cs"
+      ]
+    }
+  },
+  {
+    "id": "game_1793160768045_8ff820",
+    "title": "Glacier Canyon Hovercraft Course",
+    "prompt": "Glacier canyon hovercraft course with floating crystals",
+    "biome": "subzero-glacier",
+    "metaModel": "meta-models/muse-spark-open",
+    "createdAt": "2026-10-28T04:12:48.045Z",
+    "playUrl": "/game/game_1793160768045_8ff820",
+    "files": {
+      "html": "index.html",
+      "manifest": "manifest.json",
+      "unity": [
+        "AgenticPlayerController.cs",
+        "AgenticGameManager.cs"
+      ]
+    }
+  },
+  {
     "id": "game_1793157050687_3c81b9",
     "title": "Cyber Kinetic Hovercraft Speedway",
     "prompt": "Cyber kinetic hovercraft speedway with floating crystalline orbs",

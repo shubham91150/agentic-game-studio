@@ -1,0 +1,17 @@
+{
+  "id": "game_1793160881694_701e7e",
+  "title": "Glacier Canyon Hovercraft Race",
+  "prompt": "Glacier canyon hovercraft race with crystals",
+  "biome": "subzero-glacier",
+  "metaModel": "meta-models/muse-spark-open",
+  "createdAt": "2026-10-28T04:14:41.695Z",
+  "playUrl": "/game/game_1793160881694_701e7e",
+  "files": {
+    "html": "index.html",
+    "manifest": "manifest.json",
+    "unity": [
+      "AgenticPlayerController.cs",
+      "AgenticGameManager.cs"
+    ]
+  }
+}
