@@ -1,0 +1,17 @@
+{
+  "id": "game_1793160866303_8d9ff2",
+  "title": "Test Prompt",
+  "prompt": "Test prompt",
+  "biome": "cyber-orbital",
+  "metaModel": "meta-models/muse-spark-open",
+  "createdAt": "2026-10-28T04:14:26.304Z",
+  "playUrl": "/game/game_1793160866303_8d9ff2",
+  "files": {
+    "html": "index.html",
+    "manifest": "manifest.json",
+    "unity": [
+      "AgenticPlayerController.cs",
+      "AgenticGameManager.cs"
+    ]
+  }
+}
