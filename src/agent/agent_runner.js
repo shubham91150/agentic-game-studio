@@ -228,7 +228,7 @@ export class AgentRunner {
     this.emit({ type: "log", level, message, at: Date.now() });
   }
 
-  phase(id, label, status, detail, source) {
+  phase(id, label, status, detail, source, origin) {
     this.emit({
       type: "phase",
       id,
@@ -236,6 +236,9 @@ export class AgentRunner {
       status,
       detail: detail || "",
       source: source || "",
+      // origin: "cli" = a real action the Muse Code CLI took on the VM.
+      // Anything else is backend orchestration (shown in logs, not steps).
+      origin: origin || "backend",
       at: Date.now(),
     });
   }
@@ -249,6 +252,7 @@ export class AgentRunner {
         action.phase.status,
         action.phase.detail,
         action.phase.source,
+        "cli",
       );
     } else if (action.cli) {
       this.emit({
@@ -594,26 +598,14 @@ export class AgentRunner {
       }
     }
 
-    // ---------------- Step 2: Muse Code CLI writes files on the VM (cached) ----------------
-    this.phase(
-      "cli",
-      "Muse Code CLI file pass (VM)",
-      "running",
-      "",
-      `${CLI_MODEL_LABEL} · CLI`,
-    );
+    // ---------------- Muse Code CLI writes files on the VM (cached) ----------------
+    // No parent step is emitted: the CLI's own sub-steps
+    // (thinking, tool: bash, tool: write_file) stream as cli-step-N phases.
     let cliUnityCode = "";
     let cli = { ok: false, live: false };
     if (fs.existsSync(unityCachePath)) {
       cliUnityCode = fs.readFileSync(unityCachePath, "utf8");
       cli = { ok: true, live: false, cached: true };
-      this.phase(
-        "cli",
-        "Muse Code CLI file pass (VM)",
-        "pass",
-        "cache hit — 0 API calls",
-        "cache",
-      );
       this.log(
         "ok",
         "Unity code cache hit: Muse CLI skipped, zero credits used.",
@@ -651,40 +643,22 @@ export class AgentRunner {
       }
     }
     const cliWroteCode = Boolean(cliUnityCode);
+    // No parent "cli" step here on purpose: the CLI's own sub-steps
+    // (thinking, tool: bash, tool: write_file) already streamed above as
+    // cli-step-N phases. Only a log line summarizes the outcome.
     if (cli.cached) {
-      // Phase/log already emitted above; nothing more to report.
+      // Log already emitted above; nothing more to report.
     } else if (cliWroteCode) {
-      this.phase(
-        "cli",
-        "Muse Code CLI file pass (VM)",
-        "pass",
-        `wrote AgenticPlayerController.cs (${CLI_MODEL_LABEL})`,
-        CLI_MODEL_LABEL,
-      );
       this.log(
         "ok",
         "Muse Code CLI wrote SPEC.md and AgenticPlayerController.cs on the VM.",
       );
     } else if (cli.ok) {
-      this.phase(
-        "cli",
-        "Muse Code CLI file pass (VM)",
-        "warn",
-        "CLI ran but produced no valid C# file",
-        CLI_MODEL_LABEL,
-      );
       this.log(
         "warn",
         "Muse Code CLI finished without a valid C# file; template fallback will be used.",
       );
     } else {
-      this.phase(
-        "cli",
-        "Muse Code CLI file pass (VM)",
-        "warn",
-        cli.reason || "cli-unavailable",
-        "",
-      );
       this.log(
         "warn",
         "Muse Code CLI unavailable; template fallback will be used for Unity code.",

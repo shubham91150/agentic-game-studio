@@ -210,27 +210,31 @@ export default function StudioWorkbench() {
           addLog(`Run started: "${evt.prompt}"`, "info");
           break;
         case "phase":
-          // The agent's own actions, in arrival order. Unknown ids are new
-          // steps the agent actually performed — never a predefined list.
-          setSteps((current) => {
-            const idx = current.findIndex((s) => s.id === evt.id);
-            const entry = {
-              id: evt.id,
-              title: evt.label || evt.id,
-              source: evt.source || "",
-              status: evt.status,
-              detail: evt.detail || "",
-            };
-            if (idx === -1) return [...current, entry];
-            const next = current.slice();
-            next[idx] = {
-              ...entry,
-              title: next[idx].title || entry.title,
-              source: next[idx].source || entry.source,
-            };
-            return next;
-          });
-          if (evt.status === "running") addLog(`→ ${evt.label}`, "info");
+          // Steps panel shows ONLY the CLI agent's own actions
+          // (origin "cli": thinking, tool: bash, tool: write_file...).
+          // Backend orchestration phases become console lines, never steps.
+          if (evt.origin === "cli") {
+            setSteps((current) => {
+              const idx = current.findIndex((s) => s.id === evt.id);
+              const entry = {
+                id: evt.id,
+                title: evt.label || evt.id,
+                source: evt.source || "",
+                status: evt.status,
+                detail: evt.detail || "",
+              };
+              if (idx === -1) return [...current, entry];
+              const next = current.slice();
+              next[idx] = {
+                ...entry,
+                title: next[idx].title || entry.title,
+                source: next[idx].source || entry.source,
+              };
+              return next;
+            });
+          } else if (evt.status === "running") {
+            addLog(`→ ${evt.label}`, "info");
+          }
           break;
         case "log":
           addLog(evt.message, evt.level || "info");
@@ -886,7 +890,7 @@ export default function StudioWorkbench() {
               <span className="pipeline-demo-label">
                 {usage
                   ? `CLI ${usage.in} in / ${usage.out} out`
-                  : "live from agent"}
+                  : "Muse Code CLI · live"}
               </span>
             </div>
             <ol
@@ -902,8 +906,8 @@ export default function StudioWorkbench() {
                   <div className="step-copy">
                     <span className="step-title">No steps yet</span>
                     <span className="step-source">
-                      Press Build Game — each action the agent takes on the VM
-                      appears here
+                      Press Build Game — every action the Muse Code CLI takes on
+                      the VM appears here, nothing else
                     </span>
                   </div>
                   <span className="step-status">Waiting</span>

@@ -909,18 +909,24 @@ Low-gravity glacier course with floating crystal pickups and precise collision p
               break;
 
             case "phase": {
-              var node = stepNodes[evt.id];
-              if (!node) {
-                node = createStepNode(evt.id, evt.label, evt.source);
-              }
-              node.root.dataset.status = evt.status;
-              var detailText = evt.detail || "";
-              if (node.source && detailText)
-                detailText = "[" + node.source + "] " + detailText;
-              else if (node.source) detailText = node.source;
-              node.detail.textContent = detailText;
-              if (evt.status === "running")
+              // Steps panel shows ONLY the CLI agent's own actions
+              // (origin "cli"). Backend orchestration becomes console lines.
+              if (evt.origin === "cli") {
+                var node = stepNodes[evt.id];
+                if (!node) {
+                  node = createStepNode(evt.id, evt.label, evt.source);
+                }
+                node.root.dataset.status = evt.status;
+                var detailText = evt.detail || "";
+                if (node.source && detailText)
+                  detailText = "[" + node.source + "] " + detailText;
+                else if (node.source) detailText = node.source;
+                node.detail.textContent = detailText;
+                if (evt.status === "running")
+                  appendLine("info", "→ " + (evt.label || evt.id));
+              } else if (evt.status === "running") {
                 appendLine("info", "→ " + (evt.label || evt.id));
+              }
               break;
             }
 
