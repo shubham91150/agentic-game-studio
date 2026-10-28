@@ -705,7 +705,7 @@ Low-gravity glacier course with floating crystal pickups and precise collision p
         </div>
 
         <div class="section">
-          <label class="field">Pipeline</label>
+          <label class="field">Agent steps on VM</label>
           <div class="pipe" id="pipe"></div>
         </div>
 
@@ -781,51 +781,39 @@ Low-gravity glacier course with floating crystal pickups and precise collision p
         // Vercel-hosted UI which talks to the VM backend directly.
         var API = window.STUDIO_API_BASE || "";
 
-        var STEPS = [
-          { id: "shield", label: "Llama Guard 3 Input Shield" },
-          { id: "cli", label: "Muse Code CLI Workspace Pass" },
-          { id: "brain", label: "Meta Muse Reasoning" },
-          { id: "world", label: "Hunyuan World 2.0 Terrain" },
-          { id: "webgl", label: "Three.js WebGL Runtime" },
-          { id: "unity", label: "Unity 2022.3 C# Project" },
-          { id: "qa", label: "Physics QA Quality Gate" },
-          { id: "store", label: "Persistent Game Library" },
-        ];
-
         var el = function (id) {
           return document.getElementById(id);
         };
-        var running = false;
-        var eventCount = 0;
-        var timerId = null;
-        var startedAt = 0;
 
-        // ---------- Pipeline stepper ----------
+        // NOTE: no predefined step list. Steps are created live, in order,
+        // from the agent's own phase events (see handleEvent "phase").
+        // Whatever the VM agent actually does is what appears here.
         var stepNodes = {};
-        STEPS.forEach(function (step) {
+
+        function createStepNode(id, label, source) {
           var node = document.createElement("div");
           node.className = "step";
-          node.dataset.status = "idle";
+          node.dataset.status = "running";
           node.innerHTML =
             '<div class="step-dot"></div>' +
             '<div class="step-body">' +
             '<div class="step-title"></div>' +
             '<div class="step-detail"></div>' +
             "</div>";
-          node.querySelector(".step-title").textContent = step.label;
+          node.querySelector(".step-title").textContent = label || id;
+          if (source) node.title = source;
           el("pipe").appendChild(node);
-          stepNodes[step.id] = {
+          stepNodes[id] = {
             root: node,
             detail: node.querySelector(".step-detail"),
+            source: source || "",
           };
-        });
+          return stepNodes[id];
+        }
 
         function resetPipeline() {
-          STEPS.forEach(function (step) {
-            var n = stepNodes[step.id];
-            n.root.dataset.status = "idle";
-            n.detail.textContent = "";
-          });
+          el("pipe").innerHTML = "";
+          stepNodes = {};
         }
 
         // ---------- Console ----------
@@ -922,11 +910,17 @@ Low-gravity glacier course with floating crystal pickups and precise collision p
 
             case "phase": {
               var node = stepNodes[evt.id];
-              if (!node) break;
+              if (!node) {
+                node = createStepNode(evt.id, evt.label, evt.source);
+              }
               node.root.dataset.status = evt.status;
-              if (evt.detail) node.detail.textContent = evt.detail;
+              var detailText = evt.detail || "";
+              if (node.source && detailText)
+                detailText = "[" + node.source + "] " + detailText;
+              else if (node.source) detailText = node.source;
+              node.detail.textContent = detailText;
               if (evt.status === "running")
-                appendLine("info", "→ " + evt.label);
+                appendLine("info", "→ " + (evt.label || evt.id));
               break;
             }
 
@@ -955,6 +949,26 @@ Low-gravity glacier course with floating crystal pickups and precise collision p
               );
               el("stat-qa").textContent = evt.passed ? "passed" : "check";
               break;
+
+            case "usage": {
+              var totals = { in: 0, out: 0, cached: 0 };
+              (evt.models || []).forEach(function (m) {
+                totals.in += m.input_tokens || 0;
+                totals.out += m.output_tokens || 0;
+                totals.cached += m.cached_tokens || 0;
+              });
+              appendLine(
+                "info",
+                "CLI tokens this run: " +
+                  totals.in +
+                  " in / " +
+                  totals.out +
+                  " out (" +
+                  totals.cached +
+                  " cached)",
+              );
+              break;
+            }
 
             case "error":
               appendLine("error", evt.message);

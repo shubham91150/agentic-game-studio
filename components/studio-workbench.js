@@ -32,25 +32,9 @@ const STUDIO_API_BASE =
 const DEFAULT_PROMPT =
   "Build a compact lunar rover challenge with low-gravity jumps, collectible signal beacons, and precise collision physics.";
 
-const PIPELINE = [
-  { id: "shield", title: "Prompt safety check", source: "local rules" },
-  {
-    id: "brain",
-    title: "Game design",
-    source: "Muse Wonder 1.0 + Spark Open",
-  },
-  { id: "image", title: "Concept art", source: "Muse Image 1.0" },
-  {
-    id: "cli",
-    title: "File pass on VM",
-    source: "Muse Code CLI · Spark 1.3",
-  },
-  { id: "world", title: "World terrain + layout", source: "procedural" },
-  { id: "webgl", title: "WebGL runtime", source: "Three.js" },
-  { id: "unity", title: "Unity C# script", source: "CLI or template" },
-  { id: "qa", title: "Physics QA checks", source: "BFS + math" },
-  { id: "store", title: "Save to library", source: "VM storage" },
-];
+// NOTE: no predefined pipeline list. Steps are created live, in order,
+// from the agent's own phase events (see handleEvent "phase"). Whatever the
+// VM agent actually does is what appears here — nothing is predeclared.
 
 const TABS = [
   { id: "reasoning", label: "Agent Reasoning", icon: Activity },
@@ -78,7 +62,8 @@ const TEMPLATES = [
   },
 ];
 
-const EMPTY_STAGES = Object.fromEntries(PIPELINE.map((s) => [s.id, "pending"]));
+// Steps shown in the pipeline come only from the agent's live phase events
+// (handleEvent "phase"). Nothing is predefined.
 
 function downloadText(filename, content, mimeType) {
   const file = new Blob([content], { type: mimeType });
@@ -123,7 +108,8 @@ export default function StudioWorkbench() {
   const [engine, setEngine] = useState("Three.js WebGL");
   const [controls, setControls] = useState("Keyboard + Mobile Touch");
   const [complexity, setComplexity] = useState("Arcade");
-  const [stages, setStages] = useState(EMPTY_STAGES);
+  const [steps, setSteps] = useState([]);
+  const [usage, setUsage] = useState(null);
   const [activeTab, setActiveTab] = useState("reasoning");
   const [isBuilding, setIsBuilding] = useState(false);
   const [promptError, setPromptError] = useState(false);
@@ -224,11 +210,27 @@ export default function StudioWorkbench() {
           addLog(`Run started: "${evt.prompt}"`, "info");
           break;
         case "phase":
-          setStages((current) => ({ ...current, [evt.id]: evt.status }));
-          if (evt.status === "running") {
-            const step = PIPELINE.find((s) => s.id === evt.id);
-            if (step) addLog(`→ ${step.title}`, "info");
-          }
+          // The agent's own actions, in arrival order. Unknown ids are new
+          // steps the agent actually performed — never a predefined list.
+          setSteps((current) => {
+            const idx = current.findIndex((s) => s.id === evt.id);
+            const entry = {
+              id: evt.id,
+              title: evt.label || evt.id,
+              source: evt.source || "",
+              status: evt.status,
+              detail: evt.detail || "",
+            };
+            if (idx === -1) return [...current, entry];
+            const next = current.slice();
+            next[idx] = {
+              ...entry,
+              title: next[idx].title || entry.title,
+              source: next[idx].source || entry.source,
+            };
+            return next;
+          });
+          if (evt.status === "running") addLog(`→ ${evt.label}`, "info");
           break;
         case "log":
           addLog(evt.message, evt.level || "info");
@@ -253,6 +255,22 @@ export default function StudioWorkbench() {
             evt.passed ? "ok" : "warn",
           );
           break;
+        case "usage": {
+          const totals = (evt.models || []).reduce(
+            (acc, m) => ({
+              in: acc.in + (m.input_tokens || 0),
+              out: acc.out + (m.output_tokens || 0),
+              cached: acc.cached + (m.cached_tokens || 0),
+            }),
+            { in: 0, out: 0, cached: 0 },
+          );
+          setUsage(totals);
+          addLog(
+            `CLI tokens this run: ${totals.in} in / ${totals.out} out (${totals.cached} cached)`,
+            "info",
+          );
+          break;
+        }
         case "artifact":
           if (evt.kind === "unity") {
             setGenerated((current) => ({
@@ -346,7 +364,8 @@ export default function StudioWorkbench() {
     setPromptError(false);
     setIsBuilding(true);
     setActiveTab("reasoning");
-    setStages(EMPTY_STAGES);
+    setSteps([]);
+    setUsage(null);
     setGenerated(null);
     setLogs([]);
     setNotice("Agent is running on the VM — watch the console.");
@@ -382,7 +401,8 @@ export default function StudioWorkbench() {
     setEngine("Three.js WebGL");
     setControls("Keyboard + Mobile Touch");
     setComplexity("Arcade");
-    setStages(EMPTY_STAGES);
+    setSteps([]);
+    setUsage(null);
     setActiveTab("reasoning");
     setPromptError(false);
     setIsPaused(false);
@@ -479,7 +499,8 @@ export default function StudioWorkbench() {
     setIsBuilding(false);
     setPrompt(nextPrompt);
     setPromptError(false);
-    setStages(EMPTY_STAGES);
+    setSteps([]);
+    setUsage(null);
     setNotice("Template loaded. Review the prompt, then build.");
     templateDialogRef.current?.close();
   };
@@ -861,50 +882,73 @@ export default function StudioWorkbench() {
             </p>
 
             <div className="pipeline-heading">
-              <span>Agent execution pipeline</span>
-              <span className="pipeline-demo-label">live stream</span>
+              <span>Agent steps on VM</span>
+              <span className="pipeline-demo-label">
+                {usage
+                  ? `CLI ${usage.in} in / ${usage.out} out`
+                  : "live from agent"}
+              </span>
             </div>
             <ol
               className="pipeline-list"
-              aria-label="Agent execution pipeline"
+              aria-label="Agent steps performed on the VM"
               aria-live="polite"
             >
-              {PIPELINE.map((step) => {
-                const stage = stages[step.id] || "pending";
-                return (
-                  <li className={`pipeline-step stage-${stage}`} key={step.id}>
-                    <span className="step-indicator" aria-hidden="true">
-                      {stage === "pass" || stage === "done" ? (
-                        <Check />
-                      ) : stage === "running" ? (
-                        <LoaderCircle className="spin-icon" />
-                      ) : (
-                        <Circle />
-                      )}
+              {steps.length === 0 ? (
+                <li className="pipeline-step stage-pending" key="waiting">
+                  <span className="step-indicator" aria-hidden="true">
+                    <Circle />
+                  </span>
+                  <div className="step-copy">
+                    <span className="step-title">No steps yet</span>
+                    <span className="step-source">
+                      Press Build Game — each action the agent takes on the VM
+                      appears here
                     </span>
-                    <div className="step-copy">
-                      <span className="step-title">{step.title}</span>
-                      {step.source ? (
-                        <span className="step-source">{step.source}</span>
-                      ) : null}
-                    </div>
-                    <span
-                      className="step-status"
-                      aria-label={`Status: ${stage}`}
+                  </div>
+                  <span className="step-status">Waiting</span>
+                </li>
+              ) : (
+                steps.map((step) => {
+                  const stage = step.status || "pending";
+                  return (
+                    <li
+                      className={`pipeline-step stage-${stage}`}
+                      key={step.id}
                     >
-                      {stage === "pass" || stage === "done"
-                        ? "Done"
-                        : stage === "running"
-                          ? "Running"
-                          : stage === "warn"
-                            ? "Check"
-                            : stage === "fail"
-                              ? "Failed"
-                              : "Pending"}
-                    </span>
-                  </li>
-                );
-              })}
+                      <span className="step-indicator" aria-hidden="true">
+                        {stage === "pass" || stage === "done" ? (
+                          <Check />
+                        ) : stage === "running" ? (
+                          <LoaderCircle className="spin-icon" />
+                        ) : (
+                          <Circle />
+                        )}
+                      </span>
+                      <div className="step-copy">
+                        <span className="step-title">{step.title}</span>
+                        {step.source ? (
+                          <span className="step-source">{step.source}</span>
+                        ) : null}
+                      </div>
+                      <span
+                        className="step-status"
+                        aria-label={`Status: ${stage}`}
+                      >
+                        {stage === "pass" || stage === "done"
+                          ? "Done"
+                          : stage === "running"
+                            ? "Running"
+                            : stage === "warn"
+                              ? "Check"
+                              : stage === "fail"
+                                ? "Failed"
+                                : "Pending"}
+                      </span>
+                    </li>
+                  );
+                })
+              )}
             </ol>
           </div>
 
