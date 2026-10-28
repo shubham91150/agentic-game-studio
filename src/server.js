@@ -10,6 +10,7 @@ import { MuseWonderDirector } from "./agent/muse_wonder.js";
 import { HunyuanWorldPipeline } from "./pipeline/hunyuan_world.js";
 import { generateThreeJsGameHtml } from "./engine/threejs_runtime.js";
 import { UnityExporter } from "./engine/unity_exporter.js";
+import { GameStorageManager } from "./storage/game_store.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT_DIR = path.resolve(__dirname, "..");
@@ -20,6 +21,7 @@ const PORT = process.env.PORT || 3030;
 
 const director = new MuseWonderDirector();
 const worldPipeline = new HunyuanWorldPipeline();
+const gameStore = new GameStorageManager();
 
 // Ensure initial game exists
 const initialWebDir = path.join(BUILD_DIR, "web");
@@ -60,11 +62,20 @@ const server = http.createServer(async (req, res) => {
     }
   }
 
-  // 2. Live WebGL Game Viewport
+  // 2. Live WebGL Game Viewport & Saved Games Access
   if (pathname === "/game" || pathname === "/game/") {
     if (fs.existsSync(initialGamePath)) {
       res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
       return res.end(fs.readFileSync(initialGamePath));
+    }
+  }
+
+  // Serve static game files directly from storage directory
+  if (pathname.startsWith("/storage/games/")) {
+    const filePath = path.join(process.cwd(), pathname);
+    if (fs.existsSync(filePath)) {
+      res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+      return res.end(fs.readFileSync(filePath));
     }
   }
 
@@ -92,12 +103,21 @@ const server = http.createServer(async (req, res) => {
         const unityExporter = new UnityExporter(unityDir);
         const unityResult = unityExporter.exportProject(spec, unityDir);
 
+        // Step 5: Persist to Game Storage
+        const savedManifest = await gameStore.saveGame(
+          spec,
+          worldData,
+          gameHtml,
+          unityResult.scripts,
+        );
+
         res.writeHead(200, { "Content-Type": "application/json" });
         res.end(
           JSON.stringify({
             success: true,
             spec,
             gameHtml,
+            savedGame: savedManifest,
             unityScripts: unityResult.scripts,
             timestamp: new Date().toISOString(),
           }),
@@ -110,7 +130,14 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  // 4. API: Download Unity C# Scripts
+  // 4. API: List Stored Games Library
+  if (pathname === "/api/games" && req.method === "GET") {
+    const games = await gameStore.listGames();
+    res.writeHead(200, { "Content-Type": "application/json" });
+    return res.end(JSON.stringify(games));
+  }
+
+  // 5. API: Download Unity C# Scripts
   if (pathname === "/api/export/unity") {
     const scriptsDir = path.join(BUILD_DIR, "unity", "Assets", "Scripts");
     const playerCs = path.join(scriptsDir, "AgenticPlayerController.cs");

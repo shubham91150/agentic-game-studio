@@ -119,6 +119,13 @@
           <i data-lucide="github" class="w-4 h-4"></i>
         </a>
         <button
+          onclick="openLibraryModal()"
+          class="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-zinc-200 border border-zinc-800 transition"
+        >
+          <i data-lucide="library" class="w-3.5 h-3.5 text-zinc-400"></i>
+          <span>My Games (<span id="games-count">0</span>)</span>
+        </button>
+        <button
           onclick="openMobileQrModal()"
           class="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-zinc-200 border border-zinc-800 transition"
         >
@@ -448,6 +455,49 @@
       </section>
     </main>
 
+    <!-- My Games Library Modal -->
+    <div
+      id="modal-library"
+      class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4"
+    >
+      <div
+        class="bg-zinc-900 border border-zinc-800 rounded-xl p-6 max-w-lg w-full space-y-4 shadow-2xl flex flex-col max-h-[85vh]"
+      >
+        <div
+          class="flex items-center justify-between border-b border-zinc-800 pb-3"
+        >
+          <div class="flex items-center gap-2">
+            <i data-lucide="library" class="w-4 h-4 text-brand-400"></i>
+            <h3 class="text-sm font-semibold text-zinc-100">
+              My Stored Games Library
+            </h3>
+          </div>
+          <button
+            onclick="closeLibraryModal()"
+            class="text-zinc-500 hover:text-zinc-300"
+          >
+            <i data-lucide="x" class="w-4 h-4"></i>
+          </button>
+        </div>
+
+        <div
+          id="games-list-container"
+          class="flex-1 overflow-y-auto space-y-2.5 pr-1 font-mono text-xs"
+        >
+          <p class="text-zinc-500 py-4 text-center">Loading stored games...</p>
+        </div>
+
+        <div class="pt-2 border-t border-zinc-800 flex justify-end">
+          <button
+            onclick="closeLibraryModal()"
+            class="px-4 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-xs font-medium text-zinc-200 rounded-lg border border-zinc-700 transition"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+
     <!-- Mobile QR Code Dialog Modal -->
     <div
       id="modal-qr"
@@ -503,6 +553,69 @@
     </div>
 
     <script>
+          async function fetchGamesLibrary() {
+            try {
+              const res = await fetch('/api/games');
+              if (!res.ok) return;
+              const games = await res.json();
+              document.getElementById('games-count').textContent = games.length;
+
+              const container = document.getElementById('games-list-container');
+              if (!games || games.length === 0) {
+                container.innerHTML = '<p class="text-zinc-500 py-6 text-center">No stored games yet. Click Build 3D Game to create one!</p>';
+                return;
+              }
+
+              container.innerHTML = games.map(g => `
+                <div class="p-3 rounded-lg bg-zinc-950/60 border border-zinc-800 hover:border-zinc-700 transition flex items-center justify-between gap-3">
+                  <div class="space-y-1 min-w-0">
+                    <div class="flex items-center gap-2">
+                      <span class="font-semibold text-zinc-200 truncate">${g.title}</span>
+                      <span class="text-[10px] px-2 py-0.5 rounded bg-zinc-900 border border-zinc-800 text-zinc-400 uppercase">${g.biome}</span>
+                    </div>
+                    <p class="text-[11px] text-zinc-500 truncate font-sans">${g.prompt}</p>
+                    <p class="text-[10px] text-zinc-600">${new Date(g.createdAt).toLocaleString()}</p>
+                  </div>
+                  <div class="flex items-center gap-2 shrink-0">
+                    <button onclick="loadSavedGame('${g.id}')" class="px-3 py-1 bg-brand-500/10 hover:bg-brand-500/20 text-brand-400 border border-brand-500/30 rounded text-xs transition">
+                      ▶ Play
+                    </button>
+                  </div>
+                </div>
+              `).join('');
+            } catch (err) {
+              console.error('Failed to load library:', err);
+            }
+          }
+
+          function openLibraryModal() {
+            fetchGamesLibrary();
+            document.getElementById('modal-library').classList.remove('hidden');
+            document.getElementById('modal-library').classList.add('flex');
+            lucide.createIcons();
+          }
+
+          function closeLibraryModal() {
+            document.getElementById('modal-library').classList.add('hidden');
+            document.getElementById('modal-library').classList.remove('flex');
+          }
+
+          async function loadSavedGame(gameId) {
+            try {
+              const res = await fetch('/api/games');
+              const games = await res.json();
+              const game = games.find(g => g.id === gameId);
+              if (game) {
+                document.getElementById('display-title').textContent = game.title;
+                document.getElementById('game-frame').src = `/storage/games/${gameId}/index.html`;
+                closeLibraryModal();
+              }
+            } catch (err) {
+              console.error(err);
+            }
+          }
+
+          fetchGamesLibrary();
           lucide.createIcons();
 
           let currentTab = 'code-web';
