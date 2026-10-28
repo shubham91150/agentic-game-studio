@@ -1,16 +1,18 @@
 /**
  * Meta Muse Wonder - Game Architecture & Systems Director
  *
- * Powered by Meta Muse Wonder frontier multimodal model.
+ * Powered by Meta Muse frontier models over Baseten & Meta Model API.
  * Translates natural language concepts into complete 3D game specifications,
  * physics contracts, and dual-engine code synthesis (Three.js WebGL & Unity C#).
  */
 
+import { BasetenMuseClient } from "./baseten_muse.js";
+
 export class MuseWonderDirector {
   constructor(config = {}) {
     this.apiKey = config.apiKey || process.env.META_API_KEY;
-    this.model = config.model || "meta/muse-wonder";
-    this.temperature = 0.3; // Low temperature for deterministic code generation
+    this.model = config.model || "meta-models/muse-spark-open";
+    this.baseten = new BasetenMuseClient();
   }
 
   /**
@@ -22,12 +24,33 @@ export class MuseWonderDirector {
     }
 
     const cleanPrompt = prompt.trim();
+    let aiReasoning = "";
 
-    // Structural world decomposition
+    // 1. Live Meta Muse reasoning via Baseten ($100 Hackathon Credits)
+    try {
+      const systemPrompt = `You are Meta Muse Wonder, an expert 3D game architect and systems designer.
+Analyze the user's game concept and provide:
+1. Creative title (under 5 words)
+2. Biome type (cyber-orbital, desert-canyon, subzero-glacier, or bioluminescent-canopy)
+3. Three unique focal 3D game objects with prompts
+Be concise and creative.`;
+
+      const aiResponse = await this.baseten.generateCompletion(
+        systemPrompt,
+        cleanPrompt,
+        500,
+      );
+      aiReasoning = aiResponse.reasoning || aiResponse.content;
+    } catch {
+      aiReasoning = "Meta Muse local heuristic reasoning pipeline active.";
+    }
+
+    // 2. Structural world decomposition
     const gameSpec = {
       title: this.deriveTitle(cleanPrompt),
       prompt: cleanPrompt,
       metaModel: this.model,
+      reasoning: aiReasoning.slice(0, 300),
       timestamp: new Date().toISOString(),
       world: {
         biome: this.detectBiome(cleanPrompt),
@@ -110,7 +133,7 @@ export class MuseWonderDirector {
       return "cyber-orbital";
     if (p.includes("forest") || p.includes("nature") || p.includes("jungle"))
       return "bioluminescent-canopy";
-    if (p.includes("ice") || p.includes("snow") || p.includes("arctic"))
+    if (p.includes("ice") || p.includes("snow") || p.includes("glacier"))
       return "subzero-glacier";
     return "cyber-orbital";
   }
