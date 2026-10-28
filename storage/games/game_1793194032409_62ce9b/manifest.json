@@ -1,0 +1,17 @@
+{
+  "id": "game_1793194032409_62ce9b",
+  "title": "Low-gravity Glacier Course With",
+  "prompt": "Low-gravity glacier course with floating crystal pickups",
+  "biome": "subzero-glacier",
+  "metaModel": "meta-models/muse-spark-open",
+  "createdAt": "2026-10-28T13:27:12.410Z",
+  "playUrl": "/studio/games/game_1793194032409_62ce9b/index.html",
+  "files": {
+    "html": "index.html",
+    "manifest": "manifest.json",
+    "unity": [
+      "AgenticPlayerController.cs",
+      "AgenticGameManager.cs"
+    ]
+  }
+}
