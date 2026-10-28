@@ -5,10 +5,13 @@
  * Meta Muse Wonder specifications and Hunyuan World geometry.
  */
 
+import { generateWebAudioSynthesizerJs } from "../audio/audiocraft_synth.js";
+
 export function generateThreeJsGameHtml(gameSpec, worldData) {
   const title = gameSpec.title || "Agentic 3D World";
   const fogColor = gameSpec.world?.sky?.fogColor || "#09090b";
   const sunColor = gameSpec.world?.sky?.sunColor || "#38bdf8";
+  const audioJs = generateWebAudioSynthesizerJs();
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -72,6 +75,8 @@ export function generateThreeJsGameHtml(gameSpec, worldData) {
 
   <script>
     (function() {
+      ${audioJs}
+
       const container = document.getElementById('canvas-container');
       const valScore = document.getElementById('val-score');
       const valSpeed = document.getElementById('val-speed');
@@ -232,6 +237,7 @@ export function generateThreeJsGameHtml(gameSpec, worldData) {
         if ((keys['Space'] || mobileJump) && isGrounded) {
           velocity.y = 10.0;
           isGrounded = false;
+          AudioEngine.playJump();
         }
 
         // Gravity
@@ -269,6 +275,7 @@ export function generateThreeJsGameHtml(gameSpec, worldData) {
           if (dist < 1.6) {
             score += 100;
             valScore.textContent = score;
+            AudioEngine.playCollect();
             col.position.set(
               (Math.random() - 0.5) * 100,
               1.2,
