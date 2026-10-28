@@ -573,7 +573,11 @@
               if (data.success) {
                 currentSpec = data.spec;
                 document.getElementById('display-title').textContent = data.spec.title;
-                document.getElementById('game-frame').src = '/game?t=' + Date.now();
+                if (data.gameHtml) {
+                  document.getElementById('game-frame').srcdoc = data.gameHtml;
+                } else {
+                  document.getElementById('game-frame').src = '/game/game.html?t=' + Date.now();
+                }
                 switchTab(currentTab);
               }
             } catch (err) {

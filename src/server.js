@@ -97,6 +97,7 @@ const server = http.createServer(async (req, res) => {
           JSON.stringify({
             success: true,
             spec,
+            gameHtml,
             unityScripts: unityResult.scripts,
             timestamp: new Date().toISOString(),
           }),
