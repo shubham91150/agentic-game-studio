@@ -5,7 +5,7 @@
  */
 
 import { MuseWonderDirector } from "../src/agent/muse_wonder.js";
-import { HunyuanWorldPipeline } from "../src/pipeline/hunyuan_world.js";
+import { TerrainPipeline } from "../src/pipeline/terrain.js";
 import { generateThreeJsGameHtml } from "../src/engine/threejs_runtime.js";
 
 export default async function handler(req, res) {
@@ -30,8 +30,8 @@ export default async function handler(req, res) {
     const director = new MuseWonderDirector();
     const spec = await director.architectGame(cleanPrompt);
 
-    // 2. Hunyuan World 2.0 Spatial Terrain Synthesis
-    const worldPipeline = new HunyuanWorldPipeline();
+    // 2. Procedural Terrain Synthesis
+    const worldPipeline = new TerrainPipeline();
     const worldData = worldPipeline.generateWorldGeometry(spec.world);
 
     // 3. Three.js WebGL Code Compilation

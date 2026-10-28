@@ -36,6 +36,7 @@ export class GameStorageManager {
     gameHtml,
     unityScripts = [],
     unityControllerCode,
+    conceptImage,
   ) {
     const gameId =
       "game_" + Date.now() + "_" + crypto.randomBytes(3).toString("hex");
@@ -47,9 +48,14 @@ export class GameStorageManager {
       title: spec.title || "Agentic 3D World",
       prompt: spec.prompt || "",
       biome: spec.world?.biome || "cyber-orbital",
-      metaModel: spec.metaModel || "meta-models/muse-spark-open",
+      metaModel: spec.architectModel || spec.metaModel || "muse-wonder-1.0",
+      enrichmentModel: spec.enrichmentModel || null,
+      objective: spec.objective || "",
       createdAt: new Date().toISOString(),
       playUrl: `/studio/games/${gameId}/index.html`,
+      imageUrl: conceptImage
+        ? `/studio/games/${gameId}/assets/concept.webp`
+        : null,
       files: {
         html: "index.html",
         manifest: "manifest.json",
@@ -68,6 +74,16 @@ export class GameStorageManager {
       gameHtml,
       "utf8",
     );
+
+    // 1b. Concept art (Muse Image) under assets/
+    if (conceptImage) {
+      const assetsDir = path.join(gameDir, "assets");
+      fs.mkdirSync(assetsDir, { recursive: true });
+      await fs.promises.writeFile(
+        path.join(assetsDir, "concept.webp"),
+        conceptImage,
+      );
+    }
 
     // 2. Write Unity Scripts
     if (unityScripts && unityScripts.length > 0) {

@@ -1,59 +1,147 @@
 /**
- * Meta Muse Wonder - Game Architecture & Systems Director
- *
- * Powered by Meta Muse frontier models over Baseten & Meta Model API.
- * Translates natural language concepts into complete 3D game specifications,
- * physics contracts, and dual-engine code synthesis (Three.js WebGL & Unity C#).
+ * Game Architecture Director — model routing:
+ *   - High reasoning: Meta Muse Wonder 1.0 (Meta Model API) designs the
+ *     structured game: title, biome, physics numbers, objective, assets.
+ *   - Open weights: Baseten `meta-models/muse-spark-open` enriches the
+ *     focal asset prompts (genuine open-weight usage in every run).
+ *   - Fallback: deterministic local heuristics if a provider is down.
+ * Every run records which models actually answered in the spec.
  */
 
 import { BasetenMuseClient } from "./baseten_muse.js";
+import { MetaWonderClient } from "./meta_wonder.js";
+
+const BIOMES = [
+  "cyber-orbital",
+  "desert-canyon",
+  "subzero-glacier",
+  "bioluminescent-canopy",
+];
+
+function clamp(value, min, max, fallback) {
+  const n = Number(value);
+  return Number.isFinite(n) ? Math.min(max, Math.max(min, n)) : fallback;
+}
 
 export class MuseWonderDirector {
-  constructor(config = {}) {
-    this.apiKey = config.apiKey || process.env.META_API_KEY;
-    this.model = config.model || "meta-models/muse-spark-open";
+  constructor() {
+    this.wonder = new MetaWonderClient();
     this.baseten = new BasetenMuseClient();
   }
 
-  /**
-   * Plans and synthesizes a complete 3D game world from prompt
-   */
   async architectGame(prompt) {
     if (!prompt || typeof prompt !== "string") {
       throw new Error("Game prompt must be a non-empty string");
     }
-
     const cleanPrompt = prompt.trim();
-    let aiReasoning = "";
 
-    // 1. Live Meta Muse reasoning via Baseten ($100 Hackathon Credits)
+    let design = null;
+    let architectModel = "local-heuristics";
+    let reasoning = "";
+
+    // 1) High-reasoning architect: Muse Wonder.
     try {
-      const systemPrompt = `You are Meta Muse Wonder, an expert 3D game architect and systems designer.
-Analyze the user's game concept and provide:
-1. Creative title (under 5 words)
-2. Biome type (cyber-orbital, desert-canyon, subzero-glacier, or bioluminescent-canopy)
-3. Three unique focal 3D game objects with prompts
-Be concise and creative.`;
-
-      const aiResponse = await this.baseten.generateCompletion(
-        systemPrompt,
-        cleanPrompt,
-        500,
-      );
-      aiReasoning = aiResponse.reasoning || aiResponse.content;
+      const wonderResult = await this.wonder.designGame(cleanPrompt);
+      if (wonderResult.design) {
+        design = wonderResult.design;
+        architectModel = "muse-wonder-1.0";
+        reasoning = wonderResult.text.slice(0, 400);
+      }
     } catch {
-      aiReasoning = "Meta Muse local heuristic reasoning pipeline active.";
+      design = null;
     }
 
-    // 2. Structural world decomposition
-    const gameSpec = {
-      title: this.deriveTitle(cleanPrompt),
+    // 2) Open-weight enrichment: Baseten Muse Spark Open.
+    let enrichmentModel = null;
+    let enrichedPrompts = [];
+    try {
+      const aiResponse = await this.baseten.generateCompletion(
+        "You list vivid 3D game asset prompts. Reply with exactly 3 lines, one asset prompt per line, no numbering, no explanation.",
+        `Game concept: ${cleanPrompt}\nBiome: ${design?.biome || this.detectBiome(cleanPrompt)}\nList a player avatar, a collectible, and an obstacle asset prompt.`,
+        1500,
+      );
+      const text = aiResponse.content || "";
+      enrichedPrompts = text
+        .split("\n")
+        .map((line) => line.replace(/^[-*\d.)\s]+/, "").trim())
+        .filter(
+          (line) =>
+            line.length > 15 &&
+            !/^(we need|user wants|the user|list a|reply|exactly)/i.test(line),
+        )
+        .slice(-3);
+      if (enrichedPrompts.length)
+        enrichmentModel = "meta-models/muse-spark-open";
+      if (!reasoning) reasoning = text.slice(0, 400);
+    } catch {
+      enrichedPrompts = [];
+    }
+
+    const biome = BIOMES.includes(design?.biome)
+      ? design.biome
+      : this.detectBiome(cleanPrompt);
+
+    const wonderAssets = Array.isArray(design?.focalAssets)
+      ? design.focalAssets
+      : [];
+    const roles = ["player", "collectible", "obstacle"];
+    const focalAssets = roles.map((role, i) => {
+      const fromWonder =
+        wonderAssets.find((a) => a?.role === role) || wonderAssets[i] || {};
+      return {
+        id: ["player_avatar", "energy_cell", "pylon_barrier"][i],
+        role,
+        category: ["character", "prop", "structure"][i],
+        prompt:
+          enrichedPrompts[i] ||
+          fromWonder.prompt ||
+          [
+            "Futuristic humanoid explorer with kinetic energy core",
+            "Luminous crystalline energy orb floating in air",
+            "Angular titanium pylon barrier with glowing caution strips",
+          ][i],
+        scale: [
+          [1, 1, 1],
+          [0.6, 0.6, 0.6],
+          [1.2, 2.5, 1.2],
+        ][i],
+      };
+    });
+
+    const lowerPrompt = cleanPrompt.toLowerCase();
+    const heuristicGravity = /low.gravity|low gravity|moon|lunar|floaty/.test(
+      lowerPrompt,
+    )
+      ? -7
+      : /heavy gravity|high gravity/.test(lowerPrompt)
+        ? -24
+        : -16;
+    const heuristicSpeed = /speedway|racing|fast|speed/.test(lowerPrompt)
+      ? 20
+      : 14;
+    const heuristicJump = /floaty|low.gravity|low gravity|lunar|moon/.test(
+      lowerPrompt,
+    )
+      ? 13
+      : 9.5;
+
+    return {
+      title:
+        typeof design?.title === "string" && design.title.trim()
+          ? design.title.trim().slice(0, 60)
+          : this.deriveTitle(cleanPrompt),
       prompt: cleanPrompt,
-      metaModel: this.model,
-      reasoning: aiReasoning.slice(0, 300),
+      objective:
+        typeof design?.objective === "string" && design.objective.trim()
+          ? design.objective.trim().slice(0, 200)
+          : "Collect the energy orbs scattered across the world.",
+      metaModel: architectModel,
+      architectModel,
+      enrichmentModel,
+      reasoning: reasoning.slice(0, 400),
       timestamp: new Date().toISOString(),
       world: {
-        biome: this.detectBiome(cleanPrompt),
+        biome,
         terrain: {
           type: "procedural-heightmap",
           size: [100, 100],
@@ -75,9 +163,9 @@ Be concise and creative.`;
           smoothLag: 0.1,
         },
         physics: {
-          gravity: -16.0,
-          playerSpeed: 14.0,
-          jumpVelocity: 9.5,
+          gravity: clamp(design?.gravity, -30, -5, heuristicGravity),
+          playerSpeed: clamp(design?.playerSpeed, 6, 24, heuristicSpeed),
+          jumpVelocity: clamp(design?.jumpVelocity, 6, 16, heuristicJump),
           friction: 0.92,
         },
         controls: {
@@ -85,36 +173,9 @@ Be concise and creative.`;
           mobile: ["VirtualJoystick", "TouchJumpButton"],
         },
       },
-      focalAssets: [
-        {
-          id: "player_avatar",
-          role: "player",
-          category: "character",
-          prompt: "Futuristic humanoid explorer with kinetic energy core",
-          scale: [1, 1, 1],
-        },
-        {
-          id: "energy_cell",
-          role: "collectible",
-          category: "prop",
-          prompt: "Luminous crystalline energy orb floating in air",
-          scale: [0.6, 0.6, 0.6],
-        },
-        {
-          id: "pylon_barrier",
-          role: "obstacle",
-          category: "structure",
-          prompt: "Angular titanium pylon barrier with glowing caution strips",
-          scale: [1.2, 2.5, 1.2],
-        },
-      ],
-      targets: {
-        webgl: true,
-        unity: true,
-      },
+      focalAssets,
+      targets: { webgl: true, unity: true },
     };
-
-    return gameSpec;
   }
 
   deriveTitle(prompt) {
@@ -129,9 +190,12 @@ Be concise and creative.`;
     const p = prompt.toLowerCase();
     if (p.includes("desert") || p.includes("sand") || p.includes("dune"))
       return "desert-canyon";
-    if (p.includes("space") || p.includes("cyber") || p.includes("neon"))
-      return "cyber-orbital";
-    if (p.includes("forest") || p.includes("nature") || p.includes("jungle"))
+    if (
+      p.includes("forest") ||
+      p.includes("nature") ||
+      p.includes("jungle") ||
+      p.includes("canopy")
+    )
       return "bioluminescent-canopy";
     if (p.includes("ice") || p.includes("snow") || p.includes("glacier"))
       return "subzero-glacier";

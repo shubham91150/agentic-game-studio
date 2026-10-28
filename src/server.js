@@ -39,6 +39,7 @@ const CONTENT_TYPES = {
   ".png": "image/png",
   ".jpg": "image/jpeg",
   ".svg": "image/svg+xml",
+  ".webp": "image/webp",
 };
 
 function sendFile(res, filePath) {
@@ -172,6 +173,19 @@ const server = http.createServer(async (req, res) => {
   const playMatch = pathname.match(/^\/studio\/games\/([\w-]+)\/index\.html$/);
   if (playMatch) {
     return sendFile(res, path.join(STORAGE_DIR, playMatch[1], "index.html"));
+  }
+
+  // ---------- Stored game assets (concept art etc.) ----------
+  const assetMatch = pathname.match(
+    /^\/studio\/games\/([\w-]+)\/(assets\/[\w.\-]+)$/,
+  );
+  if (assetMatch) {
+    const assetPath = path.join(STORAGE_DIR, assetMatch[1], assetMatch[2]);
+    if (!path.resolve(assetPath).startsWith(path.resolve(STORAGE_DIR))) {
+      res.writeHead(403, { "content-type": "text/plain" });
+      return res.end("Forbidden");
+    }
+    return sendFile(res, assetPath);
   }
 
   // ---------- Live agent run (Server-Sent Events) ----------

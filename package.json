@@ -10,7 +10,7 @@
     "web:start": "next start",
     "start": "node src/index.js",
     "server:start": "node src/server.js",
-    "test": "node --test test/**/*.test.js",
+    "test": "node --test test/",
     "generate": "node src/agent/generate.js"
   },
   "keywords": [

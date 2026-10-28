@@ -112,16 +112,18 @@ agentic-game-studio/storage/games/{game_id}/
 
 ---
 
-## 📋 Master TODO Tracker
+## 📋 Master TODO Tracker (updated — verified against code)
 
 - [x] **Repository Initialized:** `shubham91150/agentic-game-studio` (Public, MIT License).
 - [x] **Live Frontend Deployed:** `https://agentic-game-studio.vercel.app/` (Vercel-native).
-- [x] **Meta Muse Spark Open Integration:** Connected via Baseten (`meta-models/muse-spark-open`, $100 Credits active).
-- [x] **Muse Code CLI Installed on VM:** `~/.local/bin/muse` (Muse Code 1.4.13).
-- [x] **Hunyuan World 2.0 Spatial Terrain Engine:** Procedural elevation grid synthesis.
-- [x] **Dual-Engine Export:** Three.js WebGL compiler + Unity C# exporter.
-- [ ] **Game Storage & Persistence System:** Implement `storage/games/` directory with `manifest.json` per game.
-- [ ] **Games Library API (`GET /api/games`):** Endpoint returning list of all previously generated games.
-- [ ] **Studio UI "My Games" Drawer:** Visual list in workbench to load and replay saved games.
-- [ ] **Mesh Decimation & Optimization Utility:** Automated triangle budget clamp (<50,000 polys for 60 FPS).
-- [ ] **End-to-End One-Click Verification:** Full loop test from prompt to saved game, WebGL play, and Unity export.
+- [x] **Model routing:** Wonder 1.0 = high-reasoning design, Muse Spark 1.3 = CLI code, Muse Spark Open (Baseten) = open-weight enrichment, Muse Image 1.0 = concept art.
+- [x] **Muse Code CLI Installed on VM:** `~/.local/bin/muse` (Muse Code 1.4.14), writes real C# in scoped run folders.
+- [x] **Procedural Terrain Engine:** Elevation grid + deterministic shared layout (rendered by game, proven by QA). _(Learned world models = roadmap.)_
+- [x] **Dual-Engine Export:** Three.js WebGL compiler + Unity project exporter (openable skeleton).
+- [x] **Game Storage & Persistence System:** `storage/games/` with `manifest.json`, assets, Unity scripts per game.
+- [x] **Games Library API:** `GET /api/studio/games` (+ per-game code endpoint).
+- [x] **Studio UI Library:** Assets tab lists stored games with Play; concept art shown.
+- [x] **Physics QA Gate:** CCD, camera, jump-arc, real BFS reachability (`npm test` — 5 passing).
+- [x] **Prompt Cache:** identical prompt = zero API calls (verified 26 ms run).
+- [ ] **SAM segmentation / 3D GLB generation / Blender decimation:** roadmap — not in this build, not claimed.
+- [ ] **Demo video + submission form:** record 3-min video per research script, submit by Nov 4, 9:00 PM ET.

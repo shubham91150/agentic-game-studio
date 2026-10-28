@@ -18,43 +18,26 @@
 
 import fs from "node:fs";
 import path from "node:path";
-import { spawn, execFileSync } from "node:child_process";
+import crypto from "node:crypto";
+import { spawn } from "node:child_process";
 import os from "node:os";
 
 import { MuseWonderDirector } from "./muse_wonder.js";
+import { resolveMetaApiKey } from "./meta_key.js";
 import { SafetyShieldValidator } from "../pipeline/safety_shield.js";
-import { HunyuanWorldPipeline } from "../pipeline/hunyuan_world.js";
+import { TerrainPipeline } from "../pipeline/terrain.js";
+import { generateLayout } from "../pipeline/layout.js";
+import { MetaImageClient } from "../pipeline/meta_image.js";
 import { generateThreeJsGameHtml } from "../engine/threejs_runtime.js";
 import { UnityExporter } from "../engine/unity_exporter.js";
 import { PhysicsQualityGate } from "../verifier/physics_qa_gate.js";
 import { GameStorageManager } from "../storage/game_store.js";
 
+export { resolveMetaApiKey };
+
 const MUSE_BIN = path.join(os.homedir(), ".local", "bin", "muse");
 const BASETEN_MODEL_LABEL = "meta-models/muse-spark-open";
 const CLI_MODEL_LABEL = process.env.MUSE_CLI_MODEL || "muse-spark-1.3";
-const VAULT_SCRIPT =
-  "/home/opencode/project-data/workspace/.orchestrator/vault.mjs";
-
-function readVaultKey(name) {
-  try {
-    if (!fs.existsSync(VAULT_SCRIPT)) return undefined;
-    const out = execFileSync("node", [VAULT_SCRIPT, "get", name], {
-      encoding: "utf8",
-    });
-    return out.trim() || undefined;
-  } catch {
-    return undefined;
-  }
-}
-
-/** Meta Model API key for the Muse CLI: env first, then the local vault. */
-export function resolveMetaApiKey() {
-  return (
-    process.env.MODEL_API_KEY ||
-    process.env.META_API_KEY ||
-    readVaultKey("Meta_Key")
-  );
-}
 
 export class AgentRunner {
   /**
@@ -66,7 +49,7 @@ export class AgentRunner {
     this.emit = emit || (() => {});
     this.shield = new SafetyShieldValidator();
     this.director = new MuseWonderDirector();
-    this.worldPipeline = new HunyuanWorldPipeline();
+    this.worldPipeline = new TerrainPipeline();
     this.qaGate = new PhysicsQualityGate();
     this.gameStore = new GameStorageManager(
       path.join(workspaceDir, "storage", "games"),
@@ -128,9 +111,9 @@ export class AgentRunner {
             "--model",
             CLI_MODEL_LABEL,
             "--reasoning-effort",
-            "medium",
+            "low",
             "--max-model-steps",
-            "8",
+            "4",
             "--api-key-stdin",
             "--disable-sandbox",
             "--disable-approval",
@@ -249,73 +232,188 @@ export class AgentRunner {
     );
     this.log("ok", "Safety check passed (local keyword rules).");
 
-    // ---------------- Step 1: Meta open weights plan the game (Baseten) ----------------
-    this.phase("brain", "Meta Muse Spark Open via Baseten", "running");
-    this.log("info", `Calling Baseten model: ${BASETEN_MODEL_LABEL}`);
+    // Prompt cache: an identical (sanitised) prompt reuses the Wonder/
+    // Baseten design, the CLI-written Unity code, and the concept image.
+    // Repeat builds therefore cost zero Meta/Baseten calls.
+    const promptHash = crypto
+      .createHash("sha1")
+      .update(prompt.toLowerCase())
+      .digest("hex")
+      .slice(0, 16);
+    const cacheDir = path.join(this.workspaceDir, "storage", "cache");
+    fs.mkdirSync(cacheDir, { recursive: true });
+    const specCachePath = path.join(cacheDir, `spec_${promptHash}.json`);
+    const unityCachePath = path.join(cacheDir, `unity_${promptHash}.cs`);
+    const imageCachePath = path.join(cacheDir, `concept_${promptHash}.webp`);
+    const specCached = fs.existsSync(specCachePath);
+
+    // ---------------- Step 1: Architect (Wonder) + open-weight enrichment (Baseten) ----------------
+    this.phase(
+      "brain",
+      "Game design: Muse Wonder + Muse Spark Open",
+      "running",
+    );
     let spec;
-    try {
-      spec = await this.director.architectGame(prompt);
-      this.phase(
-        "brain",
-        "Meta Muse Spark Open via Baseten",
-        "pass",
-        spec.title,
-      );
-      this.log("ok", `Game architecture planned: "${spec.title}"`);
-      this.emit({ type: "spec", spec, at: Date.now() });
-      if (spec.reasoning) {
-        for (const line of String(spec.reasoning).split("\n").slice(0, 6)) {
-          if (line.trim())
-            this.emit({ type: "reasoning", line: line.trim(), at: Date.now() });
-        }
+    if (specCached) {
+      try {
+        spec = JSON.parse(fs.readFileSync(specCachePath, "utf8"));
+        this.phase(
+          "brain",
+          "Game design: Muse Wonder + Muse Spark Open",
+          "pass",
+          "cache hit — 0 API calls",
+        );
+        this.log(
+          "ok",
+          "Design cache hit: Wonder/Baseten skipped, zero credits used.",
+        );
+        this.emit({ type: "spec", spec, at: Date.now() });
+      } catch {
+        spec = null;
       }
-    } catch (err) {
-      this.phase(
-        "brain",
-        "Meta Muse Spark Open via Baseten",
-        "fail",
-        "planner error",
+    }
+    if (!spec) {
+      this.log(
+        "info",
+        "High-reasoning architect: muse-wonder-1.0 · enrichment: " +
+          BASETEN_MODEL_LABEL,
       );
-      this.log("error", "Game architecture planning failed.");
-      this.emit({
-        type: "error",
-        message: "Game architecture planning failed.",
-        at: Date.now(),
-      });
-      return { ok: false };
+      try {
+        spec = await this.director.architectGame(prompt);
+        fs.writeFileSync(specCachePath, JSON.stringify(spec, null, 2), "utf8");
+        this.phase(
+          "brain",
+          "Game design: Muse Wonder + Muse Spark Open",
+          "pass",
+          `${spec.architectModel} · ${spec.world.biome}`,
+        );
+        this.log(
+          "ok",
+          `Game designed by ${spec.architectModel}: "${spec.title}" (enrichment: ${spec.enrichmentModel || "none"})`,
+        );
+        this.emit({ type: "spec", spec, at: Date.now() });
+        if (spec.reasoning) {
+          for (const line of String(spec.reasoning).split("\n").slice(0, 6)) {
+            if (line.trim())
+              this.emit({
+                type: "reasoning",
+                line: line.trim(),
+                at: Date.now(),
+              });
+          }
+        }
+      } catch (err) {
+        this.phase(
+          "brain",
+          "Game design: Muse Wonder + Muse Spark Open",
+          "fail",
+          "planner error",
+        );
+        this.log("error", "Game architecture planning failed.");
+        this.emit({
+          type: "error",
+          message: "Game architecture planning failed.",
+          at: Date.now(),
+        });
+        return { ok: false };
+      }
     }
 
-    // ---------------- Step 2: Muse Code CLI writes files on the VM ----------------
-    this.phase("cli", "Muse Code CLI file pass (VM)", "running");
-    const runDir = path.join(
-      this.workspaceDir,
-      "storage",
-      ".work",
-      `run_${Date.now()}`,
-    );
-    const cliTask =
-      `Create exactly two files in this workspace and nothing else:\n` +
-      `1) SPEC.md — markdown with the game title "${spec.title}", biome "${spec.world.biome}", ` +
-      `player speed ${spec.mechanics.physics.playerSpeed}, jump velocity ${spec.mechanics.physics.jumpVelocity}, ` +
-      `gravity ${spec.mechanics.physics.gravity}, and the objective from this concept: "${prompt}".\n` +
-      `2) AgenticPlayerController.cs — a complete Unity C# MonoBehaviour class named ` +
-      `AgenticPlayerController using only UnityEngine, with WASD/arrow movement at that speed, ` +
-      `a Space jump using that jump velocity and gravity, and no external dependencies.`;
-    const cli = await this.runMuseCLI(runDir, cliTask);
+    // ---------------- Step 1b: Concept art (Meta Muse Image, cached) ----------------
+    this.phase("image", "Concept art: Muse Image 1.0", "running");
+    let conceptImage = null;
+    if (fs.existsSync(imageCachePath)) {
+      conceptImage = fs.readFileSync(imageCachePath);
+      this.phase(
+        "image",
+        "Concept art: Muse Image 1.0",
+        "pass",
+        "cache hit — 0 API calls",
+      );
+      this.log(
+        "ok",
+        "Concept art cache hit: image API skipped, zero credits used.",
+      );
+    } else {
+      try {
+        const imageClient = new MetaImageClient();
+        conceptImage = await imageClient.generateConceptImage(
+          `Video game key art, third-person 3D game "${spec.title}", biome ${spec.world.biome}, ` +
+            `${spec.focalAssets[0]?.prompt || "hero character"}, ${spec.objective}, cinematic lighting, no text`,
+        );
+        fs.writeFileSync(imageCachePath, conceptImage);
+        this.phase(
+          "image",
+          "Concept art: Muse Image 1.0",
+          "pass",
+          `${conceptImage.length} bytes`,
+        );
+        this.log(
+          "ok",
+          `Concept art generated by muse-image-1.0 (${Math.round(conceptImage.length / 1024)} KB).`,
+        );
+      } catch {
+        conceptImage = null;
+        this.phase(
+          "image",
+          "Concept art: Muse Image 1.0",
+          "warn",
+          "image step skipped",
+        );
+        this.log("warn", "Concept art step failed; continuing without it.");
+      }
+    }
 
+    // ---------------- Step 2: Muse Code CLI writes files on the VM (cached) ----------------
+    this.phase("cli", "Muse Code CLI file pass (VM)", "running");
     let cliUnityCode = "";
-    const cliUnityPath = path.join(runDir, "AgenticPlayerController.cs");
-    if (cli.ok && fs.existsSync(cliUnityPath)) {
-      const candidate = fs.readFileSync(cliUnityPath, "utf8");
-      if (
-        /class\s+AgenticPlayerController/.test(candidate) &&
-        /MonoBehaviour/.test(candidate)
-      ) {
-        cliUnityCode = candidate;
+    let cli = { ok: false, live: false };
+    if (fs.existsSync(unityCachePath)) {
+      cliUnityCode = fs.readFileSync(unityCachePath, "utf8");
+      cli = { ok: true, live: false, cached: true };
+      this.phase(
+        "cli",
+        "Muse Code CLI file pass (VM)",
+        "pass",
+        "cache hit — 0 API calls",
+      );
+      this.log(
+        "ok",
+        "Unity code cache hit: Muse CLI skipped, zero credits used.",
+      );
+    } else {
+      const runDir = path.join(
+        this.workspaceDir,
+        "storage",
+        ".work",
+        `run_${Date.now()}`,
+      );
+      const cliTask =
+        `Create exactly two files in this workspace and nothing else:\n` +
+        `1) SPEC.md — markdown with the game title "${spec.title}", biome "${spec.world.biome}", ` +
+        `player speed ${spec.mechanics.physics.playerSpeed}, jump velocity ${spec.mechanics.physics.jumpVelocity}, ` +
+        `gravity ${spec.mechanics.physics.gravity}, and the objective from this concept: "${prompt}".\n` +
+        `2) AgenticPlayerController.cs — a complete Unity C# MonoBehaviour class named ` +
+        `AgenticPlayerController using only UnityEngine, with WASD/arrow movement at that speed, ` +
+        `a Space jump using that jump velocity and gravity, and no external dependencies.`;
+      cli = await this.runMuseCLI(runDir, cliTask);
+
+      const cliUnityPath = path.join(runDir, "AgenticPlayerController.cs");
+      if (cli.ok && fs.existsSync(cliUnityPath)) {
+        const candidate = fs.readFileSync(cliUnityPath, "utf8");
+        if (
+          /class\s+AgenticPlayerController/.test(candidate) &&
+          /MonoBehaviour/.test(candidate)
+        ) {
+          cliUnityCode = candidate;
+          fs.writeFileSync(unityCachePath, candidate, "utf8");
+        }
       }
     }
     const cliWroteCode = Boolean(cliUnityCode);
-    if (cli.ok) {
+    if (cli.cached) {
+      // Phase/log already emitted above; nothing more to report.
+    } else if (cli.ok) {
       this.phase(
         "cli",
         "Muse Code CLI file pass (VM)",
@@ -343,14 +441,15 @@ export class AgentRunner {
       );
     }
 
-    // ---------------- Step 3: Procedural terrain grid ----------------
+    // ---------------- Step 3: Procedural terrain grid + shared layout ----------------
     this.phase("world", "Procedural world terrain grid", "running");
     const worldData = this.worldPipeline.generateWorldGeometry(spec.world);
+    const layout = generateLayout(spec);
     this.phase(
       "world",
       "Procedural world terrain grid",
       "pass",
-      `${worldData.gridSize}x${worldData.gridSize}`,
+      `${worldData.gridSize}x${worldData.gridSize} · ${layout.orbs.length} orbs · ${layout.obstacles.length} obstacles`,
     );
     this.log(
       "ok",
@@ -359,7 +458,7 @@ export class AgentRunner {
 
     // ---------------- Step 4: Dual engine compile ----------------
     this.phase("webgl", "Three.js WebGL runtime", "running");
-    const gameHtml = generateThreeJsGameHtml(spec, worldData);
+    const gameHtml = generateThreeJsGameHtml(spec, worldData, layout);
     const webDir = path.join(this.workspaceDir, "build", "web");
     fs.mkdirSync(webDir, { recursive: true });
     fs.writeFileSync(path.join(webDir, "index.html"), gameHtml, "utf8");
@@ -420,7 +519,7 @@ export class AgentRunner {
 
     // ---------------- Step 5: Quality gate (local math checks) ----------------
     this.phase("qa", "Physics QA checks (local)", "running");
-    const qa = this.qaGate.runFullQASuite(spec);
+    const qa = this.qaGate.runFullQASuite(spec, layout);
     for (const proof of qa.proofs) {
       this.emit({
         type: "proof",
@@ -434,7 +533,12 @@ export class AgentRunner {
         `${proof.testName}: ${proof.passed ? "PASSED" : "FAILED"}`,
       );
     }
-    this.phase("qa", "Physics QA checks (local)", "pass", `score ${qa.score}`);
+    this.phase(
+      "qa",
+      "Physics QA checks (local)",
+      qa.gatePassed ? "pass" : "warn",
+      `score ${qa.score}`,
+    );
 
     // ---------------- Step 6: Persist to library ----------------
     this.phase("store", "Persistent game library", "running");
@@ -444,6 +548,7 @@ export class AgentRunner {
       gameHtml,
       unityResult.scripts,
       unitySource === "muse-cli" ? unityCode : undefined,
+      conceptImage,
     );
     this.phase("store", "Persistent game library", "pass", saved.id);
     this.log("ok", `Game stored in the library: ${saved.id}`);
@@ -454,6 +559,9 @@ export class AgentRunner {
       ok: true,
       gameId: saved.id,
       playUrl: `/studio/games/${saved.id}/index.html`,
+      imageUrl: conceptImage
+        ? `/studio/games/${saved.id}/assets/concept.webp`
+        : null,
       title: saved.title,
       unitySource,
       elapsedMs,
