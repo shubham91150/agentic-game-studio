@@ -1,19 +1,22 @@
 /**
  * Agent Runner - Real Orchestrator with Live Event Streaming
  *
- * Verified live chain (each step emits SSE events the UI renders):
- *   1. Prompt safety check (local rules)        -> validate prompt
- *   2. Baseten `meta-models/muse-spark-open`    -> game spec + reasoning
- *      (Meta open weights, direct OpenAI-compatible API call)
- *   3. Muse Code CLI (`muse exec`, VM binary)  -> writes SPEC.md and
- *      AgenticPlayerController.cs into a scoped run workspace.
- *      Provider is Meta Model API (vault `Meta_Key`); the CLI cannot
- *      talk to Baseten directly (its model-catalog fetch gets HTTP 405
- *      from Baseten), so Baseten is called by step 2, not by the CLI.
- *   4. Procedural terrain grid                  -> world geometry data
- *   5. Three.js WebGL + Unity C#                -> dual engine outputs
- *   6. Physics QA gate (local math checks)      -> pass/fail proofs
- *   7. Persistent storage                       -> library entry
+ * The agent runs ON THE VM. Every step the UI shows is an action that
+ * actually executed here, in arrival order — the UI predefines nothing:
+ *   1. Prompt safety check (local rules)
+ *   2. Game design by Muse Wonder 1.0 + open-weight enrichment on Baseten
+ *   3. Concept art by Muse Image 1.0
+ *   4. Muse Code CLI (`muse exec --json`) — its REAL sub-actions
+ *      (model thinking, tool: write_file per file) are parsed from the
+ *      CLI's JSONL stream and each becomes its own step in the UI.
+ *      Internal reminder/subagent noise is filtered out.
+ *   5. Procedural terrain + deterministic shared layout
+ *   6. Three.js WebGL runtime compiled from the spec
+ *   7. Unity C# project (CLI-written code when valid)
+ *   8. Physics QA gate (local math incl. real BFS reachability)
+ *   9. Persistent storage -> library entry
+ * Token usage reported by the CLI (`run.usage`) is streamed too, so
+ * credit spend is visible per run.
  */
 
 import fs from "node:fs";
@@ -39,6 +42,171 @@ const MUSE_BIN = path.join(os.homedir(), ".local", "bin", "muse");
 const BASETEN_MODEL_LABEL = "meta-models/muse-spark-open";
 const CLI_MODEL_LABEL = process.env.MUSE_CLI_MODEL || "muse-spark-1.3";
 
+/**
+ * Human label + origin for one real CLI sub-action.
+ * Returns null for internal noise (reminder/subagent tasks) — those are
+ * never shown in the UI.
+ */
+export function describeCliTaskKind(kind) {
+  if (!kind || kind.startsWith("reminder.")) return null;
+  if (kind === "model.meta.response") {
+    return {
+      title: "Muse Spark 1.3 thinking",
+      source: `live Meta · CLI · ${CLI_MODEL_LABEL}`,
+    };
+  }
+  const toolMatch = kind.match(/^tool[:.](.+)$/);
+  if (toolMatch) {
+    return { title: `CLI tool: ${toolMatch[1]}`, source: "Muse Code CLI" };
+  }
+  return { title: `CLI task: ${kind}`, source: "Muse Code CLI" };
+}
+
+/**
+ * Human-readable one-line summary of a CLI tool output chunk.
+ * Bash-style chunks arrive as JSON metadata ({command, ...}); surface
+ * the command instead of raw JSON. Plain-text chunks (e.g. write_file
+ * "wrote N bytes to ...") pass through trimmed.
+ */
+export function summarizeCliChunk(chunk) {
+  const text = String(chunk || "").trim();
+  if (!text) return "";
+  if (text.startsWith("{")) {
+    try {
+      const obj = JSON.parse(text);
+      if (typeof obj.command === "string" && obj.command.trim()) {
+        return `command: ${obj.command.trim()}`.slice(0, 160);
+      }
+      if (typeof obj.text === "string" && obj.text.trim()) {
+        return obj.text.trim().slice(0, 160);
+      }
+    } catch {
+      /* not JSON — fall through to raw text */
+    }
+  }
+  return text.slice(0, 160);
+}
+
+/**
+ * Pure reducer: one parsed `muse exec --json` line -> UI actions.
+ * Real CLI shape (verified against live output): the lifecycle phase is
+ * part of `payload_type` ("task.lifecycle.proposed", ".started",
+ * ".output", ".completed", ".cancelled") and mirrored in `event.kind`;
+ * the task kind ("model.meta.response", "tool.write_file", ...) only
+ * appears on the `proposed` event. Reminder/subagent tasks are ignored.
+ * @param {{tasks: Map}} state - mutated: taskId -> {title, source, failed}
+ * @param {object} obj - parsed JSONL object
+ * @returns {Array} actions: {phase:{id,label,status,detail,source}} |
+ *   {cli:string} | {log:{level,message}} | {usage:models}
+ */
+export function applyMuseJsonEvent(state, obj) {
+  const actions = [];
+  const p = obj && obj.payload;
+  if (!p) return actions;
+  const pt = obj.payload_type || "";
+  const ev = p.event || {};
+  const phase =
+    ev.kind ||
+    (pt.startsWith("task.lifecycle.")
+      ? pt.slice("task.lifecycle.".length)
+      : "");
+  const taskId = p.task_id || ev.task_id;
+
+  if (pt.startsWith("task.lifecycle.") || ev.kind) {
+    if (phase === "proposed" && ev.task_kind) {
+      const desc = describeCliTaskKind(ev.task_kind);
+      state.tasks.set(
+        taskId,
+        desc ? { ...desc, failed: false, phaseId: null } : { ignored: true },
+      );
+      return actions;
+    }
+    if (!taskId || !state.tasks.has(taskId)) return actions;
+    const t = state.tasks.get(taskId);
+    if (t.ignored) return actions;
+    // Sequential ids: task UUIDs share a run prefix, so truncation
+    // collides. Arrival order is the honest, unique naming.
+    if (!t.phaseId) {
+      state.seq = (state.seq || 0) + 1;
+      t.phaseId = `cli-step-${state.seq}`;
+    }
+    const phaseId = t.phaseId;
+    if (phase === "started") {
+      actions.push({
+        phase: {
+          id: phaseId,
+          label: t.title,
+          status: "running",
+          detail: "",
+          source: t.source,
+        },
+      });
+    } else if (
+      phase === "output" &&
+      typeof ev.chunk === "string" &&
+      ev.chunk.trim()
+    ) {
+      t.lastDetail = summarizeCliChunk(ev.chunk);
+      actions.push({ cli: ev.chunk.trim().slice(0, 500) });
+      actions.push({
+        phase: {
+          id: phaseId,
+          label: t.title,
+          status: "running",
+          detail: t.lastDetail,
+          source: t.source,
+        },
+      });
+    } else if (phase === "completed") {
+      actions.push({
+        phase: {
+          id: phaseId,
+          label: t.title,
+          status: "pass",
+          detail: t.lastDetail || "done",
+          source: t.source,
+        },
+      });
+    } else if (phase === "cancelled") {
+      actions.push({
+        phase: {
+          id: phaseId,
+          label: t.title,
+          status: "warn",
+          detail: ev.reason || "cancelled",
+          source: t.source,
+        },
+      });
+    }
+    // accepted/scheduled/status/tool_output_ref/side_effect_intent:
+    // internal transitions, intentionally silent.
+    return actions;
+  }
+  if (pt === "tool.result" && p.correlation_facts) {
+    const outcome = p.correlation_facts.outcome;
+    const tool = p.correlation_facts.tool_name || "tool";
+    if (outcome && outcome !== "success") {
+      actions.push({
+        log: {
+          level: "warn",
+          message: `CLI tool ${tool} reported: ${outcome}`,
+        },
+      });
+    }
+  } else if (pt === "run.usage" && Array.isArray(p.models)) {
+    const parts = p.models.map(
+      (m) =>
+        `${m.model}: ${m.input_tokens} in / ${m.output_tokens} out` +
+        (m.cached_tokens ? ` (${m.cached_tokens} cached)` : ""),
+    );
+    actions.push({ usage: p.models });
+    actions.push({
+      log: { level: "info", message: `CLI token usage — ${parts.join("; ")}` },
+    });
+  }
+  return actions;
+}
+
 export class AgentRunner {
   /**
    * @param {string} workspaceDir - repo root the agent may write inside
@@ -60,15 +228,40 @@ export class AgentRunner {
     this.emit({ type: "log", level, message, at: Date.now() });
   }
 
-  phase(id, label, status, detail) {
+  phase(id, label, status, detail, source) {
     this.emit({
       type: "phase",
       id,
       label,
       status,
       detail: detail || "",
+      source: source || "",
       at: Date.now(),
     });
+  }
+
+  /** Human label + origin for one real CLI sub-action. Null = internal noise. */
+  applyCliAction(action) {
+    if (action.phase) {
+      this.phase(
+        action.phase.id,
+        action.phase.label,
+        action.phase.status,
+        action.phase.detail,
+        action.phase.source,
+      );
+    } else if (action.cli) {
+      this.emit({
+        type: "cli",
+        stream: "stdout",
+        line: action.cli,
+        at: Date.now(),
+      });
+    } else if (action.log) {
+      this.log(action.log.level, action.log.message);
+    } else if (action.usage) {
+      this.emit({ type: "usage", models: action.usage, at: Date.now() });
+    }
   }
 
   /** Is the real `muse` binary present and runnable? */
@@ -81,10 +274,12 @@ export class AgentRunner {
   }
 
   /**
-   * Runs `muse exec` in a scoped run workspace and streams every
-   * stdout/stderr line to the UI. Uses the live Meta provider when a
-   * Meta Model API key is available; otherwise falls back to the CLI's
-   * offline echo provider and says so in the log.
+   * Runs `muse exec` in a scoped run workspace and streams the CLI's REAL
+   * sub-actions to the UI. With the live Meta provider the CLI emits
+   * machine-readable JSONL (`--json`); each model/tool action parsed from
+   * it becomes its own step (model thinking, tool: write_file per file).
+   * Internal reminder/subagent chatter is filtered out, never shown.
+   * Falls back to plain-text lines for the offline echo provider.
    * @param {string} runDir - scoped directory the CLI may write in
    * @param {string} taskPrompt
    * @returns {Promise<{ok: boolean, output: string, live: boolean, reason?: string}>}
@@ -103,6 +298,7 @@ export class AgentRunner {
 
       const metaKey = resolveMetaApiKey();
       const live = Boolean(metaKey);
+      const useJson = live;
       const args = live
         ? [
             "exec",
@@ -118,6 +314,7 @@ export class AgentRunner {
             "--disable-sandbox",
             "--disable-approval",
             "--trust-workspace",
+            "--json",
             taskPrompt,
           ]
         : ["exec", "--provider", "echo", "--trust-workspace", taskPrompt];
@@ -145,40 +342,57 @@ export class AgentRunner {
 
       let buffer = "";
       let full = "";
+      const jsonState = { tasks: new Map() };
       const timer = setTimeout(() => {
         this.log("warn", "Muse Code CLI exceeded time budget; terminating.");
         child.kill("SIGTERM");
       }, timeoutMs);
 
+      const handleStdoutLine = (trimmed) => {
+        if (!trimmed) return;
+        if (useJson) {
+          let obj = null;
+          try {
+            obj = JSON.parse(trimmed);
+          } catch {
+            obj = null;
+          }
+          if (obj && obj.payload_type) {
+            for (const action of applyMuseJsonEvent(jsonState, obj)) {
+              this.applyCliAction(action);
+            }
+            return;
+          }
+        }
+        this.emit({
+          type: "cli",
+          stream: "stdout",
+          line: trimmed.slice(0, 500),
+          at: Date.now(),
+        });
+      };
+
       const handleChunk = (chunk) => {
         const text = chunk.toString();
-        full += text;
+        if (!useJson) full += text;
         buffer += text;
         const lines = buffer.split("\n");
         buffer = lines.pop() || "";
         for (const line of lines) {
-          const trimmed = line.trim();
-          if (!trimmed) continue;
-          this.emit({
-            type: "cli",
-            stream: "stdout",
-            line: trimmed,
-            at: Date.now(),
-          });
+          handleStdoutLine(line.trim());
         }
       };
 
       child.stdout.on("data", handleChunk);
       child.stderr.on("data", (chunk) => {
         const text = chunk.toString();
-        full += text;
         for (const line of text.split("\n")) {
           const trimmed = line.trim();
           if (!trimmed) continue;
           this.emit({
             type: "cli",
             stream: "stderr",
-            line: trimmed,
+            line: trimmed.slice(0, 500),
             at: Date.now(),
           });
         }
@@ -192,12 +406,7 @@ export class AgentRunner {
       child.on("close", (code) => {
         clearTimeout(timer);
         if (buffer.trim()) {
-          this.emit({
-            type: "cli",
-            stream: "stdout",
-            line: buffer.trim(),
-            at: Date.now(),
-          });
+          handleStdoutLine(buffer.trim());
         }
         resolve({ ok: code === 0, output: full, live, code });
       });
@@ -213,7 +422,13 @@ export class AgentRunner {
     this.emit({ type: "start", prompt: rawPrompt, at: startedAt });
 
     // ---------------- Step 0: Prompt safety check (local rules) ----------------
-    this.phase("shield", "Prompt safety check (local rules)", "running");
+    this.phase(
+      "shield",
+      "Prompt safety check (local rules)",
+      "running",
+      "",
+      "local rules",
+    );
     let prompt = String(rawPrompt || "").trim();
     const safety = this.shield.validateInputPrompt(prompt);
     if (!safety.safe) {
@@ -229,6 +444,7 @@ export class AgentRunner {
       "Prompt safety check (local rules)",
       "pass",
       "no restricted terms",
+      "local rules",
     );
     this.log("ok", "Safety check passed (local keyword rules).");
 
@@ -252,6 +468,8 @@ export class AgentRunner {
       "brain",
       "Game design: Muse Wonder + Muse Spark Open",
       "running",
+      "",
+      "muse-wonder-1.0 + spark-open",
     );
     let spec;
     if (specCached) {
@@ -262,6 +480,7 @@ export class AgentRunner {
           "Game design: Muse Wonder + Muse Spark Open",
           "pass",
           "cache hit — 0 API calls",
+          "cache",
         );
         this.log(
           "ok",
@@ -286,6 +505,7 @@ export class AgentRunner {
           "Game design: Muse Wonder + Muse Spark Open",
           "pass",
           `${spec.architectModel} · ${spec.world.biome}`,
+          spec.architectModel || "muse-wonder-1.0",
         );
         this.log(
           "ok",
@@ -308,6 +528,7 @@ export class AgentRunner {
           "Game design: Muse Wonder + Muse Spark Open",
           "fail",
           "planner error",
+          "",
         );
         this.log("error", "Game architecture planning failed.");
         this.emit({
@@ -320,7 +541,13 @@ export class AgentRunner {
     }
 
     // ---------------- Step 1b: Concept art (Meta Muse Image, cached) ----------------
-    this.phase("image", "Concept art: Muse Image 1.0", "running");
+    this.phase(
+      "image",
+      "Concept art: Muse Image 1.0",
+      "running",
+      "",
+      "muse-image-1.0",
+    );
     let conceptImage = null;
     if (fs.existsSync(imageCachePath)) {
       conceptImage = fs.readFileSync(imageCachePath);
@@ -329,6 +556,7 @@ export class AgentRunner {
         "Concept art: Muse Image 1.0",
         "pass",
         "cache hit — 0 API calls",
+        "cache",
       );
       this.log(
         "ok",
@@ -347,6 +575,7 @@ export class AgentRunner {
           "Concept art: Muse Image 1.0",
           "pass",
           `${conceptImage.length} bytes`,
+          "muse-image-1.0",
         );
         this.log(
           "ok",
@@ -359,13 +588,20 @@ export class AgentRunner {
           "Concept art: Muse Image 1.0",
           "warn",
           "image step skipped",
+          "",
         );
         this.log("warn", "Concept art step failed; continuing without it.");
       }
     }
 
     // ---------------- Step 2: Muse Code CLI writes files on the VM (cached) ----------------
-    this.phase("cli", "Muse Code CLI file pass (VM)", "running");
+    this.phase(
+      "cli",
+      "Muse Code CLI file pass (VM)",
+      "running",
+      "",
+      `${CLI_MODEL_LABEL} · CLI`,
+    );
     let cliUnityCode = "";
     let cli = { ok: false, live: false };
     if (fs.existsSync(unityCachePath)) {
@@ -376,6 +612,7 @@ export class AgentRunner {
         "Muse Code CLI file pass (VM)",
         "pass",
         "cache hit — 0 API calls",
+        "cache",
       );
       this.log(
         "ok",
@@ -398,8 +635,11 @@ export class AgentRunner {
         `a Space jump using that jump velocity and gravity, and no external dependencies.`;
       cli = await this.runMuseCLI(runDir, cliTask);
 
+      // The run dir is fresh per run, so any file here came from this run.
+      // Accept it on content validity even if the CLI exited non-zero
+      // (e.g. it hit --max-model-steps after writing the files).
       const cliUnityPath = path.join(runDir, "AgenticPlayerController.cs");
-      if (cli.ok && fs.existsSync(cliUnityPath)) {
+      if (fs.existsSync(cliUnityPath)) {
         const candidate = fs.readFileSync(cliUnityPath, "utf8");
         if (
           /class\s+AgenticPlayerController/.test(candidate) &&
@@ -413,20 +653,29 @@ export class AgentRunner {
     const cliWroteCode = Boolean(cliUnityCode);
     if (cli.cached) {
       // Phase/log already emitted above; nothing more to report.
+    } else if (cliWroteCode) {
+      this.phase(
+        "cli",
+        "Muse Code CLI file pass (VM)",
+        "pass",
+        `wrote AgenticPlayerController.cs (${CLI_MODEL_LABEL})`,
+        CLI_MODEL_LABEL,
+      );
+      this.log(
+        "ok",
+        "Muse Code CLI wrote SPEC.md and AgenticPlayerController.cs on the VM.",
+      );
     } else if (cli.ok) {
       this.phase(
         "cli",
         "Muse Code CLI file pass (VM)",
-        cliWroteCode ? "pass" : "warn",
-        cliWroteCode
-          ? `wrote AgenticPlayerController.cs (${CLI_MODEL_LABEL})`
-          : "CLI ran but produced no valid C# file",
+        "warn",
+        "CLI ran but produced no valid C# file",
+        CLI_MODEL_LABEL,
       );
       this.log(
-        cliWroteCode ? "ok" : "warn",
-        cliWroteCode
-          ? "Muse Code CLI wrote SPEC.md and AgenticPlayerController.cs on the VM."
-          : "Muse Code CLI finished without a valid C# file; template fallback will be used.",
+        "warn",
+        "Muse Code CLI finished without a valid C# file; template fallback will be used.",
       );
     } else {
       this.phase(
@@ -434,6 +683,7 @@ export class AgentRunner {
         "Muse Code CLI file pass (VM)",
         "warn",
         cli.reason || "cli-unavailable",
+        "",
       );
       this.log(
         "warn",
@@ -442,7 +692,13 @@ export class AgentRunner {
     }
 
     // ---------------- Step 3: Procedural terrain grid + shared layout ----------------
-    this.phase("world", "Procedural world terrain grid", "running");
+    this.phase(
+      "world",
+      "Procedural world terrain grid",
+      "running",
+      "",
+      "procedural",
+    );
     const worldData = this.worldPipeline.generateWorldGeometry(spec.world);
     const layout = generateLayout(spec);
     this.phase(
@@ -450,6 +706,7 @@ export class AgentRunner {
       "Procedural world terrain grid",
       "pass",
       `${worldData.gridSize}x${worldData.gridSize} · ${layout.orbs.length} orbs · ${layout.obstacles.length} obstacles`,
+      "procedural",
     );
     this.log(
       "ok",
@@ -457,18 +714,30 @@ export class AgentRunner {
     );
 
     // ---------------- Step 4: Dual engine compile ----------------
-    this.phase("webgl", "Three.js WebGL runtime", "running");
+    this.phase("webgl", "Three.js WebGL runtime", "running", "", "three.js");
     const gameHtml = generateThreeJsGameHtml(spec, worldData, layout);
     const webDir = path.join(this.workspaceDir, "build", "web");
     fs.mkdirSync(webDir, { recursive: true });
     fs.writeFileSync(path.join(webDir, "index.html"), gameHtml, "utf8");
-    this.phase("webgl", "Three.js WebGL runtime", "pass", "index.html written");
+    this.phase(
+      "webgl",
+      "Three.js WebGL runtime",
+      "pass",
+      "index.html written",
+      "three.js",
+    );
     this.log(
       "ok",
       "WebGL runtime compiled and written to build/web/index.html",
     );
 
-    this.phase("unity", "Unity 2022.3 C# script", "running");
+    this.phase(
+      "unity",
+      "Unity 2022.3 C# script",
+      "running",
+      "",
+      "unity exporter",
+    );
     const unityDir = path.join(this.workspaceDir, "build", "unity");
     const unityExporter = new UnityExporter(unityDir);
     const unityResult = unityExporter.exportProject(spec, unityDir);
@@ -501,6 +770,7 @@ export class AgentRunner {
       unitySource === "muse-cli"
         ? "written by Muse Code CLI"
         : "template fallback",
+      unitySource,
     );
     this.log(
       "ok",
@@ -518,7 +788,7 @@ export class AgentRunner {
     });
 
     // ---------------- Step 5: Quality gate (local math checks) ----------------
-    this.phase("qa", "Physics QA checks (local)", "running");
+    this.phase("qa", "Physics QA checks (local)", "running", "", "local math");
     const qa = this.qaGate.runFullQASuite(spec, layout);
     for (const proof of qa.proofs) {
       this.emit({
@@ -538,10 +808,11 @@ export class AgentRunner {
       "Physics QA checks (local)",
       qa.gatePassed ? "pass" : "warn",
       `score ${qa.score}`,
+      "local math",
     );
 
     // ---------------- Step 6: Persist to library ----------------
-    this.phase("store", "Persistent game library", "running");
+    this.phase("store", "Persistent game library", "running", "", "vm disk");
     const saved = await this.gameStore.saveGame(
       spec,
       worldData,
@@ -550,7 +821,7 @@ export class AgentRunner {
       unitySource === "muse-cli" ? unityCode : undefined,
       conceptImage,
     );
-    this.phase("store", "Persistent game library", "pass", saved.id);
+    this.phase("store", "Persistent game library", "pass", saved.id, "vm disk");
     this.log("ok", `Game stored in the library: ${saved.id}`);
 
     const elapsedMs = Date.now() - startedAt;
