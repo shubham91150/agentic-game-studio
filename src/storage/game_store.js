@@ -26,9 +26,17 @@ export class GameStorageManager {
   }
 
   /**
-   * Saves a newly synthesized game to persistent storage
+   * Saves a newly synthesized game to persistent storage.
+   * @param {string} [unityControllerCode] - when given (e.g. written by the
+   *   Muse Code CLI), stored verbatim instead of copying from build/unity.
    */
-  async saveGame(spec, worldData, gameHtml, unityScripts = []) {
+  async saveGame(
+    spec,
+    worldData,
+    gameHtml,
+    unityScripts = [],
+    unityControllerCode,
+  ) {
     const gameId =
       "game_" + Date.now() + "_" + crypto.randomBytes(3).toString("hex");
     const gameDir = path.join(this.baseDir, gameId);
@@ -41,7 +49,7 @@ export class GameStorageManager {
       biome: spec.world?.biome || "cyber-orbital",
       metaModel: spec.metaModel || "meta-models/muse-spark-open",
       createdAt: new Date().toISOString(),
-      playUrl: `/game/${gameId}`,
+      playUrl: `/studio/games/${gameId}/index.html`,
       files: {
         html: "index.html",
         manifest: "manifest.json",
@@ -73,6 +81,14 @@ export class GameStorageManager {
         "Scripts",
       );
       for (const name of unityScripts) {
+        if (name === "AgenticPlayerController.cs" && unityControllerCode) {
+          await fs.promises.writeFile(
+            path.join(unityDir, name),
+            unityControllerCode,
+            "utf8",
+          );
+          continue;
+        }
         const from = path.join(sourceDir, name);
         if (fs.existsSync(from)) {
           fs.copyFileSync(from, path.join(unityDir, name));

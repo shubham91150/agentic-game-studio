@@ -3,10 +3,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Activity,
-  ArrowDown,
-  ArrowLeft,
-  ArrowRight,
-  ArrowUp,
   Box,
   Check,
   ChevronDown,
@@ -28,103 +24,38 @@ import {
 import { QRCodeSVG } from "qrcode.react";
 import GameViewport from "./game-viewport.js";
 
+// VM backend that runs the Muse Code CLI and the Baseten planner.
+// The Vercel-hosted UI only renders; all agent work happens there.
+const STUDIO_API_BASE =
+  process.env.NEXT_PUBLIC_STUDIO_API_BASE || "https://spurcode.duckdns.org";
+
 const DEFAULT_PROMPT =
   "Build a compact lunar rover challenge with low-gravity jumps, collectible signal beacons, and precise collision physics.";
 
 const PIPELINE = [
-  { title: "Architecture & Mechanics Plan", source: "Meta Muse Spark" },
-
-  { title: "Physics & Collision Engine Assembly", source: "" },
-  { title: "Playability & Performance Verification", source: "" },
+  { id: "shield", title: "Prompt safety check", source: "local rules" },
+  {
+    id: "brain",
+    title: "Game spec & reasoning",
+    source: "Muse Spark Open · Baseten",
+  },
+  {
+    id: "cli",
+    title: "File pass on VM",
+    source: "Muse Code CLI · muse-spark-1.3",
+  },
+  { id: "world", title: "World terrain grid", source: "procedural" },
+  { id: "webgl", title: "WebGL runtime", source: "Three.js" },
+  { id: "unity", title: "Unity C# script", source: "CLI or template" },
+  { id: "qa", title: "Physics QA checks", source: "local math" },
+  { id: "store", title: "Save to library", source: "VM storage" },
 ];
 
-const INITIAL_STAGES = ["done", "done", "running", "pending"];
 const TABS = [
   { id: "reasoning", label: "Agent Reasoning", icon: Activity },
   { id: "code", label: "Generated Code", icon: FileCode2 },
   { id: "assets", label: "Assets", icon: Box },
 ];
-
-const SAMPLE_ASSETS = [
-  { name: "Rover chassis", kind: "3D mesh", size: "2.4 MB", polygons: "8.4k tris" },
-  { name: "Signal beacon", kind: "3D mesh", size: "680 KB", polygons: "1.2k tris" },
-  { name: "Moon terrain", kind: "Environment", size: "4.8 MB", polygons: "18.6k tris" },
-  { name: "Surface rocks", kind: "3D mesh", size: "1.1 MB", polygons: "3.8k tris" },
-];
-
-const THREE_CODE = `import * as THREE from "three";
-
-export function createLunarRoverScene(container) {
-  const scene = new THREE.Scene();
-  scene.background = new THREE.Color("#09090b");
-
-  const camera = new THREE.PerspectiveCamera(
-    46,
-    container.clientWidth / container.clientHeight,
-    0.1,
-    120,
-  );
-  camera.position.set(10.5, 12.5, 17.5);
-
-  const renderer = new THREE.WebGLRenderer({ antialias: true });
-  renderer.setSize(container.clientWidth, container.clientHeight);
-  renderer.shadowMap.enabled = true;
-  container.appendChild(renderer.domElement);
-
-  const ground = new THREE.Mesh(
-    new THREE.PlaneGeometry(36, 26),
-    new THREE.MeshStandardMaterial({ color: 0x383a3e, roughness: 0.96 }),
-  );
-  ground.rotation.x = -Math.PI / 2;
-  ground.receiveShadow = true;
-  scene.add(ground);
-
-  const rover = new THREE.Mesh(
-    new THREE.BoxGeometry(1.9, 0.8, 1.26),
-    new THREE.MeshStandardMaterial({ color: 0x85888d, flatShading: true }),
-  );
-  rover.position.y = 0.55;
-  rover.castShadow = true;
-  scene.add(rover);
-
-  scene.add(new THREE.HemisphereLight(0xd9dcdf, 0x282a2f, 1.8));
-  const keyLight = new THREE.DirectionalLight(0xf2f2ee, 2.1);
-  keyLight.position.set(-8, 17, 10);
-  keyLight.castShadow = true;
-  scene.add(keyLight);
-
-  function render() {
-    requestAnimationFrame(render);
-    renderer.render(scene, camera);
-  }
-  render();
-
-  return () => {
-    renderer.dispose();
-    container.replaceChildren();
-  };
-}`;
-
-const UNITY_CODE = `using UnityEngine;
-
-public class LunarRoverDemo : MonoBehaviour
-{
-    [SerializeField] private float moveSpeed = 4.1f;
-    [SerializeField] private float turnSpeed = 120f;
-
-    private void Update()
-    {
-        var forward = Input.GetAxis("Vertical");
-        var turn = Input.GetAxis("Horizontal");
-        transform.Translate(
-            Vector3.forward * (forward * moveSpeed * Time.deltaTime)
-        );
-        transform.Rotate(
-            Vector3.up,
-            turn * turnSpeed * Time.deltaTime
-        );
-    }
-}`;
 
 const TEMPLATES = [
   {
@@ -146,6 +77,8 @@ const TEMPLATES = [
   },
 ];
 
+const EMPTY_STAGES = Object.fromEntries(PIPELINE.map((s) => [s.id, "pending"]));
+
 function downloadText(filename, content, mimeType) {
   const file = new Blob([content], { type: mimeType });
   const objectUrl = URL.createObjectURL(file);
@@ -163,7 +96,6 @@ async function copyText(value) {
     await navigator.clipboard.writeText(value);
     return;
   }
-
   const field = document.createElement("textarea");
   field.value = value;
   field.setAttribute("readonly", "");
@@ -187,38 +119,37 @@ function getTimeLabel() {
 
 export default function StudioWorkbench() {
   const [prompt, setPrompt] = useState(DEFAULT_PROMPT);
-  const [model, setModel] = useState("Meta Muse Spark 1.3");
   const [engine, setEngine] = useState("Three.js WebGL");
   const [controls, setControls] = useState("Keyboard + Mobile Touch");
   const [complexity, setComplexity] = useState("Arcade");
-  const [stages, setStages] = useState(INITIAL_STAGES);
+  const [stages, setStages] = useState(EMPTY_STAGES);
   const [activeTab, setActiveTab] = useState("reasoning");
   const [isBuilding, setIsBuilding] = useState(false);
   const [promptError, setPromptError] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [resetRevision, setResetRevision] = useState(0);
-  const [stats, setStats] = useState({ fps: 60, drawCalls: 24, geometryMemoryMB: 42 });
-  const [notice, setNotice] = useState("");
+  const [stats, setStats] = useState({
+    fps: 60,
+    drawCalls: 24,
+    geometryMemoryMB: 42,
+  });
+  const [notice, setNotice] = useState("Checking VM backend…");
   const [shareUrl, setShareUrl] = useState("");
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [logs, setLogs] = useState([
-    {
-      time: "12:04:12",
-      text: "Prompt mapped to movement, environment, and objective constraints.",
-    },
-    {
-      time: "12:04:13",
-      text: "Illustrative demo trace. No live model or GPU service is connected.",
-    },
-  ]);
+  const [logs, setLogs] = useState([]);
+  const [backend, setBackend] = useState({ state: "checking", cli: false });
+  const [generated, setGenerated] = useState(null);
+  const [library, setLibrary] = useState([]);
 
   const qrDialogRef = useRef(null);
   const templateDialogRef = useRef(null);
   const previewFrameRef = useRef(null);
-  const activeRunRef = useRef(0);
+  const abortRef = useRef(null);
   const tabRefs = useRef({});
 
-  const currentCode = engine === "Unity C#" ? UNITY_CODE : THREE_CODE;
+  const currentCode =
+    generated?.unityCode ||
+    "// No generated code yet.\n// Press Build Game — the Muse Code CLI writes AgenticPlayerController.cs on the VM\n// and it will appear here verbatim.";
 
   const onStats = useCallback((nextStats) => {
     setStats((current) => ({ ...current, ...nextStats }));
@@ -229,114 +160,269 @@ export default function StudioWorkbench() {
       setIsFullscreen(document.fullscreenElement === previewFrameRef.current);
     };
     document.addEventListener("fullscreenchange", syncFullscreen);
-    return () => document.removeEventListener("fullscreenchange", syncFullscreen);
+    return () =>
+      document.removeEventListener("fullscreenchange", syncFullscreen);
   }, []);
 
-  useEffect(
-    () => () => {
-      activeRunRef.current += 1;
+  useEffect(() => () => abortRef.current?.abort(), []);
+
+  const addLog = useCallback((text, level = "info") => {
+    setLogs((current) => [
+      ...current.slice(-300),
+      { time: getTimeLabel(), text, level },
+    ]);
+  }, []);
+
+  const refreshLibrary = useCallback(async () => {
+    try {
+      const res = await fetch(`${STUDIO_API_BASE}/api/studio/games`);
+      if (!res.ok) return;
+      const games = await res.json();
+      if (Array.isArray(games)) setLibrary(games);
+    } catch {
+      /* backend offline — library stays empty */
+    }
+  }, []);
+
+  // Backend health on mount: this is how the UI knows the VM is reachable.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(`${STUDIO_API_BASE}/api/studio/health`);
+        if (!res.ok) throw new Error("bad status");
+        const data = await res.json();
+        if (cancelled) return;
+        setBackend({
+          state: "online",
+          cli: Boolean(data.components?.museCodeCLI),
+        });
+        setNotice(
+          data.components?.museCodeCLI
+            ? "VM backend online. Muse Code CLI detected — ready to build."
+            : "VM backend online, but Muse Code CLI was not detected there.",
+        );
+        addLog("Connected to VM backend. Agent pipeline is live.", "ok");
+      } catch {
+        if (cancelled) return;
+        setBackend({ state: "offline", cli: false });
+        setNotice("VM backend unreachable. Builds will fail until it is back.");
+        addLog("Could not reach the VM backend.", "error");
+      }
+    })();
+    refreshLibrary();
+    return () => {
+      cancelled = true;
+    };
+  }, [addLog, refreshLibrary]);
+
+  const handleEvent = useCallback(
+    (evt) => {
+      switch (evt.type) {
+        case "start":
+          addLog(`Run started: "${evt.prompt}"`, "info");
+          break;
+        case "phase":
+          setStages((current) => ({ ...current, [evt.id]: evt.status }));
+          if (evt.status === "running") {
+            const step = PIPELINE.find((s) => s.id === evt.id);
+            if (step) addLog(`→ ${step.title}`, "info");
+          }
+          break;
+        case "log":
+          addLog(evt.message, evt.level || "info");
+          break;
+        case "cli":
+          addLog(`${evt.stream === "stderr" ? "! " : "$ "}${evt.line}`, "cli");
+          break;
+        case "reasoning":
+          addLog(`· ${evt.line}`, "reason");
+          break;
+        case "spec":
+          setGenerated((current) => ({
+            ...(current || {}),
+            spec: evt.spec,
+            title: evt.spec?.title,
+          }));
+          addLog(`Spec ready: biome ${evt.spec?.world?.biome || "?"}`, "ok");
+          break;
+        case "proof":
+          addLog(
+            `[proof] ${evt.name} — ${evt.passed ? "PASSED" : "FAILED"}`,
+            evt.passed ? "ok" : "warn",
+          );
+          break;
+        case "artifact":
+          if (evt.kind === "unity") {
+            setGenerated((current) => ({
+              ...(current || {}),
+              unityCode: evt.content,
+              unitySource: evt.source,
+            }));
+            addLog(
+              evt.source === "muse-cli"
+                ? "Unity C# received from Muse Code CLI (written on VM)."
+                : "Unity C# is from the local template fallback.",
+              evt.source === "muse-cli" ? "ok" : "warn",
+            );
+          }
+          break;
+        case "error":
+          addLog(evt.message, "error");
+          break;
+        case "done":
+          if (evt.ok && evt.playUrl) {
+            setGenerated((current) => ({
+              ...(current || {}),
+              gameId: evt.gameId,
+              title: evt.title,
+              playUrl: `${STUDIO_API_BASE}${evt.playUrl}`,
+              unitySource: evt.unitySource,
+            }));
+            addLog(
+              `Game ready: "${evt.title}" in ${(evt.elapsedMs / 1000).toFixed(1)}s`,
+              "ok",
+            );
+            setNotice(
+              `Build complete — "${evt.title}" is playing in the preview.`,
+            );
+            refreshLibrary();
+          } else {
+            addLog("Run finished without a playable build.", "error");
+            setNotice(
+              "Build finished without a playable game. Check the console.",
+            );
+          }
+          break;
+        default:
+          break;
+      }
     },
-    [],
+    [addLog, refreshLibrary],
   );
 
-  const addLog = (text) => {
-    setLogs((current) => [
-      ...current.slice(-5),
-      { time: getTimeLabel(), text },
-    ]);
-  };
+  async function readSseStream(response) {
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const parts = buffer.split("\n\n");
+      buffer = parts.pop() || "";
+      for (const block of parts) {
+        for (const line of block.split("\n")) {
+          if (!line.startsWith("data:")) continue;
+          const payload = line.slice(5).trim();
+          if (!payload) continue;
+          try {
+            handleEvent(JSON.parse(payload));
+          } catch {
+            /* ignore malformed frame */
+          }
+        }
+      }
+    }
+  }
 
   const handleBuild = async () => {
     if (isBuilding) return;
     if (!prompt.trim()) {
       setPromptError(true);
-      setNotice("Add a game idea before starting the demo build.");
+      setNotice("Add a game idea before building.");
+      return;
+    }
+    if (backend.state === "offline") {
+      setNotice("VM backend is offline — cannot start a build.");
+      addLog("Build blocked: VM backend offline.", "error");
       return;
     }
 
-    const runId = activeRunRef.current + 1;
-    activeRunRef.current = runId;
     setPromptError(false);
     setIsBuilding(true);
     setActiveTab("reasoning");
-    setStages(PIPELINE.map(() => "pending"));
-    setLogs([
-      {
-        time: getTimeLabel(),
-        text: "Demo run started. Prompt accepted for a simulated pipeline.",
-      },
-    ]);
-    setNotice("Running an illustrative build; no external model or GPU is called.");
+    setStages(EMPTY_STAGES);
+    setGenerated(null);
+    setLogs([]);
+    setNotice("Agent is running on the VM — watch the console.");
+    addLog("Sending prompt to VM backend…", "info");
 
-    for (let index = 0; index < PIPELINE.length; index += 1) {
-      if (activeRunRef.current !== runId) return;
-
-      setStages(
-        PIPELINE.map((_, stageIndex) =>
-          stageIndex < index
-            ? "done"
-            : stageIndex === index
-              ? "running"
-              : "pending",
-        ),
-      );
-      addLog(`${PIPELINE[index].title} started in the local demo pipeline.`);
-
-      await new Promise((resolve) => window.setTimeout(resolve, 520));
-      if (activeRunRef.current !== runId) return;
-
-      setStages(
-        PIPELINE.map((_, stageIndex) =>
-          stageIndex <= index ? "done" : "pending",
-        ),
-      );
+    const controller = new AbortController();
+    abortRef.current = controller;
+    try {
+      const res = await fetch(`${STUDIO_API_BASE}/api/studio/generate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt: prompt.trim() }),
+        signal: controller.signal,
+      });
+      if (!res.ok || !res.body)
+        throw new Error(`Backend answered ${res.status}`);
+      await readSseStream(res);
+    } catch (err) {
+      if (err?.name !== "AbortError") {
+        addLog("Connection to VM backend failed during the run.", "error");
+        setNotice("Build failed — connection to the VM backend was lost.");
+      }
+    } finally {
+      setIsBuilding(false);
+      abortRef.current = null;
     }
-
-    setIsBuilding(false);
-    setNotice("Demo build complete. The 3D scene is an illustrative local preview.");
-    addLog("Demo build complete. No Meta Muse, Modal, or SAM service was called.");
   };
 
   const handleNewProject = () => {
-    activeRunRef.current += 1;
+    abortRef.current?.abort();
     setIsBuilding(false);
     setPrompt("");
-    setModel("Meta Muse Spark 1.3");
     setEngine("Three.js WebGL");
     setControls("Keyboard + Mobile Touch");
     setComplexity("Arcade");
-    setStages(PIPELINE.map(() => "pending"));
+    setStages(EMPTY_STAGES);
     setActiveTab("reasoning");
     setPromptError(false);
     setIsPaused(false);
+    setGenerated(null);
     setResetRevision((revision) => revision + 1);
-    setNotice("New demo project ready. Add an idea to start.");
-    setLogs([
-      {
-        time: getTimeLabel(),
-        text: "New project created. The demo workspace is ready for an idea.",
-      },
-    ]);
+    setNotice("New project ready. Add an idea to start.");
+    setLogs([]);
+  };
+
+  const playLibraryGame = (game) => {
+    setGenerated((current) => ({
+      ...(current || {}),
+      gameId: game.id,
+      title: game.title,
+      playUrl: `${STUDIO_API_BASE}${game.playUrl}`,
+    }));
+    setNotice(`Loaded "${game.title}" from the library.`);
+    addLog(`Loaded stored game: ${game.title}`, "ok");
   };
 
   const makeShareUrl = () => {
+    if (generated?.playUrl) return generated.playUrl;
     const url = new URL("/play", window.location.origin);
     if (prompt.trim()) url.searchParams.set("idea", prompt.trim());
     return url.toString();
   };
 
   const openQrDialog = () => {
-    const nextUrl = makeShareUrl();
-    setShareUrl(nextUrl);
+    setShareUrl(makeShareUrl());
     qrDialogRef.current?.showModal();
   };
 
   const handleCopyShareLink = async () => {
     try {
       await copyText(makeShareUrl());
-      setNotice("Demo share link copied. It includes the current prompt text.");
+      setNotice(
+        generated?.playUrl
+          ? "Playable game link copied."
+          : "Link copied. It includes the current prompt text.",
+      );
     } catch {
-      setNotice("Could not copy the link. Check clipboard permissions and try again.");
+      setNotice(
+        "Could not copy the link. Check clipboard permissions and try again.",
+      );
     }
   };
 
@@ -345,66 +431,65 @@ export default function StudioWorkbench() {
       await copyText(currentCode);
       setNotice("Code copied to the clipboard.");
     } catch {
-      setNotice("Could not copy code. Check clipboard permissions and try again.");
+      setNotice(
+        "Could not copy code. Check clipboard permissions and try again.",
+      );
     }
   };
 
   const handleDownloadCode = () => {
-    const isUnity = engine === "Unity C#";
-    downloadText(
-      isUnity ? "lunar-rover-demo.cs" : "lunar-rover-demo.js",
-      currentCode,
-      isUnity ? "text/plain" : "text/javascript",
+    downloadText("AgenticPlayerController.cs", currentCode, "text/plain");
+    setNotice(
+      generated?.unitySource === "muse-cli"
+        ? "Unity C# downloaded (written by Muse Code CLI on the VM)."
+        : "Unity C# downloaded.",
     );
-    setNotice("Illustrative scene code downloaded.");
   };
 
   const handleExport = () => {
-    handleDownloadCode();
-    setNotice(
-      engine === "Unity C#"
-        ? "Unity C# demo script downloaded. It is an illustrative scaffold."
-        : "Three.js WebGL demo module downloaded. It is an illustrative scaffold.",
-    );
+    if (engine === "Unity C#") {
+      handleDownloadCode();
+      return;
+    }
+    if (generated?.playUrl) {
+      window.open(generated.playUrl, "_blank", "noopener");
+      setNotice("Opened the playable WebGL build in a new tab.");
+    } else {
+      setNotice("No WebGL build yet — run Build Game first.");
+    }
   };
 
   const handleFullscreen = async () => {
     const frame = previewFrameRef.current;
     if (!frame) return;
-
     try {
-      if (document.fullscreenElement) {
-        await document.exitFullscreen();
-      } else {
-        await frame.requestFullscreen();
-      }
+      if (document.fullscreenElement) await document.exitFullscreen();
+      else await frame.requestFullscreen();
     } catch {
       setNotice("Fullscreen is unavailable in this browser.");
     }
   };
 
   const selectTemplate = (nextPrompt) => {
-    activeRunRef.current += 1;
+    abortRef.current?.abort();
     setIsBuilding(false);
     setPrompt(nextPrompt);
     setPromptError(false);
-    setStages(INITIAL_STAGES);
-    setNotice("Template loaded. Review the prompt, then start a demo build.");
+    setStages(EMPTY_STAGES);
+    setNotice("Template loaded. Review the prompt, then build.");
     templateDialogRef.current?.close();
   };
 
   const handleTabKeyDown = (event, currentTab) => {
     const currentIndex = TABS.findIndex((tab) => tab.id === currentTab);
     let nextIndex = currentIndex;
-
-    if (event.key === "ArrowRight") nextIndex = (currentIndex + 1) % TABS.length;
-    if (event.key === "ArrowLeft") {
+    if (event.key === "ArrowRight")
+      nextIndex = (currentIndex + 1) % TABS.length;
+    if (event.key === "ArrowLeft")
       nextIndex = (currentIndex - 1 + TABS.length) % TABS.length;
-    }
     if (event.key === "Home") nextIndex = 0;
     if (event.key === "End") nextIndex = TABS.length - 1;
     if (nextIndex === currentIndex) return;
-
     event.preventDefault();
     const nextTab = TABS[nextIndex];
     setActiveTab(nextTab.id);
@@ -434,24 +519,41 @@ export default function StudioWorkbench() {
           tabIndex={0}
         >
           <div className="console-panel-heading">
-            <span className="console-caption">Illustrative {engine} scaffold</span>
+            <span className="console-caption">
+              {generated?.unityCode
+                ? generated.unitySource === "muse-cli"
+                  ? "Unity C# · written by Muse Code CLI on VM"
+                  : "Unity C# · template fallback"
+                : "Unity C# · not generated yet"}
+            </span>
             <div className="console-actions">
-              <button className="icon-text-button" type="button" onClick={handleCopyCode}>
+              <button
+                className="icon-text-button"
+                type="button"
+                onClick={handleCopyCode}
+              >
                 <Copy aria-hidden="true" />
                 <span>Copy</span>
               </button>
-              <button className="icon-text-button" type="button" onClick={handleDownloadCode}>
+              <button
+                className="icon-text-button"
+                type="button"
+                onClick={handleDownloadCode}
+              >
                 <Download aria-hidden="true" />
                 <span>Download</span>
               </button>
             </div>
           </div>
-          <pre className="code-block"><code>{currentCode}</code></pre>
+          <pre className="code-block">
+            <code>{currentCode}</code>
+          </pre>
         </section>
       );
     }
 
     if (activeTab === "assets") {
+      const assets = generated?.spec?.focalAssets || [];
       return (
         <section
           className="console-panel assets-panel"
@@ -461,18 +563,55 @@ export default function StudioWorkbench() {
           tabIndex={0}
         >
           <div className="console-panel-heading">
-            <span className="console-caption">Example assets · illustrative metadata</span>
-            <span className="asset-total">{SAMPLE_ASSETS.length} items</span>
+            <span className="console-caption">
+              {assets.length
+                ? "Planned 3D objects · from Baseten spec"
+                : "No spec yet — build a game first"}
+            </span>
+            <span className="asset-total">{assets.length} items</span>
           </div>
           <ul className="assets-grid">
-            {SAMPLE_ASSETS.map((asset) => (
-              <li className="asset-item" key={asset.name}>
-                <div className="asset-icon"><Box aria-hidden="true" /></div>
-                <div className="asset-copy">
-                  <strong>{asset.name}</strong>
-                  <span>{asset.kind} · {asset.polygons}</span>
+            {assets.map((asset) => (
+              <li className="asset-item" key={asset.id || asset.prompt}>
+                <div className="asset-icon">
+                  <Box aria-hidden="true" />
                 </div>
-                <span className="asset-size">{asset.size}</span>
+                <div className="asset-copy">
+                  <strong>{asset.prompt}</strong>
+                  <span>
+                    {asset.role} · {asset.category}
+                  </span>
+                </div>
+                <span className="asset-size">
+                  {(asset.scale || []).join("×")}
+                </span>
+              </li>
+            ))}
+          </ul>
+          <div className="console-panel-heading" style={{ marginTop: 10 }}>
+            <span className="console-caption">Stored games · VM library</span>
+            <span className="asset-total">{library.length} games</span>
+          </div>
+          <ul className="assets-grid">
+            {library.slice(0, 6).map((game) => (
+              <li className="asset-item" key={game.id}>
+                <div className="asset-icon">
+                  <Play aria-hidden="true" />
+                </div>
+                <div className="asset-copy">
+                  <strong>{game.title}</strong>
+                  <span>
+                    {game.biome} ·{" "}
+                    {new Date(game.createdAt).toLocaleDateString()}
+                  </span>
+                </div>
+                <button
+                  className="icon-text-button"
+                  type="button"
+                  onClick={() => playLibraryGame(game)}
+                >
+                  <span>Play</span>
+                </button>
               </li>
             ))}
           </ul>
@@ -489,16 +628,34 @@ export default function StudioWorkbench() {
         tabIndex={0}
       >
         <div className="console-panel-heading">
-          <span className="console-caption">Progress summaries · demo trace</span>
-          <span className="console-live"><span /> Local</span>
+          <span className="console-caption">
+            Live agent stream · VM backend
+          </span>
+          <span className="console-live">
+            <span /> {backend.state}
+          </span>
         </div>
         <div className="log-list" aria-label="Agent progress summaries">
-          {logs.map((entry, index) => (
-            <div className="log-entry" key={`${entry.time}-${index}`}>
-              <time>{entry.time}</time>
-              <span>{entry.text}</span>
+          {logs.length === 0 ? (
+            <div className="log-entry">
+              <time>--:--:--</time>
+              <span>
+                Waiting for a run. Press Build Game to watch the agent work on
+                the VM.
+              </span>
             </div>
-          ))}
+          ) : (
+            logs.map((entry, index) => (
+              <div
+                className="log-entry"
+                data-level={entry.level}
+                key={`${entry.time}-${index}`}
+              >
+                <time>{entry.time}</time>
+                <span>{entry.text}</span>
+              </div>
+            ))
+          )}
         </div>
       </section>
     );
@@ -508,10 +665,20 @@ export default function StudioWorkbench() {
     <main className="studio-shell">
       <header className="topbar">
         <div className="brand-lockup">
-          <div className="studio-mark" aria-hidden="true"><span /><span /><span /></div>
+          <div className="studio-mark" aria-hidden="true">
+            <span />
+            <span />
+            <span />
+          </div>
           <span className="brand-name">Agentic Game Studio</span>
           <span className="brand-badge">Meta Hackathon</span>
-          <span className="demo-badge">Demo</span>
+          <span className="demo-badge">
+            {backend.state === "online"
+              ? "VM live"
+              : backend.state === "offline"
+                ? "VM offline"
+                : "checking"}
+          </span>
         </div>
 
         <nav className="topbar-actions" aria-label="Main navigation">
@@ -522,7 +689,12 @@ export default function StudioWorkbench() {
           >
             Templates
           </button>
-          <a className="topbar-link" href="https://threejs.org/docs/" target="_blank" rel="noreferrer">
+          <a
+            className="topbar-link"
+            href="https://threejs.org/docs/"
+            target="_blank"
+            rel="noreferrer"
+          >
             Docs <ExternalLink aria-hidden="true" />
           </a>
           <a
@@ -533,7 +705,11 @@ export default function StudioWorkbench() {
           >
             GitHub <ExternalLink aria-hidden="true" />
           </a>
-          <button className="button button-primary button-new-project" type="button" onClick={handleNewProject}>
+          <button
+            className="button button-primary button-new-project"
+            type="button"
+            onClick={handleNewProject}
+          >
             New Project
           </button>
         </nav>
@@ -547,24 +723,29 @@ export default function StudioWorkbench() {
                 <h1 id="workbench-title">Prompt &amp; Architecture</h1>
                 <p>Shape a playable world from a clear idea.</p>
               </div>
-              <span className="illustrative-label">Demo workspace</span>
+              <span className="illustrative-label">Live VM pipeline</span>
             </div>
 
-            <label className="field-label" htmlFor="model-select">Model</label>
+            <label className="field-label" htmlFor="model-select">
+              Pipeline
+            </label>
             <div className="select-wrap model-select-wrap">
               <select
                 id="model-select"
                 className="control-select"
-                value={model}
-                onChange={(event) => setModel(event.target.value)}
+                value="live"
+                disabled
               >
-                <option>Meta Muse Spark 1.3</option>
-                <option>Muse Code 1.0</option>
+                <option value="live">
+                  Muse Spark Open (Baseten) + Muse Code CLI (VM)
+                </option>
               </select>
               <ChevronDown aria-hidden="true" />
             </div>
 
-            <label className="field-label prompt-label" htmlFor="game-prompt">Game prompt</label>
+            <label className="field-label prompt-label" htmlFor="game-prompt">
+              Game prompt
+            </label>
             <textarea
               id="game-prompt"
               className={`prompt-textarea${promptError ? " has-error" : ""}`}
@@ -580,9 +761,14 @@ export default function StudioWorkbench() {
               rows={3}
             />
             {promptError ? (
-              <p id="prompt-error" className="field-error" role="alert">Enter a game idea to continue.</p>
+              <p id="prompt-error" className="field-error" role="alert">
+                Enter a game idea to continue.
+              </p>
             ) : (
-              <p id="prompt-hint" className="sr-only">Describe the game rules, mechanics, physics, and world environment.</p>
+              <p id="prompt-hint" className="sr-only">
+                Describe the game rules, mechanics, physics, and world
+                environment.
+              </p>
             )}
 
             <div className="settings-grid">
@@ -641,30 +827,57 @@ export default function StudioWorkbench() {
               disabled={isBuilding}
               aria-keyshortcuts="Meta+Enter Control+Enter"
             >
-              {isBuilding ? <LoaderCircle className="spin-icon" aria-hidden="true" /> : null}
-              <span>{isBuilding ? "Building demo…" : "Build Game"}</span>
+              {isBuilding ? (
+                <LoaderCircle className="spin-icon" aria-hidden="true" />
+              ) : null}
+              <span>{isBuilding ? "Agent running on VM…" : "Build Game"}</span>
               {!isBuilding ? <kbd>⌘ Enter</kbd> : null}
             </button>
-            <p className="action-notice" role="status" aria-live="polite">{notice}</p>
+            <p className="action-notice" role="status" aria-live="polite">
+              {notice}
+            </p>
 
             <div className="pipeline-heading">
               <span>Agent execution pipeline</span>
-              <span className="pipeline-demo-label">Illustrative demo run</span>
+              <span className="pipeline-demo-label">live stream</span>
             </div>
-            <ol className="pipeline-list" aria-label="Illustrative agent execution pipeline" aria-live="polite">
-              {PIPELINE.map((step, index) => {
-                const stage = stages[index];
+            <ol
+              className="pipeline-list"
+              aria-label="Agent execution pipeline"
+              aria-live="polite"
+            >
+              {PIPELINE.map((step) => {
+                const stage = stages[step.id] || "pending";
                 return (
-                  <li className={`pipeline-step stage-${stage}`} key={step.title}>
+                  <li className={`pipeline-step stage-${stage}`} key={step.id}>
                     <span className="step-indicator" aria-hidden="true">
-                      {stage === "done" ? <Check /> : stage === "running" ? <LoaderCircle className="spin-icon" /> : <Circle />}
+                      {stage === "pass" || stage === "done" ? (
+                        <Check />
+                      ) : stage === "running" ? (
+                        <LoaderCircle className="spin-icon" />
+                      ) : (
+                        <Circle />
+                      )}
                     </span>
                     <div className="step-copy">
                       <span className="step-title">{step.title}</span>
-                      {step.source ? <span className="step-source">{step.source}</span> : null}
+                      {step.source ? (
+                        <span className="step-source">{step.source}</span>
+                      ) : null}
                     </div>
-                    <span className="step-status" aria-label={`Status: ${stage}`}>
-                      {stage === "done" ? "Done" : stage === "running" ? "Running" : "Pending"}
+                    <span
+                      className="step-status"
+                      aria-label={`Status: ${stage}`}
+                    >
+                      {stage === "pass" || stage === "done"
+                        ? "Done"
+                        : stage === "running"
+                          ? "Running"
+                          : stage === "warn"
+                            ? "Check"
+                            : stage === "fail"
+                              ? "Failed"
+                              : "Pending"}
                     </span>
                   </li>
                 );
@@ -673,7 +886,11 @@ export default function StudioWorkbench() {
           </div>
 
           <div className="console-shell">
-            <div className="console-tabs" role="tablist" aria-label="Project details">
+            <div
+              className="console-tabs"
+              role="tablist"
+              aria-label="Project details"
+            >
               {TABS.map(({ id, label, icon: Icon }) => (
                 <button
                   className={`console-tab${activeTab === id ? " is-active" : ""}`}
@@ -684,7 +901,9 @@ export default function StudioWorkbench() {
                   aria-selected={activeTab === id}
                   aria-controls={`panel-${id}`}
                   tabIndex={activeTab === id ? 0 : -1}
-                  ref={(node) => { tabRefs.current[id] = node; }}
+                  ref={(node) => {
+                    tabRefs.current[id] = node;
+                  }}
                   onClick={() => setActiveTab(id)}
                   onKeyDown={(event) => handleTabKeyDown(event, id)}
                 >
@@ -697,11 +916,20 @@ export default function StudioWorkbench() {
           </div>
         </section>
 
-        <section className="preview-pane" aria-labelledby="preview-title" ref={previewFrameRef}>
+        <section
+          className="preview-pane"
+          aria-labelledby="preview-title"
+          ref={previewFrameRef}
+        >
           <div className="preview-header">
             <div className="preview-title-group">
-              <h2 id="preview-title">Project Preview</h2>
-              <span className="fps-pill"><span className="status-dot" />{stats.fps} FPS</span>
+              <h2 id="preview-title">
+                {generated?.title || "Project Preview"}
+              </h2>
+              <span className="fps-pill">
+                <span className="status-dot" />
+                {stats.fps} FPS
+              </span>
             </div>
             <div className="preview-toolbar" aria-label="Preview controls">
               <button
@@ -720,18 +948,32 @@ export default function StudioWorkbench() {
                 title={isPaused ? "Play preview" : "Pause preview"}
                 onClick={() => setIsPaused((paused) => !paused)}
               >
-                {isPaused ? <Play aria-hidden="true" /> : <Pause aria-hidden="true" />}
+                {isPaused ? (
+                  <Play aria-hidden="true" />
+                ) : (
+                  <Pause aria-hidden="true" />
+                )}
               </button>
               <button
                 className="icon-button"
                 type="button"
-                aria-label={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
+                aria-label={
+                  isFullscreen ? "Exit fullscreen" : "Enter fullscreen"
+                }
                 title={isFullscreen ? "Exit fullscreen" : "Fullscreen"}
                 onClick={handleFullscreen}
               >
-                {isFullscreen ? <X aria-hidden="true" /> : <Expand aria-hidden="true" />}
+                {isFullscreen ? (
+                  <X aria-hidden="true" />
+                ) : (
+                  <Expand aria-hidden="true" />
+                )}
               </button>
-              <button className="button button-secondary mobile-qr-button" type="button" onClick={openQrDialog}>
+              <button
+                className="button button-secondary mobile-qr-button"
+                type="button"
+                onClick={openQrDialog}
+              >
                 <Smartphone aria-hidden="true" />
                 <span>Mobile QR</span>
               </button>
@@ -739,31 +981,66 @@ export default function StudioWorkbench() {
           </div>
 
           <div className="preview-stage">
-            <GameViewport isPlaying={!isPaused} resetRevision={resetRevision} onStats={onStats} />
-            <div className="viewport-hint" aria-hidden="true">Drag to orbit · WASD to move</div>
+            {generated?.playUrl ? (
+              <iframe
+                className="game-frame"
+                src={generated.playUrl}
+                title={`Playable build: ${generated.title || "generated game"}`}
+                allow="autoplay; fullscreen"
+              />
+            ) : (
+              <>
+                <GameViewport
+                  isPlaying={!isPaused}
+                  resetRevision={resetRevision}
+                  onStats={onStats}
+                />
+                <div className="viewport-hint" aria-hidden="true">
+                  Drag to orbit · WASD to move
+                </div>
+              </>
+            )}
           </div>
 
           <div className="preview-footer">
-            <div className="telemetry-list" aria-label="Illustrative demo telemetry">
+            <div className="telemetry-list" aria-label="Preview telemetry">
               <div className="telemetry-item resolution-item">
-                <span>Resolution</span>
-                <strong>1920 × 1080</strong>
+                <span>Source</span>
+                <strong>
+                  {generated?.playUrl ? "VM build" : "Local preview"}
+                </strong>
               </div>
               <div className="telemetry-item">
                 <span>Draw Calls</span>
                 <strong>{stats.drawCalls}</strong>
               </div>
               <div className="telemetry-item">
-                <span>Memory · demo</span>
-                <strong>42 MB</strong>
+                <span>Unity code</span>
+                <strong>
+                  {generated?.unitySource === "muse-cli"
+                    ? "Muse CLI"
+                    : generated?.unityCode
+                      ? "Template"
+                      : "—"}
+                </strong>
               </div>
             </div>
             <div className="footer-actions">
-              <button className="button button-footer" type="button" onClick={handleExport}>
+              <button
+                className="button button-footer"
+                type="button"
+                onClick={handleExport}
+              >
                 <Download aria-hidden="true" />
-                <span>{engine === "Unity C#" ? "Export Unity" : "Export WebGL"}</span>
+                <span>
+                  {engine === "Unity C#" ? "Export Unity" : "Open WebGL"}
+                </span>
               </button>
-              <button className="button button-footer" type="button" onClick={handleCopyShareLink}>
+              <button
+                className="button button-footer"
+                type="button"
+                onClick={handleCopyShareLink}
+              >
                 <Link2 aria-hidden="true" />
                 <span>Copy Share Link</span>
               </button>
@@ -785,23 +1062,39 @@ export default function StudioWorkbench() {
             <p className="dialog-kicker">Starter prompts</p>
             <h2 id="templates-title">Choose a template</h2>
           </div>
-          <button className="icon-button" type="button" aria-label="Close templates" onClick={() => templateDialogRef.current?.close()}>
+          <button
+            className="icon-button"
+            type="button"
+            aria-label="Close templates"
+            onClick={() => templateDialogRef.current?.close()}
+          >
             <X aria-hidden="true" />
           </button>
         </div>
         <div className="template-list">
           {TEMPLATES.map((template) => (
-            <button className="template-option" type="button" key={template.title} onClick={() => selectTemplate(template.prompt)}>
-              <span className="template-icon"><Terminal aria-hidden="true" /></span>
+            <button
+              className="template-option"
+              type="button"
+              key={template.title}
+              onClick={() => selectTemplate(template.prompt)}
+            >
+              <span className="template-icon">
+                <Terminal aria-hidden="true" />
+              </span>
               <span className="template-copy">
                 <strong>{template.title}</strong>
                 <span>{template.description}</span>
               </span>
-              <span className="template-arrow" aria-hidden="true">↗</span>
+              <span className="template-arrow" aria-hidden="true">
+                ↗
+              </span>
             </button>
           ))}
         </div>
-        <p className="dialog-note">Templates are illustrative starting points for this local prototype.</p>
+        <p className="dialog-note">
+          Templates only fill the prompt. The build itself runs live on the VM.
+        </p>
       </dialog>
 
       <dialog
@@ -815,23 +1108,45 @@ export default function StudioWorkbench() {
         <div className="dialog-header">
           <div>
             <p className="dialog-kicker">Mobile preview</p>
-            <h2 id="qr-title">Open the demo player</h2>
+            <h2 id="qr-title">Open on your phone</h2>
           </div>
-          <button className="icon-button" type="button" aria-label="Close QR dialog" onClick={() => qrDialogRef.current?.close()}>
+          <button
+            className="icon-button"
+            type="button"
+            aria-label="Close QR dialog"
+            onClick={() => qrDialogRef.current?.close()}
+          >
             <X aria-hidden="true" />
           </button>
         </div>
         <div className="qr-code-wrap">
-          {shareUrl ? <QRCodeSVG value={shareUrl} size={208} bgColor="#f4f4f5" fgColor="#09090b" includeMargin /> : null}
+          {shareUrl ? (
+            <QRCodeSVG
+              value={shareUrl}
+              size={208}
+              bgColor="#f4f4f5"
+              fgColor="#09090b"
+              includeMargin
+            />
+          ) : null}
         </div>
-        <p className="qr-description">Scan to open the interactive demo scene with touch controls.</p>
-        <p className="dialog-note">The link includes the current prompt text. The rover scene is an illustrative local demo, not a generated build.</p>
-        <button className="button button-primary dialog-copy-button" type="button" onClick={handleCopyShareLink}>
+        <p className="qr-description">
+          Scan to open the playable build with touch controls.
+        </p>
+        <p className="dialog-note">
+          {generated?.playUrl
+            ? "This link opens the actual game generated on the VM."
+            : "Build a game first — the link will then open the real generated build."}
+        </p>
+        <button
+          className="button button-primary dialog-copy-button"
+          type="button"
+          onClick={handleCopyShareLink}
+        >
           <Copy aria-hidden="true" />
-          Copy demo link
+          Copy link
         </button>
       </dialog>
-
     </main>
   );
 }

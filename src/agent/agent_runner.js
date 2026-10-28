@@ -1,21 +1,24 @@
 /**
  * Agent Runner - Real Orchestrator with Live Event Streaming
  *
- * This is the actual brain-to-hands loop:
- *   1. Llama Guard 3 shield -> validate prompt
- *   2. Muse Code CLI (`muse exec`) -> write files on the VM
- *   3. Baseten Muse Spark Open -> reasoning fallback / spec planning
- *   4. Hunyuan World -> terrain
- *   5. Three.js WebGL + Unity C# -> dual engine
- *   6. Physics QA gate -> mathematical proofs
- *   7. Persistent storage -> library
- *
- * Every stage emits an event so the UI can show what the agent is doing.
+ * Verified live chain (each step emits SSE events the UI renders):
+ *   1. Prompt safety check (local rules)        -> validate prompt
+ *   2. Baseten `meta-models/muse-spark-open`    -> game spec + reasoning
+ *      (Meta open weights, direct OpenAI-compatible API call)
+ *   3. Muse Code CLI (`muse exec`, VM binary)  -> writes SPEC.md and
+ *      AgenticPlayerController.cs into a scoped run workspace.
+ *      Provider is Meta Model API (vault `Meta_Key`); the CLI cannot
+ *      talk to Baseten directly (its model-catalog fetch gets HTTP 405
+ *      from Baseten), so Baseten is called by step 2, not by the CLI.
+ *   4. Procedural terrain grid                  -> world geometry data
+ *   5. Three.js WebGL + Unity C#                -> dual engine outputs
+ *   6. Physics QA gate (local math checks)      -> pass/fail proofs
+ *   7. Persistent storage                       -> library entry
  */
 
 import fs from "node:fs";
 import path from "node:path";
-import { spawn } from "node:child_process";
+import { spawn, execFileSync } from "node:child_process";
 import os from "node:os";
 
 import { MuseWonderDirector } from "./muse_wonder.js";
@@ -27,8 +30,31 @@ import { PhysicsQualityGate } from "../verifier/physics_qa_gate.js";
 import { GameStorageManager } from "../storage/game_store.js";
 
 const MUSE_BIN = path.join(os.homedir(), ".local", "bin", "muse");
-// Local model id used by the studio's own spec planner (Meta open weights on Baseten).
-const LOCAL_MODEL_LABEL = "meta-models/muse-spark-open";
+const BASETEN_MODEL_LABEL = "meta-models/muse-spark-open";
+const CLI_MODEL_LABEL = process.env.MUSE_CLI_MODEL || "muse-spark-1.3";
+const VAULT_SCRIPT =
+  "/home/opencode/project-data/workspace/.orchestrator/vault.mjs";
+
+function readVaultKey(name) {
+  try {
+    if (!fs.existsSync(VAULT_SCRIPT)) return undefined;
+    const out = execFileSync("node", [VAULT_SCRIPT, "get", name], {
+      encoding: "utf8",
+    });
+    return out.trim() || undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/** Meta Model API key for the Muse CLI: env first, then the local vault. */
+export function resolveMetaApiKey() {
+  return (
+    process.env.MODEL_API_KEY ||
+    process.env.META_API_KEY ||
+    readVaultKey("Meta_Key")
+  );
+}
 
 export class AgentRunner {
   /**
@@ -42,7 +68,9 @@ export class AgentRunner {
     this.director = new MuseWonderDirector();
     this.worldPipeline = new HunyuanWorldPipeline();
     this.qaGate = new PhysicsQualityGate();
-    this.gameStore = new GameStorageManager();
+    this.gameStore = new GameStorageManager(
+      path.join(workspaceDir, "storage", "games"),
+    );
   }
 
   log(level, message) {
@@ -70,38 +98,67 @@ export class AgentRunner {
   }
 
   /**
-   * Runs `muse exec` and streams every stdout/stderr line to the UI.
-   * Returns { ok, output }.
+   * Runs `muse exec` in a scoped run workspace and streams every
+   * stdout/stderr line to the UI. Uses the live Meta provider when a
+   * Meta Model API key is available; otherwise falls back to the CLI's
+   * offline echo provider and says so in the log.
+   * @param {string} runDir - scoped directory the CLI may write in
+   * @param {string} taskPrompt
+   * @returns {Promise<{ok: boolean, output: string, live: boolean, reason?: string}>}
    */
-  runMuseCLI(taskPrompt, { timeoutMs = 240000 } = {}) {
+  runMuseCLI(runDir, taskPrompt, { timeoutMs = 180000 } = {}) {
     return new Promise((resolve) => {
       if (!this.museAvailable()) {
         this.log("warn", "Muse Code CLI binary not found on this host.");
-        return resolve({ ok: false, output: "", reason: "binary-missing" });
+        return resolve({
+          ok: false,
+          output: "",
+          live: false,
+          reason: "binary-missing",
+        });
       }
 
-      // `--provider echo` keeps the CLI fully offline (no Meta API key needed yet).
-      // When MODEL_API_KEY is set, the same call upgrades to live Meta inference.
-      const hasMetaKey = Boolean(
-        process.env.MODEL_API_KEY || process.env.META_API_KEY,
-      );
-      const args = hasMetaKey
-        ? ["exec", "--json", "--trust-workspace", taskPrompt]
+      const metaKey = resolveMetaApiKey();
+      const live = Boolean(metaKey);
+      const args = live
+        ? [
+            "exec",
+            "--provider",
+            "meta",
+            "--model",
+            CLI_MODEL_LABEL,
+            "--reasoning-effort",
+            "medium",
+            "--max-model-steps",
+            "8",
+            "--api-key-stdin",
+            "--disable-sandbox",
+            "--disable-approval",
+            "--trust-workspace",
+            taskPrompt,
+          ]
         : ["exec", "--provider", "echo", "--trust-workspace", taskPrompt];
 
       this.log(
         "info",
-        `Spawning Muse Code CLI (${hasMetaKey ? "live Meta inference" : "offline echo provider"})`,
+        live
+          ? `Spawning Muse Code CLI on VM (live Meta provider, model ${CLI_MODEL_LABEL})`
+          : "Spawning Muse Code CLI on VM (offline echo provider — no Meta key found)",
       );
 
+      fs.mkdirSync(runDir, { recursive: true });
       const child = spawn(MUSE_BIN, args, {
-        cwd: this.workspaceDir,
-        env: {
-          ...process.env,
-          MUSE_NO_MODIFY_PATH: "1",
-        },
-        stdio: ["ignore", "pipe", "pipe"],
+        cwd: runDir,
+        env: { ...process.env, MUSE_NO_MODIFY_PATH: "1" },
+        stdio: ["pipe", "pipe", "pipe"],
       });
+
+      // The key goes over stdin only; it is never logged or put in argv.
+      try {
+        child.stdin.end(live ? `${metaKey}\n` : "");
+      } catch {
+        /* stdin may already be closed on spawn failure */
+      }
 
       let buffer = "";
       let full = "";
@@ -146,7 +203,7 @@ export class AgentRunner {
 
       child.on("error", () => {
         clearTimeout(timer);
-        resolve({ ok: false, output: full, reason: "spawn-error" });
+        resolve({ ok: false, output: full, live, reason: "spawn-error" });
       });
 
       child.on("close", (code) => {
@@ -159,7 +216,7 @@ export class AgentRunner {
             at: Date.now(),
           });
         }
-        resolve({ ok: code === 0, output: full, code });
+        resolve({ ok: code === 0, output: full, live, code });
       });
     });
   }
@@ -172,8 +229,8 @@ export class AgentRunner {
     const startedAt = Date.now();
     this.emit({ type: "start", prompt: rawPrompt, at: startedAt });
 
-    // ---------------- Step 0: Llama Guard 3 input shield ----------------
-    this.phase("shield", "Llama Guard 3 Input Shield", "running");
+    // ---------------- Step 0: Prompt safety check (local rules) ----------------
+    this.phase("shield", "Prompt safety check (local rules)", "running");
     let prompt = String(rawPrompt || "").trim();
     const safety = this.shield.validateInputPrompt(prompt);
     if (!safety.safe) {
@@ -184,51 +241,28 @@ export class AgentRunner {
         "Prompt sanitised to a policy-safe spatial simulation theme.",
       );
     }
-    this.phase("shield", "Llama Guard 3 Input Shield", "pass", "S0 compliant");
-    this.log("ok", "Policy status: COMPLIANT (S0 verified).");
+    this.phase(
+      "shield",
+      "Prompt safety check (local rules)",
+      "pass",
+      "no restricted terms",
+    );
+    this.log("ok", "Safety check passed (local keyword rules).");
 
-    // ---------------- Step 1: Muse Code CLI on the VM ----------------
-    this.phase("cli", "Muse Code CLI Workspace Pass", "running");
-    const cliTask =
-      `You are the file-system executor for a 3D game studio. ` +
-      `Workspace: ${this.workspaceDir}. ` +
-      `Requested game concept: "${prompt}". ` +
-      `Do not modify any file yet; report the plan and the file paths you would create.`;
-    const cli = await this.runMuseCLI(cliTask);
-    if (cli.ok) {
-      this.phase(
-        "cli",
-        "Muse Code CLI Workspace Pass",
-        "pass",
-        "CLI executed on VM",
-      );
-      this.log("ok", "Muse Code CLI completed its workspace pass.");
-    } else {
-      this.phase(
-        "cli",
-        "Muse Code CLI Workspace Pass",
-        "warn",
-        cli.reason || "cli-unavailable",
-      );
-      this.log(
-        "warn",
-        "Muse Code CLI unavailable; continuing with the studio's own planner.",
-      );
-    }
-
-    // ---------------- Step 2: Meta model plans the game ----------------
-    this.phase("brain", "Meta Muse reasoning (open weights)", "running");
-    this.log("info", `Calling the local model id: ${LOCAL_MODEL_LABEL}`);
+    // ---------------- Step 1: Meta open weights plan the game (Baseten) ----------------
+    this.phase("brain", "Meta Muse Spark Open via Baseten", "running");
+    this.log("info", `Calling Baseten model: ${BASETEN_MODEL_LABEL}`);
     let spec;
     try {
       spec = await this.director.architectGame(prompt);
       this.phase(
         "brain",
-        "Meta Muse reasoning (open weights)",
+        "Meta Muse Spark Open via Baseten",
         "pass",
         spec.title,
       );
       this.log("ok", `Game architecture planned: "${spec.title}"`);
+      this.emit({ type: "spec", spec, at: Date.now() });
       if (spec.reasoning) {
         for (const line of String(spec.reasoning).split("\n").slice(0, 6)) {
           if (line.trim())
@@ -238,7 +272,7 @@ export class AgentRunner {
     } catch (err) {
       this.phase(
         "brain",
-        "Meta Muse reasoning (open weights)",
+        "Meta Muse Spark Open via Baseten",
         "fail",
         "planner error",
       );
@@ -251,12 +285,70 @@ export class AgentRunner {
       return { ok: false };
     }
 
-    // ---------------- Step 3: Hunyuan World terrain ----------------
-    this.phase("world", "Hunyuan World 2.0 terrain", "running");
+    // ---------------- Step 2: Muse Code CLI writes files on the VM ----------------
+    this.phase("cli", "Muse Code CLI file pass (VM)", "running");
+    const runDir = path.join(
+      this.workspaceDir,
+      "storage",
+      ".work",
+      `run_${Date.now()}`,
+    );
+    const cliTask =
+      `Create exactly two files in this workspace and nothing else:\n` +
+      `1) SPEC.md — markdown with the game title "${spec.title}", biome "${spec.world.biome}", ` +
+      `player speed ${spec.mechanics.physics.playerSpeed}, jump velocity ${spec.mechanics.physics.jumpVelocity}, ` +
+      `gravity ${spec.mechanics.physics.gravity}, and the objective from this concept: "${prompt}".\n` +
+      `2) AgenticPlayerController.cs — a complete Unity C# MonoBehaviour class named ` +
+      `AgenticPlayerController using only UnityEngine, with WASD/arrow movement at that speed, ` +
+      `a Space jump using that jump velocity and gravity, and no external dependencies.`;
+    const cli = await this.runMuseCLI(runDir, cliTask);
+
+    let cliUnityCode = "";
+    const cliUnityPath = path.join(runDir, "AgenticPlayerController.cs");
+    if (cli.ok && fs.existsSync(cliUnityPath)) {
+      const candidate = fs.readFileSync(cliUnityPath, "utf8");
+      if (
+        /class\s+AgenticPlayerController/.test(candidate) &&
+        /MonoBehaviour/.test(candidate)
+      ) {
+        cliUnityCode = candidate;
+      }
+    }
+    const cliWroteCode = Boolean(cliUnityCode);
+    if (cli.ok) {
+      this.phase(
+        "cli",
+        "Muse Code CLI file pass (VM)",
+        cliWroteCode ? "pass" : "warn",
+        cliWroteCode
+          ? `wrote AgenticPlayerController.cs (${CLI_MODEL_LABEL})`
+          : "CLI ran but produced no valid C# file",
+      );
+      this.log(
+        cliWroteCode ? "ok" : "warn",
+        cliWroteCode
+          ? "Muse Code CLI wrote SPEC.md and AgenticPlayerController.cs on the VM."
+          : "Muse Code CLI finished without a valid C# file; template fallback will be used.",
+      );
+    } else {
+      this.phase(
+        "cli",
+        "Muse Code CLI file pass (VM)",
+        "warn",
+        cli.reason || "cli-unavailable",
+      );
+      this.log(
+        "warn",
+        "Muse Code CLI unavailable; template fallback will be used for Unity code.",
+      );
+    }
+
+    // ---------------- Step 3: Procedural terrain grid ----------------
+    this.phase("world", "Procedural world terrain grid", "running");
     const worldData = this.worldPipeline.generateWorldGeometry(spec.world);
     this.phase(
       "world",
-      "Hunyuan World 2.0 terrain",
+      "Procedural world terrain grid",
       "pass",
       `${worldData.gridSize}x${worldData.gridSize}`,
     );
@@ -277,20 +369,57 @@ export class AgentRunner {
       "WebGL runtime compiled and written to build/web/index.html",
     );
 
-    this.phase("unity", "Unity 2022.3 C# project", "running");
+    this.phase("unity", "Unity 2022.3 C# script", "running");
     const unityDir = path.join(this.workspaceDir, "build", "unity");
     const unityExporter = new UnityExporter(unityDir);
     const unityResult = unityExporter.exportProject(spec, unityDir);
+    const unitySource = cliWroteCode ? "muse-cli" : "template-fallback";
+    if (cliWroteCode) {
+      const target = path.join(
+        unityDir,
+        "Assets",
+        "Scripts",
+        "AgenticPlayerController.cs",
+      );
+      fs.mkdirSync(path.dirname(target), { recursive: true });
+      fs.writeFileSync(target, cliUnityCode, "utf8");
+    }
+    const unityCode = cliWroteCode
+      ? cliUnityCode
+      : fs.readFileSync(
+          path.join(
+            unityDir,
+            "Assets",
+            "Scripts",
+            "AgenticPlayerController.cs",
+          ),
+          "utf8",
+        );
     this.phase(
       "unity",
-      "Unity 2022.3 C# project",
+      "Unity 2022.3 C# script",
       "pass",
-      unityResult.scripts.join(", "),
+      unitySource === "muse-cli"
+        ? "written by Muse Code CLI"
+        : "template fallback",
     );
-    this.log("ok", `Unity scripts exported: ${unityResult.scripts.join(", ")}`);
+    this.log(
+      "ok",
+      unitySource === "muse-cli"
+        ? "Unity C# script taken from the Muse Code CLI file pass."
+        : "Unity C# script generated from the local template.",
+    );
+    this.emit({
+      type: "artifact",
+      kind: "unity",
+      name: "AgenticPlayerController.cs",
+      source: unitySource,
+      content: unityCode,
+      at: Date.now(),
+    });
 
-    // ---------------- Step 5: Quality gate with proofs ----------------
-    this.phase("qa", "Physics QA quality gate", "running");
+    // ---------------- Step 5: Quality gate (local math checks) ----------------
+    this.phase("qa", "Physics QA checks (local)", "running");
     const qa = this.qaGate.runFullQASuite(spec);
     for (const proof of qa.proofs) {
       this.emit({
@@ -305,7 +434,7 @@ export class AgentRunner {
         `${proof.testName}: ${proof.passed ? "PASSED" : "FAILED"}`,
       );
     }
-    this.phase("qa", "Physics QA quality gate", "pass", `score ${qa.score}`);
+    this.phase("qa", "Physics QA checks (local)", "pass", `score ${qa.score}`);
 
     // ---------------- Step 6: Persist to library ----------------
     this.phase("store", "Persistent game library", "running");
@@ -314,6 +443,7 @@ export class AgentRunner {
       worldData,
       gameHtml,
       unityResult.scripts,
+      unitySource === "muse-cli" ? unityCode : undefined,
     );
     this.phase("store", "Persistent game library", "pass", saved.id);
     this.log("ok", `Game stored in the library: ${saved.id}`);
@@ -325,6 +455,7 @@ export class AgentRunner {
       gameId: saved.id,
       playUrl: `/studio/games/${saved.id}/index.html`,
       title: saved.title,
+      unitySource,
       elapsedMs,
       at: Date.now(),
     });
@@ -333,6 +464,7 @@ export class AgentRunner {
       ok: true,
       gameId: saved.id,
       playUrl: `/studio/games/${saved.id}/index.html`,
+      unitySource,
       spec,
     };
   }

@@ -19,7 +19,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { AgentRunner } from "./agent/agent_runner.js";
+import { AgentRunner, resolveMetaApiKey } from "./agent/agent_runner.js";
 import { GameStorageManager } from "./storage/game_store.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -100,7 +100,17 @@ const server = http.createServer(async (req, res) => {
       service: "agentic-game-studio-backend",
       components: {
         museCodeCLI: musePresent,
-        planner: "meta open weights",
+        cliModel: process.env.MUSE_CLI_MODEL || "muse-spark-1.3",
+        cliProvider: "meta-model-api",
+        metaKeyPresent: Boolean(resolveMetaApiKey()),
+        plannerModel: "meta-models/muse-spark-open",
+        plannerProvider: "baseten",
+        basetenKeyPresent: Boolean(
+          process.env.BASETEN_API_KEY ||
+          fs.existsSync(
+            "/home/opencode/project-data/workspace/.orchestrator/vault.mjs",
+          ),
+        ),
         terrain: "procedural elevation grid",
         engines: ["threejs-webgl", "unity-csharp"],
       },
@@ -120,6 +130,23 @@ const server = http.createServer(async (req, res) => {
     const found = await gameStore.getGame(manifestMatch[1]);
     if (!found) return json(res, 404, { error: "Game not found" });
     return json(res, 200, found.manifest);
+  }
+
+  // ---------- Stored game code (Unity C# written for that game) ----------
+  const codeMatch = pathname.match(/^\/api\/studio\/games\/([\w-]+)\/code$/);
+  if (codeMatch && req.method === "GET") {
+    const found = await gameStore.getGame(codeMatch[1]);
+    if (!found) return json(res, 404, { error: "Game not found" });
+    const unityPath = path.join(
+      STORAGE_DIR,
+      codeMatch[1],
+      "unity",
+      "AgenticPlayerController.cs",
+    );
+    const unity = fs.existsSync(unityPath)
+      ? fs.readFileSync(unityPath, "utf8")
+      : "";
+    return json(res, 200, { manifest: found.manifest, unity, spec: null });
   }
 
   // ---------- Unity script download ----------
