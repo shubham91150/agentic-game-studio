@@ -490,7 +490,6 @@ export class AgentRunner {
           "ok",
           "Design cache hit: Wonder/Baseten skipped, zero credits used.",
         );
-        this.emit({ type: "spec", spec, at: Date.now() });
       } catch {
         spec = null;
       }
@@ -515,17 +514,6 @@ export class AgentRunner {
           "ok",
           `Game designed by ${spec.architectModel}: "${spec.title}" (enrichment: ${spec.enrichmentModel || "none"})`,
         );
-        this.emit({ type: "spec", spec, at: Date.now() });
-        if (spec.reasoning) {
-          for (const line of String(spec.reasoning).split("\n").slice(0, 6)) {
-            if (line.trim())
-              this.emit({
-                type: "reasoning",
-                line: line.trim(),
-                at: Date.now(),
-              });
-          }
-        }
       } catch (err) {
         this.phase(
           "brain",
@@ -542,6 +530,28 @@ export class AgentRunner {
         });
         return { ok: false };
       }
+    }
+
+    // Design summary for the Reasoning tab — every run, fresh or cached
+    // (spec is guaranteed set here; failures returned above).
+    // This is the model's actual plan, always visible even if prose is short.
+    this.emit({ type: "spec", spec, at: Date.now() });
+    for (const line of [
+      `Title: ${spec.title} · Biome: ${spec.world.biome}`,
+      `Physics: gravity ${spec.mechanics.physics.gravity}, speed ${spec.mechanics.physics.playerSpeed}, jump ${spec.mechanics.physics.jumpVelocity}`,
+      `Objective: ${spec.objective || "collect all orbs"}`,
+      ...(spec.focalAssets || []).map(
+        (a, i) => `Asset ${i + 1} (${a.role}): ${a.prompt}`,
+      ),
+      ...(spec.reasoning
+        ? String(spec.reasoning)
+            .split("\n")
+            .map((l) => l.trim())
+            .filter(Boolean)
+            .slice(0, 30)
+        : []),
+    ]) {
+      this.emit({ type: "reasoning", line, at: Date.now() });
     }
 
     // ---------------- Step 1b: Concept art (Meta Muse Image, cached) ----------------

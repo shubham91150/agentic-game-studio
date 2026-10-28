@@ -8,6 +8,25 @@
  */
 
 import { generateWebAudioSynthesizerJs } from "../audio/audiocraft_synth.js";
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+// Three.js r128 vendored on the VM and INLINED into every generated game.
+// Reason: phones on slow networks (and offline judges) cannot fetch the
+// 600KB CDN build, which leaves a black canvas. A self-contained file
+// always renders if WebGL exists; if WebGL itself is missing the game
+// shows a readable error banner instead of black.
+const __runtimeDir = path.dirname(fileURLToPath(import.meta.url));
+let THREE_BUNDLE = "";
+try {
+  THREE_BUNDLE = fs.readFileSync(
+    path.join(__runtimeDir, "vendor", "three.min.js"),
+    "utf8",
+  );
+} catch {
+  THREE_BUNDLE = "";
+}
 
 const BIOME_PRESETS = {
   "cyber-orbital": {
@@ -132,7 +151,7 @@ export function generateThreeJsGameHtml(gameSpec, worldData, layout) {
       #btn-mobile-jump { display: flex; }
     }
   </style>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  ${THREE_BUNDLE ? `<script>\n${THREE_BUNDLE}\n  </script>` : '<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>'}
 </head>
 <body>
   <div id="canvas-container"></div>
@@ -155,6 +174,19 @@ export function generateThreeJsGameHtml(gameSpec, worldData, layout) {
     (function() {
       ${audioJs}
 
+      function showEngineError(msg) {
+        var banner = document.getElementById('banner');
+        document.getElementById('banner-text').textContent = msg;
+        document.getElementById('banner-title').textContent = '3D engine unavailable';
+        banner.style.display = 'flex';
+        document.getElementById('btn-again').style.display = 'none';
+      }
+
+      if (typeof THREE === 'undefined') {
+        showEngineError('The 3D engine library failed to load on this connection. Reconnect and reload the game.');
+        return;
+      }
+
       const SPEED = ${speed};
       const JUMP = ${jump};
       const GRAVITY = ${gravity};
@@ -173,7 +205,13 @@ export function generateThreeJsGameHtml(gameSpec, worldData, layout) {
       scene.fog = new THREE.FogExp2('${preset.fog}', 0.012);
 
       const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
-      const renderer = new THREE.WebGLRenderer({ antialias: true });
+      let renderer;
+      try {
+        renderer = new THREE.WebGLRenderer({ antialias: true });
+      } catch (err) {
+        showEngineError('WebGL could not start in this browser. Try Chrome with hardware acceleration enabled.');
+        return;
+      }
       renderer.setSize(window.innerWidth, window.innerHeight);
       renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
       renderer.shadowMap.enabled = true;

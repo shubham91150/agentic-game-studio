@@ -197,7 +197,14 @@ export class MuseWonderDirector {
       p.includes("canopy")
     )
       return "bioluminescent-canopy";
-    if (p.includes("ice") || p.includes("snow") || p.includes("glacier"))
+    if (
+      p.includes("ice") ||
+      p.includes("snow") ||
+      p.includes("glacier") ||
+      p.includes("lunar") ||
+      p.includes("moon") ||
+      p.includes("crater")
+    )
       return "subzero-glacier";
     return "cyber-orbital";
   }
