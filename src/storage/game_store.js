@@ -65,7 +65,19 @@ export class GameStorageManager {
     if (unityScripts && unityScripts.length > 0) {
       const unityDir = path.join(gameDir, "unity");
       fs.mkdirSync(unityDir, { recursive: true });
-      // Copies generated scripts from build/unity if present
+      const sourceDir = path.resolve(
+        process.cwd(),
+        "build",
+        "unity",
+        "Assets",
+        "Scripts",
+      );
+      for (const name of unityScripts) {
+        const from = path.join(sourceDir, name);
+        if (fs.existsSync(from)) {
+          fs.copyFileSync(from, path.join(unityDir, name));
+        }
+      }
     }
 
     // 3. Update central registry index

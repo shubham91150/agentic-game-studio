@@ -1,0 +1,19 @@
+[
+  {
+    "id": "game_1793157050687_3c81b9",
+    "title": "Cyber Kinetic Hovercraft Speedway",
+    "prompt": "Cyber kinetic hovercraft speedway with floating crystalline orbs",
+    "biome": "cyber-orbital",
+    "metaModel": "meta-models/muse-spark-open",
+    "createdAt": "2026-10-28T03:10:50.688Z",
+    "playUrl": "/game/game_1793157050687_3c81b9",
+    "files": {
+      "html": "index.html",
+      "manifest": "manifest.json",
+      "unity": [
+        "AgenticPlayerController.cs",
+        "AgenticGameManager.cs"
+      ]
+    }
+  }
+]
