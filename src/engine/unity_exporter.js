@@ -121,6 +121,28 @@ public class AgenticGameManager : MonoBehaviour
       "utf8",
     );
 
+    // Minimal but real Unity project skeleton: Unity Hub can open this
+    // folder directly (version + package manifest are what it needs first).
+    const settingsDir = path.join(outDir, "ProjectSettings");
+    fs.mkdirSync(settingsDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(settingsDir, "ProjectVersion.txt"),
+      "m_EditorVersion: 2022.3.11f1\nm_EditorVersionWithRevision: 2022.3.11f1 (305b81aae6fe)\n",
+      "utf8",
+    );
+    const packagesDir = path.join(outDir, "Packages");
+    fs.mkdirSync(packagesDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(packagesDir, "manifest.json"),
+      JSON.stringify({ dependencies: {} }, null, 2),
+      "utf8",
+    );
+    fs.writeFileSync(
+      path.join(outDir, "README-Unity.txt"),
+      "Open this folder in Unity 2022.3.11f1 (Unity Hub > Open). Create an empty scene, add an empty GameObject, attach AgenticPlayerController.cs (add a CharacterController when prompted) and AgenticGameManager.cs, then press Play.\n",
+      "utf8",
+    );
+
     return {
       success: true,
       path: outDir,
@@ -129,7 +151,8 @@ public class AgenticGameManager : MonoBehaviour
   }
 
   /**
-   * Runs headless batchmode validation if Unity editor is available
+   * Runs headless batchmode validation if Unity editor is available.
+   * Honest result: any non-zero exit or spawn error is a failure.
    */
   async validateCompilation(projectPath = this.projectRoot) {
     if (!fs.existsSync(UNITY_BINARY)) {
@@ -149,11 +172,13 @@ public class AgenticGameManager : MonoBehaviour
         "-logFile",
         "/tmp/opencode/unity_batchmode_verify.log",
       ];
-      await execFileAsync(UNITY_BINARY, args, { timeout: 30000 });
+      await execFileAsync(UNITY_BINARY, args, { timeout: 120000 });
       return { validated: true };
     } catch (err) {
-      // Unity exits with 0 or standard logs
-      return { validated: true, note: "Batchmode executed" };
+      return {
+        validated: false,
+        reason: `Unity batchmode failed (exit ${err.code ?? "unknown"})`,
+      };
     }
   }
 }

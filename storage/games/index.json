@@ -1,5 +1,153 @@
 [
   {
+    "id": "game_1793196007297_afb03d",
+    "title": "Public Verify Glacier",
+    "prompt": "Public verify glacier world",
+    "biome": "subzero-glacier",
+    "metaModel": "cache-seed",
+    "enrichmentModel": null,
+    "objective": "Collect orbs",
+    "createdAt": "2026-10-28T14:00:07.297Z",
+    "playUrl": "/studio/games/game_1793196007297_afb03d/index.html",
+    "imageUrl": "/studio/games/game_1793196007297_afb03d/assets/concept.webp",
+    "files": {
+      "html": "index.html",
+      "manifest": "manifest.json",
+      "unity": [
+        "AgenticPlayerController.cs",
+        "AgenticGameManager.cs"
+      ]
+    }
+  },
+  {
+    "id": "game_1793195760850_7197a9",
+    "title": "Low Gravity Lunar Rover",
+    "prompt": "Low gravity lunar rover with slow floaty jumps and glowing beacons",
+    "biome": "cyber-orbital",
+    "metaModel": "local-heuristics",
+    "enrichmentModel": "meta-models/muse-spark-open",
+    "objective": "Collect the energy orbs scattered across the world.",
+    "createdAt": "2026-10-28T13:56:00.850Z",
+    "playUrl": "/studio/games/game_1793195760850_7197a9/index.html",
+    "imageUrl": "/studio/games/game_1793195760850_7197a9/assets/concept.webp",
+    "files": {
+      "html": "index.html",
+      "manifest": "manifest.json",
+      "unity": [
+        "AgenticPlayerController.cs",
+        "AgenticGameManager.cs"
+      ]
+    }
+  },
+  {
+    "id": "game_1793195725381_0a9da8",
+    "title": "Cyber Kinetic Hovercraft Speedway",
+    "prompt": "Cache test glacier world",
+    "biome": "cyber-orbital",
+    "metaModel": "meta-models/muse-spark-open",
+    "enrichmentModel": null,
+    "objective": "",
+    "createdAt": "2026-10-28T13:55:25.381Z",
+    "playUrl": "/studio/games/game_1793195725381_0a9da8/index.html",
+    "imageUrl": "/studio/games/game_1793195725381_0a9da8/assets/concept.webp",
+    "files": {
+      "html": "index.html",
+      "manifest": "manifest.json",
+      "unity": [
+        "AgenticPlayerController.cs",
+        "AgenticGameManager.cs"
+      ]
+    }
+  },
+  {
+    "id": "game_1793195632236_fa4e61",
+    "title": "Build A Compact Lunar",
+    "prompt": "Build a compact lunar rover challenge with low-gravity jumps, collectible signal beacons, and precise collision physics.",
+    "biome": "cyber-orbital",
+    "metaModel": "local-heuristics",
+    "enrichmentModel": "meta-models/muse-spark-open",
+    "objective": "Collect the energy orbs scattered across the world.",
+    "createdAt": "2026-10-28T13:53:52.237Z",
+    "playUrl": "/studio/games/game_1793195632236_fa4e61/index.html",
+    "imageUrl": "/studio/games/game_1793195632236_fa4e61/assets/concept.webp",
+    "files": {
+      "html": "index.html",
+      "manifest": "manifest.json",
+      "unity": [
+        "AgenticPlayerController.cs",
+        "AgenticGameManager.cs"
+      ]
+    }
+  },
+  {
+    "id": "game_1793194475264_81152d",
+    "title": "Signal Garden Exploration With",
+    "prompt": "Signal garden exploration with scattered beacons",
+    "biome": "cyber-orbital",
+    "metaModel": "meta-models/muse-spark-open",
+    "createdAt": "2026-10-28T13:34:35.264Z",
+    "playUrl": "/studio/games/game_1793194475264_81152d/index.html",
+    "files": {
+      "html": "index.html",
+      "manifest": "manifest.json",
+      "unity": [
+        "AgenticPlayerController.cs",
+        "AgenticGameManager.cs"
+      ]
+    }
+  },
+  {
+    "id": "game_1793194452018_534169",
+    "title": "Desert Canyon Speedway With",
+    "prompt": "Desert canyon speedway with metal pylons",
+    "biome": "desert-canyon",
+    "metaModel": "meta-models/muse-spark-open",
+    "createdAt": "2026-10-28T13:34:12.019Z",
+    "playUrl": "/studio/games/game_1793194452018_534169/index.html",
+    "files": {
+      "html": "index.html",
+      "manifest": "manifest.json",
+      "unity": [
+        "AgenticPlayerController.cs",
+        "AgenticGameManager.cs"
+      ]
+    }
+  },
+  {
+    "id": "game_1793194409032_d21df5",
+    "title": "Orbital Courier With Docking",
+    "prompt": "Orbital courier with docking targets",
+    "biome": "cyber-orbital",
+    "metaModel": "meta-models/muse-spark-open",
+    "createdAt": "2026-10-28T13:33:29.033Z",
+    "playUrl": "/studio/games/game_1793194409032_d21df5/index.html",
+    "files": {
+      "html": "index.html",
+      "manifest": "manifest.json",
+      "unity": [
+        "AgenticPlayerController.cs",
+        "AgenticGameManager.cs"
+      ]
+    }
+  },
+  {
+    "id": "game_1793194376611_8cba93",
+    "title": "Orbital Courier With Docking",
+    "prompt": "Orbital courier with docking targets and momentum steering",
+    "biome": "cyber-orbital",
+    "metaModel": "meta-models/muse-spark-open",
+    "createdAt": "2026-10-28T13:32:56.612Z",
+    "playUrl": "/studio/games/game_1793194376611_8cba93/index.html",
+    "files": {
+      "html": "index.html",
+      "manifest": "manifest.json",
+      "unity": [
+        "AgenticPlayerController.cs",
+        "AgenticGameManager.cs"
+      ]
+    }
+  },
+  {
     "id": "game_1793194032409_62ce9b",
     "title": "Low-gravity Glacier Course With",
     "prompt": "Low-gravity glacier course with floating crystal pickups",

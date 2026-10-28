@@ -1,120 +1,82 @@
-# 🎮 Agentic Game Studio
+# Agentic Game Studio
 
-> **Autonomous Multimodal AI Agent Studio for Interactive 3D Worlds & Procedural Games**  
-> _Built for the Meta Global AI Developer Hackathon 2026 ($1M Global AI Challenge)_
+**Type a sentence. Get a playable 3D game** — in your browser instantly, with Unity C# to ship it natively.
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-[![Meta Model API](https://img.shields.io/badge/Meta%20AI-Muse%20Wonder%20%7C%20SAM%203.1-0668E1)](https://dev.meta.ai/)
-[![World Engine](https://img.shields.io/badge/World%20Engine-Hunyuan%20World%202.0-00A4FF)](https://github.com/Tencent-Hunyuan/Hunyuan3D-2)
-[![Dual Engine](https://img.shields.io/badge/Dual%20Engine-Three.js%20WebGL%20%7C%20Unity%202022.3-black)](https://unity.com/)
+Built for the **Meta Global AI Developer Hackathon 2026** · Indie Developer track · Theme: **Push the Frontier**
 
----
+**[Live studio](https://agentic-game-studio.vercel.app/)** · **[Play a prebuilt game](https://spurcode.duckdns.org/studio/games/game_1793194032409_62ce9b/index.html)** · **[Repo](https://github.com/shubham91150/agentic-game-studio)**
 
-## 🌟 Overview
+## Judging map
 
-**Agentic Game Studio** is an autonomous software engineering agent that transforms high-level natural language concepts, visual sketches, and interactive rules into **fully playable 3D games and spatial simulations** with **zero human intervention**.
+| Criterion                        | What to look at                                                                                                                                                                                                                                                             |
+| -------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Impact (30%)**                 | Solo devs and game-jam teams lose days scaffolding a prototype. One prompt here produces a playable, verified, shareable build in about 20–60 seconds. Try two contrasting prompts live.                                                                                    |
+| **Use of Meta AI tooling (25%)** | Muse Wonder 1.0 designs the game, Muse Spark Open (open weights, Baseten) enriches assets, Muse Image 1.0 paints concept art, Muse Code CLI (`muse-spark-1.3`) writes the Unity C# on our VM. Verified pipeline table below.                                                |
+| **Demo (25%)**                   | Live site above. Prompt → live agent console (every step streamed) → playable game in the preview, phone-playable via QR. Prebuilt games are linked so you never wait.                                                                                                      |
+| **Technical depth (20%)**        | Deterministic shared layout rendered by the game _and_ proven by a BFS reachability gate; CCD tunneling math; scoped CLI workspaces with keys passed over stdin (never argv/logs); prompt-hash caching so repeat builds cost zero API calls. Tests: `npm test` (5 passing). |
 
-Traditional game development requires teams of 3D modelers, terrain artists, physics programmers, and UI developers. Existing AI "game tools" produce static images or broken script snippets.
+## Verified pipeline
 
-**Agentic Game Studio solves this bottleneck** with an end-to-end, multi-agent pipeline:
+Every stage below actually runs in the live path (`src/agent/agent_runner.js`):
 
-1. **Meta Muse Wonder**: Frontier-class multimodal reasoning for game lore, mechanics, physics equations, and scene composition.
-2. **Meta SAM 3.1**: Semantic segmentation isolating focal props and characters with clean alpha masking.
-3. **Hunyuan World 2.0**: Generative 3D spatial terrain, biomes, and architectural elevation grids.
-4. **Dual-Engine Production Compiler**:
-   - **Three.js WebGL**: Instant in-browser player with mobile virtual touch joystick and desktop controls.
-   - **Unity 2022.3 LTS**: Native C# assembly compilation (`AgenticPlayerController.cs`, `AgenticGameManager.cs`).
+| #   | Stage                                                                             | Model / tool                                     | Code                                                |
+| --- | --------------------------------------------------------------------------------- | ------------------------------------------------ | --------------------------------------------------- |
+| 0   | Prompt safety check (local keyword rules — not a model)                           | local                                            | `src/pipeline/safety_shield.js`                     |
+| 1   | Game design: title, biome, physics, objective, assets (structured JSON)           | **Muse Wonder 1.0** (Meta Model API)             | `src/agent/meta_wonder.js`                          |
+| 2   | Asset-prompt enrichment                                                           | **Muse Spark Open** — open weights via Baseten   | `src/agent/baseten_muse.js`                         |
+| 3   | Concept art                                                                       | **Muse Image 1.0** (Meta Model API)              | `src/pipeline/meta_image.js`                        |
+| 4   | File pass: writes `SPEC.md` + `AgenticPlayerController.cs` in a scoped run folder | **Muse Code CLI 1.4.14**, model `muse-spark-1.3` | `src/agent/agent_runner.js`                         |
+| 5   | Terrain heightmap + deterministic world layout (shared with QA)                   | procedural                                       | `src/pipeline/terrain.js`, `src/pipeline/layout.js` |
+| 6   | Playable game (biome palette, spec physics, obstacles, collect-to-win)            | Three.js WebGL                                   | `src/engine/threejs_runtime.js`                     |
+| 7   | Unity C# project (openable in Unity 2022.3.11f1)                                  | template + CLI script                            | `src/engine/unity_exporter.js`                      |
+| 8   | Physics QA: CCD zero-tunneling, camera clearance, jump arc, **BFS reachability**  | local math                                       | `src/verifier/physics_qa_gate.js`                   |
+| 9   | Persistent library with playable links                                            | VM disk + JSON index                             | `src/storage/game_store.js`                         |
 
----
+Model routing: high-reasoning work goes to **Muse Wonder**, code writing to **Muse Spark 1.3**, open-weight enrichment to **Muse Spark Open**. Identical prompts hit a cache (`storage/cache/`) and cost **zero** API calls — watch for "cache hit" in the console.
 
-## 📐 System Architecture
+One honest note: the Muse Code CLI cannot talk to Baseten directly (its model-catalog fetch gets HTTP 405 from Baseten's OpenAI-style API — we tested it). So Baseten is called by the planner step, and the CLI runs on the Meta Model API. Both are Meta models; the UI labels each step with the model that actually ran.
 
-```mermaid
-graph TD
-    User([User Prompt / World Concept]) --> Planner[Meta Muse Wonder: Game Architect]
-    Planner --> LogicAgent[Meta Muse Code: Mechanics & Physics Synthesizer]
-    Planner --> VisionAgent[Meta SAM 3.1: Semantic Asset Isolator]
-    Planner --> WorldGen[Hunyuan World 2.0: 3D Terrain & Elevation Grid]
-    VisionAgent --> GPU3D[Modal Serverless A10G: PBR 3D Reconstruction]
-    GPU3D --> Assets[(Watertight .GLB Models)]
-    WorldGen --> DualCompiler{Dual-Engine Production Compiler}
-    LogicAgent --> DualCompiler
-    Assets --> DualCompiler
-    DualCompiler -->|Target 1| WebGL[Three.js WebGL Instant Browser Player]
-    DualCompiler -->|Target 2| Unity[Unity 2022.3 LTS Native C# Studio Project]
-```
+## Try it
 
----
+1. Open the [live studio](https://agentic-game-studio.vercel.app/), type a game idea, press **Build Game**.
+2. Watch the agent console stream the CLI writing files on the VM.
+3. Play the result in the preview (WASD + Space, or the touch joystick on mobile), open **Generated Code** to read the exact C# the CLI wrote, and **Assets** for the concept art.
+4. Reopen any earlier build from the library — no rebuild needed.
 
-## 🚀 Key Features
+Prebuilt examples (generated by this pipeline, stored on the VM):
 
-- **Prompt to Playable Game:** Synthesizes procedural terrain, entities, mechanics, and controls from a single sentence.
-- **Frontier Meta Muse Wonder:** High-dimensional spatial planning with mathematical physics contracts.
-- **Meta SAM 3.1 Clean Cutouts:** Removes 2D background clutter so 3D meshes remain clean and watertight.
-- **Hunyuan World Spatial Environments:** Procedural terrain heightmaps tailored to biomes (Cyber Orbital, Desert Canyon, Glacier Arena, Bioluminescent Canopy).
-- **Dual-Engine Output:**
-  - Instant WebGL for rapid review on mobile/desktop browsers without download.
-  - Full Unity 2022.3 LTS project for professional deployment.
-- **100% Original & Compliant:** Synthetic AI-generated geometry and open-source licenses — zero trademarked IP, zero policy violations.
+- [Low-gravity glacier course](https://spurcode.duckdns.org/studio/games/game_1793194032409_62ce9b/index.html)
+- Full library: `GET https://spurcode.duckdns.org/api/studio/games`
 
----
-
-## 🛠️ Repository Structure
-
-```
-agentic-game-studio/
-├── src/
-│   ├── agent/
-│   │   ├── muse_wonder.js     # Meta Muse Wonder director & game planner
-│   │   └── generate.js        # End-to-end CLI generation pipeline
-│   ├── pipeline/
-│   │   ├── hunyuan_world.js   # Hunyuan World 2.0 terrain & biome synthesis
-│   │   ├── sam_bridge.js      # Meta SAM 3.1 semantic cutout bridge
-│   │   └── modal_client.py    # Modal serverless GPU 3D reconstruction client
-│   ├── engine/
-│   │   ├── threejs_runtime.js # Self-contained Three.js WebGL runtime compiler
-│   │   └── unity_exporter.js  # Unity 2022.3 LTS C# batchmode exporter
-│   └── runtime/
-│       └── engine.js          # Core engine utilities
-├── package.json               # Manifest & scripts
-├── LICENSE                    # MIT License
-└── README.md                  # Project documentation
-```
-
----
-
-## ⚡ Quick Start
-
-### 1. Clone & Setup
+## Run it yourself
 
 ```bash
 git clone https://github.com/shubham91150/agentic-game-studio.git
 cd agentic-game-studio
+npm install
+cp .env.example .env   # add BASETEN_API_KEY and META_API_KEY (Meta Model API)
+npm run build
+
+# VM backend (runs the Muse Code CLI + storage):
+node src/server.js     # http://localhost:3030  · SSE at /api/studio/generate
+
+# One-shot CLI run (same AgentRunner as the web backend):
+node src/agent/generate.js --prompt "Low gravity lunar rover with floaty jumps"
 ```
 
-### 2. Generate a Complete 3D Game & World
+## Honest limitations
 
-```bash
-node src/agent/generate.js --prompt "Subzero glacier racing arena with floating crystals and energy orbs"
-```
+- The WebGL game is a generated runtime whose palette, physics, terrain, and layout come from the design spec; characters/obstacles are primitive meshes, not generated GLBs. SAM segmentation, learned 3D reconstruction (e.g. TRELLIS on Modal), and learned world models (HunyuanWorld) are **roadmap, not in this build** — earlier drafts of this README claimed them; that was wrong and has been corrected.
+- Unity output is a real openable project skeleton (version, package manifest, scripts, import notes), not a pre-built scene.
+- If a provider is down, the run says so in the console (e.g. "template fallback") instead of faking success.
+- Builds depend on our VM backend; the stored library links above keep working even while the studio UI is redeployed.
 
-### 3. Play Instantly
+## Built during the event
 
-- **Browser WebGL:** Open `build/web/index.html` in any browser (supports desktop WASD + mobile touch joystick).
-- **Unity Studio:** Open `build/unity/` inside Unity 2022.3 LTS.
+All project commits are dated **Oct 26 – Nov 4, 2026** (the hackathon build window) in this public repository. Third-party open source used: Three.js (MIT), Next.js/React (MIT), Lucide icons (ISC). Game assets are generated at runtime; no third-party game IP is used.
 
----
+Track: Indie Developer · Bonus targets: Best Agentic Use-Case, Best Build on Meta Open Weight Models, Best Creative Build (Muse Image + Muse Wonder).
 
-## 🏆 Hackathon Alignment
+## License
 
-- **Primary Track:** Indie Developer Track ($150,000 First Prize)
-- **Target Problem Statement:** _Push the Frontier_ (autonomous AI agent generating playable 3D spatial simulations).
-- **Target Bonus Awards:**
-  - _Best Creative Build ($5,000)_: Creative AI synthesis powered by **Meta Muse Wonder**.
-  - _Best Agentic Use-Case ($5,000)_: Multi-agent coordination (Muse Wonder + SAM 3.1 + Hunyuan World 2.0).
-
----
-
-## 📄 License
-
-This project is licensed under the [MIT License](LICENSE).
+MIT — see `LICENSE`.

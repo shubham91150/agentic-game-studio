@@ -1,0 +1,20 @@
+{
+  "id": "game_1793196007297_afb03d",
+  "title": "Public Verify Glacier",
+  "prompt": "Public verify glacier world",
+  "biome": "subzero-glacier",
+  "metaModel": "cache-seed",
+  "enrichmentModel": null,
+  "objective": "Collect orbs",
+  "createdAt": "2026-10-28T14:00:07.297Z",
+  "playUrl": "/studio/games/game_1793196007297_afb03d/index.html",
+  "imageUrl": "/studio/games/game_1793196007297_afb03d/assets/concept.webp",
+  "files": {
+    "html": "index.html",
+    "manifest": "manifest.json",
+    "unity": [
+      "AgenticPlayerController.cs",
+      "AgenticGameManager.cs"
+    ]
+  }
+}

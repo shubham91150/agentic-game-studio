@@ -36,18 +36,19 @@ const PIPELINE = [
   { id: "shield", title: "Prompt safety check", source: "local rules" },
   {
     id: "brain",
-    title: "Game spec & reasoning",
-    source: "Muse Spark Open · Baseten",
+    title: "Game design",
+    source: "Muse Wonder 1.0 + Spark Open",
   },
+  { id: "image", title: "Concept art", source: "Muse Image 1.0" },
   {
     id: "cli",
     title: "File pass on VM",
-    source: "Muse Code CLI · muse-spark-1.3",
+    source: "Muse Code CLI · Spark 1.3",
   },
-  { id: "world", title: "World terrain grid", source: "procedural" },
+  { id: "world", title: "World terrain + layout", source: "procedural" },
   { id: "webgl", title: "WebGL runtime", source: "Three.js" },
   { id: "unity", title: "Unity C# script", source: "CLI or template" },
-  { id: "qa", title: "Physics QA checks", source: "local math" },
+  { id: "qa", title: "Physics QA checks", source: "BFS + math" },
   { id: "store", title: "Save to library", source: "VM storage" },
 ];
 
@@ -277,6 +278,9 @@ export default function StudioWorkbench() {
               gameId: evt.gameId,
               title: evt.title,
               playUrl: `${STUDIO_API_BASE}${evt.playUrl}`,
+              imageUrl: evt.imageUrl
+                ? `${STUDIO_API_BASE}${evt.imageUrl}`
+                : null,
               unitySource: evt.unitySource,
             }));
             addLog(
@@ -562,10 +566,29 @@ export default function StudioWorkbench() {
           aria-labelledby="tab-assets"
           tabIndex={0}
         >
+          {generated?.imageUrl ? (
+            <>
+              <div className="console-panel-heading">
+                <span className="console-caption">
+                  Concept art · Muse Image 1.0
+                </span>
+              </div>
+              <img
+                src={generated.imageUrl}
+                alt={`Concept art for ${generated.title || "generated game"}`}
+                style={{
+                  width: "100%",
+                  borderRadius: 6,
+                  border: "1px solid #27272a",
+                  marginBottom: 10,
+                }}
+              />
+            </>
+          ) : null}
           <div className="console-panel-heading">
             <span className="console-caption">
               {assets.length
-                ? "Planned 3D objects · from Baseten spec"
+                ? "Planned 3D objects · from game design"
                 : "No spec yet — build a game first"}
             </span>
             <span className="asset-total">{assets.length} items</span>
