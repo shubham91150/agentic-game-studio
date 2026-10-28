@@ -52,3 +52,5 @@ skills-lock.json
 /agent/
 /data/
 storage/cache/
+.vercel
+.env*
