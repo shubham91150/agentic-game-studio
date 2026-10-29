@@ -31,7 +31,7 @@ import { SafetyShieldValidator } from "../pipeline/safety_shield.js";
 import { TerrainPipeline } from "../pipeline/terrain.js";
 import { generateLayout } from "../pipeline/layout.js";
 import { MetaImageClient } from "../pipeline/meta_image.js";
-import { generateThreeJsGameHtml } from "../engine/threejs_runtime.js";
+import { generateThreeJsGameFiles } from "../engine/threejs_runtime.js";
 import { UnityExporter } from "../engine/unity_exporter.js";
 import { PhysicsQualityGate } from "../verifier/physics_qa_gate.js";
 import { GameStorageManager } from "../storage/game_store.js";
@@ -42,7 +42,14 @@ const MUSE_BIN = path.join(os.homedir(), ".local", "bin", "muse");
 const BASETEN_MODEL_LABEL = "meta-models/muse-spark-open";
 const CLI_MODEL_LABEL = process.env.MUSE_CLI_MODEL || "muse-spark-1.3";
 // Only models verified live on this VM may be selected in the UI.
-export const ALLOWED_CLI_MODELS = ["muse-spark-1.3", "muse-wonder-1.0"];
+export const ALLOWED_CLI_MODELS = [
+  "muse-wonder-1.0",
+  "muse-spark-1.3",
+  "muse-spark-1.3-contributor",
+  "muse-spark-1.2",
+  "muse-spark-1.2-contributor",
+  "muse-image-1.0",
+];
 
 export function resolveCliModel(requested) {
   if (typeof requested === "string" && ALLOWED_CLI_MODELS.includes(requested)) {
@@ -758,20 +765,25 @@ export class AgentRunner {
 
     // ---------------- Step 4: Dual engine compile ----------------
     this.phase("webgl", "Three.js WebGL runtime", "running", "", "three.js");
-    const gameHtml = generateThreeJsGameHtml(spec, worldData, layout);
+    const { html: gameHtml, js: gameJs } = generateThreeJsGameFiles(
+      spec,
+      worldData,
+      layout,
+    );
     const webDir = path.join(this.workspaceDir, "build", "web");
     fs.mkdirSync(webDir, { recursive: true });
     fs.writeFileSync(path.join(webDir, "index.html"), gameHtml, "utf8");
+    fs.writeFileSync(path.join(webDir, "game.js"), gameJs, "utf8");
     this.phase(
       "webgl",
       "Three.js WebGL runtime",
       "pass",
-      "index.html written",
+      "index.html + game.js written",
       "three.js",
     );
     this.log(
       "ok",
-      "WebGL runtime compiled and written to build/web/index.html",
+      "WebGL runtime compiled (CSP-safe external script) to build/web/",
     );
 
     this.phase(
@@ -863,6 +875,7 @@ export class AgentRunner {
       unityResult.scripts,
       unitySource === "muse-cli" ? unityCode : undefined,
       conceptImage,
+      gameJs,
     );
     this.phase("store", "Persistent game library", "pass", saved.id, "vm disk");
     this.log("ok", `Game stored in the library: ${saved.id}`);
