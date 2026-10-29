@@ -998,7 +998,7 @@ button.icon-btn {
   flex-direction: column;
   border: 1px solid var(--line);
   border-radius: var(--r-md);
-  background: var(--surface-1);
+  background: #000;
   box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6);
   padding: 6px;
 }
@@ -1176,7 +1176,7 @@ button.icon-btn {
   min-width: 0;
   border: 1px solid var(--line);
   border-radius: 7px;
-  background: #09090b;
+  background: #000;
   color: var(--ink);
   font: inherit;
   font-size: 12px;
@@ -1193,7 +1193,7 @@ button.icon-btn {
   flex: 0 0 auto;
   border: 1px solid var(--line);
   border-radius: 7px;
-  background: var(--surface-elevated, #17171e);
+  background: #000;
   color: var(--ink);
   font: inherit;
   font-size: 12px;
@@ -1205,7 +1205,8 @@ button.icon-btn {
 }
 
 .plus-add button:hover {
-  background: #232329;
+  background: #000;
+  border-color: var(--line-strong);
 }
 
 /* ---------- v0 attach menu: icon rows + inline expanders ---------- */
@@ -1258,6 +1259,7 @@ button.icon-btn {
   margin: 2px 4px 2px 22px;
   padding: 4px 4px 4px 10px;
   border-left: 1px solid var(--line);
+  background: #000;
 }
 
 .plus-add-single {
