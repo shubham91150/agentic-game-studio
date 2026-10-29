@@ -52,6 +52,51 @@
   var running = false;
   var lastPreviewUpdatedAt = 0;
 
+  // Prompt draft persistence: text survives reload until sent or deleted.
+  var DRAFT_KEY = "ags_prompt_draft";
+  var draftTimer = null;
+
+  function saveDraft(value) {
+    try {
+      localStorage.setItem(DRAFT_KEY, value);
+    } catch (e) {
+      /* ignore (privacy mode / quota) */
+    }
+  }
+
+  function loadDraft() {
+    try {
+      return localStorage.getItem(DRAFT_KEY);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function clearDraft() {
+    try {
+      localStorage.removeItem(DRAFT_KEY);
+    } catch (e) {
+      /* ignore */
+    }
+  }
+
+  function scheduleDraftSave() {
+    if (draftTimer) clearTimeout(draftTimer);
+    draftTimer = setTimeout(function () {
+      draftTimer = null;
+      if (promptEl) saveDraft(promptEl.value);
+    }, 300);
+  }
+
+  // Restore draft on load (do NOT steal focus).
+  if (promptEl) {
+    var restored = loadDraft();
+    if (typeof restored === "string" && restored && !promptEl.value) {
+      promptEl.value = restored;
+    }
+    promptEl.addEventListener("input", scheduleDraftSave);
+  }
+
   var SCOPE_PREFIX = {
     game: "",
     model:
@@ -768,6 +813,7 @@
       }
       if (text) {
         promptEl.value = (promptEl.value ? promptEl.value + " " : "") + text;
+        scheduleDraftSave();
         promptEl.focus();
       }
     });
@@ -877,6 +923,7 @@
 
     loadTerminalInline();
     promptEl.value = "";
+    clearDraft();
     attachments = [];
     activeSkills = [];
     customInstructions = [];
