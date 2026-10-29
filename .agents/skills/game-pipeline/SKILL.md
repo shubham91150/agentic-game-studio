@@ -35,6 +35,14 @@ No generic AI-slop styling — match the existing dark studio system
 - Unity C# / project / headless build → read `.agents/skills/unity-build/SKILL.md` first (exporter reuse, license rules, batchmode validation).
 - Never write engine boilerplate from memory when a skill owns the workflow.
 
+## Step 0c — Gameplay Code: Obey game-logic Standards
+
+Any gameplay code (loop, controls, camera, enemies, settings, audio,
+performance): read `.agents/skills/game-logic/SKILL.md` and follow ALL of it —
+fixed timestep, pooled objects, perf budgets, settings screens, done-gate.
+Placeholder "box moves" code is a fail. The done-gate playtest is mandatory
+before telling the user the game is ready.
+
 ## Step 1 — Fast Path: Run the Deterministic Pipeline Tool
 
 For a fresh game from a text prompt, prefer the pipeline tool over hand-writing everything. It runs safety check → Wonder/Baseten design → terrain + layout → Three.js files → Unity C# → physics QA → library save → copies into `public/live-preview/`:
