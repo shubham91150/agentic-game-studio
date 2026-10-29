@@ -469,6 +469,7 @@ body {
 /* LEFT terminal chrome — minimal (ui-taste distill): slim hairline header, quiet link. */
 .terminal-section .terminal-box {
   box-shadow: none;
+  border: none;
   border-radius: var(--r-lg);
 }
 
