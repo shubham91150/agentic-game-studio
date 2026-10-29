@@ -5,7 +5,6 @@
 
   var promptEl = document.getElementById("prompt");
   var formEl = document.getElementById("prompt-form");
-  var agentEl = document.getElementById("agent-select");
   var modelEl = document.getElementById("model-select");
   var attachBtn = document.getElementById("attach-btn");
   var fileInput = document.getElementById("file-input");
@@ -284,9 +283,6 @@
     var prompt = promptEl.value.trim();
     if (!prompt) return;
     var model = modelEl.value;
-    if (agentEl.value === "muse-wonder" && model === "muse-spark-1.3") {
-      model = "muse-wonder-1.0";
-    }
 
     running = true;
     setBusy(true);
