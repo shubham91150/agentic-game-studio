@@ -23,21 +23,16 @@
     <div class="page">
       <header class="crumbs" aria-label="Breadcrumb">
         <div class="crumbs-left">
-          <span class="crumb-user"
-            ><span class="avatar" aria-hidden="true">S</span>
-            <span class="crumb-owner">shubham91150</span></span
-          >
           <button
             type="button"
-            class="history-btn"
             id="sidebar-history-btn"
-            title="Chat history — view archived transcripts"
+            class="panel-btn"
+            title="Chat history"
             aria-label="Open chat history"
-            aria-haspopup="true"
           >
             <svg
-              width="15"
-              height="15"
+              width="16"
+              height="16"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
@@ -46,11 +41,22 @@
               stroke-linejoin="round"
               aria-hidden="true"
             >
-              <path d="M3.5 12a8.5 8.5 0 1 0 2.5-6" />
-              <polyline points="3.5 3.5 3.5 8.5 8.5 8.5" />
-              <path d="M12 8v4.2l2.8 1.8" />
+              <rect x="3" y="3" width="18" height="18" rx="2" />
+              <rect
+                x="5.5"
+                y="5.5"
+                width="6"
+                height="13"
+                rx="1"
+                fill="currentColor"
+                stroke="none"
+              />
             </svg>
           </button>
+          <span class="crumb-user"
+            ><span class="avatar" aria-hidden="true">S</span>
+            <span class="crumb-owner">shubham91150</span></span
+          >
           <span class="crumb-sep">/</span>
           <span class="crumb-repo">agentic-game-studio</span>
           <span class="live-pill" title="VM backend status">
