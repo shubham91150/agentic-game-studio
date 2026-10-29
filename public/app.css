@@ -592,36 +592,36 @@ body {
 
 .prompt-box {
   width: 100%;
-  border: 1px solid var(--line-strong);
-  border-radius: var(--r-xl);
-  background: var(--surface-1);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 12px;
+  background: #000;
   overflow: visible;
   text-align: left;
-  box-shadow: 0 16px 40px -24px rgba(0, 0, 0, 0.9);
-  transition: border-color var(--dur-fast) ease;
+  box-shadow: none;
+  transition: border-color 0.15s ease;
 }
 
 .prompt-box:focus-within {
-  border-color: rgba(255, 255, 255, 0.28);
+  border-color: rgba(255, 255, 255, 0.18);
+  box-shadow: none;
 }
 
 #prompt {
   width: 100%;
   border: 0;
   resize: none;
-  padding: 13px 15px 4px;
+  padding: 13px 15px 6px;
   font: inherit;
-  font-size: var(--fs-14);
-  line-height: 1.55;
+  font-size: 14px;
+  line-height: 1.5;
   outline: none;
   background: transparent;
   color: var(--ink);
-  min-height: 56px;
-  display: block;
+  min-height: 58px;
 }
 
 #prompt::placeholder {
-  color: var(--faint);
+  color: #6b6b76;
 }
 
 .composer-hint {
@@ -652,7 +652,7 @@ body {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  padding: 4px 10px 8px;
+  padding: 5px 10px 9px 10px;
 }
 
 .bar-left {
@@ -660,7 +660,6 @@ body {
   align-items: center;
   gap: 6px;
   min-width: 0;
-  flex: 1 1 auto;
   flex-wrap: wrap;
 }
 
@@ -672,24 +671,19 @@ body {
 }
 
 .icon-btn {
-  width: 32px;
-  height: 32px;
+  width: 30px;
+  height: 30px;
   border: 1px solid var(--line);
-  border-radius: 50%;
-  background: transparent;
-  color: var(--muted);
-  font-size: 18px;
-  font-weight: 400;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.03);
+  color: #b4b4c0;
+  font-size: 17px;
   line-height: 1;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  transition:
-    color var(--dur-fast) ease,
-    background-color var(--dur-fast) ease,
-    border-color var(--dur-fast) ease,
-    transform var(--dur-fast) var(--ease-out);
+  transition: all 0.15s ease;
   flex: 0 0 auto;
 }
 
@@ -702,9 +696,8 @@ button.icon-btn {
 }
 
 .icon-btn:hover {
-  background: var(--surface-2);
-  border-color: var(--line-strong);
-  color: var(--ink);
+  background: rgba(255, 255, 255, 0.06);
+  color: #fafafa;
 }
 
 .icon-btn:active {
@@ -726,49 +719,58 @@ button.icon-btn {
   appearance: none;
   -webkit-appearance: none;
   border: 1px solid var(--line);
-  border-radius: var(--r-pill);
-  background-color: var(--surface-2);
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239b9ba8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  border-radius: 8px;
+  background-color: rgba(255, 255, 255, 0.03);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239898a4' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
-  background-position: right 10px center;
+  background-position: right 8px center;
   cursor: pointer;
   font: inherit;
-  font-size: var(--fs-12);
-  font-weight: 600;
-  color: var(--ink-2);
-  padding: 7px 30px 7px 12px;
-  max-width: 220px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: #d4d4dc;
+  padding: 5px 26px 5px 10px;
+  max-width: 210px;
   text-overflow: ellipsis;
   outline: none;
-  transition:
-    color var(--dur-fast) ease,
-    background-color var(--dur-fast) ease,
-    border-color var(--dur-fast) ease;
+  transition: all 0.15s ease;
 }
 
 .picker option {
-  background: var(--surface-2);
-  color: var(--ink);
+  background: #141419;
+  color: #f4f4f5;
 }
 
 .picker:hover {
   color: var(--ink);
-  background-color: var(--surface-3);
+  background-color: rgba(255, 255, 255, 0.06);
   border-color: var(--line-strong);
 }
 
 .picker-pill {
-  letter-spacing: 0.01em;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background-color: rgba(255, 255, 255, 0.04);
+  background-position: right 10px center;
+  padding: 6px 30px 6px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #d4d4dc;
+  max-width: 230px;
+}
+.picker-pill:hover {
+  background-color: rgba(255, 255, 255, 0.06);
+  color: #fafafa;
 }
 
 .picker-ghost {
-  border-color: transparent;
+  border: 0;
   background-color: transparent;
   background-position: right 2px center;
-  padding: 7px 20px 7px 8px;
-  font-weight: 500;
+  padding: 6px 20px 6px 6px;
+  font-size: 12px;
   color: var(--muted);
-  max-width: 104px;
+  max-width: 110px;
 }
 
 .picker-ghost:hover {
@@ -780,21 +782,19 @@ button.icon-btn {
   display: flex;
   gap: 6px;
   flex-wrap: wrap;
-  min-width: 0;
 }
 
 .attach-chip {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  background: var(--surface-3);
+  gap: 6px;
+  background: #232329;
   border: 1px solid var(--line);
-  border-radius: var(--r-pill);
-  padding: 3px 4px 3px 10px;
-  font-size: var(--fs-11);
-  font-weight: 500;
-  color: var(--ink-2);
-  max-width: 168px;
+  border-radius: 999px;
+  padding: 2px 5px 2px 9px;
+  font-size: 11px;
+  color: #d4d4d8;
+  max-width: 160px;
 }
 
 .attach-chip span {
@@ -807,16 +807,14 @@ button.icon-btn {
   border: 0;
   background: transparent;
   cursor: pointer;
-  color: var(--faint);
-  font-size: 14px;
+  color: #71717a;
+  font-size: 13px;
   line-height: 1;
-  padding: 2px 6px;
-  border-radius: var(--r-pill);
+  padding: 0 4px;
 }
 
 .attach-chip button:hover {
-  color: var(--ink);
-  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
 }
 
 .send-btn {
@@ -824,30 +822,31 @@ button.icon-btn {
   height: 34px;
   border: 0;
   border-radius: 50%;
-  background: var(--ink);
+  background: #f4f4f6;
   color: #09090b;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   flex: 0 0 auto;
+  box-shadow: 0 2px 10px rgba(255, 255, 255, 0.14);
   transition:
-    background-color var(--dur-fast) ease,
-    transform var(--dur-fast) var(--ease-out),
-    opacity var(--dur-fast) ease;
+    transform 0.12s ease,
+    background 0.15s ease;
 }
 
 .send-btn:hover:not(:disabled) {
-  background: #fff;
-  transform: translateY(-1px);
+  background: rgba(255, 255, 255, 0.08);
+  color: #fafafa;
+  transform: none;
 }
 
 .send-btn:active:not(:disabled) {
-  transform: translateY(0) scale(0.96);
+  transform: translateY(0);
 }
 
 .send-btn:disabled {
-  opacity: 0.55;
+  opacity: 0.5;
   cursor: wait;
 }
 
@@ -871,22 +870,20 @@ button.icon-btn {
 .plus-menu {
   position: absolute;
   left: 0;
-  bottom: calc(100% + 10px);
+  bottom: calc(100% + 8px);
   z-index: 30;
   width: 300px;
-  max-width: calc(100vw - 48px);
+  max-width: calc(100vw - 24px);
   max-height: min(360px, 52vh);
   overflow-y: auto;
   overscroll-behavior: contain;
   display: flex;
   flex-direction: column;
-  border: 1px solid var(--line-strong);
-  border-radius: var(--r-lg);
-  background: var(--surface-2);
-  box-shadow: 0 24px 48px -12px rgba(0, 0, 0, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  background: #141419;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6);
   padding: 6px;
-  transform-origin: bottom left;
-  animation: menu-in var(--dur-med) var(--ease-out);
 }
 
 @keyframes menu-in {
@@ -915,16 +912,15 @@ button.icon-btn {
   width: 100%;
   min-width: 0;
   border: 0;
-  border-radius: var(--r-sm);
+  border-radius: 8px;
   background: transparent;
   color: var(--ink);
   font: inherit;
-  font-size: var(--fs-13);
+  font-size: 12.5px;
   line-height: 1.4;
   padding: 8px 10px;
   cursor: pointer;
   text-align: left;
-  transition: background-color var(--dur-fast) ease;
 }
 
 .plus-item:hover {
@@ -943,7 +939,7 @@ button.icon-btn {
 .plus-item .tick {
   flex: 0 0 auto;
   margin-left: auto;
-  color: var(--ok);
+  color: #4ade80;
   font-weight: 700;
 }
 
@@ -955,22 +951,19 @@ button.icon-btn {
 .plus-section {
   font-family: var(--font-mono);
   font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--faint);
-  padding: 10px 10px 4px;
-  margin: 4px 0 0;
-  border-top: 1px solid var(--line);
+  color: #71717e;
+  padding: 8px 10px 4px;
+  margin: 2px 0 0;
 }
 
-.plus-section:first-of-type {
-  border-top: 0;
-  margin-top: 2px;
+.plus-section:first-child {
+  margin-top: 0;
 }
 
 .plus-hint {
-  font-size: var(--fs-12);
+  font-size: 11.5px;
   color: var(--muted);
   padding: 4px 10px 6px;
   line-height: 1.5;
@@ -978,7 +971,7 @@ button.icon-btn {
 }
 
 .skill-list {
-  padding: 0 14px 4px;
+  padding: 0 14px 2px;
 }
 
 .skill-list:empty {
@@ -988,25 +981,24 @@ button.icon-btn {
 .skill-chip {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  background: var(--accent-dim);
-  border: 1px solid rgba(125, 211, 252, 0.28);
-  border-radius: var(--r-pill);
-  padding: 3px 4px 3px 10px;
-  font-size: var(--fs-11);
+  gap: 6px;
+  background: rgba(56, 189, 248, 0.1);
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  border-radius: 999px;
+  padding: 2px 5px 2px 9px;
+  font-size: 11px;
   font-family: var(--font-mono);
-  color: var(--accent);
+  color: #7dd3fc;
 }
 
 .skill-chip button {
   border: 0;
   background: transparent;
   cursor: pointer;
-  color: var(--muted);
-  font-size: 14px;
+  color: #a1a1aa;
+  font-size: 13px;
   line-height: 1;
-  padding: 2px 6px;
-  border-radius: var(--r-pill);
+  padding: 0 4px;
 }
 
 .skill-chip button:hover {
@@ -1042,14 +1034,14 @@ button.icon-btn {
   border-radius: 6px;
   background: transparent;
   cursor: pointer;
-  color: var(--faint);
-  font-size: 15px;
+  color: #71717a;
+  font-size: 14px;
   line-height: 1;
   padding: 0;
 }
 
 .plus-mcp-row button:hover {
-  color: var(--bad);
+  color: #f87171;
   background: rgba(255, 255, 255, 0.06);
 }
 
@@ -1065,13 +1057,13 @@ button.icon-btn {
   width: 100%;
   min-width: 0;
   border: 1px solid var(--line);
-  border-radius: var(--r-sm);
-  background: var(--surface-0);
+  border-radius: 7px;
+  background: #09090b;
   color: var(--ink);
   font: inherit;
-  font-size: 16px;
+  font-size: 12px;
   line-height: 1.4;
-  padding: 8px;
+  padding: 7px 8px;
   outline: none;
 }
 
@@ -1081,22 +1073,21 @@ button.icon-btn {
 
 .plus-add button {
   flex: 0 0 auto;
-  border: 1px solid var(--line-strong);
-  border-radius: var(--r-sm);
-  background: var(--surface-3);
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--surface-elevated, #17171e);
   color: var(--ink);
   font: inherit;
-  font-size: var(--fs-12);
+  font-size: 12px;
   font-weight: 600;
   line-height: 1.4;
-  padding: 8px 12px;
+  padding: 7px 12px;
   cursor: pointer;
   white-space: nowrap;
-  min-height: 38px;
 }
 
 .plus-add button:hover {
-  background: #26262f;
+  background: #232329;
 }
 
 /* ---------- Right pane: game preview stage ---------- */
@@ -1513,44 +1504,48 @@ button.icon-btn {
   .prompt-bar {
     flex-wrap: nowrap;
     gap: 6px;
-    padding: 6px 8px 4px;
+    padding: 6px 8px 8px;
   }
 
   .bar-left {
     flex: 1 1 auto;
     min-width: 0;
     flex-wrap: nowrap;
+    overflow: visible;
   }
 
   .bar-right {
     flex: 0 0 auto;
-    gap: 6px;
+    gap: 4px;
   }
 
   /* 16px inputs prevent iOS Safari zoom-on-focus */
   #prompt {
     font-size: 16px;
-    min-height: 50px;
-    padding: 11px 13px 4px;
+    min-height: 48px;
+    padding: 10px 12px 4px;
   }
 
   .picker {
-    max-width: 148px;
-    font-size: var(--fs-12);
-    padding: 9px 28px 9px 12px;
-    min-height: 44px;
+    max-width: 118px;
+    font-size: 12px;
+    white-space: nowrap;
+  }
+  .picker {
+    font-size: 13px;
+    padding: 7px 26px 7px 10px;
+    max-width: 185px;
   }
 
   .picker-ghost {
-    max-width: 76px;
-    padding-left: 8px;
+    max-width: 64px;
+    font-size: 12px;
   }
 
   .attach-list {
     flex-wrap: nowrap;
     overflow-x: auto;
     scrollbar-width: none;
-    max-width: 100%;
   }
 
   .attach-list::-webkit-scrollbar {
@@ -1563,8 +1558,8 @@ button.icon-btn {
 
   /* 44px touch targets */
   .icon-btn {
-    width: 44px;
-    height: 44px;
+    width: 36px;
+    height: 36px;
   }
 
   #attach-btn {
@@ -1574,8 +1569,8 @@ button.icon-btn {
   }
 
   .send-btn {
-    width: 44px;
-    height: 44px;
+    width: 38px;
+    height: 38px;
   }
 
   .plus-menu {
@@ -1589,7 +1584,6 @@ button.icon-btn {
 
   .plus-add input {
     font-size: 16px;
-    min-height: 44px;
   }
 
   .plus-add button {
