@@ -52,6 +52,7 @@ async function main() {
   }
   const explicitOut = argValue("--out", "");
   const conceptMode = process.argv.includes("--concept");
+  const editSrc = argValue("--edit", "");
 
   const client = new MetaImageClient();
   if (!client.available()) {
@@ -59,8 +60,30 @@ async function main() {
     process.exit(1);
   }
 
-  console.log(`[make-image] generating: "${prompt.trim().slice(0, 120)}"`);
-  const bytes = await client.generateConceptImage(prompt.trim());
+  let bytes;
+  if (editSrc) {
+    const srcPath = path.resolve(ROOT, editSrc);
+    if (!fs.existsSync(srcPath)) {
+      console.error(`[make-image] FAILED: input not found: ${editSrc}`);
+      process.exit(1);
+    }
+    const ext = path.extname(srcPath).toLowerCase();
+    const mime =
+      ext === ".jpg" || ext === ".jpeg"
+        ? "image/jpeg"
+        : ext === ".webp"
+          ? "image/webp"
+          : "image/png";
+    console.log(`[make-image] editing: "${prompt.trim().slice(0, 120)}"`);
+    bytes = await client.editImage(
+      fs.readFileSync(srcPath),
+      mime,
+      prompt.trim(),
+    );
+  } else {
+    console.log(`[make-image] generating: "${prompt.trim().slice(0, 120)}"`);
+    bytes = await client.generateConceptImage(prompt.trim());
+  }
 
   let dest;
   if (explicitOut) {
