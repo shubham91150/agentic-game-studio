@@ -30,6 +30,14 @@
         </div>
 
         <div class="crumb-right">
+          <button
+            type="button"
+            id="library-btn"
+            class="crumb-btn"
+            title="Browse generated games"
+          >
+            Library <span class="count-badge" id="library-count"></span>
+          </button>
           <a
             href="https://github.com/shubham91150/agentic-game-studio"
             target="_blank"
@@ -44,6 +52,36 @@
           >
         </div>
       </header>
+
+      <!-- Game library drawer -->
+      <div class="drawer-overlay hidden" id="drawer-overlay"></div>
+      <aside
+        class="library-drawer"
+        id="library-drawer"
+        aria-label="Generated games library"
+        aria-hidden="true"
+      >
+        <div class="drawer-head">
+          <div class="window-title-group">
+            <span class="window-dots" aria-hidden="true">
+              <span></span><span></span><span></span>
+            </span>
+            <span class="terminal-title">Game Library</span>
+          </div>
+          <button
+            type="button"
+            id="library-close"
+            class="icon-btn"
+            aria-label="Close library"
+          >
+            ×
+          </button>
+        </div>
+        <p class="drawer-sub" id="library-sub">
+          Built by the agent, ready to play.
+        </p>
+        <div class="library-grid" id="library-grid"></div>
+      </aside>
 
       <!-- Mobile view switcher (visible on screens <= 960px) -->
       <nav class="mobile-tabs" id="mobile-tabs" aria-label="Workspace view">
