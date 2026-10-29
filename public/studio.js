@@ -989,6 +989,20 @@
     }
     if (emptyEl) emptyEl.classList.remove("hidden");
     if (promptEl && window.innerWidth > 960) promptEl.focus();
+    fetch("/api/studio/session/new", { method: "POST" })
+      .then(function (res) {
+        if (!res.ok) throw new Error("new session failed: " + res.status);
+        return res.json();
+      })
+      .then(function () {
+        setStatus("Previous chat archived. Fresh terminal starting…", "ok");
+      })
+      .catch(function () {
+        setStatus(
+          "UI reset. Fresh terminal unavailable — start failed.",
+          "warn",
+        );
+      });
   }
   if (newchatBtn) newchatBtn.addEventListener("click", newChat);
 

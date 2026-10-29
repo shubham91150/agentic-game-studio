@@ -18,7 +18,8 @@ import http from "node:http";
 import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
-import { execFileSync } from "node:child_process";
+import { execFile as execFileCb, execFileSync } from "node:child_process";
+import { promisify } from "node:util";
 import { fileURLToPath } from "node:url";
 
 import {
@@ -32,6 +33,8 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT_DIR = path.resolve(__dirname, "..");
 const PUBLIC_DIR = path.join(ROOT_DIR, "public");
 const STORAGE_DIR = path.join(ROOT_DIR, "storage", "games");
+const CHATS_DIR = path.join(ROOT_DIR, "storage", "chats");
+const execFileAsync = promisify(execFileCb);
 
 const PORT = Number(process.env.STUDIO_PORT || 3030);
 const gameStore = new GameStorageManager(STORAGE_DIR);
@@ -637,6 +640,103 @@ const server = http.createServer(async (req, res) => {
       }
     });
     return;
+  }
+
+  // ---------- Fresh terminal session (new chat) ----------
+  // Archive the live pane, kill the session, recreate it fresh exactly
+  // like the launcher script. ttyd clients auto-reconnect; no ttyd restart.
+  if (pathname === "/api/studio/session/new" && req.method === "POST") {
+    // Drain any request body; nothing in it is used or logged.
+    req.resume();
+    let archived = null;
+    let note = null;
+    try {
+      const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+      const fileName = `chat_${stamp}.log`;
+      fs.mkdirSync(CHATS_DIR, { recursive: true });
+      const dest = path.join(CHATS_DIR, fileName);
+      try {
+        const { stdout } = await execFileAsync(
+          "tmux",
+          ["capture-pane", "-t", TMUX_SESSION, "-p", "-S", "-"],
+          { timeout: 15000 },
+        );
+        fs.writeFileSync(dest, stdout || "", "utf8");
+      } catch {
+        note = "previous session missing; nothing to archive";
+        fs.writeFileSync(
+          dest,
+          `No previous tmux session '${TMUX_SESSION}' to archive.\n`,
+          "utf8",
+        );
+      }
+      archived = path.join("storage", "chats", fileName);
+    } catch {
+      return json(res, 500, { ok: false, error: "Could not archive session." });
+    }
+    try {
+      await execFileAsync("tmux", ["kill-session", "-t", TMUX_SESSION], {
+        timeout: 15000,
+      });
+    } catch {
+      /* ignore missing session */
+    }
+    try {
+      const museBin = path.join(
+        process.env.HOME || "/home/opencode",
+        ".local",
+        "bin",
+        "muse",
+      );
+      await execFileAsync(
+        "tmux",
+        [
+          "new-session",
+          "-d",
+          "-s",
+          TMUX_SESSION,
+          "-x",
+          "120",
+          "-y",
+          "32",
+          "-c",
+          ROOT_DIR,
+          `bash -lc 'while true; do ${museBin} --trust-workspace --yolo --model muse-spark-1.3; sleep 1; done'`,
+        ],
+        { timeout: 15000 },
+      );
+      try {
+        await execFileAsync(
+          "tmux",
+          ["set-option", "-t", TMUX_SESSION, "status", "off"],
+          {
+            timeout: 15000,
+          },
+        );
+        await execFileAsync(
+          "tmux",
+          ["set-option", "-t", TMUX_SESSION, "mouse", "on"],
+          {
+            timeout: 15000,
+          },
+        );
+      } catch {
+        /* best-effort */
+      }
+    } catch {
+      return json(res, 500, {
+        ok: false,
+        error: "Could not start a fresh session.",
+        archived,
+      });
+    }
+    activeTerminalModel = "muse-spark-1.3";
+    return json(res, 200, {
+      ok: true,
+      archived,
+      session: TMUX_SESSION,
+      ...(note ? { note } : {}),
+    });
   }
 
   // ---------- Live agent run (Server-Sent Events) ----------
