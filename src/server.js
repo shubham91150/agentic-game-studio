@@ -87,6 +87,11 @@ const server = http.createServer(async (req, res) => {
     return sendFile(res, path.join(PUBLIC_DIR, "index.html"));
   }
 
+  // ---------- Studio static assets (studio.js, etc.) ----------
+  if (pathname === "/studio/studio.js" || pathname === "/studio.js") {
+    return sendFile(res, path.join(PUBLIC_DIR, "studio.js"));
+  }
+
   // ---------- Health ----------
   if (pathname === "/api/studio/health") {
     let musePresent = false;
@@ -170,10 +175,24 @@ const server = http.createServer(async (req, res) => {
     return fs.createReadStream(scriptPath).pipe(res);
   }
 
-  // ---------- Play a stored game ----------
-  const playMatch = pathname.match(/^\/studio\/games\/([\w-]+)\/index\.html$/);
+  // ---------- Vendor assets (Three.js etc.) ----------
+  if (pathname === "/studio/vendor/three.min.js") {
+    const vendorPath = path.join(
+      ROOT_DIR,
+      "src",
+      "engine",
+      "vendor",
+      "three.min.js",
+    );
+    return sendFile(res, vendorPath);
+  }
+
+  // ---------- Play a stored game (HTML or game.js) ----------
+  const playMatch = pathname.match(
+    /^\/studio\/games\/([\w-]+)\/(index\.html|game\.js)$/,
+  );
   if (playMatch) {
-    return sendFile(res, path.join(STORAGE_DIR, playMatch[1], "index.html"));
+    return sendFile(res, path.join(STORAGE_DIR, playMatch[1], playMatch[2]));
   }
 
   // ---------- Stored game assets (concept art etc.) ----------
