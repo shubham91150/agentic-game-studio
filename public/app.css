@@ -911,6 +911,7 @@ button.icon-btn {
   gap: 8px;
   width: 100%;
   min-width: 0;
+  min-height: 36px;
   border: 0;
   border-radius: 8px;
   background: transparent;
@@ -927,7 +928,7 @@ button.icon-btn {
   background: rgba(255, 255, 255, 0.06);
 }
 
-.plus-item > span:first-child {
+.plus-item > span:first-child:not(.plus-icon) {
   flex: 1 1 auto;
   min-width: 0;
   overflow: hidden;
@@ -1094,24 +1095,24 @@ button.icon-btn {
 
 .plus-row {
   align-items: center;
+  min-height: 38px;
 }
 
 .plus-row .plus-icon {
   flex: 0 0 auto;
-  width: 26px;
-  height: 26px;
-  border-radius: 7px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid var(--line);
+  width: 20px;
+  height: 20px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: var(--muted);
+  color: var(--faint);
 }
 
 .plus-row:hover .plus-icon {
-  color: var(--ink);
-  border-color: var(--line-strong);
+  color: var(--muted);
 }
 
 .plus-row .plus-label {
