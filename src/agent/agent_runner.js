@@ -41,6 +41,15 @@ export { resolveMetaApiKey };
 const MUSE_BIN = path.join(os.homedir(), ".local", "bin", "muse");
 const BASETEN_MODEL_LABEL = "meta-models/muse-spark-open";
 const CLI_MODEL_LABEL = process.env.MUSE_CLI_MODEL || "muse-spark-1.3";
+// Only models verified live on this VM may be selected in the UI.
+export const ALLOWED_CLI_MODELS = ["muse-spark-1.3", "muse-wonder-1.0"];
+
+export function resolveCliModel(requested) {
+  if (typeof requested === "string" && ALLOWED_CLI_MODELS.includes(requested)) {
+    return requested;
+  }
+  return CLI_MODEL_LABEL;
+}
 
 /**
  * Human label + origin for one real CLI sub-action.
@@ -288,7 +297,7 @@ export class AgentRunner {
    * @param {string} taskPrompt
    * @returns {Promise<{ok: boolean, output: string, live: boolean, reason?: string}>}
    */
-  runMuseCLI(runDir, taskPrompt, { timeoutMs = 180000 } = {}) {
+  runMuseCLI(runDir, taskPrompt, { timeoutMs = 180000, model } = {}) {
     return new Promise((resolve) => {
       if (!this.museAvailable()) {
         this.log("warn", "Muse Code CLI binary not found on this host.");
@@ -303,13 +312,14 @@ export class AgentRunner {
       const metaKey = resolveMetaApiKey();
       const live = Boolean(metaKey);
       const useJson = live;
+      const cliModel = resolveCliModel(model);
       const args = live
         ? [
             "exec",
             "--provider",
             "meta",
             "--model",
-            CLI_MODEL_LABEL,
+            cliModel,
             "--reasoning-effort",
             "low",
             "--max-model-steps",
@@ -326,7 +336,7 @@ export class AgentRunner {
       this.log(
         "info",
         live
-          ? `Spawning Muse Code CLI on VM (live Meta provider, model ${CLI_MODEL_LABEL})`
+          ? `Spawning Muse Code CLI on VM (live Meta provider, model ${cliModel})`
           : "Spawning Muse Code CLI on VM (offline echo provider — no Meta key found)",
       );
 
@@ -421,7 +431,10 @@ export class AgentRunner {
    * Full pipeline. Emits live events at every step.
    * @returns {Promise<{ok: boolean, gameId?: string, playUrl?: string, spec?: object}>}
    */
-  async run(rawPrompt) {
+  async run(rawPrompt, opts = {}) {
+    // opts: { model?: string (CLI model id, allowlisted), attachments?: Array<{name, path}> }
+    const cliModel = resolveCliModel(opts.model);
+    const attachments = Array.isArray(opts.attachments) ? opts.attachments : [];
     const startedAt = Date.now();
     this.emit({ type: "start", prompt: rawPrompt, at: startedAt });
 
@@ -452,19 +465,42 @@ export class AgentRunner {
     );
     this.log("ok", "Safety check passed (local keyword rules).");
 
-    // Prompt cache: an identical (sanitised) prompt reuses the Wonder/
-    // Baseten design, the CLI-written Unity code, and the concept image.
-    // Repeat builds therefore cost zero Meta/Baseten calls.
+    // Prompt cache: an identical (sanitised) prompt + CLI model + attachments
+    // reuses the Wonder/Baseten design, the CLI-written Unity code, and the
+    // concept image. Repeat builds therefore cost zero Meta/Baseten calls.
+    // Legacy cache files (prompt-only key) are still honoured for the
+    // default model with no attachments.
+    const attachmentKey = attachments
+      .map((a) => a.name || "file")
+      .sort()
+      .join("|");
     const promptHash = crypto
       .createHash("sha1")
       .update(prompt.toLowerCase())
       .digest("hex")
       .slice(0, 16);
+    const cacheKey =
+      cliModel === CLI_MODEL_LABEL && !attachmentKey.length
+        ? promptHash
+        : crypto
+            .createHash("sha1")
+            .update(`${prompt.toLowerCase()}|${cliModel}|${attachmentKey}`)
+            .digest("hex")
+            .slice(0, 16);
     const cacheDir = path.join(this.workspaceDir, "storage", "cache");
     fs.mkdirSync(cacheDir, { recursive: true });
-    const specCachePath = path.join(cacheDir, `spec_${promptHash}.json`);
-    const unityCachePath = path.join(cacheDir, `unity_${promptHash}.cs`);
-    const imageCachePath = path.join(cacheDir, `concept_${promptHash}.webp`);
+    let specCachePath = path.join(cacheDir, `spec_${cacheKey}.json`);
+    let unityCachePath = path.join(cacheDir, `unity_${cacheKey}.cs`);
+    let imageCachePath = path.join(cacheDir, `concept_${cacheKey}.webp`);
+    if (
+      cacheKey !== promptHash &&
+      !fs.existsSync(specCachePath) &&
+      fs.existsSync(path.join(cacheDir, `spec_${promptHash}.json`))
+    ) {
+      specCachePath = path.join(cacheDir, `spec_${promptHash}.json`);
+      unityCachePath = path.join(cacheDir, `unity_${promptHash}.cs`);
+      imageCachePath = path.join(cacheDir, `concept_${promptHash}.webp`);
+    }
     const specCached = fs.existsSync(specCachePath);
 
     // ---------------- Step 1: Architect (Wonder) + open-weight enrichment (Baseten) ----------------
@@ -627,6 +663,23 @@ export class AgentRunner {
         ".work",
         `run_${Date.now()}`,
       );
+      fs.mkdirSync(runDir, { recursive: true });
+      // Attachments land inside the scoped run dir so the CLI can read them.
+      const attachedNames = [];
+      for (const a of attachments) {
+        try {
+          if (!a || !a.path || !a.name) continue;
+          const safeName = path
+            .basename(String(a.name))
+            .replace(/[^a-zA-Z0-9._-]/g, "_")
+            .slice(0, 100);
+          if (!safeName) continue;
+          fs.copyFileSync(a.path, path.join(runDir, safeName));
+          attachedNames.push(safeName);
+        } catch {
+          // Unreadable attachment: skip it, never fail the run.
+        }
+      }
       const cliTask =
         `Create exactly two files in this workspace and nothing else:\n` +
         `1) SPEC.md — markdown with the game title "${spec.title}", biome "${spec.world.biome}", ` +
@@ -634,8 +687,14 @@ export class AgentRunner {
         `gravity ${spec.mechanics.physics.gravity}, and the objective from this concept: "${prompt}".\n` +
         `2) AgenticPlayerController.cs — a complete Unity C# MonoBehaviour class named ` +
         `AgenticPlayerController using only UnityEngine, with WASD/arrow movement at that speed, ` +
-        `a Space jump using that jump velocity and gravity, and no external dependencies.`;
-      cli = await this.runMuseCLI(runDir, cliTask);
+        `a Space jump using that jump velocity and gravity, and no external dependencies.` +
+        (attachedNames.length
+          ? `\n3) First read these attached reference files in this workspace and use them to guide the game design: ${attachedNames.join(", ")}.`
+          : "");
+      cli = await this.runMuseCLI(runDir, cliTask, {
+        model: cliModel,
+        timeoutMs: 240000,
+      });
 
       // The run dir is fresh per run, so any file here came from this run.
       // Accept it on content validity even if the CLI exited non-zero

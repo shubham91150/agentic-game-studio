@@ -17,6 +17,7 @@
 import http from "node:http";
 import fs from "node:fs";
 import path from "node:path";
+import crypto from "node:crypto";
 import { fileURLToPath } from "node:url";
 
 import { AgentRunner, resolveMetaApiKey } from "./agent/agent_runner.js";
@@ -188,17 +189,107 @@ const server = http.createServer(async (req, res) => {
     return sendFile(res, assetPath);
   }
 
+  // ---------- File upload for prompt attachments (raw bytes) ----------
+  // POST /api/studio/upload?name=foo.png with Content-Type:
+  // application/octet-stream. Max 10MB. Files land in storage/.uploads
+  // and the CLI reads them from its scoped run dir.
+  if (pathname === "/api/studio/upload" && req.method === "POST") {
+    const rawName = String(url.searchParams.get("name") || "");
+    const safeName =
+      path
+        .basename(rawName)
+        .replace(/[^a-zA-Z0-9._-]/g, "_")
+        .slice(0, 100) || "file.bin";
+    const uploadDir = path.join(ROOT_DIR, "storage", ".uploads");
+    fs.mkdirSync(uploadDir, { recursive: true });
+    const id = crypto.randomBytes(6).toString("hex");
+    const dest = path.join(uploadDir, `${id}_${safeName}`);
+    const MAX_BYTES = 10 * 1024 * 1024;
+    let received = 0;
+    let tooBig = false;
+    const out = fs.createWriteStream(dest);
+    req.on("data", (chunk) => {
+      received += chunk.length;
+      if (received > MAX_BYTES) {
+        tooBig = true;
+        try {
+          req.destroy();
+        } catch {
+          /* ignore */
+        }
+        try {
+          out.destroy();
+        } catch {
+          /* ignore */
+        }
+        try {
+          fs.unlinkSync(dest);
+        } catch {
+          /* ignore */
+        }
+        if (!res.writableEnded) {
+          json(res, 413, { error: "File too large (max 10MB)." });
+        }
+        return;
+      }
+      out.write(chunk);
+    });
+    req.on("end", () => {
+      if (tooBig || res.writableEnded) return;
+      out.end(() => {
+        json(res, 200, { id, name: safeName, size: received });
+      });
+    });
+    req.on("error", () => {
+      try {
+        fs.unlinkSync(dest);
+      } catch {
+        /* ignore */
+      }
+      if (!res.writableEnded) json(res, 400, { error: "Upload failed." });
+    });
+    return;
+  }
+
   // ---------- Live agent run (Server-Sent Events) ----------
   if (pathname === "/api/studio/generate" && req.method === "POST") {
     let body = "";
     req.on("data", (chunk) => (body += chunk));
     req.on("end", async () => {
-      let prompt = "";
+      let payload = {};
       try {
-        prompt = JSON.parse(body || "{}").prompt || "";
+        payload = JSON.parse(body || "{}");
       } catch {
-        prompt = "";
+        payload = {};
       }
+      const prompt = String(payload.prompt || "");
+      const model =
+        typeof payload.model === "string" ? payload.model : undefined;
+      const attachments = Array.isArray(payload.attachments)
+        ? payload.attachments
+            .filter(
+              (a) =>
+                a && typeof a.id === "string" && /^[0-9a-f]{12,64}$/.test(a.id),
+            )
+            .map((a) => {
+              const dir = path.join(ROOT_DIR, "storage", ".uploads");
+              let found = null;
+              try {
+                for (const f of fs.readdirSync(dir)) {
+                  if (f.startsWith(`${a.id}_`)) {
+                    found = path.join(dir, f);
+                    break;
+                  }
+                }
+              } catch {
+                found = null;
+              }
+              return found
+                ? { name: String(a.name || "file"), path: found }
+                : null;
+            })
+            .filter(Boolean)
+        : [];
 
       if (!prompt.trim()) {
         return json(res, 400, { error: "A game prompt is required." });
@@ -240,7 +331,7 @@ const server = http.createServer(async (req, res) => {
 
       try {
         const runner = new AgentRunner(ROOT_DIR, emit);
-        const result = await runner.run(prompt);
+        const result = await runner.run(prompt, { model, attachments });
         if (!result.ok) {
           emit({ type: "done", ok: false, at: Date.now() });
         }
