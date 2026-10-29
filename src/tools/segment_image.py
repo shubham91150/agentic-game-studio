@@ -157,7 +157,10 @@ def main():
     concepts = [c.strip() for c in args.prompt.split(",") if c.strip()]
     saved = []
     for ci, concept in enumerate(concepts):
-        wire_path = os.path.join(args.outdir, f"{stem}_wire_{ci}.txt")
+        safe_concept = re.sub(r"[^a-z0-9]+", "_", concept.lower()).strip("_")
+        wire_path = os.path.join(
+            args.outdir, f"{stem}_wire_{safe_concept}.txt"
+        )
         if args.reuse_wire and os.path.exists(wire_path):
             with open(wire_path) as f:
                 wire = f.read()
