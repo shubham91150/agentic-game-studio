@@ -1090,6 +1090,104 @@ button.icon-btn {
   background: #232329;
 }
 
+/* ---------- v0 attach menu: icon rows + inline expanders ---------- */
+
+.plus-row {
+  align-items: center;
+}
+
+.plus-row .plus-icon {
+  flex: 0 0 auto;
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--line);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+}
+
+.plus-row:hover .plus-icon {
+  color: var(--ink);
+  border-color: var(--line-strong);
+}
+
+.plus-row .plus-label {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.plus-row .plus-chev {
+  flex: 0 0 auto;
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  color: var(--faint);
+  transition: transform var(--dur-fast) ease;
+}
+
+.plus-row[aria-expanded="true"] .plus-chev {
+  transform: rotate(90deg);
+  color: var(--ink-2);
+}
+
+.plus-sub {
+  margin: 2px 4px 2px 22px;
+  padding: 4px 4px 4px 10px;
+  border-left: 1px solid var(--line);
+}
+
+.plus-add-single {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.instruction-list {
+  padding: 0 14px 2px;
+}
+
+.instruction-list:empty {
+  display: none;
+}
+
+.instruction-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(250, 204, 21, 0.08);
+  border: 1px solid rgba(250, 204, 21, 0.3);
+  border-radius: 999px;
+  padding: 2px 5px 2px 9px;
+  font-size: 11px;
+  font-family: var(--font-mono);
+  color: #fcd34d;
+  max-width: 220px;
+}
+
+.instruction-chip span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.instruction-chip button {
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  color: #a1a1aa;
+  font-size: 13px;
+  line-height: 1;
+  padding: 0 4px;
+}
+
+.instruction-chip button:hover {
+  color: var(--ink);
+}
+
 /* ---------- Right pane: game preview stage ---------- */
 
 .viewport {

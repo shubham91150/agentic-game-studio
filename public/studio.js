@@ -14,8 +14,18 @@
   var skillListEl = document.getElementById("skill-list");
   var plusMenu = document.getElementById("plus-menu");
   var plusFile = document.getElementById("plus-file");
+  var plusGenerateImage = document.getElementById("plus-generate-image");
+  var plusSkillsToggle = document.getElementById("plus-skills-toggle");
+  var plusInstructionsToggle = document.getElementById(
+    "plus-instructions-toggle",
+  );
+  var plusMcpsToggle = document.getElementById("plus-mcps-toggle");
   var plusSkills = document.getElementById("plus-skills");
+  var plusInstructions = document.getElementById("plus-instructions");
   var plusMcps = document.getElementById("plus-mcps");
+  var instructionInput = document.getElementById("instruction-input");
+  var instructionAdd = document.getElementById("instruction-add");
+  var instructionListEl = document.getElementById("instruction-list");
   var scopeEl = document.getElementById("scope-select");
   var micBtn = document.getElementById("mic-btn");
   var sendBtn = document.getElementById("send-btn");
@@ -288,9 +298,25 @@
       });
   });
 
-  // + menu: file attach, skills, MCPs (all loaded live from backend)
+  // + menu: v0-style icon rows with inline expanders (file, image,
+  // skills, instructions, MCPs — all loaded live from backend)
   function closePlusMenu() {
     if (plusMenu) plusMenu.classList.add("hidden");
+  }
+  function setSubOpen(toggle, panel, open) {
+    if (!toggle || !panel) return;
+    panel.classList.toggle("hidden", !open);
+    toggle.setAttribute("aria-expanded", open ? "true" : "false");
+  }
+  function isSubOpen(panel) {
+    return !!panel && !panel.classList.contains("hidden");
+  }
+  function toggleSub(toggle, panel) {
+    var open = !isSubOpen(panel);
+    setSubOpen(plusSkillsToggle, plusSkills, false);
+    setSubOpen(plusInstructionsToggle, plusInstructions, false);
+    setSubOpen(plusMcpsToggle, plusMcps, false);
+    setSubOpen(toggle, panel, open);
   }
   if (attachBtn) {
     attachBtn.addEventListener("click", function (event) {
@@ -308,10 +334,84 @@
       closePlusMenu();
     }
   });
+  document.addEventListener("keydown", function (event) {
+    if (event.key === "Escape") closePlusMenu();
+  });
   if (plusFile) {
     plusFile.addEventListener("click", function () {
       closePlusMenu();
       fileInput.click();
+    });
+  }
+  if (plusGenerateImage) {
+    plusGenerateImage.addEventListener("click", function () {
+      closePlusMenu();
+      if (scopeEl) scopeEl.value = "image";
+      if (promptEl) promptEl.focus();
+    });
+  }
+  if (plusSkillsToggle) {
+    plusSkillsToggle.addEventListener("click", function () {
+      toggleSub(plusSkillsToggle, plusSkills);
+    });
+  }
+  if (plusInstructionsToggle) {
+    plusInstructionsToggle.addEventListener("click", function () {
+      toggleSub(plusInstructionsToggle, plusInstructions);
+      if (isSubOpen(plusInstructions) && instructionInput) {
+        instructionInput.focus();
+      }
+    });
+  }
+  if (plusMcpsToggle) {
+    plusMcpsToggle.addEventListener("click", function () {
+      toggleSub(plusMcpsToggle, plusMcps);
+    });
+  }
+
+  // Custom instructions: free-text chips prepended to the sent prompt
+  var customInstructions = [];
+  function renderInstructionChips() {
+    if (!instructionListEl) return;
+    instructionListEl.innerHTML = "";
+    customInstructions.forEach(function (text) {
+      var chip = document.createElement("span");
+      chip.className = "instruction-chip";
+      var label = document.createElement("span");
+      label.textContent = text;
+      var remove = document.createElement("button");
+      remove.type = "button";
+      remove.textContent = "×";
+      remove.setAttribute("aria-label", "Remove instruction");
+      remove.addEventListener("click", function () {
+        customInstructions = customInstructions.filter(function (x) {
+          return x !== text;
+        });
+        renderInstructionChips();
+      });
+      chip.appendChild(label);
+      chip.appendChild(remove);
+      instructionListEl.appendChild(chip);
+    });
+  }
+  function addInstruction() {
+    if (!instructionInput) return;
+    var text = instructionInput.value.trim();
+    if (!text) return;
+    customInstructions.push(text);
+    instructionInput.value = "";
+    renderInstructionChips();
+    instructionInput.focus();
+  }
+  if (instructionAdd) {
+    instructionAdd.addEventListener("click", addInstruction);
+  }
+  if (instructionInput) {
+    instructionInput.addEventListener("keydown", function (event) {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        addInstruction();
+      }
     });
   }
 
@@ -621,8 +721,16 @@
         return "@" + id;
       })
       .join(" ");
+    var instructionTags = customInstructions
+      .map(function (text) {
+        return "[instruction] " + text;
+      })
+      .join(" ");
     var finalPrompt =
-      (skillTags ? skillTags + " " : "") + (SCOPE_PREFIX[scope] || "") + prompt;
+      (skillTags ? skillTags + " " : "") +
+      (instructionTags ? instructionTags + " " : "") +
+      (SCOPE_PREFIX[scope] || "") +
+      prompt;
 
     running = true;
     setBusy(true);
@@ -632,8 +740,10 @@
     promptEl.value = "";
     attachments = [];
     activeSkills = [];
+    customInstructions = [];
     renderAttachments();
     renderSkillChips();
+    renderInstructionChips();
     renderPlusMenu();
 
     fetch("/api/studio/terminal/send", {
