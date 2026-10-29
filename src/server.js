@@ -101,7 +101,13 @@ const CONTENT_TYPES = {
 };
 
 function sendFile(res, filePath) {
-  if (!fs.existsSync(filePath)) {
+  let stat = null;
+  try {
+    stat = fs.statSync(filePath);
+  } catch {
+    stat = null;
+  }
+  if (!stat || !stat.isFile()) {
     res.writeHead(404, { "content-type": "text/plain" });
     return res.end("Not found");
   }
@@ -110,7 +116,16 @@ function sendFile(res, filePath) {
     "content-type": CONTENT_TYPES[ext] || "application/octet-stream",
     "cache-control": "no-cache",
   });
-  fs.createReadStream(filePath).pipe(res);
+  const stream = fs.createReadStream(filePath);
+  stream.on("error", () => {
+    try {
+      if (!res.writableEnded) res.end();
+      else res.destroy();
+    } catch {
+      /* ignore */
+    }
+  });
+  stream.pipe(res);
 }
 
 function json(res, status, body) {

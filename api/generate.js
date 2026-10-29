@@ -6,6 +6,7 @@
 
 import { MuseWonderDirector } from "../src/agent/muse_wonder.js";
 import { TerrainPipeline } from "../src/pipeline/terrain.js";
+import { generateLayout } from "../src/pipeline/layout.js";
 import { generateThreeJsGameHtml } from "../src/engine/threejs_runtime.js";
 
 export default async function handler(req, res) {
@@ -35,7 +36,11 @@ export default async function handler(req, res) {
     const worldData = worldPipeline.generateWorldGeometry(spec.world);
 
     // 3. Three.js WebGL Code Compilation
-    const gameHtml = generateThreeJsGameHtml(spec, worldData);
+    const gameHtml = generateThreeJsGameHtml(
+      spec,
+      worldData,
+      generateLayout(spec),
+    );
 
     return res.status(200).json({
       success: true,

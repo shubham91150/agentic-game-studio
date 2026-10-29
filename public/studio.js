@@ -922,15 +922,6 @@
     setStatus("Sending to Muse Code CLI…");
 
     loadTerminalInline();
-    promptEl.value = "";
-    clearDraft();
-    attachments = [];
-    activeSkills = [];
-    customInstructions = [];
-    renderAttachments();
-    renderSkillChips();
-    renderInstructionChips();
-    renderPlusMenu();
 
     fetch("/api/studio/terminal/send", {
       method: "POST",
@@ -946,6 +937,15 @@
         return res.json();
       })
       .then(function () {
+        promptEl.value = "";
+        clearDraft();
+        attachments = [];
+        activeSkills = [];
+        customInstructions = [];
+        renderAttachments();
+        renderSkillChips();
+        renderInstructionChips();
+        renderPlusMenu();
         setStatus("Sent to Muse Code CLI (" + model + ").", "ok");
       })
       .catch(function () {
