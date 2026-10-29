@@ -191,40 +191,8 @@
           aria-label="Game preview"
         >
           <div class="preview-box">
-            <div class="result-head">
-              <div class="result-title-group">
-                <span class="preview-badge">LIVE GAME PREVIEW</span>
-                <h2 id="game-title">Loading game…</h2>
-              </div>
-              <div class="result-actions">
-                <label class="sr-only" for="game-select"
-                  >Select stored game</label
-                >
-                <select
-                  id="game-select"
-                  class="game-picker"
-                  title="Switch between generated games"
-                >
-                  <option value="">Recent games…</option>
-                </select>
-                <button
-                  type="button"
-                  id="btn-reload"
-                  class="ghost-btn"
-                  title="Reload game preview"
-                >
-                  Reload
-                </button>
-                <button type="button" id="btn-fullscreen" class="ghost-btn">
-                  Fullscreen
-                </button>
-                <button type="button" id="btn-qr" class="ghost-btn">
-                  Mobile QR
-                </button>
-                <button type="button" id="btn-code" class="ghost-btn">
-                  Unity C#
-                </button>
-              </div>
+            <div class="terminal-head">
+              <span class="terminal-title" id="game-title">Game Preview</span>
             </div>
 
             <div class="viewport">
@@ -233,24 +201,6 @@
                 title="Generated game"
                 allow="autoplay; fullscreen"
               ></iframe>
-            </div>
-
-            <div class="preview-drawers">
-              <details class="console-wrap">
-                <summary>
-                  Pipeline activity <span id="token-line"></span>
-                </summary>
-                <div class="console" id="console"></div>
-              </details>
-              <div class="qr hidden" id="qr-box">
-                <img
-                  id="qr-image"
-                  alt="QR code to play on mobile"
-                  width="180"
-                  height="180"
-                />
-              </div>
-              <pre class="code hidden" id="code-box"></pre>
             </div>
           </div>
         </section>
