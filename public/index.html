@@ -11,6 +11,10 @@
       rel="stylesheet"
     />
     <link rel="stylesheet" href="/studio/app.css" />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%2309090b'/%3E%3Cpath d='M16 6l8 5v10l-8 5-8-5V11z' fill='none' stroke='%2338bdf8' stroke-width='2'/%3E%3C/svg%3E"
+    />
   </head>
   <body>
     <div class="page">
@@ -65,11 +69,32 @@
               >Open full terminal</a
             >
           </div>
+          <div class="terminal-connect" id="terminal-connect">
+            <p class="terminal-connect-text">
+              The live terminal needs your GitHub login. Open it once in a new
+              tab, sign in, then load it inline here.
+            </p>
+            <div class="terminal-connect-actions">
+              <a
+                class="terminal-btn"
+                href="https://spurcode.duckdns.org/terminal/"
+                target="_blank"
+                rel="noreferrer"
+                >1 · Open terminal &amp; sign in</a
+              >
+              <button
+                type="button"
+                class="terminal-btn terminal-btn-primary"
+                id="terminal-load"
+              >
+                2 · Load inline preview
+              </button>
+            </div>
+          </div>
           <iframe
             id="cli-frame"
-            class="terminal-frame"
+            class="terminal-frame hidden"
             title="Muse Code CLI terminal"
-            src="https://spurcode.duckdns.org/terminal/"
           ></iframe>
         </div>
       </section>
