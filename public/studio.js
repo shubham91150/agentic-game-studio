@@ -298,6 +298,145 @@
       });
   });
 
+  // Custom model dropdown: pill button + upward menu, native select stays
+  // the single source of truth (sr-only). Selection sets value + dispatches
+  // change so the existing submit + CLI-switch logic works untouched.
+  var modelBtn = document.getElementById("model-btn");
+  var modelLabel = document.getElementById("model-label");
+  var modelMenu = document.getElementById("model-menu");
+
+  function syncModelLabel() {
+    if (!modelEl || !modelLabel) return;
+    var opt = modelEl.options[modelEl.selectedIndex];
+    modelLabel.textContent = opt ? opt.text : modelEl.value;
+  }
+
+  function setModelOpen(open) {
+    if (!modelMenu || !modelBtn) return;
+    modelMenu.classList.toggle("hidden", !open);
+    modelBtn.setAttribute("aria-expanded", open ? "true" : "false");
+  }
+
+  function isModelOpen() {
+    return !!modelMenu && !modelMenu.classList.contains("hidden");
+  }
+
+  function focusModelItem(index) {
+    if (!modelMenu) return;
+    var items = modelMenu.querySelectorAll(".model-item");
+    if (!items.length) return;
+    var i = ((index % items.length) + items.length) % items.length;
+    items[i].focus();
+  }
+
+  function focusedModelIndex() {
+    if (!modelMenu) return -1;
+    var items = modelMenu.querySelectorAll(".model-item");
+    for (var i = 0; i < items.length; i++) {
+      if (items[i] === document.activeElement) return i;
+    }
+    return -1;
+  }
+
+  if (modelEl && modelBtn && modelMenu) {
+    modelEl.querySelectorAll("option").forEach(function (opt) {
+      var item = document.createElement("button");
+      item.type = "button";
+      item.className = "model-item";
+      item.setAttribute("role", "option");
+      item.dataset.value = opt.value;
+      item.setAttribute(
+        "aria-selected",
+        opt.value === modelEl.value ? "true" : "false",
+      );
+      var name = document.createElement("span");
+      name.textContent = opt.text;
+      item.appendChild(name);
+      if (opt.value === modelEl.value) {
+        var tick = document.createElement("span");
+        tick.className = "tick";
+        tick.textContent = "✓";
+        item.appendChild(tick);
+      }
+      item.addEventListener("click", function () {
+        if (modelEl.value !== item.dataset.value) {
+          modelEl.value = item.dataset.value;
+          modelEl.dispatchEvent(new Event("change", { bubbles: true }));
+        }
+        syncModelLabel();
+        modelMenu.querySelectorAll(".model-item").forEach(function (other) {
+          var selected = other === item;
+          other.setAttribute("aria-selected", selected ? "true" : "false");
+          var oldTick = other.querySelector(".tick");
+          if (oldTick) oldTick.remove();
+          if (selected) {
+            var fresh = document.createElement("span");
+            fresh.className = "tick";
+            fresh.textContent = "✓";
+            other.appendChild(fresh);
+          }
+        });
+        setModelOpen(false);
+        modelBtn.focus();
+      });
+      modelMenu.appendChild(item);
+    });
+    syncModelLabel();
+
+    modelBtn.addEventListener("click", function (event) {
+      event.stopPropagation();
+      var open = !isModelOpen();
+      setModelOpen(open);
+      if (open) {
+        var current = modelMenu.querySelector(
+          '.model-item[data-value="' + modelEl.value + '"]',
+        );
+        var items = modelMenu.querySelectorAll(".model-item");
+        var idx = 0;
+        for (var i = 0; i < items.length; i++) {
+          if (items[i] === current) idx = i;
+        }
+        focusModelItem(idx);
+      }
+    });
+
+    modelBtn.addEventListener("keydown", function (event) {
+      if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+        event.preventDefault();
+        if (!isModelOpen()) setModelOpen(true);
+        focusModelItem(event.key === "ArrowDown" ? 0 : -1);
+      }
+    });
+
+    modelMenu.addEventListener("keydown", function (event) {
+      var idx = focusedModelIndex();
+      if (event.key === "ArrowDown") {
+        event.preventDefault();
+        focusModelItem(idx + 1);
+      } else if (event.key === "ArrowUp") {
+        event.preventDefault();
+        focusModelItem(idx - 1);
+      } else if (event.key === "Escape") {
+        setModelOpen(false);
+        modelBtn.focus();
+      }
+    });
+
+    document.addEventListener("click", function (event) {
+      if (
+        isModelOpen() &&
+        !modelMenu.contains(event.target) &&
+        event.target !== modelBtn &&
+        !modelBtn.contains(event.target)
+      ) {
+        setModelOpen(false);
+      }
+    });
+    document.addEventListener("keydown", function (event) {
+      if (event.key === "Escape") setModelOpen(false);
+    });
+  }
+
   // + menu: v0-style icon rows with inline expanders (file, image,
   // skills, instructions, MCPs — all loaded live from backend)
   function closePlusMenu() {
