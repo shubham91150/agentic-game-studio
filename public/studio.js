@@ -1162,9 +1162,91 @@
       });
   });
 
-  // New chat: reset UI conversation state only. The live CLI session is
-  // untouched (its memory persists by design) — no backend calls here.
+  // New chat: reset UI conversation state, archive via backend (which kills
+  // and recreates the tmux session), then cleanly reattach the terminal
+  // iframe to the NEW session. The reload is delayed so ttyd settles, and a
+  // quiet black veil covers the box meanwhile — this bypasses ttyd's
+  // built-in "Press Enter to Reconnect" overlay entirely (ui-taste: no
+  // light box, no manual keypress, no spinner; muted text on black).
   var newchatBtn = document.getElementById("newchat-btn");
+  var TERMINAL_URL = "https://spurcode.duckdns.org/terminal/";
+  var reconnectTimer = null;
+  var reconnectSafety = null;
+
+  function showTerminalLoading() {
+    var box = document.querySelector(".terminal-section .terminal-box");
+    if (!box) return null;
+    var overlay = document.getElementById("terminal-reconnect");
+    if (!overlay) {
+      overlay = document.createElement("div");
+      overlay.id = "terminal-reconnect";
+      overlay.className = "terminal-reconnect";
+      overlay.setAttribute("aria-live", "polite");
+      var text = document.createElement("p");
+      text.className = "terminal-reconnect-text";
+      text.textContent = "Starting fresh terminal…";
+      overlay.appendChild(text);
+      box.appendChild(overlay);
+    }
+    overlay.classList.remove("hidden");
+    var frame = document.getElementById("cli-frame");
+    if (frame) frame.classList.add("hidden");
+    return overlay;
+  }
+
+  function hideTerminalLoading() {
+    var overlay = document.getElementById("terminal-reconnect");
+    if (overlay) overlay.classList.add("hidden");
+    var frame = document.getElementById("cli-frame");
+    if (frame && frame.getAttribute("src")) frame.classList.remove("hidden");
+  }
+
+  function reconnectTerminalFresh() {
+    var frame = document.getElementById("cli-frame");
+    // Inline terminal not active (connect prompt showing) — nothing dead
+    // to hide, so leave the connect box untouched.
+    if (!frame || !frame.getAttribute("src")) return;
+    showTerminalLoading();
+    if (reconnectTimer) clearTimeout(reconnectTimer);
+    if (reconnectSafety) clearTimeout(reconnectSafety);
+    reconnectTimer = setTimeout(function () {
+      reconnectTimer = null;
+      try {
+        // Force a clean attach to the NEW session (bypasses the dead
+        // socket's reconnect overlay). removeAttribute first so setting
+        // the identical URL still triggers a navigation.
+        frame.removeAttribute("src");
+        frame.src = TERMINAL_URL;
+      } catch (e) {
+        /* ignore */
+      }
+      reconnectSafety = setTimeout(function () {
+        reconnectSafety = null;
+        hideTerminalLoading();
+        setStatus(
+          "Fresh terminal is taking long — use Open full terminal.",
+          "warn",
+        );
+      }, 20000);
+    }, 2500);
+  }
+
+  // Fresh attach confirmed: drop the veil. Guarded so the initial
+  // inline load (no veil showing) is unaffected.
+  var cliFrameEl = document.getElementById("cli-frame");
+  if (cliFrameEl) {
+    cliFrameEl.addEventListener("load", function () {
+      var overlay = document.getElementById("terminal-reconnect");
+      if (overlay && !overlay.classList.contains("hidden")) {
+        if (reconnectSafety) {
+          clearTimeout(reconnectSafety);
+          reconnectSafety = null;
+        }
+        hideTerminalLoading();
+      }
+    });
+  }
+
   function newChat() {
     if (promptEl) promptEl.value = "";
     clearDraft();
@@ -1200,6 +1282,7 @@
       })
       .then(function () {
         setStatus("Previous chat archived. Fresh terminal starting…", "ok");
+        reconnectTerminalFresh();
       })
       .catch(function () {
         setStatus(

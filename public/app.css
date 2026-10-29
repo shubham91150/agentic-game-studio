@@ -544,6 +544,33 @@ body {
 
 /* Terminal connect empty state */
 
+/* Fresh-terminal reconnect veil (ui-taste distill): quiet black cover with
+ * muted text while the iframe reattaches to the new tmux session. No
+ * spinner, no light box — hides ttyd's own reconnect overlay window. */
+.terminal-section .terminal-box {
+  position: relative;
+}
+
+.terminal-reconnect {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #000;
+  padding: 24px;
+}
+
+.terminal-reconnect-text {
+  margin: 0;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: var(--fs-13);
+  letter-spacing: 0.02em;
+  text-align: center;
+}
+
 .terminal-frame {
   flex: 1 1 auto;
   min-height: 220px;
