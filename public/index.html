@@ -172,26 +172,54 @@
           <footer class="dock" aria-label="Prompt composer">
             <form id="prompt-form" class="prompt-box" autocomplete="off">
               <label class="sr-only" for="prompt"
-                >Describe what you want the AI agent to build</label
+                >Ask the studio to build</label
               >
               <textarea
                 id="prompt"
                 rows="2"
-                placeholder="Describe what you want the AI agent to build…"
+                placeholder="Ask studio to build..."
                 required
               ></textarea>
 
+              <div
+                id="skill-list"
+                class="attach-list skill-list"
+                aria-live="polite"
+              ></div>
+
               <div class="prompt-bar">
                 <div class="bar-left">
-                  <button
-                    type="button"
-                    id="attach-btn"
-                    class="icon-btn"
-                    title="Attach a reference file"
-                    aria-label="Attach a reference file"
-                  >
-                    +
-                  </button>
+                  <div class="plus-wrap">
+                    <button
+                      type="button"
+                      id="attach-btn"
+                      class="icon-btn"
+                      title="Attach a file, skill, or MCP"
+                      aria-label="Attach a file, skill, or MCP"
+                      aria-haspopup="true"
+                    >
+                      +
+                    </button>
+                    <div
+                      class="plus-menu hidden"
+                      id="plus-menu"
+                      role="menu"
+                      aria-label="Composer options"
+                    >
+                      <button
+                        type="button"
+                        class="plus-item"
+                        id="plus-file"
+                        role="menuitem"
+                      >
+                        Attach a file…
+                      </button>
+                      <div class="plus-section">Skills</div>
+                      <div id="plus-skills"></div>
+                      <div class="plus-section">MCPs</div>
+                      <div id="plus-mcps"></div>
+                    </div>
+                  </div>
                   <input
                     type="file"
                     id="file-input"
@@ -201,7 +229,11 @@
                   />
 
                   <label class="sr-only" for="model-select">Model</label>
-                  <select id="model-select" class="picker" title="Model">
+                  <select
+                    id="model-select"
+                    class="picker picker-pill"
+                    title="Model"
+                  >
                     <option value="muse-wonder-1.0">Muse Wonder 1.0</option>
                     <option value="muse-spark-1.3" selected>
                       Muse Spark 1.3
@@ -223,27 +255,61 @@
                   ></span>
                 </div>
 
-                <button
-                  type="submit"
-                  id="send-btn"
-                  class="send-btn"
-                  title="Send to Muse CLI &amp; build preview (Enter)"
-                  aria-label="Build game"
-                >
-                  <svg
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2.2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
+                <div class="bar-right">
+                  <label class="sr-only" for="scope-select">Build scope</label>
+                  <select
+                    id="scope-select"
+                    class="picker picker-ghost"
+                    title="Build scope"
                   >
-                    <path d="m5 12 7-7 7 7" />
-                    <path d="M12 19V5" />
-                  </svg>
-                </button>
+                    <option value="game" selected>Game</option>
+                    <option value="model">3D Model</option>
+                    <option value="image">Image</option>
+                  </select>
+                  <button
+                    type="button"
+                    id="mic-btn"
+                    class="icon-btn hidden"
+                    title="Dictate with microphone"
+                    aria-label="Dictate with microphone"
+                  >
+                    <svg
+                      width="15"
+                      height="15"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    >
+                      <rect x="9" y="2" width="6" height="12" rx="3" />
+                      <path d="M5 10a7 7 0 0 0 14 0" />
+                      <path d="M12 19v3" />
+                    </svg>
+                  </button>
+                  <button
+                    type="submit"
+                    id="send-btn"
+                    class="send-btn"
+                    title="Send to Muse CLI &amp; build preview (Enter)"
+                    aria-label="Build game"
+                  >
+                    <svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2.2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    >
+                      <path d="m5 12 7-7 7 7" />
+                      <path d="M12 19V5" />
+                    </svg>
+                  </button>
+                </div>
               </div>
             </form>
           </footer>
