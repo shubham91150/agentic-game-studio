@@ -1,6 +1,6 @@
 /* Agentic Game Studio — elite dark developer studio.
  * System: pure black canvas, 1px borders, unified radius scale, neutral depth.
- * Type: system stacks only (no external fonts per CSP/offline-first).
+ * Type: self-hosted Inter + JetBrains Mono (fonts.css, no external URLs per CSP/offline-first).
  * Playbooks: ui-taste audit/craft/polish/distill + ios-design adaptive layout.
  */
 
@@ -56,11 +56,11 @@
   --dur-slow: 300ms;
 
   --font-ui:
-    -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto,
-    "Helvetica Neue", Arial, sans-serif;
+    "Inter", -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI",
+    Roboto, "Helvetica Neue", Arial, sans-serif;
   --font-mono:
-    ui-monospace, "SF Mono", "Cascadia Code", "Roboto Mono", Menlo, Consolas,
-    monospace;
+    "JetBrains Mono", ui-monospace, "SF Mono", "Cascadia Code", "Roboto Mono",
+    Menlo, Consolas, monospace;
 }
 
 * {
