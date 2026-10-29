@@ -1,3 +1,20 @@
 {
-  "version": 2
+  "version": 2,
+  "public": true,
+  "buildCommand": "echo 'No build step required'",
+  "outputDirectory": "public",
+  "rewrites": [
+    {
+      "source": "/api/studio/(.*)",
+      "destination": "https://spurcode.duckdns.org/api/studio/$1"
+    },
+    {
+      "source": "/studio/(.*)",
+      "destination": "https://spurcode.duckdns.org/studio/$1"
+    },
+    {
+      "source": "/game/(.*)",
+      "destination": "https://spurcode.duckdns.org/game/$1"
+    }
+  ]
 }
