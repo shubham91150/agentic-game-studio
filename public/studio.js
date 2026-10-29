@@ -91,12 +91,28 @@
     },
   );
 
-  // Ctrl/Cmd+Enter submits
+  // Enter submits (Shift+Enter inserts a newline)
   promptEl.addEventListener("keydown", function (event) {
-    if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
+    if (event.key === "Enter" && !event.shiftKey) {
       event.preventDefault();
       formEl.requestSubmit();
     }
+  });
+
+  // Switching the model picker also switches the live CLI model in the terminal
+  modelEl.addEventListener("change", function () {
+    fetch("/api/studio/terminal/send", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ model: modelEl.value }),
+    })
+      .then(function (res) {
+        if (!res.ok) throw new Error("model switch failed");
+        setStatus("Switched CLI model to " + modelEl.value + ".", "ok");
+      })
+      .catch(function () {
+        setStatus("Could not switch CLI model.", "error");
+      });
   });
 
   attachBtn.addEventListener("click", function () {
@@ -283,47 +299,50 @@
     var prompt = promptEl.value.trim();
     if (!prompt) return;
     var model = modelEl.value;
+    var currentAttachments = attachments.map(function (a) {
+      return { id: a.id, name: a.name };
+    });
 
     running = true;
     setBusy(true);
-    setStatus("Agent is running on the VM…");
-    consoleEl.innerHTML = "";
-    tokenLine.textContent = "";
-    resultEl.classList.add("hidden");
-    qrBox.classList.add("hidden");
-    codeBox.classList.add("hidden");
+    setStatus("Sending prompt to live Muse Code CLI terminal…");
 
-    var controller = new AbortController();
-    fetch("/api/studio/generate", {
+    // Ensure the terminal iframe is visible so the user sees the CLI process it
+    loadTerminalInline();
+
+    fetch("/api/studio/terminal/send", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         prompt: prompt,
         model: model,
-        attachments: attachments.map(function (a) {
-          return { id: a.id, name: a.name };
-        }),
+        attachments: currentAttachments,
       }),
-      signal: controller.signal,
     })
       .then(function (res) {
-        if (!res.ok || !res.body) {
+        if (!res.ok) {
           throw new Error("Backend answered " + res.status);
         }
-        return readStream(res);
+        return res.json();
       })
-      .catch(function (err) {
-        if (err && err.name !== "AbortError") {
-          setStatus(
-            "Build failed — connection to the VM backend was lost.",
-            "error",
-          );
-          log("Connection to VM backend failed during the run.", "error");
-        }
+      .then(function () {
+        promptEl.value = "";
+        attachments = [];
+        renderAttachments();
+        setStatus(
+          "Dispatched to Muse Code CLI (" +
+            model +
+            ") — watch the terminal above.",
+          "ok",
+        );
+      })
+      .catch(function () {
+        setStatus("Failed to send prompt to the VM CLI terminal.", "error");
       })
       .then(function () {
         running = false;
         setBusy(false);
+        promptEl.focus();
       });
   });
 
@@ -362,7 +381,9 @@
     if (connectBox) connectBox.classList.add("hidden");
     if (frame) {
       frame.classList.remove("hidden");
-      frame.src = "https://spurcode.duckdns.org/terminal/";
+      if (!frame.getAttribute("src")) {
+        frame.src = "https://spurcode.duckdns.org/terminal/";
+      }
     }
   }
   var isSameOrigin = window.location.hostname === "spurcode.duckdns.org";
