@@ -192,6 +192,52 @@ const server = http.createServer(async (req, res) => {
     });
   }
 
+  // ---------- Composer capabilities (skills, MCPs, models) ----------
+  if (pathname === "/api/studio/capabilities" && req.method === "GET") {
+    const skills = [];
+    for (const dir of [".agents/skills", "skills"]) {
+      let entries = [];
+      try {
+        entries = fs.readdirSync(path.join(ROOT_DIR, dir), {
+          withFileTypes: true,
+        });
+      } catch {
+        entries = [];
+      }
+      for (const e of entries) {
+        if (!e.isDirectory()) continue;
+        const id = e.name;
+        if (skills.some((s) => s.id === id)) continue;
+        let description = "";
+        try {
+          const md = fs.readFileSync(
+            path.join(ROOT_DIR, dir, id, "SKILL.md"),
+            "utf8",
+          );
+          const m = md.match(/^description:\s*(.+)$/m);
+          if (m) description = m[1].trim().slice(0, 160);
+        } catch {
+          description = "";
+        }
+        skills.push({ id, description });
+      }
+    }
+    let mcpServers = [];
+    try {
+      const settingsPath = path.join(
+        process.env.HOME || "/root",
+        ".config",
+        "muse",
+        "settings.json",
+      );
+      const settings = JSON.parse(fs.readFileSync(settingsPath, "utf8"));
+      mcpServers = Object.keys(settings.mcpServers || {});
+    } catch {
+      mcpServers = [];
+    }
+    return json(res, 200, { skills, mcpServers, models: ALLOWED_CLI_MODELS });
+  }
+
   // ---------- Library list ----------
   if (pathname === "/api/studio/games" && req.method === "GET") {
     const games = await gameStore.listGames();

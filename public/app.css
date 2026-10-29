@@ -888,3 +888,118 @@ body {
   padding: 30px 10px;
   line-height: 1.6;
 }
+
+/* v0-style composer: plus menu, model pill, scope, mic */
+.bar-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+}
+.picker-pill {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background-color: rgba(255, 255, 255, 0.04);
+  background-position: right 10px center;
+  padding: 6px 30px 6px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #d4d4dc;
+  max-width: 230px;
+}
+.picker-pill:hover {
+  background-color: rgba(255, 255, 255, 0.08);
+}
+.picker-ghost {
+  border: 0;
+  background-color: transparent;
+  background-position: right 2px center;
+  padding: 6px 20px 6px 6px;
+  font-size: 12px;
+  color: var(--muted);
+  max-width: 110px;
+}
+.plus-wrap {
+  position: relative;
+  flex: 0 0 auto;
+}
+.plus-menu {
+  position: absolute;
+  left: 0;
+  bottom: calc(100% + 8px);
+  z-index: 30;
+  width: 230px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #141419;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.65);
+  padding: 6px;
+}
+.plus-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: 12.5px;
+  padding: 8px 10px;
+  cursor: pointer;
+  text-align: left;
+}
+.plus-item:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+.plus-item .tick {
+  margin-left: auto;
+  color: #4ade80;
+  font-weight: 700;
+}
+.plus-item:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+.plus-section {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #71717e;
+  padding: 8px 10px 3px;
+}
+.plus-hint {
+  font-size: 11.5px;
+  color: var(--muted);
+  padding: 4px 10px 8px;
+  line-height: 1.5;
+}
+.skill-list {
+  padding: 0 14px 2px;
+}
+.skill-list:empty {
+  display: none;
+}
+.skill-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(56, 189, 248, 0.1);
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  border-radius: 999px;
+  padding: 2px 5px 2px 9px;
+  font-size: 11px;
+  font-family: var(--font-mono);
+  color: #7dd3fc;
+}
+.skill-chip button {
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  color: #7dd3fc;
+  font-size: 13px;
+  line-height: 1;
+  padding: 0 4px;
+}
