@@ -37,6 +37,7 @@ export class GameStorageManager {
     unityScripts = [],
     unityControllerCode,
     conceptImage,
+    gameJs,
   ) {
     const gameId =
       "game_" + Date.now() + "_" + crypto.randomBytes(3).toString("hex");
@@ -65,13 +66,21 @@ export class GameStorageManager {
 
     // 1. Write manifest & HTML player
     await fs.promises.writeFile(
-      path.join(gameDir, "manifest.json"),
-      JSON.stringify(manifest, null, 2),
-      "utf8",
-    );
-    await fs.promises.writeFile(
       path.join(gameDir, "index.html"),
       gameHtml,
+      "utf8",
+    );
+    if (gameJs) {
+      await fs.promises.writeFile(
+        path.join(gameDir, "game.js"),
+        gameJs,
+        "utf8",
+      );
+      manifest.files.js = "game.js";
+    }
+    await fs.promises.writeFile(
+      path.join(gameDir, "manifest.json"),
+      JSON.stringify(manifest, null, 2),
       "utf8",
     );
 
