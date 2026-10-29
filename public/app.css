@@ -1,6 +1,6 @@
 :root {
   color-scheme: dark;
-  --bg: #07070a;
+  --bg: #000;
   --surface: #111116;
   --surface-elevated: #17171e;
   --ink: #f4f4f6;
@@ -21,18 +21,7 @@
 
 body {
   margin: 0;
-  background:
-    radial-gradient(
-      900px 420px at 22% -10%,
-      rgba(56, 189, 248, 0.065),
-      transparent 70%
-    ),
-    radial-gradient(
-      800px 400px at 82% -15%,
-      rgba(168, 85, 247, 0.05),
-      transparent 70%
-    ),
-    var(--bg);
+  background: #000;
   color: var(--ink);
   font-family: var(--font-ui);
   font-size: 14px;
@@ -743,6 +732,9 @@ body {
     font-size: 16px;
     min-height: 48px;
     padding: 10px 12px 4px;
+  }
+  .plus-add input {
+    font-size: 16px;
   }
   .picker {
     font-size: 13px;
