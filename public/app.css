@@ -392,7 +392,7 @@ body {
   width: 100%;
   border: 1px solid rgba(255, 255, 255, 0.09);
   border-radius: 12px;
-  background: #171717;
+  background: #000;
   overflow: hidden;
   text-align: left;
   box-shadow: none;
@@ -400,6 +400,11 @@ body {
 }
 .prompt-box:focus-within {
   border-color: rgba(255, 255, 255, 0.18);
+  box-shadow: none;
+}
+/* Terminal container: no outline, blends into the page */
+.terminal-box {
+  border-color: transparent;
   box-shadow: none;
 }
 #prompt {
