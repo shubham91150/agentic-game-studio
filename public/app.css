@@ -1,10 +1,11 @@
 :root {
-  color-scheme: light;
-  --bg: #ffffff;
-  --ink: #111111;
-  --muted: #6b6b6b;
-  --line: #e5e5e5;
-  --chip: #f4f4f4;
+  color-scheme: dark;
+  --bg: #09090b;
+  --surface: #131316;
+  --ink: #f4f4f5;
+  --muted: #a1a1aa;
+  --line: #27272a;
+  --chip: #18181b;
   --radius: 12px;
   --font-ui: "Inter", system-ui, -apple-system, sans-serif;
   --font-serif: "Source Serif 4", Georgia, serif;
@@ -63,8 +64,8 @@ body {
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  background: #111;
-  color: #fff;
+  background: #e4e4e7;
+  color: #09090b;
   font-size: 10px;
   font-weight: 600;
   display: inline-flex;
@@ -72,7 +73,7 @@ body {
   justify-content: center;
 }
 .crumb-sep {
-  color: #b5b5b5;
+  color: #52525b;
 }
 .crumb-repo {
   font-weight: 500;
@@ -82,14 +83,14 @@ body {
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: #c9c9c9;
+  background: #52525b;
   margin-left: 6px;
 }
 .live-dot.on {
-  background: #16a34a;
+  background: #4ade80;
 }
 .live-dot.off {
-  background: #dc2626;
+  background: #f87171;
 }
 .live-text {
   font-size: 11px;
@@ -136,13 +137,13 @@ body {
   width: min(680px, 100%);
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  background: #fff;
+  background: var(--surface);
   overflow: hidden;
   text-align: left;
-  box-shadow: 0 1px 2px rgb(0 0 0 / 4%);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 40%);
 }
 .prompt-box:focus-within {
-  border-color: #b5b5b5;
+  border-color: #52525b;
 }
 #prompt {
   width: 100%;
@@ -158,7 +159,7 @@ body {
   min-height: 76px;
 }
 #prompt::placeholder {
-  color: #a3a3a3;
+  color: #63636b;
 }
 
 .prompt-bar {
@@ -180,11 +181,15 @@ body {
   cursor: pointer;
   font: inherit;
   font-size: 13px;
-  color: #595959;
+  color: #a1a1aa;
   padding: 6px 2px;
   max-width: 150px;
   text-overflow: ellipsis;
   outline: none;
+}
+.picker option {
+  background: #18181b;
+  color: #f4f4f5;
 }
 .picker:hover {
   color: var(--ink);
@@ -195,13 +200,14 @@ body {
   border: 0;
   border-radius: 8px;
   background: transparent;
-  color: #595959;
+  color: #a1a1aa;
   font-size: 18px;
   line-height: 1;
   cursor: pointer;
 }
 .icon-btn:hover {
-  background: #f1f0ed;
+  background: #26262a;
+  color: var(--ink);
 }
 .icon-btn:disabled {
   opacity: 0.4;
@@ -217,11 +223,11 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  background: var(--chip);
+  background: #232329;
   border-radius: 999px;
   padding: 3px 4px 3px 10px;
   font-size: 11px;
-  color: #444;
+  color: #d4d4d8;
   max-width: 180px;
 }
 .attach-chip span {
@@ -233,13 +239,13 @@ body {
   border: 0;
   background: transparent;
   cursor: pointer;
-  color: #888;
+  color: #71717a;
   font-size: 13px;
   line-height: 1;
   padding: 0 4px;
 }
 .attach-chip button:hover {
-  color: #111;
+  color: #fff;
 }
 
 .send-btn {
@@ -247,8 +253,8 @@ body {
   height: 34px;
   border: 0;
   border-radius: 50%;
-  background: #f1f0ed;
-  color: #111;
+  background: #f4f4f5;
+  color: #09090b;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
@@ -256,7 +262,7 @@ body {
   flex: 0 0 auto;
 }
 .send-btn:hover:not(:disabled) {
-  background: #e4e4e4;
+  background: #ffffff;
 }
 .send-btn:disabled {
   opacity: 0.5;
@@ -290,7 +296,7 @@ body {
   cursor: pointer;
 }
 .chip:hover {
-  background: #ececec;
+  background: #232329;
   border-color: var(--line);
   color: var(--ink);
 }
@@ -307,10 +313,10 @@ body {
   font-family: var(--font-mono);
 }
 .status.ok {
-  color: #16a34a;
+  color: #4ade80;
 }
 .status.error {
-  color: #dc2626;
+  color: #f87171;
 }
 
 /* Result */
@@ -342,15 +348,16 @@ body {
 .ghost-btn {
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: #fff;
+  background: var(--surface);
   font: inherit;
   font-size: 12px;
   padding: 6px 12px;
   cursor: pointer;
-  color: #333;
+  color: #d4d4d8;
 }
 .ghost-btn:hover {
-  background: var(--chip);
+  background: #1e1e22;
+  color: var(--ink);
 }
 .viewport {
   border: 1px solid var(--line);
@@ -371,6 +378,7 @@ body {
   border-radius: var(--radius);
   font-family: var(--font-mono);
   font-size: 11px;
+  background: #0e0e11;
 }
 .console-wrap summary {
   cursor: pointer;
@@ -384,24 +392,24 @@ body {
   display: flex;
   flex-direction: column;
   gap: 3px;
-  color: #333;
+  color: #d4d4d8;
   white-space: pre-wrap;
   word-break: break-word;
 }
 .console .ok {
-  color: #16a34a;
+  color: #4ade80;
 }
 .console .warn {
-  color: #b45309;
+  color: #fbbf24;
 }
 .console .error {
-  color: #dc2626;
+  color: #f87171;
 }
 .console .cli {
-  color: #0369a1;
+  color: #7dd3fc;
 }
 .console .reason {
-  color: #7c3aed;
+  color: #c4b5fd;
 }
 .qr {
   margin-top: 12px;
@@ -416,7 +424,8 @@ body {
   padding: 12px;
   font-size: 11px;
   text-align: left;
-  background: #fafafa;
+  background: #0e0e11;
+  color: #d4d4d8;
 }
 
 @media (max-width: 560px) {
