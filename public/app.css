@@ -1725,9 +1725,9 @@ button.icon-btn {
 
 /* ---------- Chat history sidebar (LEFT slide-over, ui-taste craft) ---------- */
 
-/* Chat history trigger — quiet ghost icon next to the avatar (ui-taste polish).
- * The avatar itself is a plain non-clickable mark; this button carries the click. */
-.history-btn {
+/* Chat history trigger — v0-style panel icon, first in header (ui-taste polish).
+ * Quiet ghost icon-button: muted → ink on hover, 28px desktop / 36px mobile. */
+.panel-btn {
   width: 28px;
   height: 28px;
   border: 1px solid transparent;
@@ -1747,13 +1747,13 @@ button.icon-btn {
     transform var(--dur-fast) var(--ease-out);
 }
 
-.history-btn:hover {
+.panel-btn:hover {
   color: var(--ink);
   background: rgba(255, 255, 255, 0.05);
   border-color: var(--line);
 }
 
-.history-btn:active {
+.panel-btn:active {
   transform: scale(0.94);
 }
 
@@ -2044,7 +2044,7 @@ button.icon-btn {
     min-height: 36px;
   }
 
-  .history-btn {
+  .panel-btn {
     width: 36px;
     height: 36px;
   }
