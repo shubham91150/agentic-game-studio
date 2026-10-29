@@ -2,21 +2,18 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
-  Activity,
-  Box,
-  Check,
   ChevronDown,
-  Circle,
   Copy,
   Download,
   Expand,
   ExternalLink,
-  FileCode2,
   Link2,
   LoaderCircle,
   Pause,
   Play,
+  Plus,
   RotateCcw,
+  Send,
   Smartphone,
   Terminal,
   X,
@@ -24,23 +21,19 @@ import {
 import { QRCodeSVG } from "qrcode.react";
 import GameViewport from "./game-viewport.js";
 
-// VM backend that runs the Muse Code CLI and the Baseten planner.
-// The Vercel-hosted UI only renders; all agent work happens there.
+// All agent work happens on the VM. The Vercel app is only the remote:
+// prompt composer at the bottom, live Muse Code terminal on top.
 const STUDIO_API_BASE =
   process.env.NEXT_PUBLIC_STUDIO_API_BASE || "https://spurcode.duckdns.org";
 
+// Only models verified live on this VM may be offered here.
+const CLI_MODELS = [
+  { id: "muse-spark-1.3", label: "Muse Spark 1.3", hint: "Fast · CLI default" },
+  { id: "muse-wonder-1.0", label: "Muse Wonder 1.0", hint: "High reasoning" },
+];
+
 const DEFAULT_PROMPT =
   "Build a compact lunar rover challenge with low-gravity jumps, collectible signal beacons, and precise collision physics.";
-
-// NOTE: no predefined pipeline list. Steps are created live, in order,
-// from the agent's own phase events (see handleEvent "phase"). Whatever the
-// VM agent actually does is what appears here — nothing is predeclared.
-
-const TABS = [
-  { id: "reasoning", label: "Agent Reasoning", icon: Activity },
-  { id: "code", label: "Generated Code", icon: FileCode2 },
-  { id: "assets", label: "Assets", icon: Box },
-];
 
 const TEMPLATES = [
   {
@@ -61,9 +54,6 @@ const TEMPLATES = [
       "Build a calm exploration scene where players reconnect signal beacons across a low-poly landscape.",
   },
 ];
-
-// Steps shown in the pipeline come only from the agent's live phase events
-// (handleEvent "phase"). Nothing is predefined.
 
 function downloadText(filename, content, mimeType) {
   const file = new Blob([content], { type: mimeType });
@@ -94,52 +84,45 @@ async function copyText(value) {
   if (!copied) throw new Error("Clipboard access is unavailable.");
 }
 
-function getTimeLabel() {
-  return new Date().toLocaleTimeString("en-US", {
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    hour12: false,
-  });
-}
-
 export default function StudioWorkbench() {
   const [prompt, setPrompt] = useState(DEFAULT_PROMPT);
-  const [engine, setEngine] = useState("Three.js WebGL");
-  const [controls, setControls] = useState("Keyboard + Mobile Touch");
-  const [complexity, setComplexity] = useState("Arcade");
-  const [steps, setSteps] = useState([]);
-  const [usage, setUsage] = useState(null);
-  const [activeTab, setActiveTab] = useState("reasoning");
+  const [model, setModel] = useState(CLI_MODELS[0].id);
+  const [attachments, setAttachments] = useState([]);
+  const [uploading, setUploading] = useState(false);
+  const [tab, setTab] = useState("terminal");
   const [isBuilding, setIsBuilding] = useState(false);
   const [promptError, setPromptError] = useState(false);
-  const [isPaused, setIsPaused] = useState(false);
-  const [resetRevision, setResetRevision] = useState(0);
-  const [stats, setStats] = useState({
-    fps: 60,
-    drawCalls: 24,
-    geometryMemoryMB: 42,
-  });
-  const [notice, setNotice] = useState("Checking VM backend…");
-  const [shareUrl, setShareUrl] = useState("");
-  const [isFullscreen, setIsFullscreen] = useState(false);
-  const [logs, setLogs] = useState([]);
+  const [activity, setActivity] = useState("Checking VM backend…");
+  const [activityLevel, setActivityLevel] = useState("info");
+  const [usage, setUsage] = useState(null);
   const [backend, setBackend] = useState({ state: "checking", cli: false });
   const [generated, setGenerated] = useState(null);
   const [library, setLibrary] = useState([]);
+  const [stats, setStats] = useState({ fps: 60, drawCalls: 24 });
+  const [isPaused, setIsPaused] = useState(false);
+  const [resetRevision, setResetRevision] = useState(0);
+  const [shareUrl, setShareUrl] = useState("");
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
 
   const qrDialogRef = useRef(null);
   const templateDialogRef = useRef(null);
   const previewFrameRef = useRef(null);
   const abortRef = useRef(null);
-  const tabRefs = useRef({});
+  const fileInputRef = useRef(null);
+  const promptRef = useRef(null);
 
   const currentCode =
     generated?.unityCode ||
-    "// No generated code yet.\n// Press Build Game — the Muse Code CLI writes AgenticPlayerController.cs on the VM\n// and it will appear here verbatim.";
+    "// No generated code yet.\n// Press Send — the Muse Code CLI writes AgenticPlayerController.cs on the VM\n// and it will appear here verbatim.";
 
   const onStats = useCallback((nextStats) => {
     setStats((current) => ({ ...current, ...nextStats }));
+  }, []);
+
+  const say = useCallback((text, level = "info") => {
+    setActivity(text);
+    setActivityLevel(level);
   }, []);
 
   useEffect(() => {
@@ -153,13 +136,6 @@ export default function StudioWorkbench() {
 
   useEffect(() => () => abortRef.current?.abort(), []);
 
-  const addLog = useCallback((text, level = "info") => {
-    setLogs((current) => [
-      ...current.slice(-300),
-      { time: getTimeLabel(), text, level },
-    ]);
-  }, []);
-
   const refreshLibrary = useCallback(async () => {
     try {
       const res = await fetch(`${STUDIO_API_BASE}/api/studio/games`);
@@ -171,7 +147,6 @@ export default function StudioWorkbench() {
     }
   }, []);
 
-  // Backend health on mount: this is how the UI knows the VM is reachable.
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -184,66 +159,41 @@ export default function StudioWorkbench() {
           state: "online",
           cli: Boolean(data.components?.museCodeCLI),
         });
-        setNotice(
+        say(
           data.components?.museCodeCLI
-            ? "VM backend online. Muse Code CLI detected — ready to build."
+            ? "VM backend online. Muse Code CLI detected — describe a game below."
             : "VM backend online, but Muse Code CLI was not detected there.",
+          "ok",
         );
-        addLog("Connected to VM backend. Agent pipeline is live.", "ok");
       } catch {
         if (cancelled) return;
         setBackend({ state: "offline", cli: false });
-        setNotice("VM backend unreachable. Builds will fail until it is back.");
-        addLog("Could not reach the VM backend.", "error");
+        say(
+          "VM backend unreachable — builds will fail until it is back.",
+          "error",
+        );
       }
     })();
     refreshLibrary();
     return () => {
       cancelled = true;
     };
-  }, [addLog, refreshLibrary]);
+  }, [say, refreshLibrary]);
 
   const handleEvent = useCallback(
     (evt) => {
       switch (evt.type) {
         case "start":
-          addLog(`Run started: "${evt.prompt}"`, "info");
-          break;
-        case "phase":
-          // Steps panel shows ONLY the CLI agent's own actions
-          // (origin "cli": thinking, tool: bash, tool: write_file...).
-          // Backend orchestration phases become console lines, never steps.
-          if (evt.origin === "cli") {
-            setSteps((current) => {
-              const idx = current.findIndex((s) => s.id === evt.id);
-              const entry = {
-                id: evt.id,
-                title: evt.label || evt.id,
-                source: evt.source || "",
-                status: evt.status,
-                detail: evt.detail || "",
-              };
-              if (idx === -1) return [...current, entry];
-              const next = current.slice();
-              next[idx] = {
-                ...entry,
-                title: next[idx].title || entry.title,
-                source: next[idx].source || entry.source,
-              };
-              return next;
-            });
-          } else if (evt.status === "running") {
-            addLog(`→ ${evt.label}`, "info");
-          }
+          say(`Run started: "${evt.prompt}"`, "info");
           break;
         case "log":
-          addLog(evt.message, evt.level || "info");
+          say(evt.message, evt.level || "info");
           break;
         case "cli":
-          addLog(`${evt.stream === "stderr" ? "! " : "$ "}${evt.line}`, "cli");
+          say(`${evt.stream === "stderr" ? "! " : "$ "}${evt.line}`, "cli");
           break;
         case "reasoning":
-          addLog(`· ${evt.line}`, "reason");
+          say(`· ${evt.line}`, "reason");
           break;
         case "spec":
           setGenerated((current) => ({
@@ -251,13 +201,28 @@ export default function StudioWorkbench() {
             spec: evt.spec,
             title: evt.spec?.title,
           }));
-          addLog(`Spec ready: biome ${evt.spec?.world?.biome || "?"}`, "ok");
+          say(`Spec ready: biome ${evt.spec?.world?.biome || "?"}`, "ok");
           break;
         case "proof":
-          addLog(
+          say(
             `[proof] ${evt.name} — ${evt.passed ? "PASSED" : "FAILED"}`,
             evt.passed ? "ok" : "warn",
           );
+          break;
+        case "artifact":
+          if (evt.kind === "unity") {
+            setGenerated((current) => ({
+              ...(current || {}),
+              unityCode: evt.content,
+              unitySource: evt.source,
+            }));
+            say(
+              evt.source === "muse-cli"
+                ? "Unity C# received from Muse Code CLI (written on VM)."
+                : "Unity C# is from the local template fallback.",
+              evt.source === "muse-cli" ? "ok" : "warn",
+            );
+          }
           break;
         case "usage": {
           const totals = (evt.models || []).reduce(
@@ -269,29 +234,14 @@ export default function StudioWorkbench() {
             { in: 0, out: 0, cached: 0 },
           );
           setUsage(totals);
-          addLog(
+          say(
             `CLI tokens this run: ${totals.in} in / ${totals.out} out (${totals.cached} cached)`,
             "info",
           );
           break;
         }
-        case "artifact":
-          if (evt.kind === "unity") {
-            setGenerated((current) => ({
-              ...(current || {}),
-              unityCode: evt.content,
-              unitySource: evt.source,
-            }));
-            addLog(
-              evt.source === "muse-cli"
-                ? "Unity C# received from Muse Code CLI (written on VM)."
-                : "Unity C# is from the local template fallback.",
-              evt.source === "muse-cli" ? "ok" : "warn",
-            );
-          }
-          break;
         case "error":
-          addLog(evt.message, "error");
+          say(evt.message, "error");
           break;
         case "done":
           if (evt.ok && evt.playUrl) {
@@ -302,29 +252,24 @@ export default function StudioWorkbench() {
               playUrl: `${STUDIO_API_BASE}${evt.playUrl}`,
               imageUrl: evt.imageUrl
                 ? `${STUDIO_API_BASE}${evt.imageUrl}`
-                : null,
+                : current?.imageUrl || null,
               unitySource: evt.unitySource,
             }));
-            addLog(
+            say(
               `Game ready: "${evt.title}" in ${(evt.elapsedMs / 1000).toFixed(1)}s`,
               "ok",
             );
-            setNotice(
-              `Build complete — "${evt.title}" is playing in the preview.`,
-            );
+            setTab("game");
             refreshLibrary();
           } else {
-            addLog("Run finished without a playable build.", "error");
-            setNotice(
-              "Build finished without a playable game. Check the console.",
-            );
+            say("Run finished without a playable game.", "error");
           }
           break;
         default:
           break;
       }
     },
-    [addLog, refreshLibrary],
+    [say, refreshLibrary],
   );
 
   async function readSseStream(response) {
@@ -351,37 +296,32 @@ export default function StudioWorkbench() {
       }
     }
   }
-
   const handleBuild = async () => {
     if (isBuilding) return;
     if (!prompt.trim()) {
       setPromptError(true);
-      setNotice("Add a game idea before building.");
+      say("Add a game idea before building.", "warn");
       return;
     }
     if (backend.state === "offline") {
-      setNotice("VM backend is offline — cannot start a build.");
-      addLog("Build blocked: VM backend offline.", "error");
+      say("VM backend is offline — cannot start a build.", "error");
       return;
     }
-
     setPromptError(false);
     setIsBuilding(true);
-    setActiveTab("reasoning");
-    setSteps([]);
     setUsage(null);
-    setGenerated(null);
-    setLogs([]);
-    setNotice("Agent is running on the VM — watch the console.");
-    addLog("Sending prompt to VM backend…", "info");
-
+    say("Agent is running on the VM…", "info");
     const controller = new AbortController();
     abortRef.current = controller;
     try {
       const res = await fetch(`${STUDIO_API_BASE}/api/studio/generate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: prompt.trim() }),
+        body: JSON.stringify({
+          prompt: prompt.trim(),
+          model,
+          attachments: attachments.map((a) => ({ id: a.id, name: a.name })),
+        }),
         signal: controller.signal,
       });
       if (!res.ok || !res.body)
@@ -389,8 +329,7 @@ export default function StudioWorkbench() {
       await readSseStream(res);
     } catch (err) {
       if (err?.name !== "AbortError") {
-        addLog("Connection to VM backend failed during the run.", "error");
-        setNotice("Build failed — connection to the VM backend was lost.");
+        say("Build failed — connection to the VM backend was lost.", "error");
       }
     } finally {
       setIsBuilding(false);
@@ -398,22 +337,54 @@ export default function StudioWorkbench() {
     }
   };
 
+  const handleAttach = async (event) => {
+    const files = Array.from(event.target.files || []);
+    event.target.value = "";
+    for (const file of files) {
+      if (file.size > 10 * 1024 * 1024) {
+        say(`"${file.name}" is over 10MB — skipped.`, "warn");
+        continue;
+      }
+      setUploading(true);
+      try {
+        const res = await fetch(
+          `${STUDIO_API_BASE}/api/studio/upload?name=${encodeURIComponent(file.name)}`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/octet-stream" },
+            body: file,
+          },
+        );
+        if (!res.ok) throw new Error(`upload failed: ${res.status}`);
+        const data = await res.json();
+        setAttachments((current) => [...current, data]);
+        say(`Attached "${data.name}".`, "ok");
+      } catch {
+        say(`Could not upload "${file.name}".`, "error");
+      } finally {
+        setUploading(false);
+      }
+    }
+  };
+
+  const removeAttachment = (id) => {
+    setAttachments((current) => current.filter((a) => a.id !== id));
+  };
+
   const handleNewProject = () => {
     abortRef.current?.abort();
     setIsBuilding(false);
     setPrompt("");
-    setEngine("Three.js WebGL");
-    setControls("Keyboard + Mobile Touch");
-    setComplexity("Arcade");
-    setSteps([]);
+    setAttachments([]);
     setUsage(null);
-    setActiveTab("reasoning");
     setPromptError(false);
     setIsPaused(false);
     setGenerated(null);
     setResetRevision((revision) => revision + 1);
-    setNotice("New project ready. Add an idea to start.");
-    setLogs([]);
+    say("New project ready. Add an idea to start.", "info");
+    if (promptRef.current) {
+      promptRef.current.style.height = "auto";
+    }
   };
 
   const playLibraryGame = (game) => {
@@ -422,9 +393,13 @@ export default function StudioWorkbench() {
       gameId: game.id,
       title: game.title,
       playUrl: `${STUDIO_API_BASE}${game.playUrl}`,
+      imageUrl: game.imageUrl ? `${STUDIO_API_BASE}${game.imageUrl}` : null,
+      unitySource: undefined,
+      unityCode: undefined,
+      spec: undefined,
     }));
-    setNotice(`Loaded "${game.title}" from the library.`);
-    addLog(`Loaded stored game: ${game.title}`, "ok");
+    setTab("game");
+    say(`Loaded "${game.title}" from the library.`, "ok");
   };
 
   const makeShareUrl = () => {
@@ -442,48 +417,31 @@ export default function StudioWorkbench() {
   const handleCopyShareLink = async () => {
     try {
       await copyText(makeShareUrl());
-      setNotice(
-        generated?.playUrl
-          ? "Playable game link copied."
-          : "Link copied. It includes the current prompt text.",
+      say(
+        generated?.playUrl ? "Playable game link copied." : "Link copied.",
+        "ok",
       );
     } catch {
-      setNotice(
-        "Could not copy the link. Check clipboard permissions and try again.",
-      );
-    }
-  };
-
-  const handleCopyCode = async () => {
-    try {
-      await copyText(currentCode);
-      setNotice("Code copied to the clipboard.");
-    } catch {
-      setNotice(
-        "Could not copy code. Check clipboard permissions and try again.",
-      );
+      say("Could not copy the link.", "error");
     }
   };
 
   const handleDownloadCode = () => {
     downloadText("AgenticPlayerController.cs", currentCode, "text/plain");
-    setNotice(
+    say(
       generated?.unitySource === "muse-cli"
         ? "Unity C# downloaded (written by Muse Code CLI on the VM)."
         : "Unity C# downloaded.",
+      "ok",
     );
   };
 
   const handleExport = () => {
-    if (engine === "Unity C#") {
-      handleDownloadCode();
-      return;
-    }
     if (generated?.playUrl) {
       window.open(generated.playUrl, "_blank", "noopener");
-      setNotice("Opened the playable WebGL build in a new tab.");
+      say("Opened the playable WebGL build in a new tab.", "ok");
     } else {
-      setNotice("No WebGL build yet — run Build Game first.");
+      say("No WebGL build yet — run Build Game first.", "warn");
     }
   };
 
@@ -494,7 +452,7 @@ export default function StudioWorkbench() {
       if (document.fullscreenElement) await document.exitFullscreen();
       else await frame.requestFullscreen();
     } catch {
-      setNotice("Fullscreen is unavailable in this browser.");
+      say("Fullscreen is unavailable in this browser.", "error");
     }
   };
 
@@ -503,211 +461,38 @@ export default function StudioWorkbench() {
     setIsBuilding(false);
     setPrompt(nextPrompt);
     setPromptError(false);
-    setSteps([]);
-    setUsage(null);
-    setNotice("Template loaded. Review the prompt, then build.");
+    say("Template loaded. Review the prompt, then build.", "info");
     templateDialogRef.current?.close();
-  };
-
-  const handleTabKeyDown = (event, currentTab) => {
-    const currentIndex = TABS.findIndex((tab) => tab.id === currentTab);
-    let nextIndex = currentIndex;
-    if (event.key === "ArrowRight")
-      nextIndex = (currentIndex + 1) % TABS.length;
-    if (event.key === "ArrowLeft")
-      nextIndex = (currentIndex - 1 + TABS.length) % TABS.length;
-    if (event.key === "Home") nextIndex = 0;
-    if (event.key === "End") nextIndex = TABS.length - 1;
-    if (nextIndex === currentIndex) return;
-    event.preventDefault();
-    const nextTab = TABS[nextIndex];
-    setActiveTab(nextTab.id);
-    tabRefs.current[nextTab.id]?.focus();
+    window.setTimeout(() => {
+      if (promptRef.current) {
+        promptRef.current.style.height = "auto";
+        promptRef.current.style.height = `${Math.min(promptRef.current.scrollHeight, 160)}px`;
+      }
+    }, 0);
   };
 
   const handlePromptKeyDown = (event) => {
     if (
       (event.metaKey || event.ctrlKey) &&
       event.key === "Enter" &&
-      !event.nativeEvent.isComposing &&
-      event.keyCode !== 229
+      !event.nativeEvent.isComposing
     ) {
       event.preventDefault();
       handleBuild();
     }
   };
 
-  const renderTabPanel = () => {
-    if (activeTab === "code") {
-      return (
-        <section
-          className="console-panel code-panel"
-          id="panel-code"
-          role="tabpanel"
-          aria-labelledby="tab-code"
-          tabIndex={0}
-        >
-          <div className="console-panel-heading">
-            <span className="console-caption">
-              {generated?.unityCode
-                ? generated.unitySource === "muse-cli"
-                  ? "Unity C# · written by Muse Code CLI on VM"
-                  : "Unity C# · template fallback"
-                : "Unity C# · not generated yet"}
-            </span>
-            <div className="console-actions">
-              <button
-                className="icon-text-button"
-                type="button"
-                onClick={handleCopyCode}
-              >
-                <Copy aria-hidden="true" />
-                <span>Copy</span>
-              </button>
-              <button
-                className="icon-text-button"
-                type="button"
-                onClick={handleDownloadCode}
-              >
-                <Download aria-hidden="true" />
-                <span>Download</span>
-              </button>
-            </div>
-          </div>
-          <pre className="code-block">
-            <code>{currentCode}</code>
-          </pre>
-        </section>
-      );
-    }
-
-    if (activeTab === "assets") {
-      const assets = generated?.spec?.focalAssets || [];
-      return (
-        <section
-          className="console-panel assets-panel"
-          id="panel-assets"
-          role="tabpanel"
-          aria-labelledby="tab-assets"
-          tabIndex={0}
-        >
-          {generated?.imageUrl ? (
-            <>
-              <div className="console-panel-heading">
-                <span className="console-caption">
-                  Concept art · Muse Image 1.0
-                </span>
-              </div>
-              <img
-                src={generated.imageUrl}
-                alt={`Concept art for ${generated.title || "generated game"}`}
-                style={{
-                  width: "100%",
-                  borderRadius: 6,
-                  border: "1px solid #27272a",
-                  marginBottom: 10,
-                }}
-              />
-            </>
-          ) : null}
-          <div className="console-panel-heading">
-            <span className="console-caption">
-              {assets.length
-                ? "Planned 3D objects · from game design"
-                : "No spec yet — build a game first"}
-            </span>
-            <span className="asset-total">{assets.length} items</span>
-          </div>
-          <ul className="assets-grid">
-            {assets.map((asset) => (
-              <li className="asset-item" key={asset.id || asset.prompt}>
-                <div className="asset-icon">
-                  <Box aria-hidden="true" />
-                </div>
-                <div className="asset-copy">
-                  <strong>{asset.prompt}</strong>
-                  <span>
-                    {asset.role} · {asset.category}
-                  </span>
-                </div>
-                <span className="asset-size">
-                  {(asset.scale || []).join("×")}
-                </span>
-              </li>
-            ))}
-          </ul>
-          <div className="console-panel-heading" style={{ marginTop: 10 }}>
-            <span className="console-caption">Stored games · VM library</span>
-            <span className="asset-total">{library.length} games</span>
-          </div>
-          <ul className="assets-grid">
-            {library.slice(0, 6).map((game) => (
-              <li className="asset-item" key={game.id}>
-                <div className="asset-icon">
-                  <Play aria-hidden="true" />
-                </div>
-                <div className="asset-copy">
-                  <strong>{game.title}</strong>
-                  <span>
-                    {game.biome} ·{" "}
-                    {new Date(game.createdAt).toLocaleDateString()}
-                  </span>
-                </div>
-                <button
-                  className="icon-text-button"
-                  type="button"
-                  onClick={() => playLibraryGame(game)}
-                >
-                  <span>Play</span>
-                </button>
-              </li>
-            ))}
-          </ul>
-        </section>
-      );
-    }
-
-    return (
-      <section
-        className="console-panel reasoning-panel"
-        id="panel-reasoning"
-        role="tabpanel"
-        aria-labelledby="tab-reasoning"
-        tabIndex={0}
-      >
-        <div className="console-panel-heading">
-          <span className="console-caption">
-            Live agent stream · VM backend
-          </span>
-          <span className="console-live">
-            <span /> {backend.state}
-          </span>
-        </div>
-        <div className="log-list" aria-label="Agent progress summaries">
-          {logs.length === 0 ? (
-            <div className="log-entry">
-              <time>--:--:--</time>
-              <span>
-                Waiting for a run. Press Build Game to watch the agent work on
-                the VM.
-              </span>
-            </div>
-          ) : (
-            logs.map((entry, index) => (
-              <div
-                className="log-entry"
-                data-level={entry.level}
-                key={`${entry.time}-${index}`}
-              >
-                <time>{entry.time}</time>
-                <span>{entry.text}</span>
-              </div>
-            ))
-          )}
-        </div>
-      </section>
-    );
+  const autoGrow = (event) => {
+    const field = event.currentTarget;
+    field.style.height = "auto";
+    field.style.height = `${Math.min(field.scrollHeight, 160)}px`;
   };
+
+  const openTerminal = () => {
+    window.open(`${STUDIO_API_BASE}/terminal/`, "_blank", "noopener");
+  };
+
+  const terminalUrl = `${STUDIO_API_BASE}/terminal/`;
 
   return (
     <main className="studio-shell">
@@ -739,14 +524,6 @@ export default function StudioWorkbench() {
           </button>
           <a
             className="topbar-link"
-            href="https://threejs.org/docs/"
-            target="_blank"
-            rel="noreferrer"
-          >
-            Docs <ExternalLink aria-hidden="true" />
-          </a>
-          <a
-            className="topbar-link"
             href="https://github.com/shubham91150/agentic-game-studio"
             target="_blank"
             rel="noreferrer"
@@ -763,361 +540,378 @@ export default function StudioWorkbench() {
         </nav>
       </header>
 
-      <div className="studio-workspace">
-        <section className="workbench-pane" aria-labelledby="workbench-title">
-          <div className="workbench-form">
-            <div className="workbench-heading">
-              <div>
-                <h1 id="workbench-title">Prompt &amp; Architecture</h1>
-                <p>Shape a playable world from a clear idea.</p>
-              </div>
-              <span className="illustrative-label">Live VM pipeline</span>
-            </div>
-
-            <label className="field-label" htmlFor="model-select">
-              Pipeline
-            </label>
-            <div className="select-wrap model-select-wrap">
-              <select
-                id="model-select"
-                className="control-select"
-                value="live"
-                disabled
-              >
-                <option value="live">
-                  Muse Spark Open (Baseten) + Muse Code CLI (VM)
-                </option>
-              </select>
-              <ChevronDown aria-hidden="true" />
-            </div>
-
-            <label className="field-label prompt-label" htmlFor="game-prompt">
-              Game prompt
-            </label>
-            <textarea
-              id="game-prompt"
-              className={`prompt-textarea${promptError ? " has-error" : ""}`}
-              value={prompt}
-              onChange={(event) => {
-                setPrompt(event.target.value);
-                if (event.target.value.trim()) setPromptError(false);
-              }}
-              onKeyDown={handlePromptKeyDown}
-              placeholder="Describe the game rules, mechanics, physics, and world environment..."
-              aria-invalid={promptError}
-              aria-describedby={promptError ? "prompt-error" : "prompt-hint"}
-              rows={3}
+      <div className="studio-body">
+        <div className="tab-bar" role="tablist" aria-label="Studio views">
+          <button
+            className={`tab-btn${tab === "terminal" ? " is-active" : ""}`}
+            type="button"
+            role="tab"
+            aria-selected={tab === "terminal"}
+            onClick={() => setTab("terminal")}
+          >
+            <Terminal aria-hidden="true" />
+            <span>Terminal</span>
+          </button>
+          <button
+            className={`tab-btn${tab === "game" ? " is-active" : ""}`}
+            type="button"
+            role="tab"
+            aria-selected={tab === "game"}
+            onClick={() => setTab("game")}
+          >
+            <Play aria-hidden="true" />
+            <span>Game</span>
+          </button>
+          <span className="tab-status" aria-live="polite">
+            <span
+              className={`status-dot${backend.state === "online" ? " status-on" : ""}`}
             />
-            {promptError ? (
-              <p id="prompt-error" className="field-error" role="alert">
-                Enter a game idea to continue.
+            {backend.state === "online"
+              ? `VM live${backend.cli ? " · Muse Code CLI" : ""}`
+              : backend.state === "offline"
+                ? "VM offline"
+                : "Connecting…"}
+          </span>
+        </div>
+
+        {tab === "terminal" ? (
+          <section className="terminal-pane" aria-labelledby="terminal-title">
+            <div className="terminal-card">
+              <Terminal aria-hidden="true" className="terminal-icon" />
+              <h2 id="terminal-title">Muse Code CLI — live on VM</h2>
+              <p>
+                The agent terminal runs on the VM. Open it in a new tab (same
+                login as here) and type <code>muse</code> to drive the build
+                yourself.
               </p>
-            ) : (
-              <p id="prompt-hint" className="sr-only">
-                Describe the game rules, mechanics, physics, and world
-                environment.
-              </p>
-            )}
-
-            <div className="settings-grid">
-              <label className="setting-field" htmlFor="engine-select">
-                <span>Engine</span>
-                <span className="select-wrap">
-                  <select
-                    id="engine-select"
-                    className="control-select"
-                    value={engine}
-                    onChange={(event) => setEngine(event.target.value)}
-                  >
-                    <option>Three.js WebGL</option>
-                    <option>Unity C#</option>
-                  </select>
-                  <ChevronDown aria-hidden="true" />
-                </span>
-              </label>
-              <label className="setting-field" htmlFor="controls-select">
-                <span>Controls</span>
-                <span className="select-wrap">
-                  <select
-                    id="controls-select"
-                    className="control-select"
-                    value={controls}
-                    onChange={(event) => setControls(event.target.value)}
-                  >
-                    <option>Keyboard + Mobile Touch</option>
-                    <option>Keyboard</option>
-                    <option>Mobile Touch</option>
-                  </select>
-                  <ChevronDown aria-hidden="true" />
-                </span>
-              </label>
-              <label className="setting-field" htmlFor="complexity-select">
-                <span>Complexity</span>
-                <span className="select-wrap">
-                  <select
-                    id="complexity-select"
-                    className="control-select"
-                    value={complexity}
-                    onChange={(event) => setComplexity(event.target.value)}
-                  >
-                    <option>Arcade</option>
-                    <option>Simulation</option>
-                  </select>
-                  <ChevronDown aria-hidden="true" />
-                </span>
-              </label>
-            </div>
-
-            <button
-              className="button button-build"
-              type="button"
-              onClick={handleBuild}
-              disabled={isBuilding}
-              aria-keyshortcuts="Meta+Enter Control+Enter"
-            >
-              {isBuilding ? (
-                <LoaderCircle className="spin-icon" aria-hidden="true" />
-              ) : null}
-              <span>{isBuilding ? "Agent running on VM…" : "Build Game"}</span>
-              {!isBuilding ? <kbd>⌘ Enter</kbd> : null}
-            </button>
-            <p className="action-notice" role="status" aria-live="polite">
-              {notice}
-            </p>
-
-            <div className="pipeline-heading">
-              <span>Agent steps on VM</span>
-              <span className="pipeline-demo-label">
-                {usage
-                  ? `CLI ${usage.in} in / ${usage.out} out`
-                  : "Muse Code CLI · live"}
-              </span>
-            </div>
-            <ol
-              className="pipeline-list"
-              aria-label="Agent steps performed on the VM"
-              aria-live="polite"
-            >
-              {steps.length === 0 ? (
-                <li className="pipeline-step stage-pending" key="waiting">
-                  <span className="step-indicator" aria-hidden="true">
-                    <Circle />
-                  </span>
-                  <div className="step-copy">
-                    <span className="step-title">No steps yet</span>
-                    <span className="step-source">
-                      Press Build Game — every action the Muse Code CLI takes on
-                      the VM appears here, nothing else
-                    </span>
-                  </div>
-                  <span className="step-status">Waiting</span>
-                </li>
-              ) : (
-                steps.map((step) => {
-                  const stage = step.status || "pending";
-                  return (
-                    <li
-                      className={`pipeline-step stage-${stage}`}
-                      key={step.id}
-                    >
-                      <span className="step-indicator" aria-hidden="true">
-                        {stage === "pass" || stage === "done" ? (
-                          <Check />
-                        ) : stage === "running" ? (
-                          <LoaderCircle className="spin-icon" />
-                        ) : (
-                          <Circle />
-                        )}
-                      </span>
-                      <div className="step-copy">
-                        <span className="step-title">{step.title}</span>
-                        {step.source ? (
-                          <span className="step-source">{step.source}</span>
-                        ) : null}
-                      </div>
-                      <span
-                        className="step-status"
-                        aria-label={`Status: ${stage}`}
-                      >
-                        {stage === "pass" || stage === "done"
-                          ? "Done"
-                          : stage === "running"
-                            ? "Running"
-                            : stage === "warn"
-                              ? "Check"
-                              : stage === "fail"
-                                ? "Failed"
-                                : "Pending"}
-                      </span>
-                    </li>
-                  );
-                })
-              )}
-            </ol>
-          </div>
-
-          <div className="console-shell">
-            <div
-              className="console-tabs"
-              role="tablist"
-              aria-label="Project details"
-            >
-              {TABS.map(({ id, label, icon: Icon }) => (
+              <div className="terminal-actions">
                 <button
-                  className={`console-tab${activeTab === id ? " is-active" : ""}`}
-                  id={`tab-${id}`}
-                  key={id}
+                  className="button button-primary"
                   type="button"
-                  role="tab"
-                  aria-selected={activeTab === id}
-                  aria-controls={`panel-${id}`}
-                  tabIndex={activeTab === id ? 0 : -1}
-                  ref={(node) => {
-                    tabRefs.current[id] = node;
-                  }}
-                  onClick={() => setActiveTab(id)}
-                  onKeyDown={(event) => handleTabKeyDown(event, id)}
+                  onClick={openTerminal}
                 >
-                  <Icon aria-hidden="true" />
-                  <span>{label}</span>
+                  Open Live Terminal
                 </button>
-              ))}
-            </div>
-            {renderTabPanel()}
-          </div>
-        </section>
-
-        <section
-          className="preview-pane"
-          aria-labelledby="preview-title"
-          ref={previewFrameRef}
-        >
-          <div className="preview-header">
-            <div className="preview-title-group">
-              <h2 id="preview-title">
-                {generated?.title || "Project Preview"}
-              </h2>
-              <span className="fps-pill">
-                <span className="status-dot" />
-                {stats.fps} FPS
-              </span>
-            </div>
-            <div className="preview-toolbar" aria-label="Preview controls">
-              <button
-                className="icon-button"
-                type="button"
-                aria-label="Reset view"
-                title="Reset view"
-                onClick={() => setResetRevision((revision) => revision + 1)}
-              >
-                <RotateCcw aria-hidden="true" />
-              </button>
-              <button
-                className="icon-button"
-                type="button"
-                aria-label={isPaused ? "Play preview" : "Pause preview"}
-                title={isPaused ? "Play preview" : "Pause preview"}
-                onClick={() => setIsPaused((paused) => !paused)}
-              >
-                {isPaused ? (
-                  <Play aria-hidden="true" />
-                ) : (
-                  <Pause aria-hidden="true" />
-                )}
-              </button>
-              <button
-                className="icon-button"
-                type="button"
-                aria-label={
-                  isFullscreen ? "Exit fullscreen" : "Enter fullscreen"
-                }
-                title={isFullscreen ? "Exit fullscreen" : "Fullscreen"}
-                onClick={handleFullscreen}
-              >
-                {isFullscreen ? (
-                  <X aria-hidden="true" />
-                ) : (
-                  <Expand aria-hidden="true" />
-                )}
-              </button>
-              <button
-                className="button button-secondary mobile-qr-button"
-                type="button"
-                onClick={openQrDialog}
-              >
-                <Smartphone aria-hidden="true" />
-                <span>Mobile QR</span>
-              </button>
-            </div>
-          </div>
-
-          <div className="preview-stage">
-            {generated?.playUrl ? (
-              <iframe
-                className="game-frame"
-                src={generated.playUrl}
-                title={`Playable build: ${generated.title || "generated game"}`}
-                allow="autoplay; fullscreen"
-              />
-            ) : (
-              <>
-                <GameViewport
-                  isPlaying={!isPaused}
-                  resetRevision={resetRevision}
-                  onStats={onStats}
-                />
-                <div className="viewport-hint" aria-hidden="true">
-                  Drag to orbit · WASD to move
-                </div>
-              </>
-            )}
-          </div>
-
-          <div className="preview-footer">
-            <div className="telemetry-list" aria-label="Preview telemetry">
-              <div className="telemetry-item resolution-item">
-                <span>Source</span>
-                <strong>
-                  {generated?.playUrl ? "VM build" : "Local preview"}
-                </strong>
+                <button
+                  className="button button-secondary"
+                  type="button"
+                  onClick={() =>
+                    copyText(terminalUrl).then(
+                      () => say("Terminal URL copied.", "ok"),
+                      () => say("Could not copy the URL.", "error"),
+                    )
+                  }
+                >
+                  <Copy aria-hidden="true" />
+                  <span>Copy URL</span>
+                </button>
               </div>
-              <div className="telemetry-item">
-                <span>Draw Calls</span>
-                <strong>{stats.drawCalls}</strong>
-              </div>
-              <div className="telemetry-item">
-                <span>Unity code</span>
-                <strong>
-                  {generated?.unitySource === "muse-cli"
-                    ? "Muse CLI"
-                    : generated?.unityCode
-                      ? "Template"
-                      : "—"}
-                </strong>
-              </div>
+              {usage ? (
+                <p className="terminal-usage">
+                  Last run CLI tokens: {usage.in} in / {usage.out} out
+                  {usage.cached ? ` (${usage.cached} cached)` : ""}
+                </p>
+              ) : null}
             </div>
-            <div className="footer-actions">
-              <button
-                className="button button-footer"
-                type="button"
-                onClick={handleExport}
-              >
-                <Download aria-hidden="true" />
-                <span>
-                  {engine === "Unity C#" ? "Export Unity" : "Open WebGL"}
+          </section>
+        ) : (
+          <section
+            className="preview-pane game-tab-pane"
+            aria-labelledby="preview-title"
+            ref={previewFrameRef}
+          >
+            <div className="preview-header">
+              <div className="preview-title-group">
+                <h2 id="preview-title">
+                  {generated?.title || "Project Preview"}
+                </h2>
+                <span className="fps-pill">
+                  <span className="status-dot" />
+                  {stats.fps} FPS
                 </span>
-              </button>
-              <button
-                className="button button-footer"
-                type="button"
-                onClick={handleCopyShareLink}
-              >
-                <Link2 aria-hidden="true" />
-                <span>Copy Share Link</span>
-              </button>
+              </div>
+              <div className="preview-toolbar" aria-label="Preview controls">
+                <button
+                  className="icon-button"
+                  type="button"
+                  aria-label="Reset view"
+                  title="Reset view"
+                  onClick={() => {
+                    setResetRevision((revision) => revision + 1);
+                    setReloadKey((key) => key + 1);
+                  }}
+                >
+                  <RotateCcw aria-hidden="true" />
+                </button>
+                <button
+                  className="icon-button"
+                  type="button"
+                  aria-label={isPaused ? "Play preview" : "Pause preview"}
+                  title={isPaused ? "Play preview" : "Pause preview"}
+                  onClick={() => setIsPaused((paused) => !paused)}
+                >
+                  {isPaused ? (
+                    <Play aria-hidden="true" />
+                  ) : (
+                    <Pause aria-hidden="true" />
+                  )}
+                </button>
+                <button
+                  className="icon-button"
+                  type="button"
+                  aria-label={
+                    isFullscreen ? "Exit fullscreen" : "Enter fullscreen"
+                  }
+                  title={isFullscreen ? "Exit fullscreen" : "Fullscreen"}
+                  onClick={handleFullscreen}
+                >
+                  {isFullscreen ? (
+                    <X aria-hidden="true" />
+                  ) : (
+                    <Expand aria-hidden="true" />
+                  )}
+                </button>
+                <button
+                  className="button button-secondary mobile-qr-button"
+                  type="button"
+                  onClick={openQrDialog}
+                >
+                  <Smartphone aria-hidden="true" />
+                  <span>Mobile QR</span>
+                </button>
+              </div>
             </div>
+
+            <div className="preview-stage">
+              {generated?.playUrl ? (
+                <iframe
+                  key={generated.gameId}
+                  className="game-frame"
+                  src={generated.playUrl}
+                  title={`Playable build: ${generated.title || "generated game"}`}
+                  allow="autoplay; fullscreen"
+                />
+              ) : (
+                <>
+                  <GameViewport
+                    isPlaying={!isPaused}
+                    resetRevision={resetRevision}
+                    onStats={onStats}
+                  />
+                  <div className="viewport-hint" aria-hidden="true">
+                    Drag to orbit · WASD to move
+                  </div>
+                </>
+              )}
+            </div>
+
+            {generated?.imageUrl ? (
+              <div className="concept-row">
+                <img
+                  src={generated.imageUrl}
+                  alt={`Concept art for ${generated.title || "generated game"}`}
+                />
+                <div className="concept-copy">
+                  <strong>Concept art · Muse Image 1.0</strong>
+                  <span>{generated.title}</span>
+                </div>
+              </div>
+            ) : null}
+
+            <div className="preview-footer">
+              <div className="telemetry-list" aria-label="Preview telemetry">
+                <div className="telemetry-item resolution-item">
+                  <span>Source</span>
+                  <strong>
+                    {generated?.playUrl ? "VM build" : "Local preview"}
+                  </strong>
+                </div>
+                <div className="telemetry-item">
+                  <span>Draw Calls</span>
+                  <strong>{stats.drawCalls}</strong>
+                </div>
+                <div className="telemetry-item">
+                  <span>Unity code</span>
+                  <strong>
+                    {generated?.unitySource === "muse-cli"
+                      ? "Muse CLI"
+                      : generated?.unityCode
+                        ? "Template"
+                        : "—"}
+                  </strong>
+                </div>
+              </div>
+              <div className="footer-actions">
+                <button
+                  className="button button-footer"
+                  type="button"
+                  onClick={handleDownloadCode}
+                >
+                  <Download aria-hidden="true" />
+                  <span>Export Unity</span>
+                </button>
+                <button
+                  className="button button-footer"
+                  type="button"
+                  onClick={handleExport}
+                >
+                  <Expand aria-hidden="true" />
+                  <span>Open WebGL</span>
+                </button>
+                <button
+                  className="button button-footer"
+                  type="button"
+                  onClick={handleCopyShareLink}
+                >
+                  <Link2 aria-hidden="true" />
+                  <span>Copy Share Link</span>
+                </button>
+              </div>
+            </div>
+
+            <div className="library-block" aria-label="Stored games">
+              <div className="library-heading">
+                <span>Library</span>
+                <span>{library.length} saved</span>
+              </div>
+              {library.length === 0 ? (
+                <p className="library-empty">
+                  No stored games yet. Build one and it will wait for you here.
+                </p>
+              ) : (
+                <ul className="library-list">
+                  {library.slice(0, 8).map((game) => (
+                    <li className="library-item" key={game.id}>
+                      <div className="library-copy">
+                        <strong>{game.title}</strong>
+                        <span>
+                          {game.biome || "world"} ·{" "}
+                          {game.createdAt
+                            ? new Date(game.createdAt).toLocaleDateString()
+                            : ""}
+                        </span>
+                      </div>
+                      <button
+                        className="button button-secondary button-small"
+                        type="button"
+                        onClick={() => playLibraryGame(game)}
+                      >
+                        <Play aria-hidden="true" />
+                        <span>Play</span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </section>
+        )}
+
+        {attachments.length > 0 ? (
+          <div className="attach-row" aria-label="Attachments">
+            {attachments.map((a) => (
+              <span className="attach-chip" key={a.id}>
+                <span className="attach-name">{a.name}</span>
+                <button
+                  className="attach-remove"
+                  type="button"
+                  aria-label={`Remove ${a.name}`}
+                  onClick={() => removeAttachment(a.id)}
+                >
+                  <X aria-hidden="true" />
+                </button>
+              </span>
+            ))}
           </div>
-        </section>
+        ) : null}
+
+        <div
+          className={`activity-line activity-${activityLevel}`}
+          role="status"
+          aria-live="polite"
+          title={activity}
+        >
+          <span className="activity-text">{activity}</span>
+          {usage ? (
+            <span className="activity-usage">
+              CLI {usage.in} in / {usage.out} out
+            </span>
+          ) : null}
+        </div>
+
+        <div className="composer" role="form" aria-label="Game prompt composer">
+          <input
+            ref={fileInputRef}
+            type="file"
+            className="sr-only"
+            tabIndex={-1}
+            multiple
+            onChange={handleAttach}
+          />
+          <button
+            className="icon-button composer-btn"
+            type="button"
+            aria-label="Attach a file"
+            title="Attach a reference file (sent to the agent)"
+            disabled={uploading || isBuilding}
+            onClick={() => fileInputRef.current?.click()}
+          >
+            {uploading ? (
+              <LoaderCircle className="spin-icon" aria-hidden="true" />
+            ) : (
+              <Plus aria-hidden="true" />
+            )}
+          </button>
+          <div className="select-wrap composer-select">
+            <select
+              className="control-select"
+              aria-label="Agent model"
+              value={model}
+              onChange={(event) => setModel(event.target.value)}
+              disabled={isBuilding}
+            >
+              {CLI_MODELS.map((m) => (
+                <option key={m.id} value={m.id} title={m.hint}>
+                  {m.label}
+                </option>
+              ))}
+            </select>
+            <ChevronDown aria-hidden="true" />
+          </div>
+          <textarea
+            ref={promptRef}
+            className={`prompt-textarea composer-input${promptError ? " has-error" : ""}`}
+            value={prompt}
+            rows={1}
+            onChange={(event) => {
+              setPrompt(event.target.value);
+              if (event.target.value.trim()) setPromptError(false);
+            }}
+            onInput={autoGrow}
+            onKeyDown={handlePromptKeyDown}
+            placeholder="Describe the game to build… (⌘ Enter to send)"
+            aria-label="Game prompt"
+            aria-invalid={promptError}
+          />
+          <button
+            className="button button-primary composer-send"
+            type="button"
+            onClick={handleBuild}
+            disabled={isBuilding || uploading}
+            aria-label="Send prompt to the agent"
+          >
+            {isBuilding ? (
+              <LoaderCircle className="spin-icon" aria-hidden="true" />
+            ) : (
+              <Send aria-hidden="true" />
+            )}
+          </button>
+        </div>
+        {promptError ? (
+          <p className="field-error composer-error" role="alert">
+            Enter a game idea to continue.
+          </p>
+        ) : null}
       </div>
 
       <dialog
