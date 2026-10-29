@@ -958,6 +958,40 @@
       });
   });
 
+  // New chat: reset UI conversation state only. The live CLI session is
+  // untouched (its memory persists by design) — no backend calls here.
+  var newchatBtn = document.getElementById("newchat-btn");
+  function newChat() {
+    if (promptEl) promptEl.value = "";
+    clearDraft();
+    setStatus("");
+    attachments = [];
+    activeSkills = [];
+    customInstructions = [];
+    renderAttachments();
+    renderSkillChips();
+    renderInstructionChips();
+    closePlusMenu();
+    setSubOpen(plusSkillsToggle, plusSkills, false);
+    setSubOpen(plusInstructionsToggle, plusInstructions, false);
+    setSubOpen(plusMcpsToggle, plusMcps, false);
+    closeLibrary();
+    ["qr-box", "code-box", "result-extra", "result-extras"].forEach(
+      function (id) {
+        var extra = document.getElementById(id);
+        if (extra) extra.classList.add("hidden");
+      },
+    );
+    if (titleEl) titleEl.textContent = "Game Preview";
+    if (frameEl) {
+      frameEl.classList.add("hidden");
+      frameEl.removeAttribute("src");
+    }
+    if (emptyEl) emptyEl.classList.remove("hidden");
+    if (promptEl && window.innerWidth > 960) promptEl.focus();
+  }
+  if (newchatBtn) newchatBtn.addEventListener("click", newChat);
+
   // Terminal inline preview: auto-load on same-origin VM page.
   function loadTerminalInline() {
     var connectBox = document.getElementById("terminal-connect");
