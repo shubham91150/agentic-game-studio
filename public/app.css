@@ -680,6 +680,39 @@ body {
   }
 
   /* Prevent iOS Safari zoom on input focus & provide 44px touch targets */
+  /* Single-row composer bar on mobile: no wrapping, ellipsis everywhere */
+  .prompt-bar {
+    flex-wrap: nowrap;
+    gap: 6px;
+    padding: 6px 8px 8px;
+  }
+  .bar-left {
+    flex: 1 1 auto;
+    min-width: 0;
+    flex-wrap: nowrap;
+    overflow: hidden;
+  }
+  .bar-right {
+    flex: 0 0 auto;
+    gap: 4px;
+  }
+  .picker {
+    max-width: 118px;
+    font-size: 12px;
+    white-space: nowrap;
+  }
+  .picker-ghost {
+    max-width: 64px;
+    font-size: 12px;
+  }
+  .attach-list {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .attach-list::-webkit-scrollbar {
+    display: none;
+  }
   #prompt {
     font-size: 16px;
     min-height: 48px;
