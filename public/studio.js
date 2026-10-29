@@ -267,6 +267,210 @@
       /* ignore */
     });
 
+  // Chat history sidebar (LEFT slide-over): archived tmux transcripts.
+  // The live terminal is a ttyd iframe, so resume = view transcript +
+  // seed the fresh live terminal with context. Never claim full restore.
+  var sidebarBtn = document.getElementById("sidebar-history-btn");
+  var sidebar = document.getElementById("sidebar-history");
+  var sidebarOverlay = document.getElementById("sidebar-overlay");
+  var sidebarClose = document.getElementById("sidebar-close");
+  var sidebarList = document.getElementById("sidebar-list");
+  var sidebarView = document.getElementById("sidebar-view");
+  var sidebarBack = document.getElementById("sidebar-back");
+  var sidebarMeta = document.getElementById("sidebar-meta");
+  var sidebarTranscript = document.getElementById("sidebar-transcript");
+  var sidebarContinue = document.getElementById("sidebar-continue");
+  var sidebarSub = document.getElementById("sidebar-sub");
+  var activeChatId = null;
+  var activeChatContent = "";
+
+  function fmtChatSize(bytes) {
+    var n = Number(bytes) || 0;
+    if (n < 1024) return n + " B";
+    if (n < 1024 * 1024) return (n / 1024).toFixed(1) + " KB";
+    return (n / (1024 * 1024)).toFixed(1) + " MB";
+  }
+
+  function fmtChatTime(iso) {
+    try {
+      var d = new Date(iso);
+      if (isNaN(d.getTime())) return "";
+      return d.toLocaleString();
+    } catch (e) {
+      return "";
+    }
+  }
+
+  function showSidebarList() {
+    activeChatId = null;
+    activeChatContent = "";
+    if (sidebarView) sidebarView.classList.add("hidden");
+    if (sidebarList) sidebarList.classList.remove("hidden");
+    if (sidebarSub)
+      sidebarSub.textContent =
+        "Archived terminal transcripts. Resume = view + seed the live terminal with context.";
+  }
+
+  function renderSidebarList(list) {
+    if (!sidebarList) return;
+    sidebarList.innerHTML = "";
+    var chats = Array.isArray(list) ? list : [];
+    if (!chats.length) {
+      var empty = document.createElement("div");
+      empty.className = "sidebar-empty";
+      empty.textContent =
+        "No archived chats yet — use New chat to archive this session.";
+      sidebarList.appendChild(empty);
+      return;
+    }
+    chats.forEach(function (c) {
+      var item = document.createElement("button");
+      item.type = "button";
+      item.className = "sidebar-item";
+      var title = document.createElement("p");
+      title.className = "sidebar-item-title";
+      title.textContent = c.id || "chat";
+      item.appendChild(title);
+      var meta = document.createElement("p");
+      meta.className = "sidebar-item-meta";
+      meta.textContent =
+        [fmtChatTime(c.createdAt), fmtChatSize(c.size)]
+          .filter(Boolean)
+          .join(" · ") || "archived chat";
+      item.appendChild(meta);
+      if (c.preview) {
+        var prev = document.createElement("p");
+        prev.className = "sidebar-item-preview";
+        prev.textContent = c.preview;
+        item.appendChild(prev);
+      }
+      var view = document.createElement("span");
+      view.className = "sidebar-item-view";
+      view.textContent = "View transcript →";
+      item.appendChild(view);
+      item.addEventListener(
+        "click",
+        (function (id) {
+          return function () {
+            openSidebarTranscript(id);
+          };
+        })(c.id),
+      );
+      sidebarList.appendChild(item);
+    });
+  }
+
+  function openSidebarTranscript(id) {
+    if (!id) return;
+    if (sidebarMeta) sidebarMeta.textContent = id;
+    if (sidebarTranscript) sidebarTranscript.textContent = "Loading…";
+    if (sidebarList) sidebarList.classList.add("hidden");
+    if (sidebarView) sidebarView.classList.remove("hidden");
+    if (sidebarSub) sidebarSub.textContent = "Archived transcript (read-only).";
+    fetch("/api/studio/chats/" + encodeURIComponent(id))
+      .then(function (res) {
+        if (!res.ok) throw new Error("chat load failed: " + res.status);
+        return res.json();
+      })
+      .then(function (data) {
+        activeChatId = data && data.id ? data.id : id;
+        activeChatContent =
+          data && typeof data.content === "string" ? data.content : "";
+        if (sidebarMeta) sidebarMeta.textContent = activeChatId;
+        if (sidebarTranscript)
+          sidebarTranscript.textContent = activeChatContent || "(empty)";
+        if (sidebarTranscript) sidebarTranscript.scrollTop = 0;
+      })
+      .catch(function () {
+        if (sidebarTranscript)
+          sidebarTranscript.textContent = "Could not load this transcript.";
+        setStatus("Could not load chat transcript.", "error");
+      });
+  }
+
+  function openSidebar() {
+    if (sidebar) {
+      sidebar.classList.add("open");
+      sidebar.setAttribute("aria-hidden", "false");
+    }
+    if (sidebarOverlay) sidebarOverlay.classList.remove("hidden");
+    showSidebarList();
+    if (sidebarList) sidebarList.innerHTML = "";
+    var loading = document.createElement("div");
+    loading.className = "sidebar-empty";
+    loading.textContent = "Loading chats…";
+    if (sidebarList) sidebarList.appendChild(loading);
+    fetch("/api/studio/chats")
+      .then(function (res) {
+        return res.ok ? res.json() : [];
+      })
+      .then(renderSidebarList)
+      .catch(function () {
+        renderSidebarList([]);
+      });
+  }
+
+  function closeSidebar() {
+    if (sidebar) {
+      sidebar.classList.remove("open");
+      sidebar.setAttribute("aria-hidden", "true");
+    }
+    if (sidebarOverlay) sidebarOverlay.classList.add("hidden");
+  }
+
+  if (sidebarBtn) sidebarBtn.addEventListener("click", openSidebar);
+  if (sidebarClose) sidebarClose.addEventListener("click", closeSidebar);
+  if (sidebarOverlay) sidebarOverlay.addEventListener("click", closeSidebar);
+  if (sidebarBack)
+    sidebarBack.addEventListener("click", function () {
+      showSidebarList();
+      openSidebarRefresh();
+    });
+  function openSidebarRefresh() {
+    fetch("/api/studio/chats")
+      .then(function (res) {
+        return res.ok ? res.json() : [];
+      })
+      .then(renderSidebarList)
+      .catch(function () {
+        renderSidebarList([]);
+      });
+  }
+  document.addEventListener("keydown", function (event) {
+    if (event.key === "Escape") closeSidebar();
+  });
+  if (sidebarContinue)
+    sidebarContinue.addEventListener("click", function () {
+      if (!activeChatId || sidebarContinue.disabled) return;
+      sidebarContinue.disabled = true;
+      var prompt =
+        "Continuing from a previous chat (archived " +
+        activeChatId +
+        "). Key context:\n" +
+        String(activeChatContent || "").slice(0, 1500) +
+        "\n---\nUser will now continue.";
+      loadTerminalInline();
+      fetch("/api/studio/terminal/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt: prompt }),
+      })
+        .then(function (res) {
+          if (!res.ok) throw new Error("send failed: " + res.status);
+          return res.json();
+        })
+        .then(function () {
+          closeSidebar();
+          setStatus("Context sent — continue in the live terminal.", "ok");
+        })
+        .catch(function () {
+          setStatus("Could not send context to the live terminal.", "error");
+        })
+        .then(function () {
+          sidebarContinue.disabled = false;
+        });
+    });
+
   // VM backend health check
   fetch("/api/studio/health")
     .then(function (res) {
