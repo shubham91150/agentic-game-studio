@@ -2,7 +2,7 @@
  * Game Architecture Director — model routing:
  *   - High reasoning: Meta Muse Wonder 1.0 (Meta Model API) designs the
  *     structured game: title, biome, physics numbers, objective, assets.
- *   - Open weights: Baseten `meta-models/muse-spark-open` enriches the
+ *   - Open weights: Baseten `meta-models/muse-spark-open-1026` enriches the
  *     focal asset prompts (genuine open-weight usage in every run).
  *   - Fallback: deterministic local heuristics if a provider is down.
  * Every run records which models actually answered in the spec.
@@ -71,7 +71,7 @@ export class MuseWonderDirector {
         )
         .slice(-3);
       if (enrichedPrompts.length)
-        enrichmentModel = "meta-models/muse-spark-open";
+        enrichmentModel = "meta-models/muse-spark-open-1026";
       if (!reasoning) reasoning = text.slice(0, 400);
     } catch {
       enrichedPrompts = [];

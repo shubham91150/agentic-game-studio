@@ -177,7 +177,7 @@ const server = http.createServer(async (req, res) => {
         cliModel: process.env.MUSE_CLI_MODEL || "muse-spark-1.3",
         cliProvider: "meta-model-api",
         metaKeyPresent: Boolean(resolveMetaApiKey()),
-        plannerModel: "meta-models/muse-spark-open",
+        plannerModel: "meta-models/muse-spark-open-1026",
         plannerProvider: "baseten",
         basetenKeyPresent: Boolean(
           process.env.BASETEN_API_KEY ||

@@ -12,7 +12,8 @@ export class BasetenMuseClient {
   constructor(apiKey = process.env.BASETEN_API_KEY) {
     this.apiKey = apiKey || this.readVaultKey();
     this.baseUrl = "https://inference.baseten.co/v1/chat/completions";
-    this.model = process.env.BASETEN_MODEL || "meta-models/muse-spark-open";
+    this.model =
+      process.env.BASETEN_MODEL || "meta-models/muse-spark-open-1026";
   }
 
   readVaultKey() {

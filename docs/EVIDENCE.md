@@ -16,7 +16,7 @@ re-checked against the live VM (`https://spurcode.duckdns.org`).
     "cliModel": "muse-spark-1.3",
     "cliProvider": "meta-model-api",
     "metaKeyPresent": true,
-    "plannerModel": "meta-models/muse-spark-open",
+    "plannerModel": "meta-models/muse-spark-open-1026",
     "plannerProvider": "baseten",
     "basetenKeyPresent": true,
     "terrain": "procedural elevation grid",
