@@ -127,18 +127,31 @@ Minimum viable game MUST have: state machine (`menu/playing/paused/over`), playe
 4. Uploaded files in `storage/.uploads/<name>` are served at `/studio/uploads/<name>` — reference that URL from game code.
 5. For `.glb` without a loader: parse the `GLB` magic (`0x46546C67`) chunks into `THREE.BufferGeometry`/`THREE.MeshStandardMaterial` directly, or extract meshes to `model_data.js` with a quick `node`/`python3` script. No external CDN scripts — only local `/studio/vendor/` and relative `./` files.
 
-## Publish Rule — Every Finished Game Enters the Library
+## Publish Rule — Hand-Made Games Publish Verbatim (NEVER Regenerate)
 
-Every FINISHED game must be published to the persistent library by running:
+Hand-made games (built/fixed by hand in `public/live-preview/` or a rough
+folder) publish ONLY via `publish-game.js`, which copies the real files
+verbatim into the library — it never regenerates anything:
 
 ```bash
-node src/tools/build-game.js --prompt "<the game idea>"
+node src/tools/publish-game.js --dir <game-folder> --title "<real game title>" [--prompt "<the game idea>"]
+# or: npm run asset:publish -- --dir <game-folder> --title "<real game title>"
 ```
 
-- This auto-saves into `storage/games/<id>/` (manifest + art + Unity code), which feeds the Library drawer.
+- This copies `index.html` + co-located assets (js/css/png) verbatim into
+  `storage/games/<id>/`, writes `manifest.json` in the exact gameStore
+  schema, and upserts the `index.json` entry — which feeds the Library drawer.
 - `public/live-preview/` holds ONLY the current game (gets overwritten — not a library).
-- Rough work folders in the workspace root (like `game-*/`) must be deleted after publishing (keep workspace clean).
-- Hand-made live-preview games that deserve keeping: re-run them through `build-game.js` with the same idea so they enter the library properly.
+- NEVER publish a hand-made game with `node src/tools/build-game.js`:
+  that tool REGENERATES a template orb-collector game from the prompt and
+  OVERWRITES the real game (this already destroyed one tic-tac-toe this way).
+  Run `build-game.js` ONLY for fresh pipeline-generated ideas, never for a
+  game that already exists as files.
+- NEVER delete the rough folder until the published game is verified, in this
+  order (verify-then-delete):
+  1. `GET /api/studio/games` lists the new game, AND
+  2. `curl` on its `playUrl` returns 200 with the real game content.
+     Only then delete the rough folder (keep workspace clean).
 
 ## Before You Say "Done"
 

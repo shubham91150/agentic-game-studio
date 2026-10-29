@@ -10,6 +10,7 @@
     "start": "node src/server.js",
     "test": "node --test test/",
     "pipeline:build": "node src/tools/build-game.js",
+    "asset:publish": "node src/tools/publish-game.js",
     "asset:image": "node src/tools/make-image.js"
   },
   "keywords": [
