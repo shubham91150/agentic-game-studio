@@ -8,7 +8,7 @@
   --line: rgba(255, 255, 255, 0.085);
   --line-strong: rgba(255, 255, 255, 0.17);
   --accent: #38bdf8;
-  --radius: 8px;
+  --radius: 14px;
   --font-ui: "Inter", system-ui, -apple-system, sans-serif;
   --font-serif: "Source Serif 4", Georgia, serif;
   --font-mono: "JetBrains Mono", ui-monospace, monospace;
@@ -21,7 +21,18 @@
 
 body {
   margin: 0;
-  background: #000;
+  background:
+    radial-gradient(
+      900px 420px at 22% -10%,
+      rgba(56, 189, 248, 0.065),
+      transparent 70%
+    ),
+    radial-gradient(
+      800px 400px at 82% -15%,
+      rgba(168, 85, 247, 0.05),
+      transparent 70%
+    ),
+    var(--bg);
   color: var(--ink);
   font-family: var(--font-ui);
   font-size: 14px;
@@ -243,7 +254,7 @@ body {
   flex-direction: column;
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  background: #000;
+  background: #0a0a0e;
   overflow: hidden;
   box-shadow:
     0 12px 32px -12px rgba(0, 0, 0, 0.7),
@@ -256,7 +267,11 @@ body {
   gap: 12px;
   padding: 9px 14px;
   border-bottom: 1px solid var(--line);
-  background: #000;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.03),
+    rgba(255, 255, 255, 0.01)
+  );
   flex: 0 0 auto;
 }
 .window-title-group {
@@ -317,7 +332,7 @@ body {
   width: 100%;
   height: 100%;
   border: 0;
-  background: #000;
+  background: #0a0a0e;
 }
 .terminal-connect {
   flex: 1 1 auto;
@@ -327,7 +342,7 @@ body {
   flex-direction: column;
   align-items: center;
   gap: 14px;
-  background: #000;
+  background: #0a0a0e;
   justify-content: center;
 }
 .terminal-connect-text {
@@ -401,7 +416,7 @@ body {
   min-height: 58px;
 }
 #prompt::placeholder {
-  color: #737373;
+  color: #6b6b76;
 }
 
 .prompt-bar {
@@ -419,12 +434,12 @@ body {
   flex-wrap: wrap;
 }
 .icon-btn {
-  width: 28px;
-  height: 28px;
-  border: 0;
+  width: 30px;
+  height: 30px;
+  border: 1px solid var(--line);
   border-radius: 8px;
-  background: transparent;
-  color: #a1a1aa;
+  background: rgba(255, 255, 255, 0.03);
+  color: #b4b4c0;
   font-size: 17px;
   line-height: 1;
   cursor: pointer;
@@ -507,20 +522,20 @@ body {
 }
 
 .send-btn {
-  width: 32px;
-  height: 32px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.03);
-  color: #a1a1aa;
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: 50%;
+  background: #f4f4f6;
+  color: #09090b;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   flex: 0 0 auto;
-  box-shadow: none;
+  box-shadow: 0 2px 10px rgba(255, 255, 255, 0.14);
   transition:
-    color 0.15s ease,
+    transform 0.12s ease,
     background 0.15s ease;
 }
 .send-btn:hover:not(:disabled) {
@@ -548,7 +563,13 @@ body {
 .viewport {
   flex: 1 1 auto;
   min-height: 260px;
-  background: #000;
+  background:
+    radial-gradient(
+      circle at 50% 42%,
+      rgba(56, 189, 248, 0.05),
+      transparent 65%
+    ),
+    #08080c;
   position: relative;
   display: flex;
   align-items: center;
@@ -903,14 +924,14 @@ body {
   flex: 0 0 auto;
 }
 .picker-pill {
-  border: 0;
-  border-radius: 8px;
-  background-color: transparent;
-  background-position: right 6px center;
-  padding: 6px 24px 6px 8px;
-  font-size: 13px;
-  font-weight: 500;
-  color: #d4d4d8;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background-color: rgba(255, 255, 255, 0.04);
+  background-position: right 10px center;
+  padding: 6px 30px 6px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #d4d4dc;
   max-width: 230px;
 }
 .picker-pill:hover {
@@ -938,7 +959,7 @@ body {
   width: 230px;
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 12px;
-  background: #1f1f1f;
+  background: #141419;
   box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6);
   padding: 6px;
 }
@@ -993,13 +1014,13 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(56, 189, 248, 0.1);
+  border: 1px solid rgba(56, 189, 248, 0.3);
   border-radius: 999px;
   padding: 2px 5px 2px 9px;
   font-size: 11px;
   font-family: var(--font-mono);
-  color: #d4d4d8;
+  color: #7dd3fc;
 }
 .skill-chip button {
   border: 0;
