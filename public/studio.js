@@ -30,12 +30,6 @@
     running = busy;
     sendBtn.disabled = busy;
     sendBtn.classList.toggle("busy", busy);
-    Array.prototype.forEach.call(
-      document.querySelectorAll(".chip"),
-      function (chip) {
-        chip.disabled = busy;
-      },
-    );
   }
 
   // VM backend health check
@@ -56,21 +50,6 @@
       liveDot.className = "live-dot off";
       liveText.textContent = "vm offline";
     });
-
-  // Example chips fill the prompt
-  Array.prototype.forEach.call(
-    document.querySelectorAll(".chip"),
-    function (chip) {
-      chip.addEventListener("click", function () {
-        if (running) return;
-        promptEl.value =
-          "Build a " +
-          chip.textContent.trim().toLowerCase() +
-          " game with precise physics, collectible beacons, and collision-aware movement.";
-        promptEl.focus();
-      });
-    },
-  );
 
   // Enter submits (Shift+Enter inserts a newline)
   promptEl.addEventListener("keydown", function (event) {
