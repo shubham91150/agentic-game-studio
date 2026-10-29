@@ -28,6 +28,7 @@
   --accent: #7dd3fc;
   --accent-dim: rgba(125, 211, 252, 0.12);
   --ok: #4ade80;
+  --warn: #fbbf24;
   --bad: #f87171;
 
   /* Unified radius scale */
@@ -356,6 +357,10 @@ body {
 
 .status.ok {
   color: var(--ok);
+}
+
+.status.warn {
+  color: var(--warn);
 }
 
 .status.error {
