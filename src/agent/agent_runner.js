@@ -39,7 +39,7 @@ import { GameStorageManager } from "../storage/game_store.js";
 export { resolveMetaApiKey };
 
 const MUSE_BIN = path.join(os.homedir(), ".local", "bin", "muse");
-const BASETEN_MODEL_LABEL = "meta-models/muse-spark-open";
+const BASETEN_MODEL_LABEL = "meta-models/muse-spark-open-1026";
 const CLI_MODEL_LABEL = process.env.MUSE_CLI_MODEL || "muse-spark-1.3";
 // Only models verified live on this VM may be selected in the UI.
 export const ALLOWED_CLI_MODELS = [
