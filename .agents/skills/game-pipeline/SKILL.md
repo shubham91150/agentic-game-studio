@@ -127,6 +127,19 @@ Minimum viable game MUST have: state machine (`menu/playing/paused/over`), playe
 4. Uploaded files in `storage/.uploads/<name>` are served at `/studio/uploads/<name>` — reference that URL from game code.
 5. For `.glb` without a loader: parse the `GLB` magic (`0x46546C67`) chunks into `THREE.BufferGeometry`/`THREE.MeshStandardMaterial` directly, or extract meshes to `model_data.js` with a quick `node`/`python3` script. No external CDN scripts — only local `/studio/vendor/` and relative `./` files.
 
+## Publish Rule — Every Finished Game Enters the Library
+
+Every FINISHED game must be published to the persistent library by running:
+
+```bash
+node src/tools/build-game.js --prompt "<the game idea>"
+```
+
+- This auto-saves into `storage/games/<id>/` (manifest + art + Unity code), which feeds the Library drawer.
+- `public/live-preview/` holds ONLY the current game (gets overwritten — not a library).
+- Rough work folders in the workspace root (like `game-*/`) must be deleted after publishing (keep workspace clean).
+- Hand-made live-preview games that deserve keeping: re-run them through `build-game.js` with the same idea so they enter the library properly.
+
 ## Before You Say "Done"
 
 - [ ] `node --check public/live-preview/game.js` passes (and every other JS file you wrote).
