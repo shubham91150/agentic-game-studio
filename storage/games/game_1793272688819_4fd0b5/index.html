@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Desert Rover Rally</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; overflow: hidden; background: #1c1108; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    #canvas-container { width: 100%; height: 100%; position: absolute; left: 0; top: 0; }
+    #hud {
+      position: absolute; top: 16px; left: 16px; z-index: 10;
+      color: #f8fafc; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 13px; background: rgba(9, 9, 11, 0.78); border: 1px solid rgba(255, 255, 255, 0.12);
+      padding: 10px 14px; border-radius: 8px; backdrop-filter: blur(8px);
+      display: flex; gap: 16px; pointer-events: none; max-width: calc(100vw - 32px); flex-wrap: wrap;
+    }
+    .hud-stat { display: flex; flex-direction: column; }
+    .hud-label { font-size: 10px; color: #a8b3bd; text-transform: uppercase; letter-spacing: 0.05em; }
+    .hud-val { font-size: 16px; font-weight: 700; color: #fde68a; }
+    #banner {
+      position: absolute; inset: 0; z-index: 30; display: none;
+      align-items: center; justify-content: center; flex-direction: column; gap: 12px;
+      background: rgba(4, 6, 10, 0.72); color: #f8fafc; text-align: center; padding: 24px;
+    }
+    #banner h1 { font-size: 26px; letter-spacing: -0.02em; }
+    #banner p { color: #cbd5e1; font-size: 14px; max-width: 420px; line-height: 1.6; }
+    #banner button {
+      font: inherit; font-weight: 600; padding: 10px 18px; border-radius: 8px;
+      border: 1px solid rgba(255,255,255,0.25); background: #f4f4f5; color: #09090b; cursor: pointer;
+    }
+    #mobile-controls {
+      position: absolute; bottom: 24px; left: 24px; z-index: 20;
+      width: 120px; height: 120px; border-radius: 50%;
+      background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.15);
+      display: none; touch-action: none;
+    }
+    #joystick-stick {
+      position: absolute; left: 35px; top: 35px; width: 50px; height: 50px;
+      border-radius: 50%; background: rgba(255,255,255,0.18); border: 1px solid #fde68a;
+      pointer-events: none;
+    }
+    #btn-mobile-jump {
+      position: absolute; bottom: 36px; right: 28px; z-index: 20;
+      width: 64px; height: 64px; border-radius: 50%;
+      background: rgba(255, 255, 255, 0.10); border: 1px solid #fde68a; color: #ffffff;
+      font-weight: 700; font-size: 12px; display: none; align-items: center; justify-content: center;
+      user-select: none; touch-action: none;
+    }
+    @media (pointer: coarse) {
+      #mobile-controls { display: block; }
+      #btn-mobile-jump { display: flex; }
+    }
+  </style>
+</head>
+<body>
+  <div id="canvas-container"></div>
+  <div id="hud">
+    <div class="hud-stat"><span class="hud-label">Desert Rover Rally</span><span class="hud-val" style="font-size:13px;">desert-canyon</span></div>
+    <div class="hud-stat"><span class="hud-label">Orbs</span><span class="hud-val" id="val-score">0 / 12</span></div>
+    <div class="hud-stat"><span class="hud-label">Speed</span><span class="hud-val" id="val-speed">0.0</span></div>
+    <div class="hud-stat"><span class="hud-label">Gravity</span><span class="hud-val">15.0</span></div>
+  </div>
+  <div id="banner">
+    <h1 id="banner-title">World complete</h1>
+    <p id="banner-text">Drive the rover across the desert canyons to collect all glowing energy beacons while avoiding rock obstacles.</p>
+    <button id="btn-again" type="button">Play again</button>
+  </div>
+
+  <div id="mobile-controls"><div id="joystick-stick"></div></div>
+  <div id="btn-mobile-jump">JUMP</div>
+  <script src="/studio/vendor/three.min.js" defer></script>
+  <script src="./game.js" defer></script>
+</body>
+</html>

@@ -1,235 +1,65 @@
 [
   {
-    "id": "game_1793196007297_afb03d",
-    "title": "Public Verify Glacier",
-    "prompt": "Public verify glacier world",
+    "id": "game_1793272746559_5bbea3",
+    "title": "Glacier Sprint",
+    "prompt": "Glacier Sprint: race across frozen glaciers, grab heat crystals, avoid ice spikes",
     "biome": "subzero-glacier",
-    "metaModel": "cache-seed",
+    "metaModel": "muse-wonder-1.0",
     "enrichmentModel": null,
-    "objective": "Collect orbs",
-    "createdAt": "2026-10-28T14:00:07.297Z",
-    "playUrl": "/studio/games/game_1793196007297_afb03d/index.html",
-    "imageUrl": "/studio/games/game_1793196007297_afb03d/assets/concept.webp",
+    "objective": "Collect all heat crystals while sprinting across the glacier and avoiding ice spikes using WASD or the touch joystick.",
+    "createdAt": "2026-10-29T11:19:06.560Z",
+    "playUrl": "/studio/games/game_1793272746559_5bbea3/index.html",
+    "imageUrl": "/studio/games/game_1793272746559_5bbea3/assets/concept.webp",
     "files": {
       "html": "index.html",
       "manifest": "manifest.json",
       "unity": [
         "AgenticPlayerController.cs",
         "AgenticGameManager.cs"
-      ]
+      ],
+      "js": "game.js"
     }
   },
   {
-    "id": "game_1793195760850_7197a9",
-    "title": "Low Gravity Lunar Rover",
-    "prompt": "Low gravity lunar rover with slow floaty jumps and glowing beacons",
+    "id": "game_1793272726551_04549a",
+    "title": "Neon Orbital Courier",
+    "prompt": "Neon Orbital Courier: pilot a hover drone around a cyber space station, collect glowing data orbs, dodge defense pylons",
     "biome": "cyber-orbital",
-    "metaModel": "local-heuristics",
-    "enrichmentModel": "meta-models/muse-spark-open",
-    "objective": "Collect the energy orbs scattered across the world.",
-    "createdAt": "2026-10-28T13:56:00.850Z",
-    "playUrl": "/studio/games/game_1793195760850_7197a9/index.html",
-    "imageUrl": "/studio/games/game_1793195760850_7197a9/assets/concept.webp",
-    "files": {
-      "html": "index.html",
-      "manifest": "manifest.json",
-      "unity": [
-        "AgenticPlayerController.cs",
-        "AgenticGameManager.cs"
-      ]
-    }
-  },
-  {
-    "id": "game_1793195725381_0a9da8",
-    "title": "Cyber Kinetic Hovercraft Speedway",
-    "prompt": "Cache test glacier world",
-    "biome": "cyber-orbital",
-    "metaModel": "meta-models/muse-spark-open",
+    "metaModel": "muse-wonder-1.0",
     "enrichmentModel": null,
-    "objective": "",
-    "createdAt": "2026-10-28T13:55:25.381Z",
-    "playUrl": "/studio/games/game_1793195725381_0a9da8/index.html",
-    "imageUrl": "/studio/games/game_1793195725381_0a9da8/assets/concept.webp",
+    "objective": "Pilot your hover drone to collect all glowing data orbs around the cyber space station while dodging the defense pylons.",
+    "createdAt": "2026-10-29T11:18:46.552Z",
+    "playUrl": "/studio/games/game_1793272726551_04549a/index.html",
+    "imageUrl": "/studio/games/game_1793272726551_04549a/assets/concept.webp",
     "files": {
       "html": "index.html",
       "manifest": "manifest.json",
       "unity": [
         "AgenticPlayerController.cs",
         "AgenticGameManager.cs"
-      ]
+      ],
+      "js": "game.js"
     }
   },
   {
-    "id": "game_1793195632236_fa4e61",
-    "title": "Build A Compact Lunar",
-    "prompt": "Build a compact lunar rover challenge with low-gravity jumps, collectible signal beacons, and precise collision physics.",
-    "biome": "cyber-orbital",
-    "metaModel": "local-heuristics",
-    "enrichmentModel": "meta-models/muse-spark-open",
-    "objective": "Collect the energy orbs scattered across the world.",
-    "createdAt": "2026-10-28T13:53:52.237Z",
-    "playUrl": "/studio/games/game_1793195632236_fa4e61/index.html",
-    "imageUrl": "/studio/games/game_1793195632236_fa4e61/assets/concept.webp",
-    "files": {
-      "html": "index.html",
-      "manifest": "manifest.json",
-      "unity": [
-        "AgenticPlayerController.cs",
-        "AgenticGameManager.cs"
-      ]
-    }
-  },
-  {
-    "id": "game_1793194475264_81152d",
-    "title": "Signal Garden Exploration With",
-    "prompt": "Signal garden exploration with scattered beacons",
-    "biome": "cyber-orbital",
-    "metaModel": "meta-models/muse-spark-open",
-    "createdAt": "2026-10-28T13:34:35.264Z",
-    "playUrl": "/studio/games/game_1793194475264_81152d/index.html",
-    "files": {
-      "html": "index.html",
-      "manifest": "manifest.json",
-      "unity": [
-        "AgenticPlayerController.cs",
-        "AgenticGameManager.cs"
-      ]
-    }
-  },
-  {
-    "id": "game_1793194452018_534169",
-    "title": "Desert Canyon Speedway With",
-    "prompt": "Desert canyon speedway with metal pylons",
+    "id": "game_1793272688819_4fd0b5",
+    "title": "Desert Rover Rally",
+    "prompt": "Desert Rover Rally: drive a rover across desert canyons, collect energy beacons, avoid rock obstacles",
     "biome": "desert-canyon",
-    "metaModel": "meta-models/muse-spark-open",
-    "createdAt": "2026-10-28T13:34:12.019Z",
-    "playUrl": "/studio/games/game_1793194452018_534169/index.html",
+    "metaModel": "muse-wonder-1.0",
+    "enrichmentModel": null,
+    "objective": "Drive the rover across the desert canyons to collect all glowing energy beacons while avoiding rock obstacles.",
+    "createdAt": "2026-10-29T11:18:08.820Z",
+    "playUrl": "/studio/games/game_1793272688819_4fd0b5/index.html",
+    "imageUrl": "/studio/games/game_1793272688819_4fd0b5/assets/concept.webp",
     "files": {
       "html": "index.html",
       "manifest": "manifest.json",
       "unity": [
         "AgenticPlayerController.cs",
         "AgenticGameManager.cs"
-      ]
-    }
-  },
-  {
-    "id": "game_1793194409032_d21df5",
-    "title": "Orbital Courier With Docking",
-    "prompt": "Orbital courier with docking targets",
-    "biome": "cyber-orbital",
-    "metaModel": "meta-models/muse-spark-open",
-    "createdAt": "2026-10-28T13:33:29.033Z",
-    "playUrl": "/studio/games/game_1793194409032_d21df5/index.html",
-    "files": {
-      "html": "index.html",
-      "manifest": "manifest.json",
-      "unity": [
-        "AgenticPlayerController.cs",
-        "AgenticGameManager.cs"
-      ]
-    }
-  },
-  {
-    "id": "game_1793194376611_8cba93",
-    "title": "Orbital Courier With Docking",
-    "prompt": "Orbital courier with docking targets and momentum steering",
-    "biome": "cyber-orbital",
-    "metaModel": "meta-models/muse-spark-open",
-    "createdAt": "2026-10-28T13:32:56.612Z",
-    "playUrl": "/studio/games/game_1793194376611_8cba93/index.html",
-    "files": {
-      "html": "index.html",
-      "manifest": "manifest.json",
-      "unity": [
-        "AgenticPlayerController.cs",
-        "AgenticGameManager.cs"
-      ]
-    }
-  },
-  {
-    "id": "game_1793194032409_62ce9b",
-    "title": "Low-gravity Glacier Course With",
-    "prompt": "Low-gravity glacier course with floating crystal pickups",
-    "biome": "subzero-glacier",
-    "metaModel": "meta-models/muse-spark-open",
-    "createdAt": "2026-10-28T13:27:12.410Z",
-    "playUrl": "/studio/games/game_1793194032409_62ce9b/index.html",
-    "files": {
-      "html": "index.html",
-      "manifest": "manifest.json",
-      "unity": [
-        "AgenticPlayerController.cs",
-        "AgenticGameManager.cs"
-      ]
-    }
-  },
-  {
-    "id": "game_1793160881694_701e7e",
-    "title": "Glacier Canyon Hovercraft Race",
-    "prompt": "Glacier canyon hovercraft race with crystals",
-    "biome": "subzero-glacier",
-    "metaModel": "meta-models/muse-spark-open",
-    "createdAt": "2026-10-28T04:14:41.695Z",
-    "playUrl": "/game/game_1793160881694_701e7e",
-    "files": {
-      "html": "index.html",
-      "manifest": "manifest.json",
-      "unity": [
-        "AgenticPlayerController.cs",
-        "AgenticGameManager.cs"
-      ]
-    }
-  },
-  {
-    "id": "game_1793160866303_8d9ff2",
-    "title": "Test Prompt",
-    "prompt": "Test prompt",
-    "biome": "cyber-orbital",
-    "metaModel": "meta-models/muse-spark-open",
-    "createdAt": "2026-10-28T04:14:26.304Z",
-    "playUrl": "/game/game_1793160866303_8d9ff2",
-    "files": {
-      "html": "index.html",
-      "manifest": "manifest.json",
-      "unity": [
-        "AgenticPlayerController.cs",
-        "AgenticGameManager.cs"
-      ]
-    }
-  },
-  {
-    "id": "game_1793160768045_8ff820",
-    "title": "Glacier Canyon Hovercraft Course",
-    "prompt": "Glacier canyon hovercraft course with floating crystals",
-    "biome": "subzero-glacier",
-    "metaModel": "meta-models/muse-spark-open",
-    "createdAt": "2026-10-28T04:12:48.045Z",
-    "playUrl": "/game/game_1793160768045_8ff820",
-    "files": {
-      "html": "index.html",
-      "manifest": "manifest.json",
-      "unity": [
-        "AgenticPlayerController.cs",
-        "AgenticGameManager.cs"
-      ]
-    }
-  },
-  {
-    "id": "game_1793157050687_3c81b9",
-    "title": "Cyber Kinetic Hovercraft Speedway",
-    "prompt": "Cyber kinetic hovercraft speedway with floating crystalline orbs",
-    "biome": "cyber-orbital",
-    "metaModel": "meta-models/muse-spark-open",
-    "createdAt": "2026-10-28T03:10:50.688Z",
-    "playUrl": "/game/game_1793157050687_3c81b9",
-    "files": {
-      "html": "index.html",
-      "manifest": "manifest.json",
-      "unity": [
-        "AgenticPlayerController.cs",
-        "AgenticGameManager.cs"
-      ]
+      ],
+      "js": "game.js"
     }
   }
 ]
