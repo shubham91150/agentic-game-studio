@@ -1,0 +1,21 @@
+{
+  "id": "game_1793272688819_4fd0b5",
+  "title": "Desert Rover Rally",
+  "prompt": "Desert Rover Rally: drive a rover across desert canyons, collect energy beacons, avoid rock obstacles",
+  "biome": "desert-canyon",
+  "metaModel": "muse-wonder-1.0",
+  "enrichmentModel": null,
+  "objective": "Drive the rover across the desert canyons to collect all glowing energy beacons while avoiding rock obstacles.",
+  "createdAt": "2026-10-29T11:18:08.820Z",
+  "playUrl": "/studio/games/game_1793272688819_4fd0b5/index.html",
+  "imageUrl": "/studio/games/game_1793272688819_4fd0b5/assets/concept.webp",
+  "files": {
+    "html": "index.html",
+    "manifest": "manifest.json",
+    "unity": [
+      "AgenticPlayerController.cs",
+      "AgenticGameManager.cs"
+    ],
+    "js": "game.js"
+  }
+}
