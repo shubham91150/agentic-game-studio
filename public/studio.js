@@ -1172,6 +1172,18 @@
   var TERMINAL_URL = "https://spurcode.duckdns.org/terminal/";
   var reconnectTimer = null;
   var reconnectSafety = null;
+  var reconnectBtn = document.getElementById("terminal-reconnect-btn");
+
+  function hideReconnectBtn() {
+    if (reconnectBtn) reconnectBtn.classList.add("hidden");
+  }
+
+  function showReconnectBtn() {
+    var frame = document.getElementById("cli-frame");
+    // Only offer a manual retry when the inline terminal is active.
+    if (!frame || !frame.getAttribute("src")) return;
+    if (reconnectBtn) reconnectBtn.classList.remove("hidden");
+  }
 
   function showTerminalLoading() {
     var box = document.querySelector(".terminal-section .terminal-box");
@@ -1206,6 +1218,7 @@
     // Inline terminal not active (connect prompt showing) — nothing dead
     // to hide, so leave the connect box untouched.
     if (!frame || !frame.getAttribute("src")) return;
+    hideReconnectBtn();
     showTerminalLoading();
     if (reconnectTimer) clearTimeout(reconnectTimer);
     if (reconnectSafety) clearTimeout(reconnectSafety);
@@ -1223,6 +1236,7 @@
       reconnectSafety = setTimeout(function () {
         reconnectSafety = null;
         hideTerminalLoading();
+        showReconnectBtn();
         setStatus(
           "Fresh terminal is taking long — use Open full terminal.",
           "warn",
@@ -1236,6 +1250,7 @@
   var cliFrameEl = document.getElementById("cli-frame");
   if (cliFrameEl) {
     cliFrameEl.addEventListener("load", function () {
+      hideReconnectBtn();
       var overlay = document.getElementById("terminal-reconnect");
       if (overlay && !overlay.classList.contains("hidden")) {
         if (reconnectSafety) {
@@ -1244,6 +1259,14 @@
         }
         hideTerminalLoading();
       }
+    });
+    cliFrameEl.addEventListener("error", function () {
+      showReconnectBtn();
+    });
+  }
+  if (reconnectBtn) {
+    reconnectBtn.addEventListener("click", function () {
+      reconnectTerminalFresh();
     });
   }
 
