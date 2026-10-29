@@ -238,6 +238,112 @@ const server = http.createServer(async (req, res) => {
     return json(res, 200, { skills, mcpServers, models: ALLOWED_CLI_MODELS });
   }
 
+  // ---------- MCP server management (Muse Code settings) ----------
+  // Reads/writes ~/.config/muse/settings.json mcpServers. Secrets (headers,
+  // env) are never returned to the client. A new CLI session picks changes up.
+  function mcpSettingsPath() {
+    return path.join(
+      process.env.HOME || "/root",
+      ".config",
+      "muse",
+      "settings.json",
+    );
+  }
+  function readMcpServers() {
+    const raw = fs.readFileSync(mcpSettingsPath(), "utf8");
+    const settings = JSON.parse(raw);
+    const servers = settings.mcpServers || {};
+    return Object.entries(servers).map(([name, cfg]) => ({
+      name,
+      transport: cfg.transport || "streamable_http",
+      url: cfg.url || "",
+      command: cfg.command || "",
+      enabled: cfg.enabled !== false,
+    }));
+  }
+  if (pathname === "/api/studio/mcp" && req.method === "GET") {
+    try {
+      return json(res, 200, { servers: readMcpServers() });
+    } catch {
+      return json(res, 500, { error: "Could not read MCP settings." });
+    }
+  }
+  if (pathname === "/api/studio/mcp" && req.method === "POST") {
+    let body = "";
+    req.on("data", (chunk) => (body += chunk));
+    req.on("end", () => {
+      let payload = {};
+      try {
+        payload = JSON.parse(body || "{}");
+      } catch {
+        payload = {};
+      }
+      const name = String(payload.name || "")
+        .toLowerCase()
+        .trim();
+      const url = String(payload.url || "").trim();
+      if (!/^[a-z0-9][a-z0-9-_]{1,40}$/.test(name)) {
+        return json(res, 400, {
+          error: "Name must be 2-41 chars: lowercase, digits, - _.",
+        });
+      }
+      let parsed = null;
+      try {
+        parsed = new URL(url);
+      } catch {
+        parsed = null;
+      }
+      if (
+        !parsed ||
+        (parsed.protocol !== "https:" && parsed.protocol !== "http:") ||
+        parsed.username ||
+        parsed.password
+      ) {
+        return json(res, 400, {
+          error: "URL must be plain http(s) without credentials.",
+        });
+      }
+      try {
+        const file = mcpSettingsPath();
+        const settings = JSON.parse(fs.readFileSync(file, "utf8"));
+        if (settings.schema_version !== 1) {
+          return json(res, 500, { error: "Unsupported settings schema." });
+        }
+        if (!settings.mcpServers || typeof settings.mcpServers !== "object") {
+          settings.mcpServers = {};
+        }
+        settings.mcpServers[name] = {
+          transport: "streamable_http",
+          url: parsed.toString(),
+        };
+        fs.copyFileSync(file, `${file}.bak`);
+        fs.writeFileSync(file, JSON.stringify(settings, null, 2), "utf8");
+        return json(res, 200, { ok: true, servers: readMcpServers() });
+      } catch {
+        return json(res, 500, { error: "Could not update MCP settings." });
+      }
+    });
+    return;
+  }
+  const mcpDel = pathname.match(
+    /^\/api\/studio\/mcp\/([a-z0-9][a-z0-9-_]{1,40})$/,
+  );
+  if (mcpDel && req.method === "DELETE") {
+    try {
+      const file = mcpSettingsPath();
+      const settings = JSON.parse(fs.readFileSync(file, "utf8"));
+      if (!settings.mcpServers || !settings.mcpServers[mcpDel[1]]) {
+        return json(res, 404, { error: "MCP server not found." });
+      }
+      delete settings.mcpServers[mcpDel[1]];
+      fs.copyFileSync(file, `${file}.bak`);
+      fs.writeFileSync(file, JSON.stringify(settings, null, 2), "utf8");
+      return json(res, 200, { ok: true, servers: readMcpServers() });
+    } catch {
+      return json(res, 500, { error: "Could not update MCP settings." });
+    }
+  }
+
   // ---------- Library list ----------
   if (pathname === "/api/studio/games" && req.method === "GET") {
     const games = await gameStore.listGames();

@@ -1036,3 +1036,59 @@ body {
   line-height: 1;
   padding: 0 4px;
 }
+
+/* MCP add/remove rows inside the plus menu */
+.plus-mcp-row {
+  cursor: default;
+}
+.plus-mcp-row:hover {
+  background: transparent;
+}
+.plus-mcp-row button {
+  margin-left: auto;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  color: #71717a;
+  font-size: 14px;
+  line-height: 1;
+  padding: 0 2px;
+}
+.plus-mcp-row button:hover {
+  color: #f87171;
+}
+.plus-add {
+  display: flex;
+  gap: 6px;
+  padding: 6px 10px 2px;
+}
+.plus-add input {
+  flex: 1 1 auto;
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: #09090b;
+  color: var(--ink);
+  font: inherit;
+  font-size: 12px;
+  padding: 6px 8px;
+  outline: none;
+}
+.plus-add input:focus {
+  border-color: var(--line-strong);
+}
+.plus-add button {
+  flex: 0 0 auto;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--surface-elevated, #17171e);
+  color: var(--ink);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 12px;
+  cursor: pointer;
+}
+.plus-add button:hover {
+  background: #232329;
+}
