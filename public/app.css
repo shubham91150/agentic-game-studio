@@ -393,7 +393,7 @@ body {
   border: 1px solid rgba(255, 255, 255, 0.09);
   border-radius: 12px;
   background: #000;
-  overflow: hidden;
+  overflow: visible;
   text-align: left;
   box-shadow: none;
   transition: border-color 0.15s ease;
@@ -716,7 +716,7 @@ body {
     flex: 1 1 auto;
     min-width: 0;
     flex-wrap: nowrap;
-    overflow: hidden;
+    overflow: visible;
   }
   .bar-right {
     flex: 0 0 auto;
@@ -961,24 +961,39 @@ body {
   left: 0;
   bottom: calc(100% + 8px);
   z-index: 30;
-  width: 230px;
+  width: 300px;
+  max-width: calc(100vw - 24px);
+  max-height: min(360px, 52vh);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  display: flex;
+  flex-direction: column;
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 12px;
   background: #141419;
   box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6);
   padding: 6px;
 }
+#plus-skills,
+#plus-mcps {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
 .plus-item {
   display: flex;
   align-items: center;
   gap: 8px;
   width: 100%;
+  min-width: 0;
   border: 0;
   border-radius: 8px;
   background: transparent;
   color: var(--ink);
   font: inherit;
   font-size: 12.5px;
+  line-height: 1.4;
   padding: 8px 10px;
   cursor: pointer;
   text-align: left;
@@ -986,7 +1001,16 @@ body {
 .plus-item:hover {
   background: rgba(255, 255, 255, 0.06);
 }
+.plus-item > span:first-child {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: left;
+}
 .plus-item .tick {
+  flex: 0 0 auto;
   margin-left: auto;
   color: #4ade80;
   font-weight: 700;
@@ -1001,13 +1025,18 @@ body {
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: #71717e;
-  padding: 8px 10px 3px;
+  padding: 8px 10px 4px;
+  margin: 2px 0 0;
+}
+.plus-section:first-child {
+  margin-top: 0;
 }
 .plus-hint {
   font-size: 11.5px;
   color: var(--muted);
-  padding: 4px 10px 8px;
+  padding: 4px 10px 6px;
   line-height: 1.5;
+  text-align: left;
 }
 .skill-list {
   padding: 0 14px 2px;
@@ -1044,26 +1073,44 @@ body {
 .plus-mcp-row:hover {
   background: transparent;
 }
+.plus-mcp-row > span:first-child {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: left;
+}
 .plus-mcp-row button {
+  flex: 0 0 auto;
   margin-left: auto;
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   border: 0;
+  border-radius: 6px;
   background: transparent;
   cursor: pointer;
   color: #71717a;
   font-size: 14px;
   line-height: 1;
-  padding: 0 2px;
+  padding: 0;
 }
 .plus-mcp-row button:hover {
   color: #f87171;
+  background: rgba(255, 255, 255, 0.06);
 }
 .plus-add {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr) auto;
   gap: 6px;
-  padding: 6px 10px 2px;
+  align-items: center;
+  padding: 6px 4px 2px;
 }
 .plus-add input {
-  flex: 1 1 auto;
+  width: 100%;
   min-width: 0;
   border: 1px solid var(--line);
   border-radius: 7px;
@@ -1071,7 +1118,8 @@ body {
   color: var(--ink);
   font: inherit;
   font-size: 12px;
-  padding: 6px 8px;
+  line-height: 1.4;
+  padding: 7px 8px;
   outline: none;
 }
 .plus-add input:focus {
@@ -1086,9 +1134,22 @@ body {
   font: inherit;
   font-size: 12px;
   font-weight: 600;
-  padding: 6px 12px;
+  line-height: 1.4;
+  padding: 7px 12px;
   cursor: pointer;
+  white-space: nowrap;
 }
 .plus-add button:hover {
   background: #232329;
+}
+@media (max-width: 600px) {
+  .plus-menu {
+    width: min(300px, calc(100vw - 32px));
+  }
+  .plus-add {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .plus-add button {
+    width: 100%;
+  }
 }
