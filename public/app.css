@@ -8,7 +8,7 @@
   --line: rgba(255, 255, 255, 0.085);
   --line-strong: rgba(255, 255, 255, 0.17);
   --accent: #38bdf8;
-  --radius: 14px;
+  --radius: 8px;
   --font-ui: "Inter", system-ui, -apple-system, sans-serif;
   --font-serif: "Source Serif 4", Georgia, serif;
   --font-mono: "JetBrains Mono", ui-monospace, monospace;
@@ -243,7 +243,7 @@ body {
   flex-direction: column;
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  background: #0a0a0e;
+  background: #000;
   overflow: hidden;
   box-shadow:
     0 12px 32px -12px rgba(0, 0, 0, 0.7),
@@ -256,11 +256,7 @@ body {
   gap: 12px;
   padding: 9px 14px;
   border-bottom: 1px solid var(--line);
-  background: linear-gradient(
-    180deg,
-    rgba(255, 255, 255, 0.03),
-    rgba(255, 255, 255, 0.01)
-  );
+  background: #000;
   flex: 0 0 auto;
 }
 .window-title-group {
@@ -321,7 +317,7 @@ body {
   width: 100%;
   height: 100%;
   border: 0;
-  background: #0a0a0e;
+  background: #000;
 }
 .terminal-connect {
   flex: 1 1 auto;
@@ -331,7 +327,7 @@ body {
   flex-direction: column;
   align-items: center;
   gap: 14px;
-  background: #0a0a0e;
+  background: #000;
   justify-content: center;
 }
 .terminal-connect-text {
@@ -380,7 +376,7 @@ body {
 .prompt-box {
   width: 100%;
   border: 1px solid rgba(255, 255, 255, 0.09);
-  border-radius: 16px;
+  border-radius: 12px;
   background: #171717;
   overflow: hidden;
   text-align: left;
@@ -552,13 +548,7 @@ body {
 .viewport {
   flex: 1 1 auto;
   min-height: 260px;
-  background:
-    radial-gradient(
-      circle at 50% 42%,
-      rgba(56, 189, 248, 0.05),
-      transparent 65%
-    ),
-    #08080c;
+  background: #000;
   position: relative;
   display: flex;
   align-items: center;
