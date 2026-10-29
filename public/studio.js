@@ -340,7 +340,7 @@
     });
   }
 
-  var cachedCapabilities = { skills: [], mcpServers: [] };
+  var cachedCapabilities = { skills: [], mcp: { servers: [] } };
   function renderPlusMenu() {
     if (plusSkills) {
       plusSkills.innerHTML = "";
@@ -381,32 +381,134 @@
     }
     if (plusMcps) {
       plusMcps.innerHTML = "";
-      if (!cachedCapabilities.mcpServers.length) {
+      var servers =
+        cachedCapabilities.mcp && Array.isArray(cachedCapabilities.mcp.servers)
+          ? cachedCapabilities.mcp.servers
+          : [];
+      if (!servers.length) {
         var hint = document.createElement("div");
         hint.className = "plus-hint";
-        hint.textContent =
-          "No MCP servers connected. Run `muse mcp login <server>` on the VM to add one.";
+        hint.textContent = "No MCP servers connected yet.";
         plusMcps.appendChild(hint);
       }
-      cachedCapabilities.mcpServers.forEach(function (name) {
+      servers.forEach(function (srv) {
         var row = document.createElement("div");
-        row.className = "plus-hint";
-        row.textContent = "● " + name;
+        row.className = "plus-item plus-mcp-row";
+        var name = document.createElement("span");
+        name.textContent = "● " + srv.name;
+        name.title = srv.url || srv.transport || "";
+        row.appendChild(name);
+        var del = document.createElement("button");
+        del.type = "button";
+        del.textContent = "×";
+        del.setAttribute("aria-label", "Remove MCP server " + srv.name);
+        del.addEventListener("click", function (event) {
+          event.stopPropagation();
+          removeMcpServer(srv.name);
+        });
+        row.appendChild(del);
         plusMcps.appendChild(row);
       });
+      var addRow = document.createElement("div");
+      addRow.className = "plus-add";
+      var nameInput = document.createElement("input");
+      nameInput.type = "text";
+      nameInput.placeholder = "name";
+      nameInput.setAttribute("aria-label", "MCP server name");
+      nameInput.maxLength = 41;
+      var urlInput = document.createElement("input");
+      urlInput.type = "url";
+      urlInput.placeholder = "https://…/mcp";
+      urlInput.setAttribute("aria-label", "MCP server URL");
+      var addBtn = document.createElement("button");
+      addBtn.type = "button";
+      addBtn.textContent = "Add";
+      addBtn.addEventListener("click", function () {
+        addMcpServer(nameInput.value, urlInput.value);
+      });
+      addRow.appendChild(nameInput);
+      addRow.appendChild(urlInput);
+      addRow.appendChild(addBtn);
+      plusMcps.appendChild(addRow);
+      var note = document.createElement("div");
+      note.className = "plus-hint";
+      note.textContent = "Takes effect in a new CLI session.";
+      plusMcps.appendChild(note);
     }
   }
+
+  function refreshMcp() {
+    fetch("/api/studio/mcp")
+      .then(function (res) {
+        return res.ok ? res.json() : null;
+      })
+      .then(function (data) {
+        cachedCapabilities.mcp = data || { servers: [] };
+        renderPlusMenu();
+      })
+      .catch(function () {
+        /* ignore */
+      });
+  }
+
+  function addMcpServer(name, url) {
+    fetch("/api/studio/mcp", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: name, url: url }),
+    })
+      .then(function (res) {
+        return res.json().then(function (data) {
+          return { ok: res.ok, data: data };
+        });
+      })
+      .then(function (result) {
+        if (!result.ok) {
+          setStatus(
+            result.data && result.data.error
+              ? result.data.error
+              : "Could not add MCP server.",
+            "error",
+          );
+          return;
+        }
+        cachedCapabilities.mcp = result.data;
+        renderPlusMenu();
+        setStatus("MCP server added.", "ok");
+      })
+      .catch(function () {
+        setStatus("Could not add MCP server.", "error");
+      });
+  }
+
+  function removeMcpServer(name) {
+    fetch("/api/studio/mcp/" + encodeURIComponent(name), {
+      method: "DELETE",
+    })
+      .then(function (res) {
+        return res.ok ? res.json() : null;
+      })
+      .then(function (data) {
+        if (data) {
+          cachedCapabilities.mcp = data;
+          renderPlusMenu();
+          setStatus("MCP server removed.", "ok");
+        }
+      })
+      .catch(function () {
+        /* ignore */
+      });
+  }
+
   fetch("/api/studio/capabilities")
     .then(function (res) {
       return res.ok ? res.json() : null;
     })
     .then(function (data) {
       if (!data) return;
-      cachedCapabilities = {
-        skills: Array.isArray(data.skills) ? data.skills : [],
-        mcpServers: Array.isArray(data.mcpServers) ? data.mcpServers : [],
-      };
+      cachedCapabilities.skills = Array.isArray(data.skills) ? data.skills : [];
       renderPlusMenu();
+      refreshMcp();
     })
     .catch(function () {
       renderPlusMenu();
