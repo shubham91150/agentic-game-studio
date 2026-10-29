@@ -37,3 +37,15 @@ Whenever the user asks you to build a game, modify a game, or render/preview an 
    - Any file in `storage/.uploads/<filename>` is served at: `/studio/uploads/<filename>` (and `/storage/.uploads/<filename>`).
    - If you need to load a `.glb` (glTF 2.0 binary) file without an external GLTFLoader, either parse its JSON + binary buffer chunks (`GLB` magic `0x46546C67`) directly into `THREE.BufferGeometry` / `THREE.MeshStandardMaterial` in `public/live-preview/game.js`, or extract its meshes into `public/live-preview/model_data.js` using a quick `node` or `python3` script so it renders reliably with zero external CDN dependencies.
 6. Do **not** modify `public/live-preview/` when the user is only asking a question or running slash commands (`/mcp`, `/usage`, `/help`).
+
+## HARD RULE: No UI Code Without Design Skills (rejection policy)
+
+Any UI change (HTML/CSS/frontend JS visuals in `public/`) MUST be made
+with the design skills read and applied FIRST:
+- `.agents/skills/ui-taste/SKILL.md` — always (anti-slop playbooks)
+- `plugin:threejs:threejs` — for any Three.js/WebGL work
+- `.agents/skills/ios-design/SKILL.md` — for mobile layout work
+
+Code review rule: UI code produced WITHOUT the relevant skill read is
+REJECTED — no matter who wrote it (agent, subagent, or orchestrator).
+The commit message for UI work must name the skill(s) applied.
