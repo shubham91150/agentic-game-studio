@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Agentic Game Studio</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/studio/app.css" />
+  </head>
+  <body>
+    <div class="page">
+      <header class="crumbs" aria-label="Breadcrumb">
+        <span class="crumb-user"
+          ><span class="avatar">S</span> shubham91150</span
+        >
+        <span class="crumb-sep">/</span>
+        <span class="crumb-repo">agentic-game-studio</span>
+        <span class="live-dot" id="live-dot" title="VM backend status"></span>
+        <span class="live-text" id="live-text">connecting…</span>
+        <span class="crumb-right">
+          <a
+            href="https://github.com/shubham91150/agentic-game-studio"
+            target="_blank"
+            rel="noreferrer"
+            >GitHub</a
+          >
+          <a href="/terminal/" target="_blank" rel="noreferrer">Live CLI</a>
+        </span>
+      </header>
+
+      <main class="hero" id="hero">
+        <h1 class="title">Agentic Game Studio</h1>
+        <p class="tagline">Describe your game. AI builds it.</p>
+
+        <form id="prompt-form" class="prompt-box" autocomplete="off">
+          <label class="sr-only" for="prompt"
+            >Describe what you want the AI agent to build</label
+          >
+          <textarea
+            id="prompt"
+            rows="3"
+            placeholder="Describe what you want the AI agent to build…"
+            required
+          ></textarea>
+
+          <div class="prompt-bar">
+            <div class="bar-left">
+              <label class="sr-only" for="agent-select">Agent</label>
+              <select id="agent-select" class="picker" title="Agent">
+                <option value="muse-code" selected>Muse Code</option>
+                <option value="muse-wonder">Muse Wonder</option>
+              </select>
+
+              <button
+                type="button"
+                id="attach-btn"
+                class="icon-btn"
+                title="Attach a reference file"
+                aria-label="Attach a reference file"
+              >
+                +
+              </button>
+              <input
+                type="file"
+                id="file-input"
+                class="sr-only"
+                multiple
+                tabindex="-1"
+              />
+
+              <label class="sr-only" for="model-select">Model</label>
+              <select id="model-select" class="picker" title="Model">
+                <option value="muse-spark-1.3" selected>Muse Spark 1.3</option>
+                <option value="muse-wonder-1.0">Muse Wonder 1.0</option>
+              </select>
+
+              <span
+                id="attach-list"
+                class="attach-list"
+                aria-live="polite"
+              ></span>
+            </div>
+
+            <button
+              type="submit"
+              id="send-btn"
+              class="send-btn"
+              title="Build game (Ctrl+Enter)"
+              aria-label="Build game"
+            >
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="m5 12 7-7 7 7" />
+                <path d="M12 19V5" />
+              </svg>
+            </button>
+          </div>
+        </form>
+
+        <div class="chips" role="group" aria-label="Try an example">
+          <button type="button" class="chip">Lunar Rover</button>
+          <button type="button" class="chip">Orbital Courier</button>
+          <button type="button" class="chip">Signal Garden</button>
+          <button type="button" class="chip">Glacier Race</button>
+          <button type="button" class="chip">Desert Dash</button>
+        </div>
+
+        <p class="status" id="status" role="status" aria-live="polite"></p>
+      </main>
+
+      <section class="result hidden" id="result" aria-label="Build result">
+        <div class="result-head">
+          <h2 id="game-title">Your game</h2>
+          <div class="result-actions">
+            <button type="button" id="btn-fullscreen" class="ghost-btn">
+              Fullscreen
+            </button>
+            <button type="button" id="btn-qr" class="ghost-btn">
+              Mobile QR
+            </button>
+            <button type="button" id="btn-code" class="ghost-btn">
+              Unity C#
+            </button>
+          </div>
+        </div>
+        <div class="viewport">
+          <iframe
+            id="game-frame"
+            title="Generated game"
+            allow="autoplay; fullscreen"
+          ></iframe>
+        </div>
+        <details class="console-wrap">
+          <summary>Agent activity <span id="token-line"></span></summary>
+          <div class="console" id="console"></div>
+        </details>
+        <div class="qr hidden" id="qr-box">
+          <img
+            id="qr-image"
+            alt="QR code to play on mobile"
+            width="180"
+            height="180"
+          />
+        </div>
+        <pre class="code hidden" id="code-box"></pre>
+      </section>
+    </div>
+    <script src="/studio/studio.js"></script>
+  </body>
+</html>
