@@ -254,6 +254,60 @@ const server = http.createServer(async (req, res) => {
     return sendFile(res, vendorPath);
   }
 
+  // ---------- Live CLI preview stage (public/live-preview/*) ----------
+  const livePreviewDir = path.join(PUBLIC_DIR, "live-preview");
+  if (pathname === "/api/studio/preview-state" && req.method === "GET") {
+    const indexPath = path.join(livePreviewDir, "index.html");
+    if (!fs.existsSync(indexPath)) {
+      return json(res, 200, { ready: false, updatedAt: 0 });
+    }
+    let updatedAt = 0;
+    let title = "Game Preview";
+    try {
+      for (const f of fs.readdirSync(livePreviewDir)) {
+        const st = fs.statSync(path.join(livePreviewDir, f));
+        if (st.mtimeMs > updatedAt) updatedAt = Math.floor(st.mtimeMs);
+      }
+      const html = fs.readFileSync(indexPath, "utf8");
+      const m = html.match(/<title>([^<]+)<\/title>/i);
+      if (m && m[1].trim()) title = m[1].trim();
+    } catch {
+      /* ignore */
+    }
+    return json(res, 200, {
+      ready: true,
+      updatedAt,
+      title,
+      url: "/studio/live-preview/index.html",
+    });
+  }
+
+  const livePreviewMatch = pathname.match(
+    /^\/studio\/live-preview\/([\w.\-/]+)$/,
+  );
+  if (livePreviewMatch) {
+    const target = path.resolve(livePreviewDir, livePreviewMatch[1]);
+    if (!target.startsWith(path.resolve(livePreviewDir))) {
+      res.writeHead(403, { "content-type": "text/plain" });
+      return res.end("Forbidden");
+    }
+    return sendFile(res, target);
+  }
+
+  // ---------- Uploaded reference files (/studio/uploads/* or /storage/.uploads/*) ----------
+  const uploadServeMatch = pathname.match(
+    /^\/(?:studio\/uploads|storage\/\.uploads)\/([\w.\-]+)$/,
+  );
+  if (uploadServeMatch) {
+    const uploadDir = path.join(ROOT_DIR, "storage", ".uploads");
+    const target = path.resolve(uploadDir, uploadServeMatch[1]);
+    if (!target.startsWith(path.resolve(uploadDir))) {
+      res.writeHead(403, { "content-type": "text/plain" });
+      return res.end("Forbidden");
+    }
+    return sendFile(res, target);
+  }
+
   // ---------- Play a stored game (HTML or game.js) ----------
   const playMatch = pathname.match(
     /^\/studio\/games\/([\w-]+)\/(index\.html|game\.js)$/,
