@@ -466,6 +466,57 @@ body {
   border-color: var(--line-strong);
 }
 
+/* LEFT terminal chrome — minimal (ui-taste distill): slim hairline header, quiet link. */
+.terminal-section .terminal-box {
+  box-shadow: none;
+  border-radius: var(--r-lg);
+}
+
+.terminal-section .terminal-head {
+  padding: 7px 12px;
+  min-height: 32px;
+  background: transparent;
+}
+
+.terminal-section .terminal-title {
+  font-size: 10px;
+  color: var(--faint);
+  letter-spacing: 0.06em;
+}
+
+.terminal-section .window-dots {
+  gap: 0;
+}
+
+.terminal-section .window-dots span {
+  width: 7px;
+  height: 7px;
+}
+
+.terminal-section .window-dots span:nth-child(2),
+.terminal-section .window-dots span:nth-child(3) {
+  display: none;
+}
+
+.terminal-section .window-dots span:nth-child(1) {
+  background: transparent;
+  border-color: var(--line-strong);
+}
+
+.terminal-section .terminal-open {
+  border: 0;
+  background: transparent;
+  padding: 4px 2px;
+  font-size: var(--fs-11);
+  color: var(--faint);
+}
+
+.terminal-section .terminal-open:hover {
+  color: var(--ink-2);
+  background: transparent;
+  border-color: transparent;
+}
+
 .stage-badge {
   display: inline-flex;
   align-items: center;
@@ -852,6 +903,72 @@ button.icon-btn {
 
 .send-btn.busy svg {
   animation: spin 1s linear infinite;
+}
+
+/* LEFT composer — minimal (ui-taste polish): single soft box, quiet row. */
+.prompt-box {
+  border-color: var(--line);
+  border-radius: var(--r-lg);
+  background: var(--surface-0);
+}
+
+#prompt {
+  padding: 16px 16px 8px;
+  line-height: 1.6;
+}
+
+.prompt-bar {
+  padding: 4px 8px 8px;
+}
+
+.prompt-box .icon-btn {
+  border-color: transparent;
+  background: transparent;
+  color: var(--faint);
+}
+
+.prompt-box .icon-btn:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--ink);
+}
+
+#attach-btn {
+  border-radius: var(--r-md);
+}
+
+.prompt-box .picker-pill {
+  border: 0;
+  background-color: transparent;
+  font-weight: 500;
+  color: var(--muted);
+}
+
+.prompt-box .picker-pill:hover {
+  background-color: var(--surface-2);
+  color: var(--ink);
+}
+
+.send-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--r-md);
+  box-shadow: none;
+}
+
+.send-btn:hover:not(:disabled) {
+  background: #fff;
+  color: #09090b;
+}
+
+.composer-hint {
+  font-size: 10px;
+}
+
+.composer-hint kbd {
+  border-bottom-width: 1px;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--faint);
 }
 
 @keyframes spin {
