@@ -571,6 +571,43 @@ body {
   text-align: center;
 }
 
+/* Manual reconnect pill (ui-taste polish): small muted pill sitting just
+ * above the composer, hidden by default, shown only on suspected
+ * disconnect. ~28px height, hairline border, no layout shift beyond its
+ * own row. */
+.reconnect-btn {
+  flex: 0 0 auto;
+  align-self: center;
+  min-height: 28px;
+  max-width: 100%;
+  margin: 0;
+  padding: 3px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-pill);
+  background: var(--surface-1);
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: var(--fs-11);
+  letter-spacing: 0.02em;
+  line-height: 1.4;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    color var(--dur-fast) ease,
+    background-color var(--dur-fast) ease,
+    border-color var(--dur-fast) ease;
+}
+
+.reconnect-btn:hover {
+  color: var(--ink-2);
+  background: var(--surface-2);
+  border-color: var(--line-strong);
+}
+
+.reconnect-btn:active {
+  transform: translateY(1px);
+}
+
 .terminal-frame {
   flex: 1 1 auto;
   min-height: 220px;
