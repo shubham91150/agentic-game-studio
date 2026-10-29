@@ -33,6 +33,18 @@ node src/tools/build-game.js --prompt "a desert rover rally with 3 jump ramps an
 - On success it prints `PREVIEW_READY public/live-preview/index.html` — the right pane picks it up automatically within ~2s. Just tell the user it's ready.
 - If the tool fails (API down), fall back to Step 2 and hand-write the files.
 
+## Step 1b — Game Images (works with ANY active CLI model)
+
+To generate textures, sprites, concept/key art, or skybox images, run:
+
+```bash
+node src/tools/make-image.js --prompt "sci-fi power crystal, game key art, no text"
+```
+
+- It calls **Meta Muse Image 1.0 directly** with the VM key — independent of the CLI session's active model (Wonder/Spark/anything). Do NOT confuse with the CLI's `--image` flag: that only _attaches_ an image to a prompt, it never _generates_ one.
+- Saves a `.webp` into `storage/.uploads/` (served at `/studio/uploads/<file>`) ready to reference from `public/live-preview/` game code, or pass `--out <path>` / `--concept` for a custom path / pipeline cache dir.
+- Typical uses: character portraits for `story.js` dialogue cards, HUD icons, ground/sky textures, loading-screen art.
+
 ## Step 2 — Hand-Written Multi-File Game Structure (fallback or edits)
 
 Write these files under `public/live-preview/`. Keep each file focused:
