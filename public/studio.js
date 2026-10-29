@@ -1,6 +1,6 @@
 /* Agentic Game Studio — Split-screen workspace client.
  * Left pane: Live Muse Code CLI terminal + Prompt composer.
- * Right pane: Live 3D WebGL Game Preview + library switcher.
+ * Right pane: Clean Game Preview container.
  * No inline scripts anywhere (CSP script-src 'self'). */
 (function () {
   "use strict";
@@ -15,34 +15,15 @@
   var statusEl = document.getElementById("status");
   var liveDot = document.getElementById("live-dot");
   var liveText = document.getElementById("live-text");
-  var resultEl = document.getElementById("result");
   var titleEl = document.getElementById("game-title");
-  var gameSelectEl = document.getElementById("game-select");
-  var btnReload = document.getElementById("btn-reload");
   var frameEl = document.getElementById("game-frame");
-  var consoleEl = document.getElementById("console");
-  var tokenLine = document.getElementById("token-line");
-  var qrBox = document.getElementById("qr-box");
-  var qrImage = document.getElementById("qr-image");
-  var codeBox = document.getElementById("code-box");
 
   var attachments = [];
   var running = false;
-  var playUrl = "";
-  var unityCode = "";
-  var gamesById = {};
 
   function setStatus(text, cls) {
     statusEl.textContent = text || "";
     statusEl.className = "status" + (cls ? " " + cls : "");
-  }
-
-  function log(text, cls) {
-    var div = document.createElement("div");
-    if (cls) div.className = cls;
-    div.textContent = text;
-    consoleEl.appendChild(div);
-    consoleEl.scrollTop = consoleEl.scrollHeight;
   }
 
   function setBusy(busy) {
@@ -57,78 +38,7 @@
     );
   }
 
-  function selectGame(game, cacheBust) {
-    if (!game || !game.playUrl) return;
-    playUrl = game.playUrl;
-    titleEl.textContent = game.title || game.id || "Playable Game";
-    frameEl.src = game.playUrl + (cacheBust ? "?t=" + Date.now() : "");
-    if (gameSelectEl && game.id) {
-      gameSelectEl.value = game.id;
-    }
-    if (game.id) {
-      fetch("/api/studio/games/" + encodeURIComponent(game.id) + "/code")
-        .then(function (r) {
-          return r.ok ? r.json() : null;
-        })
-        .then(function (data) {
-          if (data && data.unity) {
-            unityCode = data.unity;
-            codeBox.textContent = unityCode;
-          }
-        })
-        .catch(function () {
-          /* ignore */
-        });
-    }
-  }
-
-  function refreshGamesLibrary(preferredId) {
-    return fetch("/api/studio/games")
-      .then(function (res) {
-        if (!res.ok) throw new Error("failed to load games");
-        return res.json();
-      })
-      .then(function (list) {
-        if (!Array.isArray(list) || !list.length) return;
-        gamesById = {};
-        if (gameSelectEl) {
-          gameSelectEl.innerHTML = "";
-          list.forEach(function (g) {
-            gamesById[g.id] = g;
-            var opt = document.createElement("option");
-            opt.value = g.id;
-            opt.textContent = g.title || g.id;
-            gameSelectEl.appendChild(opt);
-          });
-        }
-        var target = (preferredId && gamesById[preferredId]) || list[0];
-        if (target && (!playUrl || preferredId)) {
-          selectGame(target, Boolean(preferredId));
-        }
-      })
-      .catch(function () {
-        /* ignore */
-      });
-  }
-
-  if (gameSelectEl) {
-    gameSelectEl.addEventListener("change", function () {
-      var chosen = gamesById[gameSelectEl.value];
-      if (chosen) selectGame(chosen, true);
-    });
-  }
-
-  if (btnReload) {
-    btnReload.addEventListener("click", function () {
-      if (playUrl) {
-        frameEl.src = playUrl + "?t=" + Date.now();
-      } else {
-        refreshGamesLibrary();
-      }
-    });
-  }
-
-  // VM backend health check + initial game preview load
+  // VM backend health check
   fetch("/api/studio/health")
     .then(function (res) {
       if (!res.ok) throw new Error("offline");
@@ -146,8 +56,6 @@
       liveDot.className = "live-dot off";
       liveText.textContent = "vm offline";
     });
-
-  refreshGamesLibrary();
 
   // Example chips fill the prompt
   Array.prototype.forEach.call(
@@ -245,78 +153,10 @@
   }
 
   function handleEvent(evt) {
-    switch (evt.type) {
-      case "start":
-        log('Run started: "' + evt.prompt + '"');
-        break;
-      case "log":
-        log(
-          evt.message,
-          evt.level === "ok"
-            ? "ok"
-            : evt.level === "warn"
-              ? "warn"
-              : evt.level === "error"
-                ? "error"
-                : "",
-        );
-        break;
-      case "cli":
-        log((evt.stream === "stderr" ? "! " : "$ ") + evt.line, "cli");
-        break;
-      case "reasoning":
-        log("· " + evt.line, "reason");
-        break;
-      case "proof":
-        log(
-          "[proof] " + evt.name + " — " + (evt.passed ? "PASSED" : "FAILED"),
-          evt.passed ? "ok" : "warn",
-        );
-        break;
-      case "artifact":
-        if (evt.kind === "unity") {
-          unityCode = evt.content || "";
-          codeBox.textContent = unityCode;
-        }
-        break;
-      case "usage": {
-        var totals = (evt.models || []).reduce(
-          function (acc, m) {
-            return {
-              in: acc.in + (m.input_tokens || 0),
-              out: acc.out + (m.output_tokens || 0),
-              cached: acc.cached + (m.cached_tokens || 0),
-            };
-          },
-          { in: 0, out: 0, cached: 0 },
-        );
-        tokenLine.textContent =
-          "CLI " + totals.in + " in / " + totals.out + " out";
-        break;
-      }
-      case "error":
-        log(evt.message, "error");
-        break;
-      case "done":
-        if (evt.ok && evt.playUrl) {
-          playUrl = evt.playUrl;
-          titleEl.textContent = evt.title || "Your game";
-          frameEl.src = evt.playUrl + "?t=" + Date.now();
-          resultEl.classList.remove("hidden");
-          refreshGamesLibrary(evt.gameId);
-          setStatus(
-            'Preview updated: "' +
-              (evt.title || "") +
-              '" (' +
-              (evt.elapsedMs / 1000).toFixed(1) +
-              "s)",
-            "ok",
-          );
-          log('Game ready: "' + (evt.title || "") + '"', "ok");
-        }
-        break;
-      default:
-        break;
+    if (evt.type === "done" && evt.ok && evt.playUrl) {
+      if (titleEl) titleEl.textContent = evt.title || "Game Preview";
+      if (frameEl) frameEl.src = evt.playUrl + "?t=" + Date.now();
+      setStatus("Game preview ready.", "ok");
     }
   }
 
@@ -360,11 +200,7 @@
 
     running = true;
     setBusy(true);
-    consoleEl.innerHTML = "";
-    tokenLine.textContent = "";
-    qrBox.classList.add("hidden");
-    codeBox.classList.add("hidden");
-    setStatus("Sent to live Muse CLI terminal & updating game preview…");
+    setStatus("Sent to live Muse CLI terminal…");
 
     loadTerminalInline();
     promptEl.value = "";
@@ -381,11 +217,10 @@
         attachments: currentAttachments,
       }),
     }).catch(function () {
-      log("Could not forward prompt to live terminal.", "warn");
+      /* ignore */
     });
 
-    // 2. Simultaneously build/update the 3D WebGL game preview on the right
-    // (skipSubprocessCli avoids spawning a duplicate CLI process).
+    // 2. Build/update the 3D WebGL game preview on the right
     fetch("/api/studio/generate", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -410,30 +245,6 @@
         setBusy(false);
         promptEl.focus();
       });
-  });
-
-  document
-    .getElementById("btn-fullscreen")
-    .addEventListener("click", function () {
-      if (frameEl.requestFullscreen) frameEl.requestFullscreen();
-    });
-
-  document.getElementById("btn-qr").addEventListener("click", function () {
-    var url = playUrl
-      ? window.location.origin + playUrl
-      : window.location.origin + "/";
-    qrImage.src =
-      "https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=" +
-      encodeURIComponent(url);
-    qrBox.classList.toggle("hidden");
-  });
-
-  document.getElementById("btn-code").addEventListener("click", function () {
-    if (!unityCode) {
-      setStatus("No Unity code yet — run a build first.", "error");
-      return;
-    }
-    codeBox.classList.toggle("hidden");
   });
 
   // Terminal inline preview: auto-load on same-origin VM page.
