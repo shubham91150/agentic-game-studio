@@ -35,28 +35,24 @@ No generic AI-slop styling — match the existing dark studio system
 - Unity C# / project / headless build → read `.agents/skills/unity-build/SKILL.md` first (exporter reuse, license rules, batchmode validation).
 - Never write engine boilerplate from memory when a skill owns the workflow.
 
-## Step 0d — Genre Routing (never one-template-fits-all)
+## Step 0d — Open Design (no genre boxes)
 
-Match the game to the prompt. The orb-collector runner is ONE template, not the
-default. Supported genres (pick by prompt, ask if unclear):
+There is NO fixed genre list. ANY game the user describes can be built —
+runner, platformer, puzzle, racing, pet sim, rhythm, maze, story adventure,
+sports, music, farming, flying, underwater, space — whatever the prompt asks.
+Never force a prompt into a template, and never answer "that genre is not
+supported". Design from the prompt's own words: goal, rules, win/lose, world,
+characters.
 
-- Runner / collector (orbs, beacons) — spreads layout orbs + obstacles
-- Platformer (jump between platforms, reach the goal flag)
-- Maze explorer (find exit, mapping, keys + doors)
-- Puzzle (Sokoban-style push, match, sequence — grid logic in `levels.js`)
-- Racing (laps, checkpoints, best-time in `save.js`)
-- Pet / care sim (feed/play meters, moods, no fail state — cozy)
-- Rhythm (beat-matched inputs via WebAudio clock)
-- Garden defense (PEACEFUL tower-defense: pests vs plants, no weapons of war)
+The orb-collector runner is just ONE past example, never the default.
+Each game reuses the same file architecture and done-gate from
+`.agents/skills/game-logic/SKILL.md` — only the rules, level data, and
+win/lose conditions change per the user's idea.
 
 BANNED always: war, weapons, military, killing, blood, gore. If the user asks
 for any of these, the safety shield sanitizes the theme — build the peaceful
 version (e.g. "space battle" → "asteroid dodging courier") and say so in one
 line. Never lecture, just build.
-
-Each genre reuses the same file architecture and done-gate from
-`.agents/skills/game-logic/SKILL.md` — only `levels.js`, `enemies.js`
-(friendly rivals/obstacles, never soldiers), and win/lose rules change.
 
 ## Step 0c — Gameplay Code: Obey game-logic Standards
 
