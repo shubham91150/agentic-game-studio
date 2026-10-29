@@ -15,7 +15,7 @@ Whenever the user asks you to build a game, modify a game, or render/preview an 
 2. The right-side preview pane automatically watches `public/live-preview/` and reloads `/studio/live-preview/index.html` as soon as you save those files.
 3. **CRITICAL CSP RULE (`script-src 'self'`)**:
    - **NEVER** use inline `<script>...</script>` blocks or inline `onclick=` attributes in `public/live-preview/index.html` (the reverse proxy's Content-Security-Policy blocks inline scripts).
-   - Always put all JavaScript inside `public/live-preview/game.js` and load it with `<script src="./game.js"></script>`.
+   - Always put all JavaScript inside `public/live-preview/game.js` and load `<script src="/studio/vendor/three.min.js" defer></script>` and `<script src="./game.js" defer></script>` at the bottom of `<body>` (before `</body>`) so DOM elements exist when `game.js` runs.
 4. **Available Local Vendor Libraries & Uploaded Files**:
    - Three.js (r128) is available locally at: `<script src="/studio/vendor/three.min.js"></script>`
    - Any file in `storage/.uploads/<filename>` is served at: `/studio/uploads/<filename>` (and `/storage/.uploads/<filename>`).

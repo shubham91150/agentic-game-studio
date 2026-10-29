@@ -135,8 +135,6 @@ export function generateThreeJsGameFiles(gameSpec, worldData, layout) {
       #btn-mobile-jump { display: flex; }
     }
   </style>
-  <script src="/studio/vendor/three.min.js"></script>
-  <script src="./game.js"></script>
 </head>
 <body>
   <div id="canvas-container"></div>
@@ -154,6 +152,8 @@ export function generateThreeJsGameFiles(gameSpec, worldData, layout) {
 
   <div id="mobile-controls"><div id="joystick-stick"></div></div>
   <div id="btn-mobile-jump">JUMP</div>
+  <script src="/studio/vendor/three.min.js" defer></script>
+  <script src="./game.js" defer></script>
 </body>
 </html>`;
 
@@ -182,7 +182,7 @@ export function generateThreeJsGameFiles(gameSpec, worldData, layout) {
   const WORLD_BOUND = 72;
   const TARGET_ORBS = (LAYOUT.orbs || []).length || 12;
 
-  const container = document.getElementById('canvas-container');
+  const container = document.getElementById('canvas-container') || document.body;
   const valScore = document.getElementById('val-score');
   const valSpeed = document.getElementById('val-speed');
 
@@ -429,7 +429,7 @@ export function generateThreeJsGameHtml(gameSpec, worldData, layout) {
   const { html, js } = generateThreeJsGameFiles(gameSpec, worldData, layout);
   // Replaces the ./game.js reference with the inline script for standalone/offline preview where CSP is not active
   return html.replace(
-    '<script src="./game.js"></script>',
+    '<script src="./game.js" defer></script>',
     `<script>\n${js}\n</script>`,
   );
 }
