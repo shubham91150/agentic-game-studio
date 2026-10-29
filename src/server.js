@@ -18,9 +18,14 @@ import http from "node:http";
 import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
+import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
-import { AgentRunner, resolveMetaApiKey } from "./agent/agent_runner.js";
+import {
+  AgentRunner,
+  ALLOWED_CLI_MODELS,
+  resolveMetaApiKey,
+} from "./agent/agent_runner.js";
 import { GameStorageManager } from "./storage/game_store.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -30,6 +35,57 @@ const STORAGE_DIR = path.join(ROOT_DIR, "storage", "games");
 
 const PORT = Number(process.env.STUDIO_PORT || 3030);
 const gameStore = new GameStorageManager(STORAGE_DIR);
+const TMUX_SESSION = "muse-studio";
+let activeTerminalModel = "muse-spark-1.3";
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function ensureTmuxSession() {
+  try {
+    execFileSync("tmux", ["has-session", "-t", TMUX_SESSION], {
+      stdio: "ignore",
+    });
+  } catch {
+    const museBin = path.join(
+      process.env.HOME || "/home/opencode",
+      ".local",
+      "bin",
+      "muse",
+    );
+    execFileSync("tmux", [
+      "new-session",
+      "-d",
+      "-s",
+      TMUX_SESSION,
+      "-x",
+      "120",
+      "-y",
+      "32",
+      "-c",
+      ROOT_DIR,
+      `bash -lc 'while true; do ${museBin} --trust-workspace --yolo --model muse-spark-1.3; sleep 1; done'`,
+    ]);
+    try {
+      execFileSync("tmux", ["set-option", "-t", TMUX_SESSION, "status", "off"]);
+      execFileSync("tmux", ["set-option", "-t", TMUX_SESSION, "mouse", "on"]);
+    } catch {
+      /* ignore */
+    }
+  }
+}
+
+async function sendLineToTmux(line) {
+  ensureTmuxSession();
+  const clean = String(line || "")
+    .replace(/\r?\n+/g, " ")
+    .trim();
+  if (!clean) return;
+  execFileSync("tmux", ["send-keys", "-t", TMUX_SESSION, "-l", clean]);
+  await sleep(300);
+  execFileSync("tmux", ["send-keys", "-t", TMUX_SESSION, "C-m"]);
+}
 
 const CONTENT_TYPES = {
   ".html": "text/html; charset=utf-8",
@@ -277,6 +333,73 @@ const server = http.createServer(async (req, res) => {
         /* ignore */
       }
       if (!res.writableEnded) json(res, 400, { error: "Upload failed." });
+    });
+    return;
+  }
+
+  // ---------- Send prompt / model switch into live Muse Code CLI terminal ----------
+  if (pathname === "/api/studio/terminal/send" && req.method === "POST") {
+    let body = "";
+    req.on("data", (chunk) => (body += chunk));
+    req.on("end", async () => {
+      let payload = {};
+      try {
+        payload = JSON.parse(body || "{}");
+      } catch {
+        payload = {};
+      }
+      const prompt = String(payload.prompt || "").trim();
+      const model =
+        typeof payload.model === "string" &&
+        ALLOWED_CLI_MODELS.includes(payload.model)
+          ? payload.model
+          : null;
+      const attachments = Array.isArray(payload.attachments)
+        ? payload.attachments
+            .filter(
+              (a) =>
+                a && typeof a.id === "string" && /^[0-9a-f]{12,64}$/.test(a.id),
+            )
+            .map((a) => {
+              const dir = path.join(ROOT_DIR, "storage", ".uploads");
+              try {
+                for (const f of fs.readdirSync(dir)) {
+                  if (f.startsWith(`${a.id}_`)) {
+                    return `storage/.uploads/${f}`;
+                  }
+                }
+              } catch {
+                /* ignore */
+              }
+              return null;
+            })
+            .filter(Boolean)
+        : [];
+
+      try {
+        if (model && model !== activeTerminalModel) {
+          await sendLineToTmux(`/model ${model}`);
+          activeTerminalModel = model;
+          await sleep(400);
+        }
+        if (prompt) {
+          const finalPrompt = attachments.length
+            ? `${prompt} (Reference files: ${attachments.join(", ")})`
+            : prompt;
+          await sendLineToTmux(finalPrompt);
+        }
+        return json(res, 200, {
+          ok: true,
+          session: TMUX_SESSION,
+          model: activeTerminalModel,
+          sent: Boolean(prompt),
+        });
+      } catch {
+        return json(res, 500, {
+          ok: false,
+          error: "Failed to dispatch prompt to live CLI terminal.",
+        });
+      }
     });
     return;
   }
