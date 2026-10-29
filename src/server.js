@@ -739,6 +739,95 @@ const server = http.createServer(async (req, res) => {
     });
   }
 
+  // ---------- Chat history (archived tmux transcripts) ----------
+  // GET /api/studio/chats -> newest-first [{id, createdAt, size, preview}]
+  if (pathname === "/api/studio/chats" && req.method === "GET") {
+    let files = [];
+    try {
+      fs.mkdirSync(CHATS_DIR, { recursive: true });
+      files = fs.readdirSync(CHATS_DIR).filter((f) => f.endsWith(".log"));
+    } catch {
+      files = [];
+    }
+    const list = files
+      .map((f) => {
+        const abs = path.join(CHATS_DIR, f);
+        let stat = null;
+        try {
+          stat = fs.statSync(abs);
+        } catch {
+          stat = null;
+        }
+        if (!stat || !stat.isFile()) return null;
+        let preview = "";
+        try {
+          const text = fs.readFileSync(abs, "utf8");
+          preview = text
+            .split("\n")
+            .map((l) => l.trim())
+            .filter(Boolean)
+            .slice(0, 3)
+            .join("\n")
+            .slice(0, 300);
+        } catch {
+          preview = "";
+        }
+        return {
+          id: f,
+          createdAt: stat.mtime.toISOString(),
+          size: stat.size,
+          preview,
+        };
+      })
+      .filter(Boolean)
+      .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
+    return json(res, 200, list);
+  }
+
+  // GET /api/studio/chats/:id -> {id, content} capped at 200KB.
+  // The live terminal is a ttyd iframe (static files cannot render there),
+  // so "resume" = view transcript + seed fresh terminal with context.
+  const chatMatch = pathname.match(/^\/api\/studio\/chats\/(.+)$/);
+  if (chatMatch && req.method === "GET") {
+    const raw = chatMatch[1] || "";
+    let id = "";
+    try {
+      id = decodeURIComponent(raw);
+    } catch {
+      return json(res, 400, { error: "Invalid chat id." });
+    }
+    if (!/^[a-zA-Z0-9._-]+$/.test(id)) {
+      return json(res, 400, { error: "Invalid chat id." });
+    }
+    const dir = path.resolve(CHATS_DIR);
+    const target = path.resolve(dir, id);
+    if (target !== path.join(dir, id) || !target.startsWith(dir + path.sep)) {
+      return json(res, 400, { error: "Invalid chat id." });
+    }
+    let stat = null;
+    try {
+      stat = fs.statSync(target);
+    } catch {
+      stat = null;
+    }
+    if (!stat || !stat.isFile()) {
+      return json(res, 404, { error: "Chat not found." });
+    }
+    let content = "";
+    try {
+      content = fs.readFileSync(target, "utf8");
+    } catch {
+      return json(res, 500, { error: "Could not read chat transcript." });
+    }
+    const MAX_BYTES = 200 * 1024;
+    if (Buffer.byteLength(content, "utf8") > MAX_BYTES) {
+      content = Buffer.from(content, "utf8")
+        .slice(0, MAX_BYTES)
+        .toString("utf8");
+    }
+    return json(res, 200, { id, content });
+  }
+
   // ---------- Live agent run (Server-Sent Events) ----------
   if (pathname === "/api/studio/generate" && req.method === "POST") {
     let body = "";

@@ -24,7 +24,16 @@
       <header class="crumbs" aria-label="Breadcrumb">
         <div class="crumbs-left">
           <span class="crumb-user"
-            ><span class="avatar">S</span>
+            ><button
+              type="button"
+              class="avatar avatar-btn"
+              id="sidebar-history-btn"
+              title="Chat history — view archived transcripts"
+              aria-label="Open chat history"
+              aria-haspopup="true"
+            >
+              S
+            </button>
             <span class="crumb-owner">shubham91150</span></span
           >
           <span class="crumb-sep">/</span>
@@ -107,6 +116,71 @@
           Built by the agent, ready to play.
         </p>
         <div class="library-grid" id="library-grid"></div>
+      </aside>
+
+      <!-- Chat history sidebar (LEFT slide-over: archived transcripts) -->
+      <div class="sidebar-overlay hidden" id="sidebar-overlay"></div>
+      <aside
+        class="sidebar-history"
+        id="sidebar-history"
+        aria-label="Chat history"
+        aria-hidden="true"
+      >
+        <div class="drawer-head">
+          <div class="window-title-group">
+            <span class="window-dots" aria-hidden="true">
+              <span></span><span></span><span></span>
+            </span>
+            <span class="terminal-title">Chat history</span>
+          </div>
+          <button
+            type="button"
+            id="sidebar-close"
+            class="icon-btn"
+            aria-label="Close chat history"
+          >
+            <svg
+              width="15"
+              height="15"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M18 6 6 18" />
+              <path d="m6 6 12 12" />
+            </svg>
+          </button>
+        </div>
+        <p class="drawer-sub" id="sidebar-sub">
+          Archived terminal transcripts. Resume = view + seed the live terminal
+          with context.
+        </p>
+        <div class="sidebar-body" id="sidebar-body">
+          <div class="sidebar-list" id="sidebar-list"></div>
+          <div class="sidebar-view hidden" id="sidebar-view">
+            <div class="sidebar-view-top">
+              <button type="button" class="sidebar-back" id="sidebar-back">
+                ← Back
+              </button>
+              <p class="sidebar-meta" id="sidebar-meta"></p>
+            </div>
+            <pre
+              class="sidebar-transcript"
+              id="sidebar-transcript"
+              tabindex="0"
+            ></pre>
+            <button
+              type="button"
+              class="sidebar-continue"
+              id="sidebar-continue"
+            >
+              Continue from here
+            </button>
+          </div>
+        </div>
       </aside>
 
       <!-- Mobile view switcher (visible on screens <= 960px) -->
