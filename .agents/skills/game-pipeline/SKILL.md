@@ -29,6 +29,20 @@ Any change to the studio page (`public/index.html`, `public/app.css`,
 No generic AI-slop styling — match the existing dark studio system
 (obsidian surfaces, 1px borders, mono labels, window-dot headers).
 
+UI skill routing (all under `.agents/skills/`):
+
+- `frontend-design/SKILL.md` — anti-slop visual direction (ground design in
+  the game's subject matter, plan-then-critique) for new studio/preview UI.
+- `web-design-guidelines/SKILL.md` — QA pass: fetch latest guidelines, then
+  review studio/preview code and report findings in `file:line` format.
+- `mobile-design/SKILL.md` — touch controls and small-screen layout for the
+  preview pane (thumb-zone controls, no hover-only input, 44px+ targets).
+- `better-ui/SKILL.md` + `better-interface/SKILL.md` — exact polish values
+  (radius = inner + padding, press scale 0.96, transitions not keyframes) and
+  the ranked cross-discipline interface review format.
+- `3d-web-experience/SKILL.md` — preview-pane WebGL work: Three.js scene
+  setup, GLB→web pipeline, loading states, mobile fallback for heavy scenes.
+
 ## Step 0b — Engine Work: Delegate to Engine Skills
 
 - Godot game / GDScript / web export → read `.agents/skills/godot-web/SKILL.md` first (binary paths, cybersurge reference, headless export flow).
