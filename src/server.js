@@ -96,6 +96,7 @@ const CONTENT_TYPES = {
   ".png": "image/png",
   ".jpg": "image/jpeg",
   ".svg": "image/svg+xml",
+  ".woff2": "font/woff2",
   ".webp": "image/webp",
 };
 
@@ -157,6 +158,19 @@ const server = http.createServer(async (req, res) => {
           ? "tailwind.config.js"
           : "studio.js";
     return sendFile(res, path.join(PUBLIC_DIR, fname));
+  }
+
+  // ---------- Self-hosted fonts + icons (CSP-safe, no CDN) ----------
+  const fontsMatch = pathname.match(
+    /^\/studio\/fonts\/([\w.\-]+\.(?:woff2|css))$/,
+  );
+  if (fontsMatch) {
+    const target = path.resolve(PUBLIC_DIR, "fonts", fontsMatch[1]);
+    if (!target.startsWith(path.resolve(PUBLIC_DIR, "fonts"))) {
+      res.writeHead(403, { "content-type": "text/plain" });
+      return res.end("Forbidden");
+    }
+    return sendFile(res, target);
   }
 
   // ---------- Health ----------
