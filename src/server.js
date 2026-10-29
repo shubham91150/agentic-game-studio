@@ -87,9 +87,20 @@ const server = http.createServer(async (req, res) => {
     return sendFile(res, path.join(PUBLIC_DIR, "index.html"));
   }
 
-  // ---------- Studio static assets (studio.js, etc.) ----------
-  if (pathname === "/studio/studio.js" || pathname === "/studio.js") {
-    return sendFile(res, path.join(PUBLIC_DIR, "studio.js"));
+  // ---------- Studio static assets (studio.js, tailwind.config.js, app.css, etc.) ----------
+  if (
+    pathname === "/studio/studio.js" ||
+    pathname === "/studio.js" ||
+    pathname === "/studio/tailwind.config.js" ||
+    pathname === "/studio/app.css"
+  ) {
+    const fname =
+      pathname === "/studio/app.css"
+        ? "app.css"
+        : pathname === "/studio/tailwind.config.js"
+          ? "tailwind.config.js"
+          : "studio.js";
+    return sendFile(res, path.join(PUBLIC_DIR, fname));
   }
 
   // ---------- Health ----------
