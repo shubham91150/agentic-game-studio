@@ -675,29 +675,6 @@ body {
   color: #6b6b76;
 }
 
-.composer-hint {
-  margin: 0;
-  padding: 0 15px 10px;
-  font-size: var(--fs-11);
-  color: var(--faint);
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  user-select: none;
-}
-
-.composer-hint kbd {
-  font-family: var(--font-mono);
-  font-size: 10px;
-  border: 1px solid var(--line);
-  border-bottom-width: 2px;
-  border-radius: 5px;
-  padding: 0 5px;
-  line-height: 1.7;
-  background: var(--surface-2);
-  color: var(--muted);
-}
-
 .prompt-bar {
   display: flex;
   align-items: center;
@@ -958,17 +935,6 @@ button.icon-btn {
 .send-btn:hover:not(:disabled) {
   background: #fff;
   color: #09090b;
-}
-
-.composer-hint {
-  font-size: 10px;
-}
-
-.composer-hint kbd {
-  border-bottom-width: 1px;
-  border-radius: 4px;
-  background: transparent;
-  color: var(--faint);
 }
 
 @keyframes spin {
@@ -1767,10 +1733,6 @@ button.icon-btn {
   }
 
   .attach-list::-webkit-scrollbar {
-    display: none;
-  }
-
-  .composer-hint {
     display: none;
   }
 
