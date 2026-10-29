@@ -22,10 +22,29 @@
   var tabCli = document.getElementById("tab-cli");
   var tabPreview = document.getElementById("tab-preview");
   var previewReadyDot = document.getElementById("preview-ready-dot");
+  var libraryBtn = document.getElementById("library-btn");
+  var libraryCount = document.getElementById("library-count");
+  var libraryDrawer = document.getElementById("library-drawer");
+  var drawerOverlay = document.getElementById("drawer-overlay");
+  var libraryClose = document.getElementById("library-close");
+  var libraryGrid = document.getElementById("library-grid");
+  var librarySub = document.getElementById("library-sub");
 
   var attachments = [];
   var running = false;
   var lastPreviewUpdatedAt = 0;
+
+  function playPreview(url, title) {
+    if (!url) return;
+    if (titleEl) titleEl.textContent = title || "Game Preview";
+    if (emptyEl) emptyEl.classList.add("hidden");
+    if (frameEl) {
+      frameEl.classList.remove("hidden");
+      frameEl.src = url + "?t=" + Date.now();
+    }
+    closeLibrary();
+    if (window.innerWidth <= 960) setActivePane("preview");
+  }
 
   function setStatus(text, cls) {
     statusEl.textContent = text || "";
@@ -58,6 +77,125 @@
       setActivePane("preview");
     });
   }
+
+  // Game library showcase drawer (curated: junk titles filtered out)
+  function isShowcaseGame(g) {
+    if (!g || !g.playUrl) return false;
+    var text = ((g.title || "") + " " + (g.prompt || "")).trim();
+    if (text.length < 4) return false;
+    if (/^(\/mcp|\/usage|\/help|hi+|test)$/i.test(text)) return false;
+    return true;
+  }
+
+  function renderLibrary(list) {
+    if (!libraryGrid) return;
+    libraryGrid.innerHTML = "";
+    var games = (Array.isArray(list) ? list : []).filter(isShowcaseGame);
+    if (libraryCount)
+      libraryCount.textContent = games.length ? String(games.length) : "";
+    if (librarySub) {
+      librarySub.textContent = games.length
+        ? "Built by the agent, ready to play."
+        : "No showcase games yet — send a prompt to build the first.";
+    }
+    if (!games.length) {
+      var empty = document.createElement("div");
+      empty.className = "library-empty";
+      empty.textContent =
+        "Send a prompt in the composer and your games will appear here.";
+      libraryGrid.appendChild(empty);
+      return;
+    }
+    games.slice(0, 12).forEach(function (g) {
+      var card = document.createElement("div");
+      card.className = "game-card";
+      if (g.imageUrl) {
+        var img = document.createElement("img");
+        img.className = "game-thumb";
+        img.src = g.imageUrl;
+        img.alt = g.title || "game concept art";
+        img.loading = "lazy";
+        card.appendChild(img);
+      } else {
+        var fb = document.createElement("div");
+        fb.className = "game-thumb-fallback";
+        fb.textContent = "◆ " + (g.biome || "3D world");
+        card.appendChild(fb);
+      }
+      var body = document.createElement("div");
+      body.className = "game-body";
+      var title = document.createElement("p");
+      title.className = "game-title";
+      title.textContent = g.title || g.id;
+      body.appendChild(title);
+      var meta = document.createElement("p");
+      meta.className = "game-meta";
+      var date = "";
+      try {
+        date = new Date(g.createdAt).toLocaleDateString();
+      } catch (e) {
+        date = "";
+      }
+      meta.textContent = [g.biome, date].filter(Boolean).join(" · ");
+      body.appendChild(meta);
+      var play = document.createElement("button");
+      play.type = "button";
+      play.className = "game-play";
+      play.textContent = "▶ Play this game";
+      play.addEventListener("click", function () {
+        playPreview(g.playUrl, g.title);
+      });
+      body.appendChild(play);
+      card.appendChild(body);
+      libraryGrid.appendChild(card);
+    });
+  }
+
+  function openLibrary() {
+    if (libraryDrawer) {
+      libraryDrawer.classList.add("open");
+      libraryDrawer.setAttribute("aria-hidden", "false");
+    }
+    if (drawerOverlay) drawerOverlay.classList.remove("hidden");
+    fetch("/api/studio/games")
+      .then(function (res) {
+        return res.ok ? res.json() : [];
+      })
+      .then(renderLibrary)
+      .catch(function () {
+        renderLibrary([]);
+      });
+  }
+
+  function closeLibrary() {
+    if (libraryDrawer) {
+      libraryDrawer.classList.remove("open");
+      libraryDrawer.setAttribute("aria-hidden", "true");
+    }
+    if (drawerOverlay) drawerOverlay.classList.add("hidden");
+  }
+
+  if (libraryBtn) libraryBtn.addEventListener("click", openLibrary);
+  if (libraryClose) libraryClose.addEventListener("click", closeLibrary);
+  if (drawerOverlay) drawerOverlay.addEventListener("click", closeLibrary);
+  document.addEventListener("keydown", function (event) {
+    if (event.key === "Escape") closeLibrary();
+  });
+
+  // Library count badge on load (no drawer fetch until opened)
+  fetch("/api/studio/games")
+    .then(function (res) {
+      return res.ok ? res.json() : [];
+    })
+    .then(function (list) {
+      var games = (Array.isArray(list) ? list : []).filter(isShowcaseGame);
+      if (libraryCount && games.length) {
+        libraryCount.textContent = String(games.length);
+      }
+    })
+    .catch(function () {
+      /* ignore */
+    });
 
   // VM backend health check
   fetch("/api/studio/health")

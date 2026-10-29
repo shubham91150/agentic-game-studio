@@ -21,6 +21,14 @@ You are inside the Agentic Game Studio live terminal. The user's browser has TWO
 - User asks to **render / preview an uploaded 3D model** (`.glb` in `storage/.uploads/`) → write a viewer into `public/live-preview/`.
 - User only asks a question or runs `/mcp`, `/usage`, `/help` → do NOT touch `public/live-preview/`.
 
+## Step 0 — UI Work: Read ui-taste First
+
+Any change to the studio page (`public/index.html`, `public/app.css`,
+`public/studio.js`) or the preview pane: read
+`.agents/skills/ui-taste/SKILL.md` first and apply its playbooks.
+No generic AI-slop styling — match the existing dark studio system
+(obsidian surfaces, 1px borders, mono labels, window-dot headers).
+
 ## Step 1 — Fast Path: Run the Deterministic Pipeline Tool
 
 For a fresh game from a text prompt, prefer the pipeline tool over hand-writing everything. It runs safety check → Wonder/Baseten design → terrain + layout → Three.js files → Unity C# → physics QA → library save → copies into `public/live-preview/`:
