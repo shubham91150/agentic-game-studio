@@ -29,6 +29,12 @@ Any change to the studio page (`public/index.html`, `public/app.css`,
 No generic AI-slop styling — match the existing dark studio system
 (obsidian surfaces, 1px borders, mono labels, window-dot headers).
 
+## Step 0b — Engine Work: Delegate to Engine Skills
+
+- Godot game / GDScript / web export → read `.agents/skills/godot-web/SKILL.md` first (binary paths, cybersurge reference, headless export flow).
+- Unity C# / project / headless build → read `.agents/skills/unity-build/SKILL.md` first (exporter reuse, license rules, batchmode validation).
+- Never write engine boilerplate from memory when a skill owns the workflow.
+
 ## Step 1 — Fast Path: Run the Deterministic Pipeline Tool
 
 For a fresh game from a text prompt, prefer the pipeline tool over hand-writing everything. It runs safety check → Wonder/Baseten design → terrain + layout → Three.js files → Unity C# → physics QA → library save → copies into `public/live-preview/`:
