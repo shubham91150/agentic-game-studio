@@ -656,7 +656,13 @@ export class AgentRunner {
     // (thinking, tool: bash, tool: write_file) stream as cli-step-N phases.
     let cliUnityCode = "";
     let cli = { ok: false, live: false };
-    if (fs.existsSync(unityCachePath)) {
+    if (opts.skipSubprocessCli) {
+      cli = { ok: true, live: true, delegatedToLiveTerminal: true };
+      this.log(
+        "ok",
+        "Prompt dispatched to live interactive Muse Code CLI terminal session.",
+      );
+    } else if (fs.existsSync(unityCachePath)) {
       cliUnityCode = fs.readFileSync(unityCachePath, "utf8");
       cli = { ok: true, live: false, cached: true };
       this.log(

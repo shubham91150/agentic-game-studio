@@ -1,5 +1,7 @@
-/* Agentic Game Studio — DarkCodeGPT-style front page client.
- * No inline scripts anywhere (CSP script-src 'self'): all logic lives here. */
+/* Agentic Game Studio — Split-screen workspace client.
+ * Left pane: Live Muse Code CLI terminal + Prompt composer.
+ * Right pane: Live 3D WebGL Game Preview + library switcher.
+ * No inline scripts anywhere (CSP script-src 'self'). */
 (function () {
   "use strict";
 
@@ -15,6 +17,8 @@
   var liveText = document.getElementById("live-text");
   var resultEl = document.getElementById("result");
   var titleEl = document.getElementById("game-title");
+  var gameSelectEl = document.getElementById("game-select");
+  var btnReload = document.getElementById("btn-reload");
   var frameEl = document.getElementById("game-frame");
   var consoleEl = document.getElementById("console");
   var tokenLine = document.getElementById("token-line");
@@ -26,11 +30,7 @@
   var running = false;
   var playUrl = "";
   var unityCode = "";
-
-  var MODEL_FOR_AGENT = {
-    "muse-code": "muse-spark-1.3",
-    "muse-wonder": "muse-wonder-1.0",
-  };
+  var gamesById = {};
 
   function setStatus(text, cls) {
     statusEl.textContent = text || "";
@@ -57,7 +57,78 @@
     );
   }
 
-  // VM backend health check
+  function selectGame(game, cacheBust) {
+    if (!game || !game.playUrl) return;
+    playUrl = game.playUrl;
+    titleEl.textContent = game.title || game.id || "Playable Game";
+    frameEl.src = game.playUrl + (cacheBust ? "?t=" + Date.now() : "");
+    if (gameSelectEl && game.id) {
+      gameSelectEl.value = game.id;
+    }
+    if (game.id) {
+      fetch("/api/studio/games/" + encodeURIComponent(game.id) + "/code")
+        .then(function (r) {
+          return r.ok ? r.json() : null;
+        })
+        .then(function (data) {
+          if (data && data.unity) {
+            unityCode = data.unity;
+            codeBox.textContent = unityCode;
+          }
+        })
+        .catch(function () {
+          /* ignore */
+        });
+    }
+  }
+
+  function refreshGamesLibrary(preferredId) {
+    return fetch("/api/studio/games")
+      .then(function (res) {
+        if (!res.ok) throw new Error("failed to load games");
+        return res.json();
+      })
+      .then(function (list) {
+        if (!Array.isArray(list) || !list.length) return;
+        gamesById = {};
+        if (gameSelectEl) {
+          gameSelectEl.innerHTML = "";
+          list.forEach(function (g) {
+            gamesById[g.id] = g;
+            var opt = document.createElement("option");
+            opt.value = g.id;
+            opt.textContent = g.title || g.id;
+            gameSelectEl.appendChild(opt);
+          });
+        }
+        var target = (preferredId && gamesById[preferredId]) || list[0];
+        if (target && (!playUrl || preferredId)) {
+          selectGame(target, Boolean(preferredId));
+        }
+      })
+      .catch(function () {
+        /* ignore */
+      });
+  }
+
+  if (gameSelectEl) {
+    gameSelectEl.addEventListener("change", function () {
+      var chosen = gamesById[gameSelectEl.value];
+      if (chosen) selectGame(chosen, true);
+    });
+  }
+
+  if (btnReload) {
+    btnReload.addEventListener("click", function () {
+      if (playUrl) {
+        frameEl.src = playUrl + "?t=" + Date.now();
+      } else {
+        refreshGamesLibrary();
+      }
+    });
+  }
+
+  // VM backend health check + initial game preview load
   fetch("/api/studio/health")
     .then(function (res) {
       if (!res.ok) throw new Error("offline");
@@ -75,6 +146,8 @@
       liveDot.className = "live-dot off";
       liveText.textContent = "vm offline";
     });
+
+  refreshGamesLibrary();
 
   // Example chips fill the prompt
   Array.prototype.forEach.call(
@@ -204,12 +277,6 @@
         if (evt.kind === "unity") {
           unityCode = evt.content || "";
           codeBox.textContent = unityCode;
-          log(
-            evt.source === "muse-cli"
-              ? "Unity C# received from Muse Code CLI."
-              : "Unity C# is from the local template fallback.",
-            evt.source === "muse-cli" ? "ok" : "warn",
-          );
         }
         break;
       case "usage": {
@@ -225,15 +292,6 @@
         );
         tokenLine.textContent =
           "CLI " + totals.in + " in / " + totals.out + " out";
-        log(
-          "CLI tokens this run: " +
-            totals.in +
-            " in / " +
-            totals.out +
-            " out (" +
-            totals.cached +
-            " cached)",
-        );
         break;
       }
       case "error":
@@ -245,19 +303,16 @@
           titleEl.textContent = evt.title || "Your game";
           frameEl.src = evt.playUrl + "?t=" + Date.now();
           resultEl.classList.remove("hidden");
+          refreshGamesLibrary(evt.gameId);
           setStatus(
-            'Game ready: "' +
+            'Preview updated: "' +
               (evt.title || "") +
-              '" in ' +
+              '" (' +
               (evt.elapsedMs / 1000).toFixed(1) +
-              "s",
+              "s)",
             "ok",
           );
           log('Game ready: "' + (evt.title || "") + '"', "ok");
-          resultEl.scrollIntoView({ behavior: "smooth", block: "start" });
-        } else {
-          setStatus("Run finished without a playable game.", "error");
-          log("Run finished without a playable game.", "error");
         }
         break;
       default:
@@ -305,11 +360,18 @@
 
     running = true;
     setBusy(true);
-    setStatus("Sending prompt to live Muse Code CLI terminal…");
+    consoleEl.innerHTML = "";
+    tokenLine.textContent = "";
+    qrBox.classList.add("hidden");
+    codeBox.classList.add("hidden");
+    setStatus("Sent to live Muse CLI terminal & updating game preview…");
 
-    // Ensure the terminal iframe is visible so the user sees the CLI process it
     loadTerminalInline();
+    promptEl.value = "";
+    attachments = [];
+    renderAttachments();
 
+    // 1. Dispatch directly into the live Muse Code CLI terminal on the left
     fetch("/api/studio/terminal/send", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -318,26 +380,30 @@
         model: model,
         attachments: currentAttachments,
       }),
+    }).catch(function () {
+      log("Could not forward prompt to live terminal.", "warn");
+    });
+
+    // 2. Simultaneously build/update the 3D WebGL game preview on the right
+    // (skipSubprocessCli avoids spawning a duplicate CLI process).
+    fetch("/api/studio/generate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        prompt: prompt,
+        model: model,
+        attachments: currentAttachments,
+        skipSubprocessCli: true,
+      }),
     })
       .then(function (res) {
-        if (!res.ok) {
+        if (!res.ok || !res.body) {
           throw new Error("Backend answered " + res.status);
         }
-        return res.json();
-      })
-      .then(function () {
-        promptEl.value = "";
-        attachments = [];
-        renderAttachments();
-        setStatus(
-          "Dispatched to Muse Code CLI (" +
-            model +
-            ") — watch the terminal above.",
-          "ok",
-        );
+        return readStream(res);
       })
       .catch(function () {
-        setStatus("Failed to send prompt to the VM CLI terminal.", "error");
+        setStatus("Dispatched to live CLI terminal above.", "ok");
       })
       .then(function () {
         running = false;
@@ -370,11 +436,7 @@
     codeBox.classList.toggle("hidden");
   });
 
-  // Terminal inline preview.
-  // Same-origin (spurcode page): cookies work, so auto-load the iframe.
-  // Cross-origin (Vercel): the session cookie is third-party and blocked,
-  // so the iframe would only hit the GitHub login redirect (which refuses
-  // framing). There the user connects explicitly via the button instead.
+  // Terminal inline preview: auto-load on same-origin VM page.
   function loadTerminalInline() {
     var connectBox = document.getElementById("terminal-connect");
     var frame = document.getElementById("cli-frame");
