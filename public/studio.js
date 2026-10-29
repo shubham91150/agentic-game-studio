@@ -351,19 +351,26 @@
     codeBox.classList.toggle("hidden");
   });
 
-  // Terminal inline preview: only load the iframe after the user asks.
-  // Auto-loading would hit the GitHub login redirect inside the iframe,
-  // and GitHub refuses framing (frame-ancestors 'none').
+  // Terminal inline preview.
+  // Same-origin (spurcode page): cookies work, so auto-load the iframe.
+  // Cross-origin (Vercel): the session cookie is third-party and blocked,
+  // so the iframe would only hit the GitHub login redirect (which refuses
+  // framing). There the user connects explicitly via the button instead.
+  function loadTerminalInline() {
+    var connectBox = document.getElementById("terminal-connect");
+    var frame = document.getElementById("cli-frame");
+    if (connectBox) connectBox.classList.add("hidden");
+    if (frame) {
+      frame.classList.remove("hidden");
+      frame.src = "https://spurcode.duckdns.org/terminal/";
+    }
+  }
+  var isSameOrigin = window.location.hostname === "spurcode.duckdns.org";
+  if (isSameOrigin) {
+    loadTerminalInline();
+  }
   var terminalLoadBtn = document.getElementById("terminal-load");
   if (terminalLoadBtn) {
-    terminalLoadBtn.addEventListener("click", function () {
-      var connectBox = document.getElementById("terminal-connect");
-      var frame = document.getElementById("cli-frame");
-      if (connectBox) connectBox.classList.add("hidden");
-      if (frame) {
-        frame.classList.remove("hidden");
-        frame.src = "https://spurcode.duckdns.org/terminal/";
-      }
-    });
+    terminalLoadBtn.addEventListener("click", loadTerminalInline);
   }
 })();
