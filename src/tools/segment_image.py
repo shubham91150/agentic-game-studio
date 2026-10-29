@@ -135,6 +135,11 @@ def main():
     ap.add_argument("--image", required=True)
     ap.add_argument("--prompt", required=True, help="comma-separated concepts")
     ap.add_argument("--outdir", default=os.path.join(ROOT, "storage", ".uploads"))
+    ap.add_argument(
+        "--reuse-wire",
+        action="store_true",
+        help="reuse cached SAM 3.1 wire output instead of calling the API",
+    )
     args = ap.parse_args()
 
     img_path = args.image if os.path.isabs(args.image) else os.path.join(ROOT, args.image)
@@ -152,8 +157,16 @@ def main():
     concepts = [c.strip() for c in args.prompt.split(",") if c.strip()]
     saved = []
     for ci, concept in enumerate(concepts):
-        print(f"[segment] concept: {concept}", flush=True)
-        wire = segment_image(image_b64, concept, api_key)
+        wire_path = os.path.join(args.outdir, f"{stem}_wire_{ci}.txt")
+        if args.reuse_wire and os.path.exists(wire_path):
+            with open(wire_path) as f:
+                wire = f.read()
+            print(f"[segment] concept: {concept} (reusing cached wire)")
+        else:
+            print(f"[segment] concept: {concept}", flush=True)
+            wire = segment_image(image_b64, concept, api_key)
+            with open(wire_path, "w") as f:
+                f.write(wire)
         records = parse_records(wire)
         if not records:
             print(f"[segment] no matches for '{concept}'")
@@ -188,19 +201,22 @@ def main():
             px = _arr.array("B", bytes(raster))
             mimg = Image.new("L", (mw, mh))
             mimg.putdata([255 if v else 0 for v in px])
-            mimg = mimg.resize((src_w, src_h), Image.NEAREST)
-            tint = Image.new("RGBA", (src_w, src_h), color + (0,))
-            alpha = mimg.point(lambda v: 90 if v else 0)
+            # The mask raster is cropped to its box (mask W/H == box
+            # x2-x1+1 / y2-y1+1), NOT full-frame. Paste it at the box origin.
+            bw, bh = (x2 - x1 + 1), (y2 - y1 + 1)
+            mimg = mimg.resize((bw, bh), Image.NEAREST)
+            full_mask = Image.new("L", (src_w, src_h), 0)
+            full_mask.paste(mimg, (x1, y1))
             overlay = Image.composite(
                 Image.new("RGBA", (src_w, src_h), color + (255,)),
                 overlay.convert("RGBA"),
-                alpha,
+                full_mask.point(lambda v: 90 if v else 0),
             )
             draw = ImageDraw.Draw(overlay, "RGBA")
             draw.rectangle([x1, y1, x2, y2], outline=color + (255,), width=3)
-            # cutout: object on transparent background
+            # cutout: object on transparent background, at its position
             cut = Image.new("RGBA", (src_w, src_h), (0, 0, 0, 0))
-            cut.paste(base.convert("RGBA"), (0, 0), mimg)
+            cut.paste(base.convert("RGBA"), (0, 0), full_mask)
             cut_path = os.path.join(
                 args.outdir, f"{stem}_seg_{ci}_{obj_id}.png"
             )
