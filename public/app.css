@@ -295,7 +295,7 @@ body {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
 }
 
 .pane-right {
@@ -474,7 +474,7 @@ body {
 }
 
 .terminal-section .terminal-head {
-  padding: 7px 12px;
+  padding: 5px 10px;
   min-height: 32px;
   background: transparent;
 }
@@ -669,7 +669,7 @@ body {
   outline: none;
   background: transparent;
   color: var(--ink);
-  min-height: 58px;
+  min-height: 52px;
 }
 
 #prompt::placeholder {
@@ -891,12 +891,12 @@ button.icon-btn {
 }
 
 #prompt {
-  padding: 16px 16px 8px;
+  padding: 14px 14px 6px;
   line-height: 1.6;
 }
 
 .prompt-bar {
-  padding: 4px 8px 8px;
+  padding: 2px 8px 6px;
 }
 
 .prompt-box .icon-btn {
