@@ -1661,25 +1661,35 @@ button.icon-btn {
 
 /* ---------- Chat history sidebar (LEFT slide-over, ui-taste craft) ---------- */
 
-.avatar-btn {
-  border: 1px solid var(--line-strong);
+/* Chat history trigger — quiet ghost icon next to the avatar (ui-taste polish).
+ * The avatar itself is a plain non-clickable mark; this button carries the click. */
+.history-btn {
+  width: 28px;
+  height: 28px;
+  border: 1px solid transparent;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--muted);
   padding: 0;
   cursor: pointer;
-  font-family: inherit;
-  appearance: none;
-  -webkit-appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
   transition:
+    color var(--dur-fast) ease,
     background-color var(--dur-fast) ease,
     border-color var(--dur-fast) ease,
     transform var(--dur-fast) var(--ease-out);
 }
 
-.avatar-btn:hover {
-  background: var(--surface-3);
-  border-color: var(--accent);
+.history-btn:hover {
+  color: var(--ink);
+  background: rgba(255, 255, 255, 0.05);
+  border-color: var(--line);
 }
 
-.avatar-btn:active {
+.history-btn:active {
   transform: scale(0.94);
 }
 
@@ -1968,6 +1978,11 @@ button.icon-btn {
 
   .crumb-btn {
     min-height: 36px;
+  }
+
+  .history-btn {
+    width: 36px;
+    height: 36px;
   }
 
   /* Segmented control switcher */
