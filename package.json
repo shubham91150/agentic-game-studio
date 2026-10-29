@@ -5,10 +5,9 @@
   "main": "src/index.js",
   "type": "module",
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "web:start": "next start",
-    "start": "node src/index.js",
+    "dev": "node src/server.js",
+    "build": "echo 'Ready'",
+    "start": "node src/server.js",
     "server:start": "node src/server.js",
     "test": "node --test test/",
     "generate": "node src/agent/generate.js"
