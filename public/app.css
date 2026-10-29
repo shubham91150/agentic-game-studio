@@ -872,16 +872,16 @@ button.icon-btn {
   left: 0;
   bottom: calc(100% + 8px);
   z-index: 30;
-  width: 300px;
+  width: 260px;
   max-width: calc(100vw - 24px);
   max-height: min(360px, 52vh);
   overflow-y: auto;
   overscroll-behavior: contain;
   display: flex;
   flex-direction: column;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 12px;
-  background: #141419;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--surface-1);
   box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6);
   padding: 6px;
 }
@@ -1673,7 +1673,7 @@ button.icon-btn {
   }
 
   .plus-menu {
-    width: min(300px, calc(100vw - 40px));
+    width: min(260px, calc(100vw - 24px));
     max-height: 46vh;
   }
 
