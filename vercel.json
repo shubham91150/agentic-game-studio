@@ -1,7 +1,6 @@
 {
   "version": 2,
-  "public": true,
-  "buildCommand": "echo 'No build step required'",
+  "framework": null,
   "outputDirectory": "public",
   "rewrites": [
     {
