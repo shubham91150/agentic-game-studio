@@ -1,6 +1,6 @@
 /* Agentic Game Studio — Split-screen workspace client.
  * Left pane: Live Muse Code CLI terminal + Prompt composer.
- * Right pane: Clean Game Preview container.
+ * Right pane: Live Game Preview container (watches public/live-preview/ written by Muse CLI).
  * No inline scripts anywhere (CSP script-src 'self'). */
 (function () {
   "use strict";
@@ -17,9 +17,15 @@
   var liveText = document.getElementById("live-text");
   var titleEl = document.getElementById("game-title");
   var frameEl = document.getElementById("game-frame");
+  var emptyEl = document.getElementById("preview-empty");
+  var splitEl = document.getElementById("workspace-split");
+  var tabCli = document.getElementById("tab-cli");
+  var tabPreview = document.getElementById("tab-preview");
+  var previewReadyDot = document.getElementById("preview-ready-dot");
 
   var attachments = [];
   var running = false;
+  var lastPreviewUpdatedAt = 0;
 
   function setStatus(text, cls) {
     statusEl.textContent = text || "";
@@ -30,6 +36,27 @@
     running = busy;
     sendBtn.disabled = busy;
     sendBtn.classList.toggle("busy", busy);
+  }
+
+  // Mobile segmented tab switcher (CLI vs Game Preview)
+  function setActivePane(pane) {
+    if (!splitEl) return;
+    splitEl.setAttribute("data-active-pane", pane);
+    if (tabCli) tabCli.classList.toggle("active", pane === "cli");
+    if (tabPreview) tabPreview.classList.toggle("active", pane === "preview");
+    if (pane === "preview" && previewReadyDot) {
+      previewReadyDot.classList.add("hidden");
+    }
+  }
+  if (tabCli) {
+    tabCli.addEventListener("click", function () {
+      setActivePane("cli");
+    });
+  }
+  if (tabPreview) {
+    tabPreview.addEventListener("click", function () {
+      setActivePane("preview");
+    });
   }
 
   // VM backend health check
@@ -51,6 +78,39 @@
       liveText.textContent = "vm offline";
     });
 
+  // Watch public/live-preview/ so whenever Muse Code CLI writes or updates
+  // a game or 3D model preview, the right-side iframe updates automatically.
+  function pollPreviewState() {
+    fetch("/api/studio/preview-state")
+      .then(function (res) {
+        return res.ok ? res.json() : null;
+      })
+      .then(function (data) {
+        if (!data || !data.ready || !data.updatedAt) return;
+        if (data.updatedAt > lastPreviewUpdatedAt) {
+          lastPreviewUpdatedAt = data.updatedAt;
+          if (titleEl) titleEl.textContent = data.title || "Game Preview";
+          if (emptyEl) emptyEl.classList.add("hidden");
+          if (frameEl) {
+            frameEl.classList.remove("hidden");
+            frameEl.src = data.url + "?t=" + data.updatedAt;
+          }
+          if (
+            splitEl &&
+            splitEl.getAttribute("data-active-pane") !== "preview" &&
+            previewReadyDot
+          ) {
+            previewReadyDot.classList.remove("hidden");
+          }
+        }
+      })
+      .catch(function () {
+        /* ignore */
+      });
+  }
+  pollPreviewState();
+  setInterval(pollPreviewState, 2000);
+
   // Enter submits (Shift+Enter inserts a newline)
   promptEl.addEventListener("keydown", function (event) {
     if (event.key === "Enter" && !event.shiftKey) {
@@ -59,7 +119,7 @@
     }
   });
 
-  // Switching the model picker also switches the live CLI model in the terminal
+  // Switching the model picker switches the live CLI model in the terminal
   modelEl.addEventListener("change", function () {
     fetch("/api/studio/terminal/send", {
       method: "POST",
@@ -131,42 +191,8 @@
     });
   }
 
-  function handleEvent(evt) {
-    if (evt.type === "done" && evt.ok && evt.playUrl) {
-      if (titleEl) titleEl.textContent = evt.title || "Game Preview";
-      if (frameEl) frameEl.src = evt.playUrl + "?t=" + Date.now();
-      setStatus("Game preview ready.", "ok");
-    }
-  }
-
-  function readStream(response) {
-    var reader = response.body.getReader();
-    var decoder = new TextDecoder();
-    var buffer = "";
-    function pump() {
-      return reader.read().then(function (result) {
-        if (result.done) return;
-        buffer += decoder.decode(result.value, { stream: true });
-        var parts = buffer.split("\n\n");
-        buffer = parts.pop() || "";
-        parts.forEach(function (block) {
-          block.split("\n").forEach(function (line) {
-            if (line.indexOf("data:") !== 0) return;
-            var payload = line.slice(5).trim();
-            if (!payload) return;
-            try {
-              handleEvent(JSON.parse(payload));
-            } catch (e) {
-              /* ignore malformed frame */
-            }
-          });
-        });
-        return pump();
-      });
-    }
-    return pump();
-  }
-
+  // Submit: ONLY forward the prompt to the live Muse Code CLI terminal.
+  // Never run any fake/template game generator on slash commands or chat.
   formEl.addEventListener("submit", function (event) {
     event.preventDefault();
     if (running) return;
@@ -179,14 +205,13 @@
 
     running = true;
     setBusy(true);
-    setStatus("Sent to live Muse CLI terminal…");
+    setStatus("Sending to Muse Code CLI…");
 
     loadTerminalInline();
     promptEl.value = "";
     attachments = [];
     renderAttachments();
 
-    // 1. Dispatch directly into the live Muse Code CLI terminal on the left
     fetch("/api/studio/terminal/send", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -195,29 +220,16 @@
         model: model,
         attachments: currentAttachments,
       }),
-    }).catch(function () {
-      /* ignore */
-    });
-
-    // 2. Build/update the 3D WebGL game preview on the right
-    fetch("/api/studio/generate", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        prompt: prompt,
-        model: model,
-        attachments: currentAttachments,
-        skipSubprocessCli: true,
-      }),
     })
       .then(function (res) {
-        if (!res.ok || !res.body) {
-          throw new Error("Backend answered " + res.status);
-        }
-        return readStream(res);
+        if (!res.ok) throw new Error("Backend answered " + res.status);
+        return res.json();
+      })
+      .then(function () {
+        setStatus("Sent to Muse Code CLI (" + model + ").", "ok");
       })
       .catch(function () {
-        setStatus("Dispatched to live CLI terminal above.", "ok");
+        setStatus("Could not reach the VM CLI terminal.", "error");
       })
       .then(function () {
         running = false;
