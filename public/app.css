@@ -1914,3 +1914,28 @@ button.icon-btn {
     margin: 8px 10px 0 8px;
   }
 }
+
+/* ---------- Meta model chain footer (ui-taste: quiet one-liner, tokens only, no glow) ---------- */
+
+.chain-foot {
+  flex: 0 0 auto;
+  display: flex;
+  justify-content: center;
+  padding: 8px var(--pad) calc(8px + env(safe-area-inset-bottom));
+  border-top: 1px solid var(--line);
+  font-size: var(--fs-11);
+  letter-spacing: 0.02em;
+  text-align: center;
+}
+
+.chain-foot a {
+  color: var(--faint);
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  transition: color var(--dur-fast) var(--ease-out);
+}
+
+.chain-foot a:hover {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}

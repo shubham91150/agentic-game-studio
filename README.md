@@ -13,7 +13,7 @@ Built for the **Meta Global AI Developer Hackathon 2026** · Indie Developer tra
 | **Impact (30%)**                 | Solo devs and game-jam teams lose days scaffolding a prototype. One prompt here produces a playable, verified, shareable build in about 20–60 seconds. Try two contrasting prompts live.                                                                                    |
 | **Use of Meta AI tooling (25%)** | Muse Wonder 1.0 designs the game, Muse Spark Open (open weights, Baseten) enriches assets, Muse Image 1.0 paints concept art, Muse Code CLI (`muse-spark-1.3`) writes the Unity C# on our VM. Verified pipeline table below.                                                |
 | **Demo (25%)**                   | Live site above. Prompt → live agent console (every step streamed) → playable game in the preview, phone-playable via QR. Prebuilt games are linked so you never wait.                                                                                                      |
-| **Technical depth (20%)**        | Deterministic shared layout rendered by the game _and_ proven by a BFS reachability gate; CCD tunneling math; scoped CLI workspaces with keys passed over stdin (never argv/logs); prompt-hash caching so repeat builds cost zero API calls. Tests: `npm test` (5 passing). |
+| **Technical depth (20%)**        | Deterministic shared layout rendered by the game _and_ proven by a BFS reachability gate; CCD tunneling math; scoped CLI workspaces with keys passed over stdin (never argv/logs); prompt-hash caching so repeat builds cost zero API calls. Tests: `npm test` (9 passing). |
 
 ## Verified pipeline
 
@@ -35,6 +35,22 @@ Every stage below actually runs in the live path (`src/agent/agent_runner.js`):
 Model routing: high-reasoning work goes to **Muse Wonder**, code writing to **Muse Spark 1.3**, open-weight enrichment to **Muse Spark Open**. Identical prompts hit a cache (`storage/cache/`) and cost **zero** API calls — watch for "cache hit" in the console.
 
 One honest note: the Muse Code CLI cannot talk to Baseten directly (its model-catalog fetch gets HTTP 405 from Baseten's OpenAI-style API — we tested it). So Baseten is called by the planner step, and the CLI runs on the Meta Model API. Both are Meta models; the UI labels each step with the model that actually ran.
+
+## Meta model chain
+
+Every model/tool below is Meta (first-party API, open weights, or CLI on the Meta provider). Steps 1–5 run live in the per-run path; the SAM tools ship in-repo and run standalone.
+
+| Step                                                              | Model                                         | Provider                                                                        | Where in code                                                           |
+| ----------------------------------------------------------------- | --------------------------------------------- | ------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| 1 · Prompt safety screen (local rules, no model)                  | —                                             | local                                                                           | `src/pipeline/safety_shield.js` via `src/agent/agent_runner.js`         |
+| 2 · Game design (title, biome, physics, assets)                   | `muse-wonder-1.0`                             | Meta Model API (`POST /v1/responses`)                                           | `src/agent/meta_wonder.js`, routed by `src/agent/muse_wonder.js`        |
+| 3 · Asset-prompt enrichment (open weights)                        | `meta-models/muse-spark-open-1026`            | Baseten (`POST /v1/chat/completions`)                                           | `src/agent/baseten_muse.js`, routed by `src/agent/muse_wonder.js`       |
+| 4 · Concept art                                                   | `muse-image-1.0`                              | Meta Model API (`POST /v1/images/generations`)                                  | `src/pipeline/meta_image.js`                                            |
+| 5 · File pass (`SPEC.md` + Unity C#)                              | `muse-spark-1.3` (default; allowlist in code) | Meta Model API via Muse Code CLI (`muse exec --provider meta --model … --json`) | `src/agent/agent_runner.js`                                             |
+| 6 · Segmentation tool (standalone)                                | `sam-3.1`                                     | Meta Model API (`POST /v1/responses`, SSE)                                      | `src/tools/segment_image.py`                                            |
+| 7 · 3D reconstruction tool (standalone, `ASSET_3D_BACKEND=sam3d`) | SAM 3D Objects (`SAM3DObjects.reconstruct`)   | Modal app `spurcode-sam3d-objects`                                              | `src/tools/modal_call_3d.py`, dispatched by `src/pipeline/assets_3d.js` |
+
+Steps 6–7 are **not** invoked by the live per-run path in `src/agent/agent_runner.js` — that path renders with procedural terrain + Three.js (`src/pipeline/terrain.js`, `src/pipeline/layout.js`, `src/engine/threejs_runtime.js`). Repeat prompts hit `storage/cache/` (`spec_`, `concept_`, `unity_` files) and cost zero API calls.
 
 ## Try it
 
@@ -66,7 +82,7 @@ node src/agent/generate.js --prompt "Low gravity lunar rover with floaty jumps"
 
 ## Honest limitations
 
-- The WebGL game is a generated runtime whose palette, physics, terrain, and layout come from the design spec; characters/obstacles are primitive meshes, not generated GLBs. SAM segmentation, learned 3D reconstruction (e.g. TRELLIS on Modal), and learned world models (HunyuanWorld) are **roadmap, not in this build** — earlier drafts of this README claimed them; that was wrong and has been corrected.
+- The WebGL game is a generated runtime whose palette, physics, terrain, and layout come from the design spec; characters/obstacles are primitive meshes, not generated GLBs. Standalone SAM 3.1 / SAM 3D tooling ships in `src/tools/` (see "Meta model chain" steps 6–7) but is **not wired into the live per-run path** — learned 3D reconstruction and learned world models (HunyuanWorld) stay roadmap. Earlier drafts of this README claimed otherwise; that was wrong and has been corrected.
 - Unity output is a real openable project skeleton (version, package manifest, scripts, import notes), not a pre-built scene.
 - If a provider is down, the run says so in the console (e.g. "template fallback") instead of faking success.
 - Builds depend on our VM backend; the stored library links above keep working even while the studio UI is redeployed.
