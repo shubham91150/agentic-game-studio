@@ -42,176 +42,219 @@
         </span>
       </header>
 
-      <main class="hero hero-compact" id="hero">
-        <h1 class="title">Agentic Game Studio</h1>
-        <p class="tagline">Describe your game. AI builds it.</p>
-
-        <div class="chips" role="group" aria-label="Try an example">
-          <button type="button" class="chip">Lunar Rover</button>
-          <button type="button" class="chip">Orbital Courier</button>
-          <button type="button" class="chip">Signal Garden</button>
-          <button type="button" class="chip">Glacier Race</button>
-          <button type="button" class="chip">Desert Dash</button>
-        </div>
-
-        <p class="status" id="status" role="status" aria-live="polite"></p>
-      </main>
-
-      <section class="terminal-section" aria-label="Muse Code CLI terminal">
-        <div class="terminal-box">
-          <div class="terminal-head">
-            <span class="terminal-title">Muse Code CLI — live on VM</span>
-            <a
-              class="terminal-open"
-              href="https://spurcode.duckdns.org/terminal/"
-              target="_blank"
-              rel="noreferrer"
-              >Open full terminal</a
-            >
-          </div>
-          <div class="terminal-connect" id="terminal-connect">
-            <p class="terminal-connect-text">
-              The live terminal needs your GitHub login. Open it once in a new
-              tab, sign in, then load it inline here.
-            </p>
-            <div class="terminal-connect-actions">
-              <a
-                class="terminal-btn"
-                href="https://spurcode.duckdns.org/terminal/"
-                target="_blank"
-                rel="noreferrer"
-                >1 · Open terminal &amp; sign in</a
-              >
-              <button
-                type="button"
-                class="terminal-btn terminal-btn-primary"
-                id="terminal-load"
-              >
-                2 · Load inline preview
-              </button>
-            </div>
-          </div>
-          <iframe
-            id="cli-frame"
-            class="terminal-frame hidden"
-            title="Muse Code CLI terminal"
-          ></iframe>
-        </div>
-      </section>
-
-      <section class="result hidden" id="result" aria-label="Build result">
-        <div class="result-head">
-          <h2 id="game-title">Your game</h2>
-          <div class="result-actions">
-            <button type="button" id="btn-fullscreen" class="ghost-btn">
-              Fullscreen
-            </button>
-            <button type="button" id="btn-qr" class="ghost-btn">
-              Mobile QR
-            </button>
-            <button type="button" id="btn-code" class="ghost-btn">
-              Unity C#
-            </button>
-          </div>
-        </div>
-        <div class="viewport">
-          <iframe
-            id="game-frame"
-            title="Generated game"
-            allow="autoplay; fullscreen"
-          ></iframe>
-        </div>
-        <details class="console-wrap">
-          <summary>Agent activity <span id="token-line"></span></summary>
-          <div class="console" id="console"></div>
-        </details>
-        <div class="qr hidden" id="qr-box">
-          <img
-            id="qr-image"
-            alt="QR code to play on mobile"
-            width="180"
-            height="180"
-          />
-        </div>
-        <pre class="code hidden" id="code-box"></pre>
-      </section>
-
-      <footer class="dock" aria-label="Prompt composer">
-        <form id="prompt-form" class="prompt-box" autocomplete="off">
-          <label class="sr-only" for="prompt"
-            >Describe what you want the AI agent to build</label
-          >
-          <textarea
-            id="prompt"
-            rows="2"
-            placeholder="Describe what you want the AI agent to build…"
-            required
-          ></textarea>
-
-          <div class="prompt-bar">
-            <div class="bar-left">
-              <button
-                type="button"
-                id="attach-btn"
-                class="icon-btn"
-                title="Attach a reference file"
-                aria-label="Attach a reference file"
-              >
-                +
-              </button>
-              <input
-                type="file"
-                id="file-input"
-                class="sr-only"
-                multiple
-                tabindex="-1"
-              />
-
-              <label class="sr-only" for="model-select">Model</label>
-              <select id="model-select" class="picker" title="Model">
-                <option value="muse-wonder-1.0">Muse Wonder 1.0</option>
-                <option value="muse-spark-1.3" selected>Muse Spark 1.3</option>
-                <option value="muse-spark-1.3-contributor">
-                  Muse Spark 1.3 Contributor
-                </option>
-                <option value="muse-spark-1.2">Muse Spark 1.2</option>
-                <option value="muse-spark-1.2-contributor">
-                  Muse Spark 1.2 Contributor
-                </option>
-                <option value="muse-image-1.0">Muse Image 1.0</option>
-              </select>
-
-              <span
-                id="attach-list"
-                class="attach-list"
-                aria-live="polite"
-              ></span>
+      <div class="workspace-split">
+        <!-- LEFT SIDE: Hero + Outlined Muse Code CLI Terminal + Bottom Prompt Box -->
+        <aside class="pane-left" aria-label="Agent CLI and prompt composer">
+          <main class="hero hero-compact" id="hero">
+            <div class="hero-top">
+              <h1 class="title">Agentic Game Studio</h1>
+              <p class="tagline">Describe your game. AI builds it.</p>
             </div>
 
-            <button
-              type="submit"
-              id="send-btn"
-              class="send-btn"
-              title="Build game (Ctrl+Enter)"
-              aria-label="Build game"
-            >
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
+            <div class="chips" role="group" aria-label="Try an example">
+              <button type="button" class="chip">Lunar Rover</button>
+              <button type="button" class="chip">Orbital Courier</button>
+              <button type="button" class="chip">Signal Garden</button>
+              <button type="button" class="chip">Glacier Race</button>
+              <button type="button" class="chip">Desert Dash</button>
+            </div>
+
+            <p class="status" id="status" role="status" aria-live="polite"></p>
+          </main>
+
+          <section class="terminal-section" aria-label="Muse Code CLI terminal">
+            <div class="terminal-box">
+              <div class="terminal-head">
+                <span class="terminal-title">Muse Code CLI — live on VM</span>
+                <a
+                  class="terminal-open"
+                  href="https://spurcode.duckdns.org/terminal/"
+                  target="_blank"
+                  rel="noreferrer"
+                  >Open full terminal</a
+                >
+              </div>
+              <div class="terminal-connect" id="terminal-connect">
+                <p class="terminal-connect-text">
+                  The live terminal needs your GitHub login. Open it once in a
+                  new tab, sign in, then load it inline here.
+                </p>
+                <div class="terminal-connect-actions">
+                  <a
+                    class="terminal-btn"
+                    href="https://spurcode.duckdns.org/terminal/"
+                    target="_blank"
+                    rel="noreferrer"
+                    >1 · Open terminal &amp; sign in</a
+                  >
+                  <button
+                    type="button"
+                    class="terminal-btn terminal-btn-primary"
+                    id="terminal-load"
+                  >
+                    2 · Load inline preview
+                  </button>
+                </div>
+              </div>
+              <iframe
+                id="cli-frame"
+                class="terminal-frame hidden"
+                title="Muse Code CLI terminal"
+              ></iframe>
+            </div>
+          </section>
+
+          <footer class="dock" aria-label="Prompt composer">
+            <form id="prompt-form" class="prompt-box" autocomplete="off">
+              <label class="sr-only" for="prompt"
+                >Describe what you want the AI agent to build</label
               >
-                <path d="m5 12 7-7 7 7" />
-                <path d="M12 19V5" />
-              </svg>
-            </button>
+              <textarea
+                id="prompt"
+                rows="2"
+                placeholder="Describe what you want the AI agent to build…"
+                required
+              ></textarea>
+
+              <div class="prompt-bar">
+                <div class="bar-left">
+                  <button
+                    type="button"
+                    id="attach-btn"
+                    class="icon-btn"
+                    title="Attach a reference file"
+                    aria-label="Attach a reference file"
+                  >
+                    +
+                  </button>
+                  <input
+                    type="file"
+                    id="file-input"
+                    class="sr-only"
+                    multiple
+                    tabindex="-1"
+                  />
+
+                  <label class="sr-only" for="model-select">Model</label>
+                  <select id="model-select" class="picker" title="Model">
+                    <option value="muse-wonder-1.0">Muse Wonder 1.0</option>
+                    <option value="muse-spark-1.3" selected>
+                      Muse Spark 1.3
+                    </option>
+                    <option value="muse-spark-1.3-contributor">
+                      Muse Spark 1.3 Contributor
+                    </option>
+                    <option value="muse-spark-1.2">Muse Spark 1.2</option>
+                    <option value="muse-spark-1.2-contributor">
+                      Muse Spark 1.2 Contributor
+                    </option>
+                    <option value="muse-image-1.0">Muse Image 1.0</option>
+                  </select>
+
+                  <span
+                    id="attach-list"
+                    class="attach-list"
+                    aria-live="polite"
+                  ></span>
+                </div>
+
+                <button
+                  type="submit"
+                  id="send-btn"
+                  class="send-btn"
+                  title="Send to Muse CLI &amp; build preview (Enter)"
+                  aria-label="Build game"
+                >
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <path d="m5 12 7-7 7 7" />
+                    <path d="M12 19V5" />
+                  </svg>
+                </button>
+              </div>
+            </form>
+          </footer>
+        </aside>
+
+        <!-- RIGHT SIDE: Live 3D Game Preview -->
+        <section
+          class="pane-right result"
+          id="result"
+          aria-label="Game preview"
+        >
+          <div class="preview-box">
+            <div class="result-head">
+              <div class="result-title-group">
+                <span class="preview-badge">LIVE GAME PREVIEW</span>
+                <h2 id="game-title">Loading game…</h2>
+              </div>
+              <div class="result-actions">
+                <label class="sr-only" for="game-select"
+                  >Select stored game</label
+                >
+                <select
+                  id="game-select"
+                  class="game-picker"
+                  title="Switch between generated games"
+                >
+                  <option value="">Recent games…</option>
+                </select>
+                <button
+                  type="button"
+                  id="btn-reload"
+                  class="ghost-btn"
+                  title="Reload game preview"
+                >
+                  Reload
+                </button>
+                <button type="button" id="btn-fullscreen" class="ghost-btn">
+                  Fullscreen
+                </button>
+                <button type="button" id="btn-qr" class="ghost-btn">
+                  Mobile QR
+                </button>
+                <button type="button" id="btn-code" class="ghost-btn">
+                  Unity C#
+                </button>
+              </div>
+            </div>
+
+            <div class="viewport">
+              <iframe
+                id="game-frame"
+                title="Generated game"
+                allow="autoplay; fullscreen"
+              ></iframe>
+            </div>
+
+            <div class="preview-drawers">
+              <details class="console-wrap">
+                <summary>
+                  Pipeline activity <span id="token-line"></span>
+                </summary>
+                <div class="console" id="console"></div>
+              </details>
+              <div class="qr hidden" id="qr-box">
+                <img
+                  id="qr-image"
+                  alt="QR code to play on mobile"
+                  width="180"
+                  height="180"
+                />
+              </div>
+              <pre class="code hidden" id="code-box"></pre>
+            </div>
           </div>
-        </form>
-      </footer>
+        </section>
+      </div>
     </div>
     <script src="/studio/studio.js"></script>
   </body>

@@ -484,7 +484,11 @@ const server = http.createServer(async (req, res) => {
 
       try {
         const runner = new AgentRunner(ROOT_DIR, emit);
-        const result = await runner.run(prompt, { model, attachments });
+        const result = await runner.run(prompt, {
+          model,
+          attachments,
+          skipSubprocessCli: Boolean(payload.skipSubprocessCli),
+        });
         if (!result.ok) {
           emit({ type: "done", ok: false, at: Date.now() });
         }
