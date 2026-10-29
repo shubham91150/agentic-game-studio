@@ -350,4 +350,20 @@
     }
     codeBox.classList.toggle("hidden");
   });
+
+  // Terminal inline preview: only load the iframe after the user asks.
+  // Auto-loading would hit the GitHub login redirect inside the iframe,
+  // and GitHub refuses framing (frame-ancestors 'none').
+  var terminalLoadBtn = document.getElementById("terminal-load");
+  if (terminalLoadBtn) {
+    terminalLoadBtn.addEventListener("click", function () {
+      var connectBox = document.getElementById("terminal-connect");
+      var frame = document.getElementById("cli-frame");
+      if (connectBox) connectBox.classList.add("hidden");
+      if (frame) {
+        frame.classList.remove("hidden");
+        frame.src = "https://spurcode.duckdns.org/terminal/";
+      }
+    });
+  }
 })();
