@@ -6,6 +6,11 @@
       name="viewport"
       content="width=device-width, initial-scale=1.0, viewport-fit=cover"
     />
+    <meta name="theme-color" content="#000000" />
+    <meta
+      name="description"
+      content="Agentic Game Studio — describe your game, Muse builds it. Live CLI terminal, prompt composer, and playable 3D preview."
+    />
     <title>Agentic Game Studio</title>
     <link rel="stylesheet" href="/studio/app.css" />
     <link
@@ -140,6 +145,21 @@
                 >
               </div>
               <div class="terminal-connect" id="terminal-connect">
+                <div class="connect-mark" aria-hidden="true">
+                  <svg
+                    width="22"
+                    height="22"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.6"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <polyline points="4 17 10 11 4 5" />
+                    <line x1="12" y1="19" x2="20" y2="19" />
+                  </svg>
+                </div>
                 <p class="terminal-connect-text">
                   The live terminal needs your GitHub login. Open it once in a
                   new tab, sign in, then load it inline here.
@@ -178,6 +198,7 @@
                 id="prompt"
                 rows="2"
                 placeholder="Ask studio to build..."
+                enterkeyhint="send"
                 required
               ></textarea>
 
@@ -311,6 +332,9 @@
                   </button>
                 </div>
               </div>
+              <p class="composer-hint" aria-hidden="true">
+                <kbd>⏎</kbd> send&nbsp;&nbsp;·&nbsp;&nbsp;<kbd>⇧⏎</kbd> newline
+              </p>
             </form>
           </footer>
         </aside>
@@ -329,14 +353,17 @@
                 </span>
                 <span class="terminal-title" id="game-title">Game Preview</span>
               </div>
+              <span class="stage-badge" aria-hidden="true">
+                <span class="stage-badge-dot"></span>WebGL stage
+              </span>
             </div>
 
             <div class="viewport">
               <div class="viewport-empty" id="preview-empty">
                 <div class="empty-cube" aria-hidden="true">
                   <svg
-                    width="36"
-                    height="36"
+                    width="30"
+                    height="30"
                     viewBox="0 0 24 24"
                     fill="none"
                     stroke="currentColor"
@@ -351,7 +378,7 @@
                     <line x1="12" y1="22.08" x2="12" y2="12" />
                   </svg>
                 </div>
-                <p class="empty-title">3D WebGL Stage Ready</p>
+                <p class="empty-title">3D WebGL stage ready</p>
                 <p class="empty-sub">
                   Send a prompt in the composer to watch Muse CLI work and
                   render your playable game here.
