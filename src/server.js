@@ -426,7 +426,7 @@ const server = http.createServer(async (req, res) => {
     return fs.createReadStream(scriptPath).pipe(res);
   }
 
-  // ---------- Vendor assets (Three.js, Phaser, etc.) ----------
+  // ---------- Vendor assets (Three.js) ----------
   if (pathname === "/studio/vendor/three.min.js") {
     const vendorPath = path.join(
       ROOT_DIR,
@@ -434,16 +434,6 @@ const server = http.createServer(async (req, res) => {
       "engine",
       "vendor",
       "three.min.js",
-    );
-    return sendFile(res, vendorPath);
-  }
-  if (pathname === "/studio/vendor/phaser.min.js") {
-    const vendorPath = path.join(
-      ROOT_DIR,
-      "src",
-      "engine",
-      "vendor",
-      "phaser.min.js",
     );
     return sendFile(res, vendorPath);
   }
