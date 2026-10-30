@@ -49,6 +49,29 @@ UI skill routing (all under `.agents/skills/`):
 - Unity C# / project / headless build → read `.agents/skills/unity-build/SKILL.md` first (exporter reuse, license rules, batchmode validation).
 - Never write engine boilerplate from memory when a skill owns the workflow.
 
+## Step 0e — 2D Track: Phaser or Godot 2D
+
+When the prompt fits 2D (platformer, puzzle, top-down, cards,
+board, match-3, tower-defense on a grid, visual novel), pick ONE engine:
+
+- **Phaser (default for pure 2D):** build scenes with the vendored
+  Phaser 3.x (`/studio/vendor/phaser.min.js`, served from
+  `src/engine/vendor/phaser.min.js` — CSP forbids CDN scripts, use the
+  local vendor path only). Standard shape: `Boot` → `Menu` →
+  `Game` scene(s) in `game.js` (+ `levels.js` for level defs when the
+  game has more than one level).
+- **Godot 2D web export (when the prompt already asks for
+  Godot/GDScript, or needs a Godot-only feature):** the
+  `.agents/skills/godot-web/SKILL.md` skill owns that path — read it
+  first and follow its headless export flow with a 2D project.
+
+2D preview goes to `public/live-preview/` exactly like 3D:
+`index.html` (shell, no inline `<script>`, `defer` only) + `game.js`
+(boot + loop). Load order at end of `<body>` for a Phaser game:
+`<script src="/studio/vendor/phaser.min.js" defer></script>` then
+your files with `defer`. Same done-gate as 3D (state machine,
+win/lose reachable, keyboard + touch, `node --check` clean).
+
 ## Step 0d — Open Design (no genre boxes)
 
 There is NO fixed genre list. ANY game the user describes can be built —
@@ -140,7 +163,7 @@ Minimum viable game MUST have: state machine (`menu/playing/paused/over`), playe
 ## Hard Rules (CSP + Preview)
 
 1. **NEVER** inline `<script>...</script>` or `onclick=` in `index.html` — the reverse proxy sends `Content-Security-Policy: script-src 'self'` and blocks inline scripts.
-2. Load order at end of `<body>`: `<script src="/studio/vendor/three.min.js" defer></script>` then your files with `defer`.
+2. Load order at end of `<body>`: `<script src="/studio/vendor/three.min.js" defer></script>` then your files with `defer` (3D). For 2D Phaser games: `<script src="/studio/vendor/phaser.min.js" defer></script>` then your files with `defer`.
 3. Guard DOM access: `document.getElementById('canvas-container') || document.body`.
 4. Uploaded files in `storage/.uploads/<name>` are served at `/studio/uploads/<name>` — reference that URL from game code.
 5. For `.glb` without a loader: parse the `GLB` magic (`0x46546C67`) chunks into `THREE.BufferGeometry`/`THREE.MeshStandardMaterial` directly, or extract meshes to `model_data.js` with a quick `node`/`python3` script. No external CDN scripts — only local `/studio/vendor/` and relative `./` files.
