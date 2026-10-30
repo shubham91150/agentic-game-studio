@@ -93,3 +93,7 @@ blender --background --python src/tools/blender_cleanup.py -- \
 ```
 
 Code: `src/tools/blender_cleanup.py`.
+
+## 8. Scope decision: bounded worlds win (open explorable worlds out of scope)
+
+We cannot fully replace Hunyuan World 2.0 open explorable worlds — so we build specific bounded 3D games (single arena / track / room / island, `worldBound:72` pattern) instead: bounded quality over open mediocrity.

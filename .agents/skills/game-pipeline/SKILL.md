@@ -68,6 +68,14 @@ for any of these, the safety shield sanitizes the theme — build the peaceful
 version (e.g. "space battle" → "asteroid dodging courier") and say so in one
 line. Never lecture, just build.
 
+## Scope rule: bounded worlds win
+
+Prefer compact worlds — single arena / track / room / island with clear
+bounds (our `worldBound:72` pattern in `src/pipeline/layout.js`). Good fits:
+arena collector, track racer, room escape, tower plateau, garden defense.
+If the user asks open-world, build the best bounded version + say in ONE
+line what was scoped down and why (engine + deadline honesty, no lecture).
+
 ## Step 0c — Gameplay Code: Obey game-logic Standards
 
 Any gameplay code (loop, controls, camera, enemies, settings, audio,
