@@ -36,7 +36,7 @@ Godot reference (copy mat karo, sirf dekho): `/home/opencode/project-data/worksp
 3. **Mixamo-style auto-rig (PLANNED, external).** Note: Mixamo Adobe ka third-party tool hai — tool ki tarah allowed, lekin external dependency; SAM 3D mesh pe skeleton/walk-anim ka koi code repo me nahi hai.
 4. **Godot Navigation/physics wiring (PLANNED).** `physics_qa_gate.js` sirf local deterministic checks (BFS reachability, tunneling) karta hai — Godot `NavigationAgent3D` / Rigidbody wiring ka code nahi hai.
 5. **LOD/occlusion perf (PLANNED).** LOD + occlusion culling ka koi code nahi hai; Three.js runtime CSP-compliant split (`index.html` + `game.js`) tak hi hai.
-6. **Depth Anything V2 / Gaussian Splatting (PLANNED).** Chat ne suggest kiya tha; repo me nahi hai — `terrain.js` sirf procedural heightmap hai (file me khud likha hai: learned world model roadmap hai, used nahi).
+6. **Depth Anything V2 (LIVE as local tool).** `src/tools/depth_map.py` — Depth-Anything-V2-Small HF checkpoint (MIT), CPU-only, brighter = nearer PNG + optional `.npy`. Gaussian Splatting still PLANNED (koi code nahi hai). Details: §6 below.
 
 ## 4. Rules reminder (Meta hackathon compliance)
 
@@ -48,3 +48,29 @@ Godot reference (copy mat karo, sirf dekho): `/home/opencode/project-data/worksp
 ## 5. Submission pitch
 
 > "Agentic Game Studio ek prompt se playable 3D game banata hai — Meta Muse Wonder world reasoning, Muse Spark Open asset planning, Muse Image concept art, aur SAM-family (3.1 segmentation + 3D Objects) image-to-3D ke liye — deterministic layout aur physics QA gate ke saath. Koi third-party end-to-end world model shipped path me nahi hai (Trellis dev-only hai)."
+
+## 6. World-expansion tools (LIVE — tools only, never the shipped path)
+
+Depth → novel-view → Blender-projection chain. MIT/open tooling + own code;
+koi third-party generative weight shipped path me nahi jaata. Verified
+30 Oct 2026 on `storage/.uploads/sunrise_valley.jpg` (1920×1280):
+
+```bash
+# 1. depth map (CPU, 8-core VM): infer ~6s, total ~7s → 768×512 PNG (44 KB) + .npy (1.5 MB)
+python3 src/tools/depth_map.py --image storage/.uploads/sunrise_valley.jpg \
+    --out /tmp/depth.png --npy /tmp/depth.npy --max-side 768
+# sanity: brighter = nearer; foreground-bottom mean 166.5 vs sky-top mean 1.0
+
+# 2. novel view warp (zero ML, ~0.5s): same-size output, holes 1.72% (<2%), cv2-Telea fill
+python3 src/tools/novel_view.py --image storage/.uploads/sunrise_valley.jpg \
+    --depth /tmp/depth.png --px 24 --out /tmp/novel.png
+
+# 3. Blender projection (~3s + one-time `sudo apt-get install -y blender`, v3.4.1):
+#    subdivided plane displaced by depth + image texture → .glb (6.8 MB, glTF magic OK)
+PYTHONPATH=/home/opencode/.local/lib/python3.11/site-packages \
+blender --background --python src/tools/blender_project.py -- \
+    --image storage/.uploads/sunrise_valley.jpg --depth /tmp/depth.png \
+    --out /tmp/scene.glb --grid 191x127 --strength 0.35
+```
+
+Code: `src/tools/depth_map.py`, `src/tools/novel_view.py`, `src/tools/blender_project.py`.

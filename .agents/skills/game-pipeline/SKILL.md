@@ -100,6 +100,10 @@ node src/tools/make-image.js --prompt "sci-fi power crystal, game key art, no te
 - Saves a `.webp` into `storage/.uploads/` (served at `/studio/uploads/<file>`) ready to reference from `public/live-preview/` game code, or pass `--out <path>` / `--concept` for a custom path / pipeline cache dir.
 - Typical uses: character portraits for `story.js` dialogue cards, HUD icons, ground/sky textures, loading-screen art.
 
+## Step 1c — World-Expansion (depth → warp → Blender-projection tools)
+
+World-expansion (parallax views / relief mesh from a concept image, TOOL ONLY — never the shipped Meta path): depth→warp→Blender-projection chain lives in `src/tools/depth_map.py` → `novel_view.py` → `blender_project.py` (exact commands + timings: `docs/WORLD_PIPELINE.md` §6); use when the user asks for novel views, depth relief, or scene expansion from a flat image, and never route shipped submissions through it.
+
 ## Step 2 — Hand-Written Multi-File Game Structure (fallback or edits)
 
 Write these files under `public/live-preview/`. Keep each file focused:
