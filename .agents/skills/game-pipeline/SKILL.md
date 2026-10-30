@@ -117,6 +117,7 @@ node src/tools/make-image.js --prompt "sci-fi power crystal, game key art, no te
 - It calls **Meta Muse Image 1.0 directly** with the VM key — independent of the CLI session's active model (Wonder/Spark/anything). Do NOT confuse with the CLI's `--image` flag: that only _attaches_ an image to a prompt, it never _generates_ one.
 - Saves a `.webp` into `storage/.uploads/` (served at `/studio/uploads/<file>`) ready to reference from `public/live-preview/` game code, or pass `--out <path>` / `--concept` for a custom path / pipeline cache dir.
 - Typical uses: character portraits for `story.js` dialogue cards, HUD icons, ground/sky textures, loading-screen art.
+- 360 skybox art: use the LIVE-capable panorama prompt + r128 cube-conversion snippet in `docs/WORLD_PIPELINE.md` §9 (equirectangular seamless upload → `scene.background` via `WebGLCubeRenderTarget.fromEquirectangularTexture`).
 
 ## Step 1c — World-Expansion (depth → warp → Blender-projection tools)
 
@@ -129,6 +130,10 @@ NPC lines for `story.js` dialogue cards: `node src/tools/npc_dialogue.js --chara
 ## Step 1d — Mesh Cleanup (SAM 3D / generated .glb → game-ready .glb)
 
 Mesh cleanup (dense SAM 3D output, TOOL ONLY — never the shipped Meta path): `src/tools/blender_cleanup.py` headless decimate + merge-doubles + loose-delete + transform-apply (exact command + verified sizes: `docs/WORLD_PIPELINE.md` §7); use when the user asks to clean, decimate, shrink, or game-ready a `.glb` before it ships in a game.
+
+## Step 1e — Physics: Prefer Rapier Rigid-Bodies in Preview
+
+Preview (browser) physics runs on the self-hosted Rapier build — `@dimforge/rapier3d-compat` 0.21.0 (Apache-2.0, TOOL not model), vendored at `src/engine/vendor/rapier3d-compat.mjs` + `rapier_wasm3d_bg.wasm` and served local-only at `/studio/vendor/` (same CSP-safe pattern as `three.min.js`; the `.mjs` resolves its `.wasm` relative to its own URL so both files must stay side by side). Browser use is one module import — `import * as RAPIER from '/studio/vendor/rapier3d-compat.mjs'; await RAPIER.init();` then `new RAPIER.World({x:0,y:-9.81,z:0})` with dynamic/fixed rigid-bodies + colliders stepped each frame (verified: dynamic ball falls and rests exactly on a fixed ground cuboid). Prefer real Rapier rigid-bodies + colliders for ALL preview movement, stacking, bouncing, and collision; hand-rolled custom gravity is allowed ONLY for trivial cases (single-axis constant fall with no collisions, e.g. a menu backdrop). Unity/Godot exports still use their own Rigidbody wiring; the deterministic `physics_qa_gate.js` still gates layout before anything ships.
 
 ## Step 2 — Hand-Written Multi-File Game Structure (fallback or edits)
 

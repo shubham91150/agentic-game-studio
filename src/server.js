@@ -101,6 +101,8 @@ const CONTENT_TYPES = {
   ".svg": "image/svg+xml",
   ".woff2": "font/woff2",
   ".webp": "image/webp",
+  ".mjs": "application/javascript; charset=utf-8",
+  ".wasm": "application/wasm",
 };
 
 function sendFile(res, filePath) {
@@ -434,6 +436,26 @@ const server = http.createServer(async (req, res) => {
       "engine",
       "vendor",
       "three.min.js",
+    );
+    return sendFile(res, vendorPath);
+  }
+
+  // ---------- Vendor assets (Rapier physics, local-only like three.min.js) ----------
+  // @dimforge/rapier3d-compat 0.21.0 (Apache-2.0), self-hosted: CSP bans CDN.
+  // rapier3d-compat.mjs resolves rapier_wasm3d_bg.wasm relative to its own
+  // URL, so both files must stay side by side in src/engine/vendor/.
+  // Browser use: <script type="module"> import * as RAPIER from
+  // '/studio/vendor/rapier3d-compat.mjs'; await RAPIER.init(); ...
+  const rapierMatch = pathname.match(
+    /^\/studio\/vendor\/(rapier3d-compat\.mjs|rapier_wasm3d_bg\.wasm)$/,
+  );
+  if (rapierMatch) {
+    const vendorPath = path.join(
+      ROOT_DIR,
+      "src",
+      "engine",
+      "vendor",
+      rapierMatch[1],
     );
     return sendFile(res, vendorPath);
   }

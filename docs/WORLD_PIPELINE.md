@@ -37,6 +37,7 @@ Godot reference (copy mat karo, sirf dekho): `/home/opencode/project-data/worksp
 4. **Godot Navigation/physics wiring (PLANNED).** `physics_qa_gate.js` sirf local deterministic checks (BFS reachability, tunneling) karta hai — Godot `NavigationAgent3D` / Rigidbody wiring ka code nahi hai.
 5. **LOD/occlusion perf (PLANNED).** LOD + occlusion culling ka koi code nahi hai; Three.js runtime CSP-compliant split (`index.html` + `game.js`) tak hi hai.
 6. **Depth Anything V2 (LIVE as local tool).** `src/tools/depth_map.py` — Depth-Anything-V2-Small HF checkpoint (MIT), CPU-only, brighter = nearer PNG + optional `.npy`. Gaussian Splatting still PLANNED (koi code nahi hai). Details: §6 below.
+7. **ComfyUI (NOT used — manual/external).** Chat ne drag-drop workflow suggest kiya tha; sach: repo me koi ComfyUI workflow JSON ya node graph nahi hai — panorama/depth/splat steps upar ke local tools (§6–§7) se hote hain. ComfyUI manual external tool ki tarah allowed hai, lekin shipped path ka hissa nahi hai.
 
 ## 4. Rules reminder (Meta hackathon compliance)
 
@@ -99,3 +100,55 @@ Code: `src/tools/blender_cleanup.py`.
 Start bounded — single arena / track / room / island (`worldBound:72` pattern) — then scale up freely (multi-arena, connected zones, larger bounds, richer dressing via Blender/SAM3D/Image) as long as fps budgets, the QA gate, and the done-gate pass. The ceiling is QUALITY, not size: grow until perf/playtest says stop, then stop.
 Scaling ladder: arena → connected zones → larger bounds; each step up is gated by the fps meter + QA gate (`src/verifier/physics_qa_gate.js`).
 Never shrink ambition by default — only scope down when measurements demand it. We still don't promise full Hunyuan World 2.0 open explorable worlds; we grow toward them gate by gate instead of scoping down up front.
+
+## 9. Skybox flow (LIVE-capable)
+
+Panorama → scene background. No new code needed: `make-image.js` (Meta Muse
+Image) generates the art, the preview's vendored three.js displays it.
+LIVE-capable = every piece below is verified working today.
+
+**Step 1 — generate the panorama** (exact prompt pattern; fill in
+`<style>` from the Wonder/Spark game JSON):
+
+```bash
+node src/tools/make-image.js --prompt "equirectangular 360 panorama, seamless wrapping horizon, no text, no watermark, no people close-up, <style>, game skybox backdrop, dusk lighting" --out storage/.uploads/<game>_sky.webp
+```
+
+Prompt rules: must contain `equirectangular`, `seamless`, `no text`;
+2:1 wide output reads best as a skybox. The file is served at
+`/studio/uploads/<game>_sky.webp` (same static route as other uploads).
+
+**Step 2 — set it as the scene background** (`public/live-preview/`
+`index.html` + `game.js`; CSP-safe, local-only, no CDN — same as ever):
+
+```html
+<script src="/studio/vendor/three.min.js" defer></script>
+```
+
+```js
+// game.js — 360 skybox on the preview's vendored three.js r128
+const loader = new THREE.TextureLoader();
+loader.load("/studio/uploads/<game>_sky.webp", function (tex) {
+  tex.mapping = THREE.EquirectangularReflectionMapping;
+  // r128-correct 360 path: plain-texture scene.background renders flat,
+  // so convert equirect -> cube first (both APIs verified in vendor file).
+  const cubeRT = new THREE.WebGLCubeRenderTarget(
+    512,
+  ).fromEquirectangularTexture(renderer, tex);
+  scene.background = cubeRT.texture;
+  tex.dispose();
+});
+```
+
+**API check (honest, verified 30 Oct 2026 against
+`src/engine/vendor/three.min.js`, revision r128):**
+`THREE.EquirectangularReflectionMapping` ✅ PRESENT,
+`THREE.TextureLoader` ✅ PRESENT,
+`WebGLCubeRenderTarget.fromEquirectangularTexture` ✅ PRESENT,
+`Scene.background` (texture/cube path) ✅ PRESENT.
+⚠️ The one-liner `texture.mapping = THREE.EquirectangularReflectionMapping;
+scene.background = texture` does **NOT** 360-render on this vendored r128 —
+a plain Texture background draws as a flat fullscreen quad (renderer branch
+verified in the vendor bundle). Use the cube-conversion snippet above for
+the preview; the direct-assignment pattern applies only if the preview ever
+upgrades to the modern three in `node_modules` (^0.186.1).
