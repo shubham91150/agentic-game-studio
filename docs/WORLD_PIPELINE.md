@@ -32,7 +32,7 @@ Godot reference (copy mat karo, sirf dekho): `/home/opencode/project-data/worksp
 ## 3. Gaps to build (PLANNED — aaj repo me nahi hai)
 
 1. **Proper audio (PLANNED / research).** Chat ne "Meta AudioCraft/MusicGen" bola. Sach: repo me sirf WebAudio oscillator synth hai — **ye Meta AudioCraft NAHI hai** (`src/audio/audiocraft_synth.js` — EXISTS, procedural jump/collect/drone stems). Asli generative audio (AudioCraft/MusicGen open weights) research item hai, koi code nahi hai.
-2. **NPC dialogue via Spark (PLANNED, chhota).** Idea: Wonder/Spark JSON me `story/dialogue` field — shopkeeper lines ("aao jalebi khao") generate karke game spec me daalo. Aaj spec me story/dialogue nahi hai.
+2. **NPC dialogue via Spark (LIVE as CLI tool).** `src/tools/npc_dialogue.js` — `--character/--world/--lines/--out` → JSON array of `{speaker, line, mood}` via Baseten `meta-models/muse-spark-open-1026` (cheapest model for short dialogue; deterministic local fallback if the provider is down). Verified 30 Oct 2026: 5 shopkeeper lines, schema-valid. Game-spec `story/dialogue` injection still PLANNED.
 3. **Mixamo-style auto-rig (PLANNED, external).** Note: Mixamo Adobe ka third-party tool hai — tool ki tarah allowed, lekin external dependency; SAM 3D mesh pe skeleton/walk-anim ka koi code repo me nahi hai.
 4. **Godot Navigation/physics wiring (PLANNED).** `physics_qa_gate.js` sirf local deterministic checks (BFS reachability, tunneling) karta hai — Godot `NavigationAgent3D` / Rigidbody wiring ka code nahi hai.
 5. **LOD/occlusion perf (PLANNED).** LOD + occlusion culling ka koi code nahi hai; Three.js runtime CSP-compliant split (`index.html` + `game.js`) tak hi hai.
