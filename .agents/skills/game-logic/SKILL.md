@@ -69,6 +69,16 @@ No shortcuts.
 - One shared AudioContext (resume on first gesture). Master gain ← volume setting.
 - SFX: jump (sine sweep up), pickup (two-note chime), hit (noise burst + low thud), win (arpeggio). Music: tiny looped sequencer (bass + pad), mutable.
 
+### NPC speech (free, built-in)
+
+- Standard: browser `speechSynthesis` — no downloads, no API key, no infra.
+- Helper spec: `speak(line, { rate, pitch })` — pick voice by lang preference list (`en-US` → default voice fallback), `rate` 1.0 default / `pitch` per mood (grumpy: rate 0.9 pitch 0.7; cheerful: 1.1/1.2).
+- Always `speechSynthesis.cancel()` before a new line (no overlap).
+- Fully gated by existing mute + volume settings (mute = skip speech entirely; voice is audio, so gate on mute only — NOT on `prefers-reduced-motion`).
+- Graceful no-op if API missing (older browsers: `if (!('speechSynthesis' in window)) return`).
+- Dialogue UI: typewriter text + portrait + voice together (speak on line start, cancel on line skip/close).
+- UPGRADE path (RESEARCH, not existing): Meta SeamlessM4T open weights on Modal for real TTS later.
+
 ## 8. Done-Gate (playtest before saying done)
 
 - [ ] 60 seconds of play: no jank, fps stable per §5 meter.
