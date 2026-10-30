@@ -104,6 +104,10 @@ node src/tools/make-image.js --prompt "sci-fi power crystal, game key art, no te
 
 World-expansion (parallax views / relief mesh from a concept image, TOOL ONLY — never the shipped Meta path): depth→warp→Blender-projection chain lives in `src/tools/depth_map.py` → `novel_view.py` → `blender_project.py` (exact commands + timings: `docs/WORLD_PIPELINE.md` §6); use when the user asks for novel views, depth relief, or scene expansion from a flat image, and never route shipped submissions through it.
 
+## Step 1d — Mesh Cleanup (SAM 3D / generated .glb → game-ready .glb)
+
+Mesh cleanup (dense SAM 3D output, TOOL ONLY — never the shipped Meta path): `src/tools/blender_cleanup.py` headless decimate + merge-doubles + loose-delete + transform-apply (exact command + verified sizes: `docs/WORLD_PIPELINE.md` §7); use when the user asks to clean, decimate, shrink, or game-ready a `.glb` before it ships in a game.
+
 ## Step 2 — Hand-Written Multi-File Game Structure (fallback or edits)
 
 Write these files under `public/live-preview/`. Keep each file focused:

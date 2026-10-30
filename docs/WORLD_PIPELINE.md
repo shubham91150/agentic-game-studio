@@ -74,3 +74,22 @@ blender --background --python src/tools/blender_project.py -- \
 ```
 
 Code: `src/tools/depth_map.py`, `src/tools/novel_view.py`, `src/tools/blender_project.py`.
+
+## 7. Mesh cleanup (LIVE — tool only, never the shipped path)
+
+SAM 3D / generated meshes carry dense tris, loose verts, and unapplied
+transforms. `src/tools/blender_cleanup.py` normalizes them headless
+(Blender 3.4.1, zero ML weights): import `.glb` → COLLAPSE decimate
+(`--ratio`, default 0.5) → merge doubles (dist 0.0001) + delete loose
+verts/edges → root `--scale` + apply rotation/scale → export `.glb`.
+
+```bash
+# Verified 30 Oct 2026 on storage/.uploads/drone.glb (133888 B):
+# → /tmp/drone_clean.glb (103632 B, glTF magic OK), roundtrip re-clean OK
+PYTHONPATH=/home/opencode/.local/lib/python3.11/site-packages \
+blender --background --python src/tools/blender_cleanup.py -- \
+    --in storage/.uploads/drone.glb --out /tmp/drone_clean.glb \
+    --ratio 0.5 --scale 1.0
+```
+
+Code: `src/tools/blender_cleanup.py`.
