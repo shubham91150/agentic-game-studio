@@ -94,6 +94,8 @@ blender --background --python src/tools/blender_cleanup.py -- \
 
 Code: `src/tools/blender_cleanup.py`.
 
-## 8. Scope decision: bounded worlds win (open explorable worlds out of scope)
+## 8. Scope decision: as big as quality holds (start bounded, scale on green gates)
 
-We cannot fully replace Hunyuan World 2.0 open explorable worlds — so we build specific bounded 3D games (single arena / track / room / island, `worldBound:72` pattern) instead: bounded quality over open mediocrity.
+Start bounded — single arena / track / room / island (`worldBound:72` pattern) — then scale up freely (multi-arena, connected zones, larger bounds, richer dressing via Blender/SAM3D/Image) as long as fps budgets, the QA gate, and the done-gate pass. The ceiling is QUALITY, not size: grow until perf/playtest says stop, then stop.
+Scaling ladder: arena → connected zones → larger bounds; each step up is gated by the fps meter + QA gate (`src/verifier/physics_qa_gate.js`).
+Never shrink ambition by default — only scope down when measurements demand it. We still don't promise full Hunyuan World 2.0 open explorable worlds; we grow toward them gate by gate instead of scoping down up front.
