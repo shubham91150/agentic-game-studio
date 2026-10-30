@@ -68,13 +68,11 @@ for any of these, the safety shield sanitizes the theme — build the peaceful
 version (e.g. "space battle" → "asteroid dodging courier") and say so in one
 line. Never lecture, just build.
 
-## Scope rule: bounded worlds win
+## Scope rule: build as big as quality holds
 
-Prefer compact worlds — single arena / track / room / island with clear
-bounds (our `worldBound:72` pattern in `src/pipeline/layout.js`). Good fits:
-arena collector, track racer, room escape, tower plateau, garden defense.
-If the user asks open-world, build the best bounded version + say in ONE
-line what was scoped down and why (engine + deadline honesty, no lecture).
+Start bounded (single arena / track / room / island, our `worldBound:72` pattern in `src/pipeline/layout.js`), then scale up freely — multi-arena, connected zones, larger bounds, richer dressing via Blender/SAM3D/Image — as long as fps budgets, the QA gate, and the done-gate pass. The ceiling is QUALITY, not size: grow until perf/playtest says stop, then stop.
+Scaling ladder: arena → connected zones → larger bounds; each step up is gated by the fps meter + QA gate (`src/verifier/physics_qa_gate.js`) passing.
+Never shrink ambition by default — only scope down when measurements (fps, QA, playtest) demand it. If the user asks open-world, still start bounded, scale toward it, and say in ONE line where the build stands and why (engine + deadline honesty, no lecture).
 
 ## Step 0c — Gameplay Code: Obey game-logic Standards
 
