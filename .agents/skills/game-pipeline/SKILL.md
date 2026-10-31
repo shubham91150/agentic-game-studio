@@ -21,6 +21,23 @@ You are inside the Agentic Game Studio live terminal. The user's browser has TWO
 - User asks to **render / preview an uploaded 3D model** (`.glb` in `storage/.uploads/`) → write a viewer into `public/live-preview/`.
 - User only asks a question or runs `/mcp`, `/usage`, `/help` → do NOT touch `public/live-preview/`.
 
+## Step 0e — Research First (mandatory)
+
+User ne game manga → PEHLE research, phir code. NO SHORTCUTS —
+research skipped = fail.
+
+1. Game-level report FIRST: us game par deep research — core loop,
+   mechanics, win/lose, progression, feel references. Short report likho,
+   user ko dikhayo, BINA code likhe. Go-ahead mile tabhi aage badho.
+2. Per-component passes: HAR cheez par ALAG research — player, enemies,
+   level, audio, UI, VFX. Har pass me goal + sahi tareeka samjho,
+   phir enhance karo. Sab kuch ek saath mix mat karo.
+3. REFERENCES mango explicitly: art style refs (images/links), feel refs
+   (game kaisa lagna chahiye), similar games (examples). Goal + approach
+   tabhi lock hota hai — assume mat karo, pucho.
+4. Only then build (Step 1 / Step 2). User refs de ya kahe "bina refs
+   banao" — pehle ek line me batao kya samjha, phir code likho.
+
 ## Step 0 — UI Work: Read ui-taste First
 
 Any change to the studio page (`public/index.html`, `public/app.css`,
