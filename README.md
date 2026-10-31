@@ -1,6 +1,6 @@
 # Agentic Game Studio
 
-**Type a sentence. Get a playable 3D game** — in your browser instantly, with Unity C# to ship it natively.
+**Type a sentence. Watch a playable 3D prototype build in stages** — in your browser, with Unity C# to carry forward natively.
 
 Built for the **Meta Global AI Developer Hackathon 2026** · Indie Developer track · Theme: **Push the Frontier**
 
@@ -10,7 +10,7 @@ Built for the **Meta Global AI Developer Hackathon 2026** · Indie Developer tra
 
 | Criterion                        | What to look at                                                                                                                                                                                                                                                             |
 | -------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Impact (30%)**                 | Solo devs and game-jam teams lose days scaffolding a prototype. One prompt here produces a playable, verified, shareable build in about 20–60 seconds. Try two contrasting prompts live.                                                                                    |
+| **Impact (30%)**                 | Solo devs and game-jam teams lose days scaffolding a prototype. One prompt here starts a staged build you can watch — playable prototypes in minutes, production quality iteratively. Try two contrasting prompts live.                                                     |
 | **Use of Meta AI tooling (25%)** | Muse Wonder 1.0 designs the game, Muse Spark Open (open weights, Baseten) enriches assets, Muse Image 1.0 paints concept art, Muse Code CLI (`muse-spark-1.3`) writes the Unity C# on our VM. Verified pipeline table below.                                                |
 | **Demo (25%)**                   | Live site above. Prompt → live agent console (every step streamed) → playable game in the preview, phone-playable via QR. Prebuilt games are linked so you never wait.                                                                                                      |
 | **Technical depth (20%)**        | Deterministic shared layout rendered by the game _and_ proven by a BFS reachability gate; CCD tunneling math; scoped CLI workspaces with keys passed over stdin (never argv/logs); prompt-hash caching so repeat builds cost zero API calls. Tests: `npm test` (9 passing). |

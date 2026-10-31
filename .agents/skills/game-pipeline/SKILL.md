@@ -133,7 +133,7 @@ For a fresh game from a text prompt, the pipeline tool is ONE optional fast-path
 node src/tools/build-game.js --prompt "a desert rover rally with 3 jump ramps and 12 beacons"
 ```
 
-- Takes ~30–90s (Wonder + Baseten + Image API calls). Reuses `storage/cache/` on repeat prompts (0 credits).
+- Build time depends on live API calls (Wonder + Baseten + Image); watch each stage in the console. Reuses `storage/cache/` on repeat prompts (0 credits).
 - On success it prints `PREVIEW_READY public/live-preview/index.html` — the right pane picks it up automatically within ~2s. Just tell the user it's ready.
 - If you skip the tool (or it fails — API down), build by hand in Step 2 — a first-class path, not a fallback.
 
@@ -226,6 +226,11 @@ When anyone (user, judge, demo) asks what you use or skip, read
 proof), the top SKIP + its resource reason, and the vision one-liner
 (bounded quality over open mediocrity — by budget choice, not by claim).
 Never invent, never oversell, never claim a SKIP item as shipped.
+
+## Delivery honesty
+
+Never promise one-click finished games. Always build and report in stages (research → stage 1 → …).
+After each stage, say what is done vs what is pending.
 
 ## Before You Say "Done"
 
