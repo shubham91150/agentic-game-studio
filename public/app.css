@@ -2103,8 +2103,10 @@ button.icon-btn {
   .workspace-split {
     display: flex;
     flex-direction: column;
-    padding: 10px 12px calc(10px + env(safe-area-inset-bottom)) 8px;
+    padding: 10px 8px calc(10px + env(safe-area-inset-bottom)) 8px;
     gap: 10px;
+    overflow-x: clip;
+    max-width: 100%;
   }
 
   .pane-left {
@@ -2124,6 +2126,10 @@ button.icon-btn {
     display: none;
   }
 
+  .workspace-split[data-active-pane="preview"] .dock {
+    display: none;
+  }
+
   .workspace-split[data-active-pane="preview"] .pane-left {
     flex: 0 0 auto;
     order: 2;
@@ -2137,6 +2143,19 @@ button.icon-btn {
 
   .viewport {
     min-height: 240px;
+  }
+
+  /* FIX 1 (ui-taste): terminal spans full width edge-to-edge within the
+   * symmetric 8px gutter — no right-side blank gap, no sideways overflow. */
+  .terminal-section .terminal-box {
+    margin: 0;
+    max-width: 100%;
+  }
+
+  .terminal-frame {
+    width: 100%;
+    max-width: 100%;
+    margin: 0;
   }
 
   /* Single-row composer: one line, no wrap, ellipsis */
@@ -2256,7 +2275,7 @@ button.icon-btn {
   }
 
   .workspace-split {
-    padding: 8px 10px calc(8px + env(safe-area-inset-bottom)) 8px;
+    padding: 8px 8px calc(8px + env(safe-area-inset-bottom)) 8px;
   }
 
   .mobile-tabs {
