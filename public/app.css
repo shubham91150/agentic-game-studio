@@ -218,7 +218,7 @@ body {
   color: var(--muted);
   text-decoration: none;
   padding: 6px 10px;
-  border-radius: var(--r-sm);
+  border-radius: 4px;
   border: 1px solid transparent;
   transition:
     color var(--dur-fast) ease,
@@ -236,7 +236,7 @@ body {
 
 .crumb-btn {
   border: 1px solid var(--line);
-  border-radius: var(--r-sm);
+  border-radius: 4px;
   background: var(--surface-1);
   color: var(--ink-2);
   font: inherit;
@@ -462,7 +462,7 @@ body {
   color: var(--muted);
   text-decoration: none;
   padding: 5px 10px;
-  border-radius: var(--r-sm);
+  border-radius: 4px;
   background: transparent;
   border: 1px solid var(--line);
   transition:
@@ -514,7 +514,7 @@ body {
  * studio token system; no external fonts/CDN. Mobile-safe (collapses to icon). */
 .save-btn {
   border: 1px solid var(--line);
-  border-radius: var(--r-sm);
+  border-radius: 4px;
   background: transparent;
   color: var(--muted);
   font: inherit;
@@ -762,10 +762,11 @@ body {
 }
 
 .prompt-box {
+  // ui-taste: slightly lifted from pure black
   width: 100%;
   border: 1px solid rgba(255, 255, 255, 0.09);
   border-radius: 12px;
-  background: #000;
+  background: #0a0a0c;
   overflow: visible;
   text-align: left;
   box-shadow: none;
@@ -1030,6 +1031,7 @@ button.icon-btn {
 
 /* LEFT composer — minimal (ui-taste polish): single soft box, quiet row. */
 .prompt-box {
+  // ui-taste: slightly lifted from pure black
   border-color: var(--line);
   border-radius: var(--r-lg);
   background: var(--surface-0);
@@ -1809,7 +1811,7 @@ button.icon-btn {
   width: 28px;
   height: 28px;
   border: 1px solid transparent;
-  border-radius: var(--r-sm);
+  border-radius: 4px;
   background: transparent;
   color: var(--muted);
   padding: 0;
@@ -1977,7 +1979,7 @@ button.icon-btn {
 
 .sidebar-back {
   border: 1px solid var(--line);
-  border-radius: var(--r-sm);
+  border-radius: 4px;
   background: var(--surface-2);
   color: var(--ink-2);
   font: inherit;
