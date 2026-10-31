@@ -1,0 +1,39 @@
+- generic [active] [ref=f1e1]:
+  - generic:
+    - generic:
+      - generic: CRYSTALS
+      - generic: 0/10
+    - generic: HULL
+    - generic:
+      - generic: TIME
+      - generic: 0:00
+    - generic:
+      - generic: BEST
+      - generic: 1/10
+    - generic [ref=f1e4]:
+      - button "Mute" [ref=f1e5] [cursor=pointer]: 🔊
+      - button "Pause" [ref=f1e6] [cursor=pointer]: ❚❚
+  - generic: QUALITY AUTO → LOW
+  - generic [ref=f1e30]: 20 FPS
+  - generic [ref=f1e8]:
+    - generic [ref=f1e9]: CRYSTAL DRONE // ARENA
+    - generic [ref=f1e14]:
+      - heading "CRYSTAL DRONE // ARENA" [level=1] [ref=f1e15]
+      - paragraph [ref=f1e16]: Pilot a survey drone inside a bounded energy arena. Harvest every power crystal — and don't touch the rogue sentries.
+      - generic [ref=f1e17]: OBJECTIVE — Collect all 10 power crystals as fast as you can. 3 hull hits and the drone goes down.
+      - generic [ref=f1e18]:
+        - generic [ref=f1e19]:
+          - generic [ref=f1e20]: WASD / ARROWS
+          - text: fly the drone
+        - generic [ref=f1e21]:
+          - generic [ref=f1e22]: SHIFT / SPACE
+          - text: boost burst
+        - generic [ref=f1e23]:
+          - generic [ref=f1e24]: P / ESC
+          - text: pause game
+        - generic [ref=f1e25]:
+          - generic [ref=f1e26]: TOUCH
+          - text: left stick + BOOST
+      - generic [ref=f1e27]: BEST — 1/10
+      - button "LAUNCH DRONE" [ref=f1e28] [cursor=pointer]
+      - paragraph [ref=f1e29]: HEADPHONES ON — SYNTH AUDIO, NO DOWNLOADS

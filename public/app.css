@@ -949,8 +949,33 @@ button.icon-btn {
   cursor: wait;
 }
 
-.send-btn.busy svg {
+.send-btn.busy .icon-send {
   animation: spin 1s linear infinite;
+}
+
+.send-btn .icon-stop {
+  display: none;
+}
+
+.send-btn.is-stop .icon-send {
+  display: none;
+}
+
+.send-btn.is-stop .icon-stop {
+  display: block;
+  animation: none;
+}
+
+.send-btn.is-stop {
+  background: var(--surface-3);
+  color: var(--ink);
+  border: 1px solid var(--line-strong);
+}
+
+.send-btn.is-stop:hover:not(:disabled) {
+  background: rgba(248, 113, 113, 0.16);
+  color: var(--bad);
+  border-color: rgba(248, 113, 113, 0.45);
 }
 
 /* LEFT composer — minimal (ui-taste polish): single soft box, quiet row. */

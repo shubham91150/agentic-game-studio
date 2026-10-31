@@ -1,0 +1,17 @@
+- generic [active] [ref=f1e1]:
+  - generic:
+    - generic:
+      - generic: CRYSTALS
+      - generic: 0/10
+    - generic: HULL
+    - generic:
+      - generic: TIME
+      - generic: 0:00
+    - generic:
+      - generic: BEST
+      - generic: 1/10
+    - generic [ref=f1e4]:
+      - button "Mute" [ref=f1e5] [cursor=pointer]: 🔊
+      - button "Pause" [ref=f1e6] [cursor=pointer]: ❚❚
+  - generic: HARVEST ALL 10 CRYSTALS
+  - generic [ref=f1e30]: 20 FPS

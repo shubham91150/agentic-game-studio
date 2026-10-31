@@ -1,0 +1,19 @@
+- generic [active] [ref=f12e1]:
+  - generic:
+    - generic:
+      - generic: WAVE
+      - generic: 1/2
+    - generic:
+      - generic: CRYSTALS
+      - generic: 1/1
+    - generic: HULL
+    - generic:
+      - generic: TIME
+      - generic: 0:00
+    - generic:
+      - generic: BEST
+      - generic: 0:00
+    - generic [ref=f12e4]:
+      - button "Mute" [ref=f12e5] [cursor=pointer]: 🔊
+      - button "Pause" [ref=f12e6] [cursor=pointer]: ❚❚
+  - generic: WAVE 1 CLEARED — +1 HULL

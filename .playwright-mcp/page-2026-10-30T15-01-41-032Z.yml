@@ -1,0 +1,21 @@
+- generic [active] [ref=f10e1]:
+  - generic:
+    - generic:
+      - generic: WAVE
+      - generic: 1/2
+    - generic:
+      - generic: CRYSTALS
+      - generic: 0/1
+    - generic: HULL
+    - generic:
+      - generic: TIME
+      - generic: 0:00
+    - generic:
+      - generic: BEST
+      - generic: 0:00
+    - generic [ref=f10e4]:
+      - button "Mute" [ref=f10e5] [cursor=pointer]: 🔊
+      - button "Pause" [ref=f10e6] [cursor=pointer]: ❚❚
+  - generic: SHIELD 60s
+  - generic: SH 60s
+  - generic: ▲

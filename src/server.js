@@ -90,6 +90,38 @@ async function sendLineToTmux(line) {
   execFileSync("tmux", ["send-keys", "-t", TMUX_SESSION, "C-m"]);
 }
 
+function isTmuxCliBusy() {
+  try {
+    const out = execFileSync(
+      "tmux",
+      ["capture-pane", "-t", TMUX_SESSION, "-p"],
+      {
+        encoding: "utf8",
+        stdio: ["ignore", "pipe", "ignore"],
+        timeout: 2000,
+      },
+    );
+    const lines = String(out || "")
+      .split(/\r?\n/)
+      .map((l) => l.trimEnd())
+      .filter((l) => l.trim().length > 0);
+    const tail = lines.slice(-6).join("\n");
+    if (!tail) return false;
+    if (
+      /esc to interrupt|interrupt|thinking|working|running|generating|[⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏◐◓◑◒]/i.test(
+        tail,
+      ) &&
+      !/interrupted/i.test(tail)
+    ) {
+      return true;
+    }
+    const hasPrompt = lines.slice(-6).some((l) => /^\s*❯(\s|$)/.test(l));
+    return !hasPrompt;
+  } catch {
+    return false;
+  }
+}
+
 const CONTENT_TYPES = {
   ".html": "text/html; charset=utf-8",
   ".js": "application/javascript; charset=utf-8",
@@ -472,9 +504,10 @@ const server = http.createServer(async (req, res) => {
   // ---------- Live CLI preview stage (public/live-preview/*) ----------
   const livePreviewDir = path.join(PUBLIC_DIR, "live-preview");
   if (pathname === "/api/studio/preview-state" && req.method === "GET") {
+    const cliBusy = Boolean(isTmuxCliBusy());
     const indexPath = path.join(livePreviewDir, "index.html");
     if (!fs.existsSync(indexPath)) {
-      return json(res, 200, { ready: false, updatedAt: 0 });
+      return json(res, 200, { ready: false, updatedAt: 0, cliBusy });
     }
     let updatedAt = 0;
     let title = "Game Preview";
@@ -494,6 +527,7 @@ const server = http.createServer(async (req, res) => {
       updatedAt,
       title,
       url: "/studio/live-preview/index.html",
+      cliBusy,
     });
   }
 
@@ -671,6 +705,23 @@ const server = http.createServer(async (req, res) => {
       }
     });
     return;
+  }
+
+  // ---------- Stop / interrupt running turn in live Muse Code CLI terminal ----------
+  if (pathname === "/api/studio/terminal/stop" && req.method === "POST") {
+    req.resume();
+    try {
+      execFileSync("tmux", ["send-keys", "-t", TMUX_SESSION, "Escape"]);
+      await sleep(100);
+      execFileSync("tmux", ["send-keys", "-t", TMUX_SESSION, "C-c"]);
+    } catch {
+      /* ignore if session not running */
+    }
+    return json(res, 200, { ok: true, stopped: true });
+  }
+
+  if (pathname === "/api/studio/terminal/status" && req.method === "GET") {
+    return json(res, 200, { ok: true, cliBusy: Boolean(isTmuxCliBusy()) });
   }
 
   // ---------- Fresh terminal session (new chat) ----------

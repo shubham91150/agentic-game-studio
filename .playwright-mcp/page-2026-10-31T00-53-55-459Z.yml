@@ -1,0 +1,49 @@
+- generic [active] [ref=f5e1]:
+  - generic:
+    - generic:
+      - generic: ZONE
+      - generic: MEADOW
+    - generic:
+      - generic: CRYSTALS
+      - generic: "0"
+    - generic:
+      - generic: QUESTS
+      - generic: 0/3
+    - generic:
+      - generic: TIME
+      - generic: 0:00
+    - generic [ref=f5e4]:
+      - button "Mute" [ref=f5e5] [cursor=pointer]: 🔊
+      - button "Pause" [ref=f5e6] [cursor=pointer]: ❚❚
+  - generic:
+    - generic: ◇ RINGS 0/5
+    - generic: ◇ CHIMES 0/4
+    - generic: ◇ WISP 0/3
+  - generic [ref=f5e8]:
+    - generic [ref=f5e9]: SKYBOUND // EXPEDITION
+    - generic [ref=f5e14]:
+      - heading "SKYBOUND // EXPEDITION" [level=1] [ref=f5e15]
+      - paragraph [ref=f5e16]: Fly your survey drone across three connected wilds — meadow, desert canyon, glacier. Harvest crystals, open the zone gates, and finish all three field quests.
+      - generic [ref=f5e17]: "OBJECTIVE — Collect crystals to unlock gates (6 for canyon, 14 for glacier) and complete 3 quests: meadow ring run, canyon chimes, glacier wisp. Follow the ▲ arrow and minimap."
+      - generic [ref=f5e18]:
+        - generic [ref=f5e19]:
+          - generic [ref=f5e20]: WASD / ARROWS
+          - text: fly the drone
+        - generic [ref=f5e21]:
+          - generic [ref=f5e22]: SHIFT / SPACE
+          - text: boost burst
+        - generic [ref=f5e23]:
+          - generic [ref=f5e24]: P / ESC
+          - text: pause game
+        - generic [ref=f5e25]:
+          - generic [ref=f5e26]: TOUCH
+          - text: left stick + BOOST
+        - generic [ref=f5e27]:
+          - generic [ref=f5e28]: ▲ + MAP
+          - text: guide to targets
+        - generic [ref=f5e29]:
+          - generic [ref=f5e30]: GATES
+          - text: crystals unlock zones
+      - generic [ref=f5e31]: BEST — NO EXPEDITIONS YET
+      - button "TAKE FLIGHT" [ref=f5e32] [cursor=pointer]
+      - paragraph [ref=f5e33]: HEADPHONES ON — SYNTH AUDIO, NO DOWNLOADS

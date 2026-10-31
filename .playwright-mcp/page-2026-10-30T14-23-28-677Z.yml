@@ -1,0 +1,16 @@
+- generic [active] [ref=e1]:
+  - generic:
+    - generic:
+      - generic: CRYSTALS
+      - generic: 1/10
+    - generic: HULL
+    - generic:
+      - generic: TIME
+      - generic: 0:32
+    - generic:
+      - generic: BEST
+      - generic: "--"
+    - generic [ref=e4]:
+      - button "Mute" [ref=e5] [cursor=pointer]: 🔊
+      - button "Pause" [ref=e6] [cursor=pointer]: ❚❚
+  - generic: QUALITY AUTO → LOW

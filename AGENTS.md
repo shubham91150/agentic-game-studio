@@ -8,12 +8,25 @@ Muse Code reads this file as project rules when it runs in this directory.
 
 1. **STRICT BAN ON PRIMITIVE FAKES**: Building cars, trees, characters, buildings, props, or grass out of `THREE.BoxGeometry`, `THREE.ConeGeometry`, `THREE.CylinderGeometry`, `THREE.SphereGeometry`, `THREE.PlaneGeometry`, `function box(...)` helpers, or `THREE.MeshLambertMaterial` is **STRICTLY BANNED** and will be automatically rejected by `node src/verifier/visual_qa_gate.js`.
 2. **MANDATORY REAL `.glb` MODELS**: Always load real 3D `.glb` assets using `/studio/vendor/GLTFLoader.js` and `/studio/vendor/world_realism.js` (`WorldRealism.loadGlbModel(url, onLoaded)`). Over **100+ real CC0 `.glb` models** (sports cars, sedans, SUVs, trucks, pine/oak/palm trees, rocks, buildings, barriers, cones, characters, props) are locally available and indexed in `/studio/assets/models/index.json` (on disk at `public/assets/models/`).
-3. **MANDATORY 3D SHADER GRASS & REALISM HELPER**:
+3. **MANDATORY 3D SHADER GRASS, REALISTIC WATER, PBR BUILDINGS & REALISM HELPER**:
    - Load `<script src="/studio/vendor/three.min.js" defer></script>`, `<script src="/studio/vendor/GLTFLoader.js" defer></script>`, and `<script src="/studio/vendor/world_realism.js" defer></script>` in `public/live-preview/index.html`.
    - Use `WorldRealism.createRealisticSkyAndLighting(scene, renderer, options)` for ACES Filmic tone mapping, PMREM IBL environment reflections (`scene.environment`), sun-disc shader sky dome, and 3-point shadowed lighting.
-   - Use `WorldRealism.createProceduralPBRMaterial(kind, options)` (`'asphalt' | 'grass' | 'rock' | 'dirt' | 'kerb'`) for 512×512 Sobel normal-mapped + roughness-mapped PBR surfaces.
+   - Use `WorldRealism.createProceduralPBRMaterial(kind, options)` (`'asphalt' | 'grass' | 'rock' | 'dirt' | 'kerb' | 'brick' | 'concrete'`) for 512×512 Sobel normal-mapped + roughness-mapped PBR surfaces.
    - Use `WorldRealism.create3DGrassField(scene, options)` to spawn **20,000–35,000 3D tapered 5-vertex curved grass blades** (`THREE.InstancedMesh` with `onBeforeCompile` wind-sway vertex shader). Flat `PlaneGeometry` / `BoxGeometry` grass is forbidden.
+   - Use `WorldRealism.createRealisticWater(scene, options)` for animated dual-scrolling procedural wave water with Fresnel sky/deep-water blending (`#0a3246` ↔ `#7ab8d6`), sun specular glint, and shoreline foam edge feathering.
+   - Use `WorldRealism.createRealisticBuilding(options)` for multi-material PBR architectural buildings (normal-mapped concrete/brick facades, recessed reflective PMREM glass windows, ground-floor storefront frames, parapet cornice ledges, and rooftop HVAC/water-tank details). Flat untextured box buildings are forbidden.
+   - Use real Polyhaven photogrammetry models in `public/assets/polyhaven/` (served at `/studio/assets/polyhaven/<id>/<id>_1k.glb`, including `Barrel_01`, `Lantern_01`, `CoffeeCart_01`, `Drill_01`, `modular_street_seating`, trees, boulders, barriers, street lamps) or fetch additional ones via `python3 src/tools/fetch_polyhaven.py <id> --type model --res 1k`.
 4. **HARD VISUAL QA GATE**: Every 3D preview or game build MUST pass `node src/verifier/visual_qa_gate.js public/live-preview` before completion.
+
+## MANDATORY MULTI-SUBAGENT ORCHESTRATION RULE (`subagent_spawn` + `subagent_wait`)
+
+Muse Code CLI has built-in subagent tools: `subagent_spawn`, `subagent_wait`, `subagent_send_message`, and `subagent_cancel`.
+Whenever Muse Code CLI builds or upgrades a game, it **MUST NOT work single-threaded**. It MUST act as the **Lead Orchestrator** and spawn parallel specialized subagents via `subagent_spawn` + `subagent_wait` (giving each subagent strict file ownership so they never overwrite each other):
+
+1. **Subagent A — Research & Architecture**: Deep gameplay/mechanics/reference report, level spline/topology design, and state machine contract.
+2. **Subagent B — World, Terrain, Water & Foliage**: `WorldRealism.createRealisticSkyAndLighting`, `create3DGrassField`, `createRealisticWater`, `createRealisticBuilding`, and Polyhaven photogrammetry nature/rocks (`levels.js`).
+3. **Subagent C — Vehicles, Characters, Tools & Physics**: High-poly `.glb` vehicles/characters/tools/props (`public/assets/polyhaven/` & `public/assets/models/`), Rapier/arcade physics, animations, and WebAudio (`player.js`, `enemies.js`, `audio.js`, `vfx.js`).
+4. **Subagent D — Visual QA & Playtest Critic**: Runs `node src/verifier/visual_qa_gate.js`, takes headless Chromium screenshots, and rejects any primitive/box/cartoon asset before handoff.
 
 ## Live Studio Environment (Split-Screen UI)
 

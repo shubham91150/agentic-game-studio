@@ -1,0 +1,39 @@
+- generic [ref=f6e1]:
+  - generic:
+    - generic:
+      - generic: CRYSTALS
+      - generic: 0/10
+    - generic: HULL
+    - generic:
+      - generic: TIME
+      - generic: 1:02
+    - generic [ref=f6e4]:
+      - button "Mute" [ref=f6e5] [cursor=pointer]: 🔊
+      - button "Pause" [active] [ref=f6e6] [cursor=pointer]: ❚❚
+  - generic: HARVEST ALL 10 CRYSTALS
+  - button "BOOST" [ref=f6e10]
+  - generic [ref=f6e35]:
+    - generic [ref=f6e36]: PAUSED
+    - generic [ref=f6e41]:
+      - heading "Paused" [level=2] [ref=f6e42]
+      - generic [ref=f6e43]:
+        - generic [ref=f6e44]: VOLUME
+        - slider [ref=f6e45]: "70"
+        - generic [ref=f6e46]: "70"
+      - generic [ref=f6e47]:
+        - generic [ref=f6e48]: QUALITY
+        - combobox [ref=f6e49]:
+          - option "Low" [selected]
+          - option "Medium"
+          - option "High"
+      - generic [ref=f6e50]:
+        - generic [ref=f6e51]: SENSITIVITY
+        - slider [ref=f6e52]: "100"
+        - generic [ref=f6e53]: "1.0"
+      - generic [ref=f6e54]:
+        - generic [ref=f6e55]: MUTE
+        - checkbox [ref=f6e57] [cursor=pointer]
+      - generic [ref=f6e59]:
+        - button "RESUME" [ref=f6e60] [cursor=pointer]
+        - button "RESTART" [ref=f6e61] [cursor=pointer]
+      - button "RESET SAVE" [ref=f6e62] [cursor=pointer]

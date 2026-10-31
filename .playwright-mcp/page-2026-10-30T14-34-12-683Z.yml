@@ -1,0 +1,16 @@
+- generic [active] [ref=f4e1]:
+  - generic:
+    - generic:
+      - generic: CRYSTALS
+      - generic: 2/10
+    - generic: HULL
+    - generic:
+      - generic: TIME
+      - generic: 0:00
+    - generic:
+      - generic: BEST
+      - generic: 0:00
+    - generic [ref=f4e4]:
+      - button "Mute" [ref=f4e5] [cursor=pointer]: 🔊
+      - button "Pause" [ref=f4e6] [cursor=pointer]: ❚❚
+  - generic: HARVEST ALL 10 CRYSTALS

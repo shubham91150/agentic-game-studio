@@ -1,0 +1,26 @@
+- generic [active] [ref=f16e1]:
+  - generic:
+    - generic:
+      - generic: LAP
+      - generic: 1/3
+    - generic:
+      - generic: TIME
+      - generic: 0:14.7
+    - generic:
+      - generic: LAP TIME
+      - generic: "14.7"
+    - generic:
+      - generic: BEST
+      - generic: "29.3"
+    - generic [ref=f16e4]:
+      - button "Mute" [ref=f16e5] [cursor=pointer]: 🔇
+      - button "Pause" [ref=f16e6] [cursor=pointer]: ❚❚
+  - generic:
+    - generic: LAP 1 --
+    - generic: LAP 2 --
+    - generic: LAP 3 --
+  - generic:
+    - generic: 32 KM/H
+    - generic: GEAR 1 · GRIP
+  - generic: 3 LAPS · FOLLOW THE DRONE
+  - generic: 20 FPS · 38 DR

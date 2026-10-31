@@ -169,6 +169,23 @@
       return distGrid[iz * DF_SIZE + ix];
     }
 
+    var LAKE_X = 32.0,
+      LAKE_Z = -96.0,
+      LAKE_RX = 48.0,
+      LAKE_RZ = 34.0;
+
+    function lakeNormDist2(x, z) {
+      var dx = (x - LAKE_X) / LAKE_RX;
+      var dz = (z - LAKE_Z) / LAKE_RZ;
+      return dx * dx + dz * dz;
+    }
+
+    function isInLake(x, z) {
+      return (
+        lakeNormDist2(x, z) < 0.92 && fastTrackDist(x, z) > ROAD_HALF + 8.0
+      );
+    }
+
     function isOnTrack(x, z) {
       return fastTrackDist(x, z) < ROAD_HALF + 3.8;
     }
@@ -180,7 +197,14 @@
       if (d <= flatEdge) return 0.0;
       var t = Math.min(1.0, (d - flatEdge) / blendSpan);
       var smooth = t * t * (3.0 - 2.0 * t);
-      return Math.max(0.0, multiOctaveHeight(x, z) * smooth);
+      var baseH = Math.max(0.0, multiOctaveHeight(x, z) * smooth);
+      var ld2 = lakeNormDist2(x, z);
+      if (ld2 < 1.35 && d > ROAD_HALF + 6.5) {
+        var lakeFactor = Math.max(0.0, 1.0 - ld2 / 1.35);
+        var basin = lakeFactor * lakeFactor * (3.0 - 2.0 * lakeFactor);
+        return baseH * (1.0 - basin) - 1.35 * basin;
+      }
+      return baseH;
     }
 
     world.isOnTrack = isOnTrack;
@@ -409,7 +433,9 @@
       spread: 380,
       bladeHeight: 0.72,
       bladeWidth: 0.18,
-      excludeFn: isOnTrack,
+      excludeFn: function (x, z) {
+        return isOnTrack(x, z) || isInLake(x, z);
+      },
       heightFn: getTerrainHeight,
       sampleFn: function (attempt, u1, u2) {
         // Focus grass density near road verges and camera (distance 8m to 95m from track)
@@ -433,6 +459,92 @@
       },
     });
     world.grassField = grassField;
+
+    // 5b. Scenic Lakeside Water Body beside the opening straight & turn 1
+    var waterSurface = null;
+    if (typeof WR.createRealisticWater === "function") {
+      waterSurface = WR.createRealisticWater(scene, {
+        width: LAKE_RX * 2.0,
+        depth: LAKE_RZ * 2.0,
+        segmentsX: 64,
+        segmentsZ: 64,
+        position: [LAKE_X, 0.06, LAKE_Z],
+        sunDirection: [120, 95, 60],
+        deepColor: "#0a3246",
+        skyColor: "#7ab8d6",
+        waveHeight: 0.12,
+      });
+      world.water = waterSurface;
+    }
+
+    // 5c. Realistic Multi-Material PBR Buildings along the Start/Finish Village
+    if (typeof WR.createRealisticBuilding === "function") {
+      var buildingDefs = [
+        {
+          idx: S - 38,
+          lat: 23.5,
+          width: 14,
+          depth: 10,
+          floors: 3,
+          style: "brick",
+          yawOffset: -Math.PI / 2,
+        },
+        {
+          idx: S - 18,
+          lat: -23.0,
+          width: 12,
+          depth: 9.5,
+          floors: 2,
+          style: "concrete",
+          yawOffset: Math.PI / 2,
+        },
+        {
+          idx: 6,
+          lat: 24.0,
+          width: 15,
+          depth: 11,
+          floors: 4,
+          style: "concrete",
+          yawOffset: -Math.PI / 2,
+        },
+        {
+          idx: 30,
+          lat: 25.5,
+          width: 13,
+          depth: 10,
+          floors: 3,
+          style: "brick",
+          yawOffset: -Math.PI / 2,
+        },
+        {
+          idx: 72,
+          lat: 27.0,
+          width: 12,
+          depth: 9,
+          floors: 2,
+          style: "brick",
+          yawOffset: -Math.PI / 2,
+        },
+      ];
+      for (var bi = 0; bi < buildingDefs.length; bi++) {
+        var bd = buildingDefs[bi];
+        var bIdx = ((bd.idx % S) + S) % S;
+        var bP = pts[bIdx],
+          bSd = side[bIdx],
+          bT = tan[bIdx];
+        var bx = bP.x + bSd.x * bd.lat;
+        var bz = bP.z + bSd.z * bd.lat;
+        var by = Math.max(0, getTerrainHeight(bx, bz) - 0.15);
+        WR.createRealisticBuilding(scene, {
+          width: bd.width,
+          depth: bd.depth,
+          floors: bd.floors,
+          style: bd.style,
+          position: [bx, by, bz],
+          rotationY: Math.atan2(bT.x, bT.z) + bd.yawOffset,
+        });
+      }
+    }
 
     // 6. Corner rubber-mark decals on asphalt
     (function rubberDecals() {
@@ -673,38 +785,22 @@
         { targetLength: 6.8, envMapIntensity: 1.25 },
       ).catch(function () {});
 
-      // Polyhaven photogrammetry Jacaranda leafy trees: /studio/assets/polyhaven/jacaranda_tree/jacaranda_tree_1k.glb
+      // Polyhaven photogrammetry lush broadleaf canopy trees: /studio/assets/polyhaven/lush_tree_1k.glb
       WR.loadGlbModel(
-        "/studio/assets/polyhaven/jacaranda_tree/jacaranda_tree_1k.glb",
+        "/studio/assets/polyhaven/lush_tree_1k.glb",
         function (treeProto) {
-          treeProto.traverse(function (n) {
-            if (n && n.isMesh && n.material) {
-              var mats = Array.isArray(n.material) ? n.material : [n.material];
-              for (var mi = 0; mi < mats.length; mi++) {
-                if (
-                  mats[mi] &&
-                  (mats[mi].name || "").toLowerCase().indexOf("leaves") !== -1
-                ) {
-                  mats[mi].alphaTest = 0.45;
-                  mats[mi].transparent = false;
-                  mats[mi].depthWrite = true;
-                  mats[mi].side = THREE.DoubleSide;
-                  mats[mi].needsUpdate = true;
-                }
-              }
-            }
-          });
           var treeSpots = [
             { idx: S - 36, lat: -15, yawOffset: 0.4, scale: 1.15 },
             { idx: S - 24, lat: 15.5, yawOffset: 1.9, scale: 1.2 },
             { idx: S - 10, lat: -16, yawOffset: 3.1, scale: 1.1 },
             { idx: 8, lat: 16, yawOffset: 0.8, scale: 1.15 },
             { idx: 22, lat: -16.5, yawOffset: 2.4, scale: 1.25 },
+            { idx: 36, lat: 17, yawOffset: 1.2, scale: 1.18 },
           ];
-          for (var i = 60; i < S - 60; i += 55) {
-            var sideSign = i % 110 === 0 ? 1 : -1;
-            var dist = 16 + ((i * 37) % 18);
-            var sc = 0.9 + ((i * 19) % 8) * 0.08;
+          for (var i = 55; i < S - 50; i += 45) {
+            var sideSign = i % 90 === 0 ? 1 : -1;
+            var dist = 15 + ((i * 37) % 16);
+            var sc = 0.95 + ((i * 19) % 8) * 0.08;
             treeSpots.push({
               idx: i,
               lat: sideSign * dist,
@@ -712,29 +808,35 @@
               scale: sc,
             });
           }
-          placeAlongTrack(treeProto, treeSpots, true);
+          placeAlongTrack(treeProto, treeSpots, false);
         },
-        { targetLength: 11.5, envMapIntensity: 1.15, castShadow: false },
+        { targetLength: 13.5, envMapIntensity: 1.15, castShadow: true },
       ).catch(function () {});
 
-      // Polyhaven photogrammetry Quiver trees: /studio/assets/polyhaven/quiver_tree_02/quiver_tree_02_1k.glb
+      // Polyhaven photogrammetry lush conifer pine trees: /studio/assets/polyhaven/pine_tree_1k.glb
       WR.loadGlbModel(
-        "/studio/assets/polyhaven/quiver_tree_02/quiver_tree_02_1k.glb",
-        function (quiverProto) {
-          var quiverSpots = [];
-          for (var i = 12; i < S; i += 40) {
-            var sideSign = i % 80 < 40 ? -1 : 1;
-            var dist = 14 + ((i * 23) % 16);
-            quiverSpots.push({
+        "/studio/assets/polyhaven/pine_tree_1k.glb",
+        function (pineProto) {
+          var pineSpots = [
+            { idx: S - 30, lat: 18.5, yawOffset: 0.7, scale: 1.12 },
+            { idx: S - 16, lat: 17.5, yawOffset: 2.2, scale: 1.08 },
+            { idx: 2, lat: -17.5, yawOffset: 1.5, scale: 1.15 },
+            { idx: 16, lat: 18.0, yawOffset: 2.9, scale: 1.1 },
+            { idx: 30, lat: -18.0, yawOffset: 0.5, scale: 1.18 },
+          ];
+          for (var i = 12; i < S; i += 38) {
+            var sideSign = i % 76 < 38 ? -1 : 1;
+            var dist = 15 + ((i * 23) % 16);
+            pineSpots.push({
               idx: i,
               lat: sideSign * dist,
               yawOffset: (i * 0.9) % 6.28,
-              scale: 0.92 + ((i * 11) % 5) * 0.08,
+              scale: 0.96 + ((i * 11) % 5) * 0.08,
             });
           }
-          placeAlongTrack(quiverProto, quiverSpots, true);
+          placeAlongTrack(pineProto, pineSpots, false);
         },
-        { targetLength: 8.2, envMapIntensity: 1.15, castShadow: false },
+        { targetLength: 13.8, envMapIntensity: 1.15, castShadow: true },
       ).catch(function () {});
 
       // Polyhaven photogrammetry shrubs: /studio/assets/polyhaven/shrub_03/shrub_03_1k.glb
@@ -811,6 +913,85 @@
           placeAlongTrack(boulderProto, boulderSpots, true);
         },
         { targetLength: 6.4, envMapIntensity: 1.1, castShadow: false },
+      ).catch(function () {});
+
+      // Polyhaven photogrammetry CoffeeCart_01 near Start/Finish Village: /studio/assets/polyhaven/CoffeeCart_01/CoffeeCart_01_1k.glb
+      WR.loadGlbModel(
+        "/studio/assets/polyhaven/CoffeeCart_01/CoffeeCart_01_1k.glb",
+        function (cartProto) {
+          placeAlongTrack(
+            cartProto,
+            [
+              { idx: S - 28, lat: 14.5, yawOffset: -Math.PI / 2, scale: 1.0 },
+              { idx: 12, lat: 14.8, yawOffset: -Math.PI / 2, scale: 1.0 },
+            ],
+            false,
+          );
+        },
+        { targetLength: 2.6, envMapIntensity: 1.25, castShadow: true },
+      ).catch(function () {});
+
+      // Polyhaven photogrammetry modular_street_seating near Start/Finish Village & Lakeside: /studio/assets/polyhaven/modular_street_seating/modular_street_seating_1k.glb
+      WR.loadGlbModel(
+        "/studio/assets/polyhaven/modular_street_seating/modular_street_seating_1k.glb",
+        function (seatProto) {
+          placeAlongTrack(
+            seatProto,
+            [
+              { idx: S - 32, lat: 15.2, yawOffset: -Math.PI / 2, scale: 1.0 },
+              { idx: S - 12, lat: -15.0, yawOffset: Math.PI / 2, scale: 1.0 },
+              { idx: 18, lat: -14.5, yawOffset: Math.PI / 2, scale: 1.0 },
+            ],
+            false,
+          );
+        },
+        { targetLength: 3.2, envMapIntensity: 1.2, castShadow: true },
+      ).catch(function () {});
+
+      // Polyhaven photogrammetry Barrel_01 clusters in Pit/Start Village: /studio/assets/polyhaven/Barrel_01/Barrel_01_1k.glb
+      WR.loadGlbModel(
+        "/studio/assets/polyhaven/Barrel_01/Barrel_01_1k.glb",
+        function (barrelProto) {
+          placeAlongTrack(
+            barrelProto,
+            [
+              { idx: S - 22, lat: 13.5, yawOffset: 0.3, scale: 1.0 },
+              { idx: S - 21, lat: 14.2, yawOffset: 1.4, scale: 0.96 },
+              { idx: 4, lat: -13.8, yawOffset: 0.8, scale: 1.0 },
+              { idx: 5, lat: -14.5, yawOffset: 2.1, scale: 1.02 },
+            ],
+            true,
+          );
+        },
+        { targetLength: 0.95, envMapIntensity: 1.25, castShadow: false },
+      ).catch(function () {});
+
+      // Polyhaven photogrammetry Lantern_01 & Drill_01 Pit Details: /studio/assets/polyhaven/Lantern_01/Lantern_01_1k.glb & /studio/assets/polyhaven/Drill_01/Drill_01_1k.glb
+      WR.loadGlbModel(
+        "/studio/assets/polyhaven/Lantern_01/Lantern_01_1k.glb",
+        function (lanternProto) {
+          placeAlongTrack(
+            lanternProto,
+            [
+              { idx: S - 26, lat: 13.2, yawOffset: 0.5, scale: 1.0 },
+              { idx: 10, lat: 13.4, yawOffset: 1.2, scale: 1.0 },
+            ],
+            true,
+          );
+        },
+        { targetLength: 0.55, envMapIntensity: 1.3, castShadow: false },
+      ).catch(function () {});
+
+      WR.loadGlbModel(
+        "/studio/assets/polyhaven/Drill_01/Drill_01_1k.glb",
+        function (drillProto) {
+          placeAlongTrack(
+            drillProto,
+            [{ idx: S - 20, lat: 13.0, yawOffset: 0.9, scale: 1.0 }],
+            true,
+          );
+        },
+        { targetLength: 0.42, envMapIntensity: 1.3, castShadow: false },
       ).catch(function () {});
     }, 50);
 
@@ -923,6 +1104,9 @@
     world.update = function (dt, time, playerPos) {
       if (grassField && typeof grassField.update === "function") {
         grassField.update(dt, playerPos);
+      }
+      if (waterSurface && typeof waterSurface.update === "function") {
+        waterSurface.update(dt);
       }
       for (var i = 0; i < clouds.length; i++) {
         clouds[i].position.x += dt * 1.6;

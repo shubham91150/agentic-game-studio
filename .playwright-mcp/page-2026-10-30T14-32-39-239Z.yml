@@ -1,0 +1,33 @@
+- generic [active] [ref=f2e1]:
+  - generic:
+    - generic:
+      - generic: CRYSTALS
+      - generic: 2/2
+    - generic: HULL
+    - generic:
+      - generic: TIME
+      - generic: 0:00
+    - generic:
+      - generic: BEST
+      - generic: 0:00
+    - generic [ref=f2e4]:
+      - button "Mute" [ref=f2e5] [cursor=pointer]: 🔊
+      - button "Pause" [ref=f2e6] [cursor=pointer]: ❚❚
+  - generic: HALF HARVESTED
+  - generic [ref=f2e31]:
+    - generic [ref=f2e32]: ALL CRYSTALS HARVESTED
+    - generic [ref=f2e37]:
+      - heading "Arena Cleared" [level=2] [ref=f2e38]
+      - paragraph [ref=f2e39]: Clean sweep. The arena hums at full charge.
+      - generic [ref=f2e40]:
+        - generic [ref=f2e41]:
+          - generic [ref=f2e42]: 2/2
+          - generic [ref=f2e43]: CRYSTALS
+        - generic [ref=f2e44]:
+          - generic [ref=f2e45]: 0:00
+          - generic [ref=f2e46]: TIME
+        - generic [ref=f2e47]:
+          - generic [ref=f2e48]: 0:00
+          - generic [ref=f2e49]: BEST
+      - button "FLY AGAIN" [ref=f2e50] [cursor=pointer]
+      - button "MAIN MENU" [ref=f2e51] [cursor=pointer]

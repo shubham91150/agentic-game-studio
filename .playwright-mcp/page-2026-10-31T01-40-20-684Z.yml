@@ -1,0 +1,52 @@
+- generic [active] [ref=f10e1]:
+  - generic:
+    - generic:
+      - generic: LAP
+      - generic: 1/3
+    - generic:
+      - generic: TIME
+      - generic: 0:00.0
+    - generic:
+      - generic: LAP TIME
+      - generic: "--"
+    - generic:
+      - generic: BEST
+      - generic: "--"
+    - generic [ref=f10e4]:
+      - button "Mute" [ref=f10e5] [cursor=pointer]: 🔊
+      - button "Pause" [ref=f10e6] [cursor=pointer]: ❚❚
+  - generic:
+    - generic: LAP 1 --
+    - generic: LAP 2 --
+    - generic: LAP 3 --
+  - generic:
+    - generic: 0 KM/H
+    - generic: GEAR 1 · GRIP
+  - generic [ref=f10e9]:
+    - generic [ref=f10e10]: NITRO // CIRCUIT
+    - generic [ref=f10e14]:
+      - heading "NITRO // CIRCUIT" [level=1] [ref=f10e15]
+      - paragraph [ref=f10e16]: Arcade circuit racing. 3 laps, checkpoint-gated, boost crystals on the racing line — and a pace drone to chase. Finish clean, chase your best lap.
+      - generic [ref=f10e17]: OBJECTIVE — complete 3 laps through every checkpoint. Grab crystals for nitro boost. Follow the pace drone's line. Wrong-way burns time.
+      - generic [ref=f10e18]:
+        - generic [ref=f10e19]:
+          - generic [ref=f10e20]: WASD / ARROWS
+          - text: steer + gas/brake
+        - generic [ref=f10e21]:
+          - generic [ref=f10e22]: SPACE
+          - text: handbrake drift
+        - generic [ref=f10e23]:
+          - generic [ref=f10e24]: R
+          - text: reset to track
+        - generic [ref=f10e25]:
+          - generic [ref=f10e26]: P / ESC · M
+          - text: pause · mute
+        - generic [ref=f10e27]:
+          - generic [ref=f10e28]: TOUCH
+          - text: ◀ ▶ + GAS / BRK / DRIFT
+        - generic [ref=f10e29]:
+          - generic [ref=f10e30]: MAP
+          - text: track + drone + boosts
+      - generic [ref=f10e31]: BEST — NO LAPS YET
+      - button "START RACE" [ref=f10e32] [cursor=pointer]
+      - paragraph [ref=f10e33]: SYNTH ENGINE AUDIO — NO DOWNLOADS

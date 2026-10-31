@@ -669,6 +669,8 @@
         if (steps === 3) acc = 0;
         world.update(raw, now / 1000, player.mesh.position);
         G.VFX.update(raw, now / 1000, player.x, player.z);
+      } else if (world.water && typeof world.water.update === "function") {
+        world.water.update(raw);
       }
       updateCamera(raw);
       renderer.render(scene, camera);

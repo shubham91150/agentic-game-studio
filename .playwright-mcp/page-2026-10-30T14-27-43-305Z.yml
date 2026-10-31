@@ -1,0 +1,42 @@
+- generic [ref=f1e1]:
+  - generic:
+    - generic:
+      - generic: CRYSTALS
+      - generic: 0/10
+    - generic: HULL
+    - generic:
+      - generic: TIME
+      - generic: 0:29
+    - generic:
+      - generic: BEST
+      - generic: 1/10
+    - generic [ref=f1e4]:
+      - button "Mute" [ref=f1e5] [cursor=pointer]: 🔊
+      - button "Pause" [active] [ref=f1e6] [cursor=pointer]: ❚❚
+  - generic: HULL HIT — 1 LEFT
+  - generic [ref=f1e30]: 20 FPS
+  - generic [ref=f1e32]:
+    - generic [ref=f1e33]: PAUSED
+    - generic [ref=f1e38]:
+      - heading "Paused" [level=2] [ref=f1e39]
+      - generic [ref=f1e40]:
+        - generic [ref=f1e41]: VOLUME
+        - slider [ref=f1e42]: "70"
+        - generic [ref=f1e43]: "70"
+      - generic [ref=f1e44]:
+        - generic [ref=f1e45]: QUALITY
+        - combobox [ref=f1e46]:
+          - option "Low"
+          - option "Medium"
+          - option "High" [selected]
+      - generic [ref=f1e47]:
+        - generic [ref=f1e48]: SENSITIVITY
+        - slider [ref=f1e49]: "100"
+        - generic [ref=f1e50]: "1.0"
+      - generic [ref=f1e51]:
+        - generic [ref=f1e52]: MUTE
+        - checkbox [ref=f1e54] [cursor=pointer]
+      - generic [ref=f1e56]:
+        - button "RESUME" [ref=f1e57] [cursor=pointer]
+        - button "RESTART" [ref=f1e58] [cursor=pointer]
+      - button "RESET SAVE" [ref=f1e59] [cursor=pointer]

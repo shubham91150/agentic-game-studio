@@ -1,0 +1,41 @@
+- generic [ref=e1]:
+  - generic:
+    - generic:
+      - generic: CRYSTALS
+      - generic: 0/10
+    - generic: HULL
+    - generic:
+      - generic: TIME
+      - generic: 0:03
+    - generic:
+      - generic: BEST
+      - generic: "--"
+    - generic [ref=e4]:
+      - button "Mute" [ref=e5] [cursor=pointer]: 🔊
+      - button "Pause" [active] [ref=e6] [cursor=pointer]: ❚❚
+  - generic: HARVEST ALL 10 CRYSTALS
+  - generic [ref=e31]:
+    - generic [ref=e32]: PAUSED
+    - generic [ref=e37]:
+      - heading "Paused" [level=2] [ref=e38]
+      - generic [ref=e39]:
+        - generic [ref=e40]: VOLUME
+        - slider [ref=e41]: "70"
+        - generic [ref=e42]: "70"
+      - generic [ref=e43]:
+        - generic [ref=e44]: QUALITY
+        - combobox [ref=e45]:
+          - option "Low" [selected]
+          - option "Medium"
+          - option "High"
+      - generic [ref=e46]:
+        - generic [ref=e47]: SENSITIVITY
+        - slider [ref=e48]: "100"
+        - generic [ref=e49]: "1.0"
+      - generic [ref=e50]:
+        - generic [ref=e51]: MUTE
+        - checkbox [ref=e53] [cursor=pointer]
+      - generic [ref=e55]:
+        - button "RESUME" [ref=e56] [cursor=pointer]
+        - button "RESTART" [ref=e57] [cursor=pointer]
+      - button "RESET SAVE" [ref=e58] [cursor=pointer]

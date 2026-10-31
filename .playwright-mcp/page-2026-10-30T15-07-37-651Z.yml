@@ -1,0 +1,47 @@
+- generic [active] [ref=f14e1]:
+  - generic:
+    - generic:
+      - generic: WAVE
+      - generic: 1/4
+    - generic:
+      - generic: CRYSTALS
+      - generic: 0/6
+    - generic: HULL
+    - generic:
+      - generic: TIME
+      - generic: 0:00
+    - generic:
+      - generic: BEST
+      - generic: "--"
+    - generic [ref=f14e4]:
+      - button "Mute" [ref=f14e5] [cursor=pointer]: 🔊
+      - button "Pause" [ref=f14e6] [cursor=pointer]: ❚❚
+  - generic: HARVEST ALL 6 CRYSTALS
+  - generic [ref=f14e8]:
+    - generic [ref=f14e9]: CRYSTAL DRONE // ARENA
+    - generic [ref=f14e14]:
+      - heading "CRYSTAL DRONE // ARENA" [level=1] [ref=f14e15]
+      - paragraph [ref=f14e16]: Pilot a survey drone inside a bounded energy arena. Clear 3 waves of patrols and chasers, grab power-ups — then overload the Void Drone boss.
+      - generic [ref=f14e17]: OBJECTIVE — Harvest each wave's crystals to advance. 3 hull hits and the drone goes down. Follow the ▲ arrow to your next target.
+      - generic [ref=f14e18]:
+        - generic [ref=f14e19]:
+          - generic [ref=f14e20]: WASD / ARROWS
+          - text: fly the drone
+        - generic [ref=f14e21]:
+          - generic [ref=f14e22]: SHIFT / SPACE
+          - text: boost burst
+        - generic [ref=f14e23]:
+          - generic [ref=f14e24]: P / ESC
+          - text: pause game
+        - generic [ref=f14e25]:
+          - generic [ref=f14e26]: TOUCH
+          - text: left stick + BOOST
+        - generic [ref=f14e27]:
+          - generic [ref=f14e28]: ▲ ARROW
+          - text: points to target
+        - generic [ref=f14e29]:
+          - generic [ref=f14e30]: WAVES 1-3 + BOSS
+          - text: shield / speed / magnet
+      - generic [ref=f14e31]: BEST — NO RUNS YET
+      - button "LAUNCH DRONE" [ref=f14e32] [cursor=pointer]
+      - paragraph [ref=f14e33]: HEADPHONES ON — SYNTH AUDIO, NO DOWNLOADS

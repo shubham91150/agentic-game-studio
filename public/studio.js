@@ -50,6 +50,10 @@
   var attachments = [];
   var activeSkills = [];
   var running = false;
+  var agentWorking = false;
+  var agentGraceUntil = 0;
+  var agentGraceTimer = null;
+  var sendAbortController = null;
   var lastPreviewUpdatedAt = 0;
 
   // Prompt draft persistence: text survives reload until sent or deleted.
@@ -121,10 +125,62 @@
     statusEl.className = "status" + (cls ? " " + cls : "");
   }
 
+  function updateSendStopButton() {
+    if (!sendBtn) return;
+    var active = Boolean(running || agentWorking);
+    sendBtn.disabled = false;
+    sendBtn.classList.toggle("is-stop", active);
+    sendBtn.classList.toggle("busy", active);
+    if (active) {
+      sendBtn.setAttribute("title", "Stop agent (Esc)");
+      sendBtn.setAttribute("aria-label", "Stop agent");
+    } else {
+      sendBtn.setAttribute("title", "Send to Muse CLI & build preview (Enter)");
+      sendBtn.setAttribute("aria-label", "Build game");
+    }
+  }
+
   function setBusy(busy) {
     running = busy;
-    sendBtn.disabled = busy;
-    sendBtn.classList.toggle("busy", busy);
+    updateSendStopButton();
+  }
+
+  function setAgentWorking(working, graceMs) {
+    agentWorking = Boolean(working);
+    if (agentGraceTimer) {
+      clearTimeout(agentGraceTimer);
+      agentGraceTimer = null;
+    }
+    if (agentWorking && graceMs && graceMs > 0) {
+      agentGraceUntil = Date.now() + graceMs;
+      agentGraceTimer = setTimeout(function () {
+        agentGraceTimer = null;
+        pollPreviewState();
+      }, graceMs + 50);
+    } else if (!agentWorking) {
+      agentGraceUntil = 0;
+    }
+    updateSendStopButton();
+  }
+
+  function stopAgentRun() {
+    if (sendAbortController) {
+      try {
+        sendAbortController.abort();
+      } catch (e) {
+        /* ignore */
+      }
+      sendAbortController = null;
+    }
+    running = false;
+    setAgentWorking(false, 0);
+    setStatus("Stopped Muse Code CLI.", "warn");
+    fetch("/api/studio/terminal/stop", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+    }).catch(function () {
+      /* ignore */
+    });
   }
 
   // Mobile segmented tab switcher (CLI vs Game Preview)
@@ -498,7 +554,22 @@
         return res.ok ? res.json() : null;
       })
       .then(function (data) {
-        if (!data || !data.ready || !data.updatedAt) return;
+        if (!data) return;
+        if (typeof data.cliBusy === "boolean") {
+          if (data.cliBusy) {
+            if (!agentWorking) {
+              setAgentWorking(true, 0);
+            }
+          } else if (
+            agentWorking &&
+            Date.now() >= agentGraceUntil &&
+            !running
+          ) {
+            setAgentWorking(false, 0);
+            setStatus("Ready.", "ok");
+          }
+        }
+        if (!data.ready || !data.updatedAt) return;
         if (data.updatedAt > lastPreviewUpdatedAt) {
           lastPreviewUpdatedAt = data.updatedAt;
           if (titleEl) titleEl.textContent = data.title || "Game Preview";
@@ -523,13 +594,33 @@
   pollPreviewState();
   setInterval(pollPreviewState, 2000);
 
-  // Enter submits (Shift+Enter inserts a newline)
+  // Enter submits (Shift+Enter inserts a newline); Escape stops running CLI when prompt is empty
   promptEl.addEventListener("keydown", function (event) {
     if (event.key === "Enter" && !event.shiftKey) {
       event.preventDefault();
+      if (running || agentWorking) return;
       formEl.requestSubmit();
+      return;
+    }
+    if (
+      event.key === "Escape" &&
+      (running || agentWorking) &&
+      !promptEl.value.trim()
+    ) {
+      event.preventDefault();
+      stopAgentRun();
     }
   });
+
+  if (sendBtn) {
+    sendBtn.addEventListener("click", function (event) {
+      if (running || agentWorking) {
+        event.preventDefault();
+        event.stopPropagation();
+        stopAgentRun();
+      }
+    });
+  }
 
   // Switching the model picker switches the live CLI model in the terminal
   modelEl.addEventListener("change", function () {
@@ -1097,7 +1188,10 @@
   // Never run any fake/template game generator on slash commands or chat.
   formEl.addEventListener("submit", function (event) {
     event.preventDefault();
-    if (running) return;
+    if (running || agentWorking) {
+      stopAgentRun();
+      return;
+    }
     var prompt = promptEl.value.trim();
     if (!prompt) return;
     var model = modelEl.value;
@@ -1122,10 +1216,15 @@
       prompt;
 
     running = true;
+    setAgentWorking(true, 4500);
     setBusy(true);
     setStatus("Sending to Muse Code CLI…");
 
     loadTerminalInline();
+
+    var controller =
+      typeof AbortController !== "undefined" ? new AbortController() : null;
+    sendAbortController = controller;
 
     fetch("/api/studio/terminal/send", {
       method: "POST",
@@ -1135,12 +1234,14 @@
         model: model,
         attachments: currentAttachments,
       }),
+      signal: controller ? controller.signal : undefined,
     })
       .then(function (res) {
         if (!res.ok) throw new Error("Backend answered " + res.status);
         return res.json();
       })
       .then(function () {
+        if (controller && controller.signal.aborted) return;
         promptEl.value = "";
         clearDraft();
         attachments = [];
@@ -1150,12 +1251,17 @@
         renderSkillChips();
         renderInstructionChips();
         renderPlusMenu();
-        setStatus("Sent to Muse Code CLI (" + model + ").", "ok");
+        setStatus("Muse Code CLI working (" + model + ")…", "ok");
       })
-      .catch(function () {
+      .catch(function (err) {
+        if (err && err.name === "AbortError") return;
+        setAgentWorking(false, 0);
         setStatus("Could not reach the VM CLI terminal.", "error");
       })
       .then(function () {
+        if (sendAbortController === controller) {
+          sendAbortController = null;
+        }
         running = false;
         setBusy(false);
         promptEl.focus();
@@ -1271,6 +1377,16 @@
   }
 
   function newChat() {
+    if (sendAbortController) {
+      try {
+        sendAbortController.abort();
+      } catch (e) {
+        /* ignore */
+      }
+      sendAbortController = null;
+    }
+    running = false;
+    setAgentWorking(false, 0);
     if (promptEl) promptEl.value = "";
     clearDraft();
     setStatus("");

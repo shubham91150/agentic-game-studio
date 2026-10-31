@@ -161,6 +161,8 @@ export function generateThreeJsGameFiles(gameSpec, worldData, layout) {
   <div id="btn-mobile-jump">JUMP</div>
   <div id="caption" role="status" aria-live="polite"></div>
   <script src="/studio/vendor/three.min.js" defer></script>
+  <script src="/studio/vendor/GLTFLoader.js" defer></script>
+  <script src="/studio/vendor/world_realism.js" defer></script>
   <script src="./game.js" defer></script>
 </body>
 </html>`;
@@ -187,6 +189,7 @@ export function generateThreeJsGameFiles(gameSpec, worldData, layout) {
   const HEIGHTMAP = ${heightmapJson};
   const LAYOUT = ${layoutJson};
   const AMPLITUDE = ${amplitude};
+  const BIOME_NAME = '${biomeName}';
   const WORLD_BOUND = 72;
   const TARGET_ORBS = (LAYOUT.orbs || []).length || 12;
 
@@ -196,12 +199,12 @@ export function generateThreeJsGameFiles(gameSpec, worldData, layout) {
 
   const scene = new THREE.Scene();
   scene.background = new THREE.Color('${preset.fog}');
-  scene.fog = new THREE.FogExp2('${preset.fog}', 0.012);
+  scene.fog = new THREE.FogExp2('${preset.fog}', 0.008);
 
   const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
   let renderer;
   try {
-    renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
   } catch (err) {
     showEngineError('WebGL could not start in this browser. Try Chrome with hardware acceleration enabled.');
     return;
@@ -209,13 +212,36 @@ export function generateThreeJsGameFiles(gameSpec, worldData, layout) {
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.shadowMap.enabled = true;
+  if (THREE.PCFSoftShadowMap !== undefined) {
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  }
+  if (THREE.ACESFilmicToneMapping !== undefined) {
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.08;
+  }
+  if (THREE.sRGBEncoding !== undefined) {
+    renderer.outputEncoding = THREE.sRGBEncoding;
+  }
   container.appendChild(renderer.domElement);
 
-  scene.add(new THREE.AmbientLight(0xffffff, 0.65));
-  const sunLight = new THREE.DirectionalLight('${preset.sun}', 1.25);
-  sunLight.position.set(20, 40, 20);
-  sunLight.castShadow = true;
-  scene.add(sunLight);
+  const WR = typeof window !== 'undefined' ? window.WorldRealism : null;
+  let skyRig = null;
+  if (WR && typeof WR.createRealisticSkyAndLighting === 'function') {
+    skyRig = WR.createRealisticSkyAndLighting(scene, renderer, {
+      sunPosition: [110, 95, 65],
+      sunLightColor: '${preset.sun}',
+      groundColor: '${preset.terrain}',
+      fogColor: '${preset.fog}',
+      fogDensity: 0.0035,
+      exposure: 1.08
+    });
+  } else {
+    scene.add(new THREE.AmbientLight(0xffffff, 0.65));
+    const sunLight = new THREE.DirectionalLight('${preset.sun}', 1.25);
+    sunLight.position.set(20, 40, 20);
+    sunLight.castShadow = true;
+    scene.add(sunLight);
+  }
 
   function groundHeight(x, z) {
     if (!HEIGHTMAP.length) return 0;
@@ -225,65 +251,152 @@ export function generateThreeJsGameFiles(gameSpec, worldData, layout) {
     return (HEIGHTMAP[gz][gx] || 0) * AMPLITUDE * 0.35;
   }
 
-  const terrainGeo = new THREE.PlaneGeometry(160, 160, 48, 48);
+  const terrainGeo = new THREE.PlaneGeometry(160, 160, 64, 64);
   terrainGeo.rotateX(-Math.PI / 2);
   const pos = terrainGeo.attributes.position;
   for (let i = 0; i < pos.count; i++) {
     pos.setY(i, groundHeight(pos.getX(i), pos.getZ(i)));
   }
   terrainGeo.computeVertexNormals();
-  const terrain = new THREE.Mesh(
-    terrainGeo,
-    new THREE.MeshStandardMaterial({ color: '${preset.terrain}', roughness: 0.9, metalness: 0.15, flatShading: true })
-  );
+  let terrainMat;
+  if (WR && typeof WR.createProceduralPBRMaterial === 'function') {
+    const surfaceKind = BIOME_NAME === 'desert-canyon' ? 'dirt' : (BIOME_NAME === 'subzero-glacier' ? 'rock' : 'grass');
+    terrainMat = WR.createProceduralPBRMaterial(surfaceKind, { repeatX: 28, repeatY: 28, roughness: 0.88 });
+    terrainMat.color.lerp(new THREE.Color('${preset.terrain}'), 0.35);
+  } else {
+    terrainMat = new THREE.MeshStandardMaterial({ color: '${preset.terrain}', roughness: 0.9, metalness: 0.15 });
+  }
+  const terrain = new THREE.Mesh(terrainGeo, terrainMat);
   terrain.receiveShadow = true;
   scene.add(terrain);
 
-  const grid = new THREE.GridHelper(160, 40, '${preset.gridA}', '${preset.gridB}');
-  grid.position.y = 0.05;
-  grid.material.transparent = true;
-  grid.material.opacity = 0.35;
-  scene.add(grid);
+  let grassField = null;
+  if (WR && typeof WR.create3DGrassField === 'function') {
+    grassField = WR.create3DGrassField(scene, {
+      count: 24000,
+      spread: 150,
+      bladeHeight: 0.65,
+      bladeWidth: 0.18,
+      heightFn: groundHeight,
+      excludeFn: function (x, z) {
+        if (Math.hypot(x, z) < 4.5) return true;
+        return (LAYOUT.obstacles || []).some(function (o) {
+          return Math.hypot(x - o.x, z - o.z) < (o.r || 1.5) + 0.8;
+        });
+      }
+    });
+  }
 
+  // Player — immediate fallback mesh for frame-0 movement/collision, upgraded to real .glb
   const playerGroup = new THREE.Group();
+  const fallbackPlayer = new THREE.Group();
   const bodyMesh = new THREE.Mesh(
-    new THREE.BoxGeometry(1.2, 1.8, 1.0),
-    new THREE.MeshStandardMaterial({ color: '${preset.player}', roughness: 0.3, metalness: 0.7 })
+    new THREE.CapsuleGeometry ? new THREE.CapsuleGeometry(0.55, 0.9, 8, 16) : new THREE.CylinderGeometry(0.55, 0.55, 1.8, 16),
+    new THREE.MeshStandardMaterial({ color: '${preset.player}', roughness: 0.25, metalness: 0.75 })
   );
-  bodyMesh.position.y = 0.9;
+  bodyMesh.position.y = 0.95;
   bodyMesh.castShadow = true;
-  playerGroup.add(bodyMesh);
+  fallbackPlayer.add(bodyMesh);
   const coreMesh = new THREE.Mesh(
-    new THREE.BoxGeometry(0.8, 0.4, 0.3),
+    new THREE.SphereGeometry(0.35, 12, 12),
     new THREE.MeshBasicMaterial({ color: '${preset.collectible}' })
   );
-  coreMesh.position.set(0, 1.2, 0.45);
-  playerGroup.add(coreMesh);
+  coreMesh.position.set(0, 1.2, 0.42);
+  fallbackPlayer.add(coreMesh);
+  playerGroup.add(fallbackPlayer);
   scene.add(playerGroup);
 
-  // Obstacles (pylons) — solid, with collision.
+  const playerGlbUrl = BIOME_NAME === 'cyber-orbital'
+    ? '/studio/assets/models/vehicles/drone.glb'
+    : '/studio/assets/polyhaven/supercar_highpoly.glb';
+  if (WR && typeof WR.loadGlbModel === 'function') {
+    WR.loadGlbModel(playerGlbUrl, function (modelRoot) {
+      playerGroup.remove(fallbackPlayer);
+      if (playerGlbUrl.indexOf('drone.glb') !== -1) {
+        modelRoot.position.y += 0.9;
+      }
+      playerGroup.add(modelRoot);
+    }, { targetLength: 2.8, envMapIntensity: 1.35 }).catch(function () {});
+  }
+
+  // Obstacles — solid collision from frame 0, upgraded to real Polyhaven boulders & trees
   const obstacles = [];
-  const obstacleGeo = new THREE.BoxGeometry(1.4, 3.2, 1.4);
-  const obstacleMat = new THREE.MeshStandardMaterial({ color: '${preset.obstacle}', roughness: 0.6, metalness: 0.4 });
-  (LAYOUT.obstacles || []).forEach(function (o) {
-    const mesh = new THREE.Mesh(obstacleGeo, obstacleMat);
-    mesh.position.set(o.x, groundHeight(o.x, o.z) + 1.6, o.z);
-    mesh.castShadow = true;
-    scene.add(mesh);
+  const obstacleGroups = [];
+  const obstacleGeo = new THREE.DodecahedronGeometry(1.35, 1);
+  const obstacleMat = new THREE.MeshStandardMaterial({ color: '${preset.obstacle}', roughness: 0.75, metalness: 0.2 });
+  (LAYOUT.obstacles || []).forEach(function (o, idx) {
+    const grp = new THREE.Group();
+    grp.position.set(o.x, groundHeight(o.x, o.z), o.z);
+    const fallbackRock = new THREE.Mesh(obstacleGeo, obstacleMat);
+    fallbackRock.position.y = 1.1;
+    fallbackRock.rotation.set(idx * 0.7, idx * 1.3, 0);
+    fallbackRock.castShadow = true;
+    fallbackRock.receiveShadow = true;
+    grp.add(fallbackRock);
+    grp.userData.fallbackMesh = fallbackRock;
+    grp.userData.seed = idx;
+    scene.add(grp);
+    obstacleGroups.push(grp);
     obstacles.push({ x: o.x, z: o.z, r: o.r || 1.5 });
   });
 
-  // Collectible orbs
+  if (WR && typeof WR.loadGlbModel === 'function') {
+    WR.loadGlbModel('/studio/assets/polyhaven/boulder_01/boulder_01_1k.glb', function (boulderTemplate) {
+      obstacleGroups.forEach(function (grp, idx) {
+        if (idx % 3 === 2) return;
+        if (grp.userData.fallbackMesh) {
+          grp.remove(grp.userData.fallbackMesh);
+          grp.userData.fallbackMesh = null;
+        }
+        const clone = boulderTemplate.clone(true);
+        clone.rotation.y = (idx * 1.7) % (Math.PI * 2);
+        grp.add(clone);
+      });
+    }, { targetLength: 2.9 }).catch(function () {});
+
+    WR.loadGlbModel('/studio/assets/polyhaven/jacaranda_tree/jacaranda_tree_1k.glb', function (treeTemplate) {
+      obstacleGroups.forEach(function (grp, idx) {
+        if (idx % 3 !== 2) return;
+        if (grp.userData.fallbackMesh) {
+          grp.remove(grp.userData.fallbackMesh);
+          grp.userData.fallbackMesh = null;
+        }
+        const clone = treeTemplate.clone(true);
+        clone.rotation.y = (idx * 2.3) % (Math.PI * 2);
+        grp.add(clone);
+      });
+    }, { targetLength: 5.8 }).catch(function () {});
+  }
+
+  // Collectible orbs — immediate fallback crystals for frame-0 pickup, upgraded to scifi_power_crystal.glb
   const collectibles = [];
-  const colGeo = new THREE.OctahedronGeometry(0.65);
-  const colMat = new THREE.MeshStandardMaterial({ color: '${preset.collectible}', roughness: 0.15, metalness: 0.8, emissive: '${preset.collectible}', emissiveIntensity: 0.25 });
+  const colGeo = new THREE.OctahedronGeometry(0.65, 1);
+  const colMat = new THREE.MeshStandardMaterial({ color: '${preset.collectible}', roughness: 0.15, metalness: 0.8, emissive: '${preset.collectible}', emissiveIntensity: 0.35 });
   (LAYOUT.orbs || []).forEach(function (o) {
-    const mesh = new THREE.Mesh(colGeo, colMat);
-    mesh.position.set(o.x, groundHeight(o.x, o.z) + 1.4, o.z);
-    mesh.castShadow = true;
-    scene.add(mesh);
-    collectibles.push(mesh);
+    const orbGroup = new THREE.Group();
+    orbGroup.position.set(o.x, groundHeight(o.x, o.z) + 1.4, o.z);
+    const fallbackOrb = new THREE.Mesh(colGeo, colMat);
+    fallbackOrb.castShadow = true;
+    orbGroup.add(fallbackOrb);
+    orbGroup.userData.fallbackOrb = fallbackOrb;
+    scene.add(orbGroup);
+    collectibles.push(orbGroup);
   });
+
+  if (WR && typeof WR.loadGlbModel === 'function') {
+    WR.loadGlbModel('/studio/assets/models/props/scifi_power_crystal.glb', function (crystalTemplate) {
+      collectibles.forEach(function (orbGroup) {
+        if (!orbGroup.parent) return;
+        if (orbGroup.userData.fallbackOrb) {
+          orbGroup.remove(orbGroup.userData.fallbackOrb);
+          orbGroup.userData.fallbackOrb = null;
+        }
+        const clone = crystalTemplate.clone(true);
+        clone.position.y = -0.55;
+        orbGroup.add(clone);
+      });
+    }, { targetLength: 1.35, envMapIntensity: 1.6 }).catch(function () {});
+  }
 
   const keys = {};
   window.addEventListener('keydown', e => keys[e.code] = true);
@@ -482,10 +595,19 @@ export function generateThreeJsGameFiles(gameSpec, worldData, layout) {
     camera.position.lerp(targetCamPos, 0.08);
     camera.lookAt(playerGroup.position.clone().add(new THREE.Vector3(0, 1.2, 0)));
 
+    if (grassField && typeof grassField.update === 'function') {
+      grassField.update(dt, playerGroup.position);
+    }
+    if (skyRig && typeof skyRig.followTarget === 'function') {
+      skyRig.followTarget(playerGroup.position);
+    }
+
     for (let i = collectibles.length - 1; i >= 0; i--) {
       const col = collectibles[i];
       col.rotation.y += 1.5 * dt;
-      col.rotation.x += 0.8 * dt;
+      if (col.userData.fallbackOrb) {
+        col.userData.fallbackOrb.rotation.x += 0.8 * dt;
+      }
       col.position.y = groundHeight(col.position.x, col.position.z) + 1.4 + Math.sin(clock.elapsedTime * 2 + i) * 0.15;
       if (!won && playerGroup.position.distanceTo(col.position) < 1.8) {
         scene.remove(col);

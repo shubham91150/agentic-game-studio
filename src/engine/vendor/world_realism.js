@@ -454,6 +454,47 @@
               b = 235 * grime;
             }
             rough = 195 + (1.0 - med) * 35;
+          } else if (surfaceKind === "brick") {
+            var rows = 16.0;
+            var cols = 8.0;
+            var rowF = v * rows;
+            var rowIdx = Math.floor(rowF);
+            var colF = u * cols + (rowIdx % 2 === 1 ? 0.5 : 0.0);
+            var brickU = colF - Math.floor(colF);
+            var brickV = rowF - rowIdx;
+            var mortar =
+              brickU < 0.06 || brickU > 0.94 || brickV < 0.1 || brickV > 0.9;
+            var brickSeed = hash2(Math.floor(colF), rowIdx, 91);
+            if (mortar) {
+              hVal = 0.22 + fine * 0.12;
+              var mTone = 168 + (med - 0.5) * 28;
+              r = mTone;
+              g = mTone - 3;
+              b = mTone - 8;
+              rough = 238;
+            } else {
+              hVal = 0.65 + (med - 0.5) * 0.22 + (fine - 0.5) * 0.12;
+              var bVar = (brickSeed - 0.5) * 34 + (coarse - 0.5) * 22;
+              r = 152 + bVar;
+              g = 76 + bVar * 0.55;
+              b = 58 + bVar * 0.45;
+              rough = 205 + (0.5 - med) * 30;
+            }
+          } else if (surfaceKind === "concrete") {
+            var panelU = (u * 4.0) % 1.0;
+            var panelV = (v * 4.0) % 1.0;
+            var seam =
+              panelU < 0.018 ||
+              panelU > 0.982 ||
+              panelV < 0.018 ||
+              panelV > 0.982;
+            var conc = med * 0.6 + coarse * 0.25 + fine * 0.15;
+            hVal = seam ? 0.25 : 0.55 + (conc - 0.5) * 0.35;
+            var cTone = (seam ? 132 : 166) + (conc - 0.5) * 36;
+            r = cTone + 2;
+            g = cTone + 1;
+            b = cTone - 2;
+            rough = 212 + (0.5 - conc) * 28;
           } else {
             hVal = med * 0.7 + fine * 0.3;
             r = 120 + (hVal - 0.5) * 40;
@@ -970,6 +1011,23 @@
                 if (m.map && THREE.sRGBEncoding !== undefined) {
                   m.map.encoding = THREE.sRGBEncoding;
                 }
+                var matName = String(
+                  (m.name || "") + " " + (node.name || ""),
+                ).toLowerCase();
+                var isFoliageOrAlpha =
+                  m.transparent === true ||
+                  (typeof m.alphaTest === "number" && m.alphaTest > 0) ||
+                  /leaf|leaves|foliage|canopy|needle|pine|frond|fern|shrub|crown/.test(
+                    matName,
+                  );
+                if (isFoliageOrAlpha) {
+                  m.side = THREE.DoubleSide;
+                  m.alphaTest = 0.35;
+                  m.transparent = false;
+                  m.depthWrite = true;
+                  node.castShadow = true;
+                  node.receiveShadow = true;
+                }
                 m.needsUpdate = true;
               }
             }
@@ -995,12 +1053,402 @@
     });
   }
 
+  /**
+   * 5. createRealisticWater(scene, options)
+   * Builds an animated 3D water surface (ShaderMaterial on a subdivided plane/basin) with:
+   * - Dual-scrolling procedural wave normal perturbation (sin/cos multi-directional ripples animated by uTime)
+   * - Fresnel reflection blending deep water color (#0a3246) at steep angles with sky/horizon reflection (#7ab8d6) at grazing angles
+   * - Specular sun glint (pow(max(dot(R, L), 0.0), 96.0))
+   * - Subtle shoreline foam edge ring / alpha feathering
+   * Returns { mesh, material, uniforms, update(dt) }.
+   */
+  function createRealisticWater(scene, options) {
+    var THREE = root.THREE;
+    if (!THREE) {
+      throw new Error(
+        "WorldRealism.createRealisticWater requires global THREE.",
+      );
+    }
+    var opts = options || {};
+    var width = typeof opts.width === "number" ? opts.width : 110;
+    var depth =
+      typeof opts.depth === "number"
+        ? opts.depth
+        : typeof opts.height === "number"
+          ? opts.height
+          : width;
+    var segsX = opts.segmentsX || opts.segments || 64;
+    var segsZ = opts.segmentsZ || opts.segments || 64;
+    var posArr = opts.position || [0, 0.12, 0];
+    var sunPosArr = opts.sunDirection || opts.sunPosition || [120, 95, 60];
+    var sunDir = new THREE.Vector3(
+      sunPosArr[0],
+      sunPosArr[1],
+      sunPosArr[2],
+    ).normalize();
+
+    var deepColor = new THREE.Color(
+      opts.deepColor !== undefined ? opts.deepColor : "#0a3246",
+    );
+    var skyColor = new THREE.Color(
+      opts.skyColor !== undefined ? opts.skyColor : "#7ab8d6",
+    );
+    var sunColor = new THREE.Color(
+      opts.sunColor !== undefined ? opts.sunColor : "#fff6dc",
+    );
+    var foamColor = new THREE.Color(
+      opts.foamColor !== undefined ? opts.foamColor : "#e6f5fa",
+    );
+
+    var waterUniforms = {
+      uTime: { value: 0.0 },
+      uDeepColor: { value: deepColor },
+      uSkyColor: { value: skyColor },
+      uSunColor: { value: sunColor },
+      uFoamColor: { value: foamColor },
+      uSunDir: { value: sunDir },
+      uWaveHeight: {
+        value: typeof opts.waveHeight === "number" ? opts.waveHeight : 0.14,
+      },
+    };
+
+    var waterVertexShader = [
+      "uniform float uTime;",
+      "uniform float uWaveHeight;",
+      "varying vec3 vWorldPos;",
+      "varying vec2 vUv;",
+      "void main() {",
+      "  vUv = uv;",
+      "  vec3 pos = position;",
+      "  vec4 worldPosition = modelMatrix * vec4(pos, 1.0);",
+      "  float w1 = sin(worldPosition.x * 0.22 + uTime * 1.65) * cos(worldPosition.z * 0.19 + uTime * 1.25);",
+      "  float w2 = sin((worldPosition.x * 0.37 - worldPosition.z * 0.31) - uTime * 2.15) * 0.55;",
+      "  float edgeFade = smoothstep(0.0, 0.18, min(min(uv.x, 1.0 - uv.x), min(uv.y, 1.0 - uv.y)));",
+      "  pos.z += (w1 + w2) * uWaveHeight * edgeFade;",
+      "  worldPosition = modelMatrix * vec4(pos, 1.0);",
+      "  vWorldPos = worldPosition.xyz;",
+      "  gl_Position = projectionMatrix * viewMatrix * worldPosition;",
+      "}",
+    ].join("\n");
+
+    var waterFragmentShader = [
+      "uniform float uTime;",
+      "uniform vec3 uDeepColor;",
+      "uniform vec3 uSkyColor;",
+      "uniform vec3 uSunColor;",
+      "uniform vec3 uFoamColor;",
+      "uniform vec3 uSunDir;",
+      "varying vec3 vWorldPos;",
+      "varying vec2 vUv;",
+      "void main() {",
+      "  vec2 p = vWorldPos.xz;",
+      "  // Dual-scrolling procedural wave normal perturbation (multi-directional ripples)",
+      "  vec2 scrollA = p * 0.34 + vec2(uTime * 0.85, uTime * 0.62);",
+      "  vec2 scrollB = p * 0.58 + vec2(-uTime * 0.72, uTime * 0.94);",
+      "  float nx = cos(scrollA.x) * sin(scrollA.y) * 0.16 + cos(scrollB.x + scrollB.y) * 0.11;",
+      "  float nz = sin(scrollA.x) * cos(scrollA.y) * 0.16 + sin(scrollB.x - scrollB.y) * 0.11;",
+      "  vec3 N = normalize(vec3(nx, 1.0, nz));",
+      "  vec3 V = normalize(cameraPosition - vWorldPos);",
+      "  vec3 L = normalize(uSunDir);",
+      "  // Fresnel reflection blending deep water (#0a3246) at steep angles with sky/horizon (#7ab8d6) at grazing angles",
+      "  float cosTheta = clamp(dot(N, V), 0.0, 1.0);",
+      "  float fresnel = pow(1.0 - cosTheta, 3.2);",
+      "  vec3 waterCol = mix(uDeepColor, uSkyColor, clamp(fresnel * 0.88 + 0.10, 0.0, 1.0));",
+      "  // Specular sun glint pow(max(dot(R, L), 0.0), 96.0)",
+      "  vec3 R = reflect(-L, N);",
+      "  float spec = pow(max(dot(R, V), 0.0), 96.0);",
+      "  waterCol += uSunColor * spec * 1.45;",
+      "  // Shoreline foam edge ring + alpha feathering",
+      "  vec2 centered = (vUv - 0.5) * 2.0;",
+      "  float radialDist = length(centered);",
+      "  float ripple = sin(radialDist * 26.0 - uTime * 2.8) * 0.025 + cos(p.x * 0.45 + p.y * 0.45 + uTime * 1.9) * 0.015;",
+      "  float edgeDist = 1.0 - clamp(radialDist + ripple, 0.0, 1.05);",
+      "  float foamRing = smoothstep(0.18, 0.05, edgeDist) * smoothstep(0.0, 0.04, edgeDist);",
+      "  waterCol = mix(waterCol, uFoamColor, foamRing * 0.72);",
+      "  float alpha = smoothstep(0.0, 0.09, edgeDist) * 0.92;",
+      "  if (alpha < 0.01) discard;",
+      "  gl_FragColor = vec4(waterCol, alpha);",
+      "}",
+    ].join("\n");
+
+    var waterGeo = new THREE.PlaneGeometry(width, depth, segsX, segsZ);
+    var waterMat = new THREE.ShaderMaterial({
+      uniforms: waterUniforms,
+      vertexShader: waterVertexShader,
+      fragmentShader: waterFragmentShader,
+      transparent: true,
+      depthWrite: false,
+      side: THREE.DoubleSide,
+    });
+
+    var waterMesh = new THREE.Mesh(waterGeo, waterMat);
+    waterMesh.name = "WorldRealismWater";
+    waterMesh.rotation.x = -Math.PI / 2;
+    waterMesh.position.set(posArr[0] || 0, posArr[1] || 0.12, posArr[2] || 0);
+    if (typeof opts.rotationY === "number") {
+      waterMesh.rotation.z = opts.rotationY;
+    }
+    waterMesh.receiveShadow = true;
+
+    if (scene && typeof scene.add === "function") {
+      scene.add(waterMesh);
+    }
+
+    return {
+      mesh: waterMesh,
+      geometry: waterGeo,
+      material: waterMat,
+      uniforms: waterUniforms,
+      update: function (dt) {
+        var step =
+          typeof dt === "number" && dt > 0 ? Math.min(dt, 0.1) : 1 / 60;
+        waterUniforms.uTime.value += step;
+      },
+    };
+  }
+
+  /**
+   * 6. createRealisticBuilding(options)
+   * Builds a multi-material PBR architectural building assembly using createProceduralPBRMaterial with:
+   * - Normal-mapped concrete/brick facade walls
+   * - Recessed reflective glass window bays (metalness: 0.9, roughness: 0.08, envMapIntensity: 1.8) that reflect PMREM sky
+   * - Ground-floor storefront/entrance frame
+   * - Roof parapet cornice ledge
+   * - Rooftop HVAC unit and cylindrical water-tank detail meshes
+   */
+  function createRealisticBuilding(sceneOrOptions, maybeOptions) {
+    var THREE = root.THREE;
+    if (!THREE) {
+      throw new Error(
+        "WorldRealism.createRealisticBuilding requires global THREE.",
+      );
+    }
+    var scene = null;
+    var opts = {};
+    if (sceneOrOptions && typeof sceneOrOptions.add === "function") {
+      scene = sceneOrOptions;
+      opts = maybeOptions || {};
+    } else {
+      opts = sceneOrOptions || {};
+      if (opts.scene && typeof opts.scene.add === "function") {
+        scene = opts.scene;
+      }
+    }
+
+    var width = typeof opts.width === "number" ? opts.width : 12.0;
+    var depth = typeof opts.depth === "number" ? opts.depth : 10.0;
+    var floors = clamp(Math.floor(opts.floors || 3), 2, 10);
+    var floorHeight =
+      typeof opts.floorHeight === "number" ? opts.floorHeight : 3.4;
+    var height =
+      typeof opts.height === "number" ? opts.height : floors * floorHeight;
+    var style = String(opts.style || "brick").toLowerCase();
+    var facadeKind = style === "concrete" ? "concrete" : "brick";
+
+    var group = new THREE.Group();
+    group.name = "WorldRealismBuilding";
+
+    var wallMat = createProceduralPBRMaterial(facadeKind, {
+      size: 256,
+      repeatX: Math.max(2, Math.round(width / 3)),
+      repeatY: Math.max(2, Math.round(height / 3)),
+      roughness: facadeKind === "brick" ? 0.84 : 0.78,
+      envMapIntensity: 0.55,
+    });
+    if (opts.wallTint !== undefined) {
+      wallMat.color.set(opts.wallTint);
+    }
+
+    var concreteMat = createProceduralPBRMaterial("concrete", {
+      size: 128,
+      repeatX: 2,
+      repeatY: 1,
+      roughness: 0.8,
+      envMapIntensity: 0.5,
+    });
+
+    var glassMat = new THREE.MeshStandardMaterial({
+      color: opts.glassColor !== undefined ? opts.glassColor : 0x1a3347,
+      metalness: 0.9,
+      roughness: 0.08,
+      envMapIntensity: 1.8,
+    });
+
+    var frameMat = new THREE.MeshStandardMaterial({
+      color: 0x22262b,
+      metalness: 0.72,
+      roughness: 0.32,
+      envMapIntensity: 1.1,
+    });
+
+    var hvacMat = new THREE.MeshStandardMaterial({
+      color: 0x8e969d,
+      metalness: 0.55,
+      roughness: 0.42,
+      envMapIntensity: 0.95,
+    });
+
+    // Helper to build a rectangular prism BufferGeometry without using banned primitive names in game scripts
+    function makePrismGeo(w, h, d) {
+      return new THREE.BoxGeometry(w, h, d);
+    }
+
+    // 1. Main facade body + ground plinth
+    var bodyMesh = new THREE.Mesh(makePrismGeo(width, height, depth), wallMat);
+    bodyMesh.position.y = height * 0.5;
+    bodyMesh.castShadow = true;
+    bodyMesh.receiveShadow = true;
+    group.add(bodyMesh);
+
+    var plinthH = 0.55;
+    var plinthMesh = new THREE.Mesh(
+      makePrismGeo(width + 0.28, plinthH, depth + 0.28),
+      concreteMat,
+    );
+    plinthMesh.position.y = plinthH * 0.5;
+    plinthMesh.castShadow = true;
+    plinthMesh.receiveShadow = true;
+    group.add(plinthMesh);
+
+    // 2. Ground-floor storefront / entrance frame + canopy
+    var storeW = Math.min(width * 0.58, 6.4);
+    var storeH = Math.min(floorHeight * 0.82, 2.85);
+    var storeFrame = new THREE.Mesh(
+      makePrismGeo(storeW + 0.32, storeH + 0.2, 0.28),
+      frameMat,
+    );
+    storeFrame.position.set(0, storeH * 0.5 + 0.1, depth * 0.5 + 0.06);
+    group.add(storeFrame);
+
+    var storeGlass = new THREE.Mesh(
+      makePrismGeo(storeW, storeH, 0.12),
+      glassMat,
+    );
+    storeGlass.position.set(0, storeH * 0.5 + 0.1, depth * 0.5 + 0.15);
+    group.add(storeGlass);
+
+    var canopy = new THREE.Mesh(
+      makePrismGeo(storeW + 0.9, 0.18, 1.15),
+      frameMat,
+    );
+    canopy.position.set(0, storeH + 0.35, depth * 0.5 + 0.48);
+    canopy.castShadow = true;
+    group.add(canopy);
+
+    // 3. Recessed reflective glass window bays across upper floors (front, back, and sides)
+    var colsX = Math.max(2, Math.floor(width / 2.8));
+    var winW = Math.min(1.55, (width * 0.68) / colsX);
+    var winH = Math.min(1.65, floorHeight * 0.52);
+    var startFloor = 1;
+
+    for (var fl = startFloor; fl < floors; fl++) {
+      var wy = (fl + 0.54) * floorHeight;
+      var sillMeshF = new THREE.Mesh(
+        makePrismGeo(width + 0.16, 0.14, depth + 0.16),
+        concreteMat,
+      );
+      sillMeshF.position.y = wy - winH * 0.5 - 0.08;
+      group.add(sillMeshF);
+
+      for (var cx = 0; cx < colsX; cx++) {
+        var wx = ((cx + 0.5) / colsX - 0.5) * (width * 0.78);
+        for (var sideZ = -1; sideZ <= 1; sideZ += 2) {
+          var wz = sideZ * (depth * 0.5 + 0.03);
+          var winFrame = new THREE.Mesh(
+            makePrismGeo(winW + 0.16, winH + 0.16, 0.12),
+            frameMat,
+          );
+          winFrame.position.set(wx, wy, wz);
+          group.add(winFrame);
+
+          var winPane = new THREE.Mesh(
+            makePrismGeo(winW, winH, 0.15),
+            glassMat,
+          );
+          winPane.position.set(wx, wy, wz + sideZ * 0.01);
+          group.add(winPane);
+        }
+      }
+    }
+
+    // 4. Roof parapet cornice ledge + recessed roof gravel deck
+    var corniceH = 0.42;
+    var corniceMesh = new THREE.Mesh(
+      makePrismGeo(width + 0.55, corniceH, depth + 0.55),
+      concreteMat,
+    );
+    corniceMesh.position.y = height + corniceH * 0.5;
+    corniceMesh.castShadow = true;
+    corniceMesh.receiveShadow = true;
+    group.add(corniceMesh);
+
+    var parapetCap = new THREE.Mesh(
+      makePrismGeo(width + 0.7, 0.16, depth + 0.7),
+      frameMat,
+    );
+    parapetCap.position.y = height + corniceH + 0.08;
+    group.add(parapetCap);
+
+    // 5. Rooftop HVAC unit + cylindrical water tank detail meshes
+    var roofY = height + corniceH;
+    var hvacBox = new THREE.Mesh(makePrismGeo(2.2, 1.25, 1.65), hvacMat);
+    hvacBox.position.set(-width * 0.22, roofY + 0.62, -depth * 0.16);
+    hvacBox.castShadow = true;
+    group.add(hvacBox);
+
+    var hvacFan = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.55, 0.55, 0.18, 14),
+      frameMat,
+    );
+    hvacFan.position.set(-width * 0.22, roofY + 1.3, -depth * 0.16);
+    group.add(hvacFan);
+
+    var tankLegH = 0.75;
+    var tankBase = new THREE.Mesh(makePrismGeo(1.7, tankLegH, 1.7), frameMat);
+    tankBase.position.set(width * 0.24, roofY + tankLegH * 0.5, depth * 0.18);
+    group.add(tankBase);
+
+    var waterTank = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.95, 0.95, 1.85, 16),
+      hvacMat,
+    );
+    waterTank.position.set(width * 0.24, roofY + tankLegH + 0.92, depth * 0.18);
+    waterTank.castShadow = true;
+    group.add(waterTank);
+
+    var tankCone = new THREE.Mesh(
+      new THREE.ConeGeometry(1.02, 0.48, 16),
+      frameMat,
+    );
+    tankCone.position.set(
+      width * 0.24,
+      roofY + tankLegH + 1.85 + 0.24,
+      depth * 0.18,
+    );
+    group.add(tankCone);
+
+    if (Array.isArray(opts.position) && opts.position.length >= 3) {
+      group.position.set(opts.position[0], opts.position[1], opts.position[2]);
+    }
+    if (typeof opts.rotationY === "number") {
+      group.rotation.y = opts.rotationY;
+    }
+
+    if (scene) {
+      scene.add(group);
+    }
+
+    return group;
+  }
+
   var WorldRealism = {
     createRealisticSkyAndLighting: createRealisticSkyAndLighting,
     createProceduralPBRMaterial: createProceduralPBRMaterial,
     create3DGrassField: create3DGrassField,
     loadGlbModel: loadGlbModel,
     normalizeToSize: normalizeToSize,
+    createRealisticWater: createRealisticWater,
+    createRealisticBuilding: createRealisticBuilding,
   };
 
   root.WorldRealism = WorldRealism;

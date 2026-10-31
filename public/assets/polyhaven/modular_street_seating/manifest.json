@@ -1,0 +1,13 @@
+{
+  "assetId": "modular_street_seating",
+  "type": "model",
+  "resolution": "1k",
+  "license": "CC0 1.0 Universal (Polyhaven)",
+  "files": [
+    {
+      "file": "modular_street_seating_1k.glb",
+      "url": "/studio/assets/polyhaven/modular_street_seating/modular_street_seating_1k.glb",
+      "bytes": 7606140
+    }
+  ]
+}
