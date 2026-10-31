@@ -536,19 +536,44 @@
           spd = Math.abs(c.speed);
         var fx0 = Math.sin(c.angle),
           fz0 = Math.cos(c.angle);
+        var cy = c.y || 0;
         if (c.drifting && !c.offroad && skidT > 0.11) {
           for (var s = -1; s <= 1; s += 2) {
             var wx = c.x - fx0 * 1.45 - fz0 * s * 0.95;
             var wz = c.z - fz0 * 1.45 + fx0 * s * 0.95;
             G.VFX.dropSkid(wx, wz, c.angle);
           }
-          G.VFX.puff(c.x - fx0 * 2, 0.4, c.z - fz0 * 2, 0xbbbbbb, 1, 2, 1.5);
+          G.VFX.puff(
+            c.x - fx0 * 2,
+            cy + 0.4,
+            c.z - fz0 * 2,
+            0xbbbbbb,
+            1,
+            2,
+            1.5,
+          );
         }
         if (c.offroad && spd > 10 && dustT > 0.07) {
-          G.VFX.puff(c.x - fx0 * 2, 0.5, c.z - fz0 * 2, 0x9a8a5a, 2, 2.5, 2);
+          G.VFX.puff(
+            c.x - fx0 * 2,
+            cy + 0.5,
+            c.z - fz0 * 2,
+            0x9a8a5a,
+            2,
+            2.5,
+            2,
+          );
         }
         if (c.nitroActive && dustT > 0.09) {
-          G.VFX.puff(c.x - fx0 * 2.6, 0.4, c.z - fz0 * 2.6, 0x66ccff, 1, 1, 1);
+          G.VFX.puff(
+            c.x - fx0 * 2.6,
+            cy + 0.4,
+            c.z - fz0 * 2.6,
+            0x66ccff,
+            1,
+            1,
+            1,
+          );
         }
       }
       if (skidT > 0.11) skidT = 0;
@@ -563,10 +588,10 @@
         menuAngle += dt * 0.25;
         _des.set(
           player.x + Math.sin(menuAngle) * 9.5,
-          3.2,
+          (player.y || 0) + 3.2,
           player.z + Math.cos(menuAngle) * 9.5,
         );
-        _look.set(player.x, 1, player.z);
+        _look.set(player.x, (player.y || 0) + 1, player.z);
         var mk = 1 - Math.exp(-dt * 3);
         camPos.lerp(_des, camInit ? mk : 1);
         camLook.lerp(_look, camInit ? mk : 1);
@@ -583,11 +608,11 @@
       var fx0 = Math.sin(player.angle),
         fz0 = Math.cos(player.angle);
       if (camMode === 2) {
-        _des.set(px + fx0 * 0.4, cfg.h, pz + fz0 * 0.4);
-        _look.set(px + fx0 * 30, 1.0, pz + fz0 * 30);
+        _des.set(px + fx0 * 0.4, (player.y || 0) + cfg.h, pz + fz0 * 0.4);
+        _look.set(px + fx0 * 30, (player.y || 0) + 1.0, pz + fz0 * 30);
       } else {
-        _des.set(px - fx0 * cfg.d, cfg.h, pz - fz0 * cfg.d);
-        _look.set(px + fx0 * 6, 1.2, pz + fz0 * 6);
+        _des.set(px - fx0 * cfg.d, (player.y || 0) + cfg.h, pz - fz0 * cfg.d);
+        _look.set(px + fx0 * 6, (player.y || 0) + 1.2, pz + fz0 * 6);
       }
       var k = 1 - Math.exp(-dt * (camMode === 2 ? 30 : 6.5));
       if (!camInit) {

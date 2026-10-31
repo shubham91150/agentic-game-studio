@@ -1,8 +1,12 @@
 /* Horizon Sprint — levels.js
- * World builder: closed Catmull-Rom circuit, WorldRealism shader sky + PMREM IBL,
- * Sobel normal-mapped PBR road/kerbs/terrain, 30,000+ 3D wind-swaying grass blades,
- * and real GLTF (.glb) trackside scenery (trees, palms, rocks, boulders, buildings,
- * tents, street lights, and concrete barriers). */
+ * World builder: a large, varied closed Catmull-Rom circuit (~2.5x the original
+ * lap length) with a long main straight, sweeping Turn 1, a climbing out-leg +
+ * S-bend, a tight crest hairpin, a descending back-leg, a chicane on the return
+ * straight and a sweeping SW loop; WorldRealism shader sky + PMREM IBL, Sobel
+ * normal-mapped PBR road/kerbs/terrain, gentle along-track elevation (flat in
+ * the south, rising to the hairpin crest), 35,000 3D wind-swaying grass blades,
+ * and real GLTF (.glb) trackside scenery (trees, palms, rocks, boulders,
+ * buildings, tents, street lights, and concrete barriers). */
 (function () {
   "use strict";
   window.G = window.G || {};
@@ -22,26 +26,77 @@
     return t;
   }
 
+  // Expanded circuit: ~2.5x the original length. A long main straight, a
+  // sweeping Turn 1, a climbing out-leg with an S-bend, a tight R~16m hairpin
+  // at the crest, a descending back-leg, a return straight broken by a
+  // chicane, and a sweeping SW loop back to the start. Bounds ~709 x 717 m.
   var CTRL = [
-    [0, -150],
-    [80, -148],
-    [140, -110],
-    [160, -50],
-    [120, -10],
-    [130, 50],
-    [90, 95],
-    [100, 150],
-    [30, 170],
-    [-50, 150],
-    [-120, 160],
-    [-170, 110],
-    [-150, 40],
-    [-165, -30],
-    [-120, -90],
-    [-60, -120],
+    [-77, -378], // 0  START/FINISH (south main straight, heading +x)
+    [77, -374], // 1
+    [205, -368], // 2  main straight
+    [288, -348], // 3  Turn 1 sweep (SE -> up the east side)
+    [336, -300], // 4
+    [354, -238], // 5  out-leg climb (uphill)
+    [362, -170], // 6
+    [354, -100], // 7
+    [348, -43], // 8  sweep
+    [374, 21], // 9  S-bend
+    [343, 78], // 10
+    [366, 136], // 11
+    [356, 206], // 12 short straight to the hairpin
+    [388, 255], // 13 approach (heading N)
+    [388, 300], // 14 HAIRPIN entry (R~35 U-turn)
+    [378, 325], // 15
+    [353, 335], // 16 crest apex (northmost point of the lap)
+    [328, 325], // 17
+    [318, 300], // 18 hairpin exit (heading S)
+    [300, 268], // 19 exit S
+    [274, 225], // 20 back-leg descent (downhill)
+    [256, 149], // 21
+    [274, 72], // 22
+    [250, -5], // 23
+    [269, -82], // 24
+    [250, -156], // 25
+    [263, -223], // 26 sweep back to the return straight
+    [215, -258], // 27
+    [102, -260], // 28 return straight (W-bound)
+    [44, -258], // 29 CHICANE entry
+    [0, -242], // 30 chicane kink N
+    [-44, -258], // 31 chicane kink back
+    [-120, -259], // 32 return straight
+    [-200, -260], // 33 return straight
+    [-256, -258], // 34 SW sweep start (big R~61 loop)
+    [-300, -280], // 35 SW loop
+    [-318, -319], // 36 westernmost point
+    [-300, -358], // 37
+    [-256, -380], // 38 grid run-up west end
+    [-168, -380], // 39 grid run-up mid (closes to start line)
   ];
-  var SAMPLES = 600,
+  var SAMPLES = 1500,
     ROAD_HALF = 6;
+
+  // Smooth, gentle road elevation profile (metres). Flat (0) across the whole
+  // south (start straight + chicane + grid) where tyre-skid VFX lives at y~0,
+  // then it ramps up toward the north so the out-leg climbs and the back-leg
+  // descends, with a soft crest right under the hairpin apex. Total range ~0-7m
+  // with shallow gradients, so the camera and arcade physics stay calm.
+  function roadElev(x, z) {
+    var t = (z + 200) / 560;
+    if (t < 0) t = 0;
+    else if (t > 1) t = 1;
+    var sm = t * t * (3 - 2 * t);
+    var climb = 4.2 * sm;
+    var roll =
+      1.5 *
+      (Math.sin(x * 0.0042 + 0.6) * Math.cos(z * 0.0046 - 0.4) * 0.5 + 0.5) *
+      sm;
+    var crest =
+      2.4 *
+      Math.exp(
+        -((x - 340) * (x - 340) + (z - 360) * (z - 360)) / (250 * 250 * 1.2),
+      );
+    return climb + roll + crest;
+  }
 
   function computeTrackData() {
     var curve = new THREE.CatmullRomCurve3(
@@ -49,7 +104,7 @@
         return new THREE.Vector3(p[0], 0, p[1]);
       }),
       true,
-      "catmullrom",
+      "centripetal",
       0.5,
     );
     var raw = curve.getSpacedPoints(SAMPLES);
@@ -58,7 +113,8 @@
       pts = raw,
       tan = [],
       side = [],
-      cum = [0];
+      cum = [0],
+      elev = [];
     for (var i = 0; i < S; i++) {
       var a = pts[(i - 1 + S) % S],
         b = pts[(i + 1) % S];
@@ -66,6 +122,7 @@
       tan.push(t);
       side.push(new THREE.Vector3(-t.z, 0, t.x));
       if (i > 0) cum.push(cum[i - 1] + pts[i].distanceTo(pts[i - 1]));
+      elev.push(roadElev(pts[i].x, pts[i].z));
     }
     var totalLen = cum[S - 1] + pts[0].distanceTo(pts[S - 1]);
     var gates = [];
@@ -76,6 +133,7 @@
       tan: tan,
       side: side,
       cum: cum,
+      elev: elev,
       totalLen: totalLen,
       S: S,
       roadHalf: ROAD_HALF,
@@ -90,7 +148,7 @@
     var h2 = Math.sin(x * 0.033 + 1.4) * Math.cos(z * 0.029 - 0.8) * 2.2;
     var h3 = Math.sin((x + z) * 0.065) * 0.75;
     var radial = Math.sqrt(x * x + z * z);
-    var rim = Math.max(0, (radial - 220) * 0.095);
+    var rim = Math.max(0, (radial - 520) * 0.12);
     return h1 + h2 + h3 + rim;
   }
 
@@ -142,8 +200,8 @@
       maxZ: maxZ + 30,
     };
 
-    var DF_SIZE = 180;
-    var DF_EXTENT = 900;
+    var DF_SIZE = 200;
+    var DF_EXTENT = 1100;
     var DF_HALF = DF_EXTENT * 0.5;
     var distGrid = new Float32Array(DF_SIZE * DF_SIZE);
     for (var gz = 0; gz < DF_SIZE; gz++) {
@@ -169,10 +227,10 @@
       return distGrid[iz * DF_SIZE + ix];
     }
 
-    var LAKE_X = 32.0,
-      LAKE_Z = -96.0,
-      LAKE_RX = 48.0,
-      LAKE_RZ = 34.0;
+    var LAKE_X = -20.0,
+      LAKE_Z = -30.0,
+      LAKE_RX = 85.0,
+      LAKE_RZ = 85.0;
 
     function lakeNormDist2(x, z) {
       var dx = (x - LAKE_X) / LAKE_RX;
@@ -193,11 +251,12 @@
     function getTerrainHeight(x, z) {
       var d = fastTrackDist(x, z);
       var flatEdge = ROAD_HALF + 5.0;
-      var blendSpan = 28.0;
-      if (d <= flatEdge) return 0.0;
+      var blendSpan = 30.0;
+      var roadH = roadElev(x, z);
+      if (d <= flatEdge) return roadH;
       var t = Math.min(1.0, (d - flatEdge) / blendSpan);
       var smooth = t * t * (3.0 - 2.0 * t);
-      var baseH = Math.max(0.0, multiOctaveHeight(x, z) * smooth);
+      var baseH = roadH + Math.max(0.0, multiOctaveHeight(x, z)) * smooth;
       var ld2 = lakeNormDist2(x, z);
       if (ld2 < 1.35 && d > ROAD_HALF + 6.5) {
         var lakeFactor = Math.max(0.0, 1.0 - ld2 / 1.35);
@@ -219,14 +278,15 @@
         var j = i % S,
           P = pts[j],
           Sd = side[j];
+        var yj = (track.elev[j] || 0) + y;
         var v = (i < S ? cum[i] : totalLen) / vScale;
         pos.set(
           [
             P.x + Sd.x * inner,
-            y,
+            yj,
             P.z + Sd.z * inner,
             P.x + Sd.x * outer,
-            y,
+            yj,
             P.z + Sd.z * outer,
           ],
           i * 6,
@@ -381,8 +441,8 @@
     );
 
     (function buildDisplacedTerrain() {
-      var gridN = 96;
-      var extent = 900;
+      var gridN = 128;
+      var extent = 1300;
       var vCount = (gridN + 1) * (gridN + 1);
       var positions = new Float32Array(vCount * 3);
       var uvs = new Float32Array(vCount * 2);
@@ -429,8 +489,8 @@
     // 5. 35,000 3-Blade Crossed Grass Tufts (105,000 3D Wind-Swaying Blades) via WorldRealism.create3DGrassField
     var grassField = WR.create3DGrassField(scene, {
       count: 35000,
-      radius: 95,
-      spread: 380,
+      radius: 160,
+      spread: 700,
       bladeHeight: 0.72,
       bladeWidth: 0.18,
       excludeFn: function (x, z) {
@@ -438,12 +498,12 @@
       },
       heightFn: getTerrainHeight,
       sampleFn: function (attempt, u1, u2) {
-        // Focus grass density near road verges and camera (distance 8m to 95m from track)
+        // Spread tufts along the whole expanded circuit (8-130m verge) with a
+        // denser band near the start/finish village so the grid looks lush.
         var idx;
-        if (attempt % 10 < 7) {
-          // 70% concentrated along visible main straight & first corners (S-80 to +160)
-          var span = 240;
-          idx = (S - 80 + Math.floor(u1 * span)) % S;
+        if (attempt % 10 < 3) {
+          var span = 300;
+          idx = (S - 140 + Math.floor(u1 * span)) % S;
         } else {
           idx = Math.floor(u1 * S) % S;
         }
@@ -451,8 +511,8 @@
           Sd = side[idx],
           Tn = tan[idx];
         var sideSign = attempt % 2 === 0 ? 1 : -1;
-        var latDist = 8.0 + Math.pow(u2, 2.35) * 87.0;
-        var alongJitter = (((attempt * 0.6180339887) % 1.0) - 0.5) * 6.5;
+        var latDist = 8.0 + Math.pow(u2, 2.2) * 122.0;
+        var alongJitter = (((attempt * 0.6180339887) % 1.0) - 0.5) * 7.0;
         var wx = P.x + Sd.x * (sideSign * latDist) + Tn.x * alongJitter;
         var wz = P.z + Sd.z * (sideSign * latDist) + Tn.z * alongJitter;
         return [wx, wz];
@@ -605,6 +665,7 @@
           T = tan[quads[q][0]],
           Sd = side[quads[q][0]];
         var lat = quads[q][1];
+        var yq = (track.elev[quads[q][0]] || 0) + 0.04;
         var cx = P.x + Sd.x * lat,
           cz = P.z + Sd.z * lat;
         var hx = Sd.x * 1.6,
@@ -614,16 +675,16 @@
         pos.set(
           [
             cx - hx - lx,
-            0.04,
+            yq,
             cz - hz - lz,
             cx + hx - lx,
-            0.04,
+            yq,
             cz + hz - lz,
             cx + hx + lx,
-            0.04,
+            yq,
             cz + hz + lz,
             cx - hx + lx,
-            0.04,
+            yq,
             cz - hz + lz,
           ],
           q * 12,
@@ -678,6 +739,7 @@
     });
     var gantry = new THREE.Group();
     gantry.position.copy(pts[0]);
+    gantry.position.y = track.elev[0] || 0;
     gantry.rotation.y = yaw0;
     var banner = new THREE.Mesh(
       new THREE.PlaneGeometry((ROAD_HALF + 1.6) * 2, 1.35),
@@ -701,7 +763,7 @@
     startLine.rotation.x = -Math.PI / 2;
     var lh = new THREE.Group();
     lh.position.copy(pts[0]);
-    lh.position.y = 0.045;
+    lh.position.y = (track.elev[0] || 0) + 0.045;
     lh.rotation.y = yaw0;
     lh.add(startLine);
     scene.add(lh);
@@ -1017,7 +1079,7 @@
       false,
     );
     var clouds = [];
-    for (var ci2 = 0; ci2 < 12; ci2++) {
+    for (var ci2 = 0; ci2 < 16; ci2++) {
       var sm = new THREE.SpriteMaterial({
         map: cloudTex,
         transparent: true,
@@ -1027,13 +1089,13 @@
       });
       var sp = new THREE.Sprite(sm);
       var ca = Math.random() * Math.PI * 2,
-        cr2 = 200 + Math.random() * 320;
+        cr2 = 280 + Math.random() * 420;
       sp.position.set(
         Math.cos(ca) * cr2,
-        100 + Math.random() * 70,
+        120 + Math.random() * 90,
         Math.sin(ca) * cr2,
       );
-      var ssc = 70 + Math.random() * 70;
+      var ssc = 90 + Math.random() * 90;
       sp.scale.set(ssc, ssc * 0.45, 1);
       scene.add(sp);
       clouds.push(sp);
@@ -1110,7 +1172,7 @@
       }
       for (var i = 0; i < clouds.length; i++) {
         clouds[i].position.x += dt * 1.6;
-        if (clouds[i].position.x > 550) clouds[i].position.x = -550;
+        if (clouds[i].position.x > 750) clouds[i].position.x = -750;
       }
     };
 
