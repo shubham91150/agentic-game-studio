@@ -308,7 +308,14 @@ body {
 
 /* ---------- Studio header ---------- */
 
+/* Hero (title + tagline + #status line) is hidden across all viewports
+ * (ui-taste distill): the left pane is now just the terminal (top, flex-grow)
+ * and the prompt composer (bottom) — no header text. #status stays in the
+ * DOM inside .hero so studio.js (getElementById('status')) keeps working; it
+ * simply isn't rendered while the hero is collapsed. To bring the hero back,
+ * remove the `display: none` below (flex/padding are preserved for that). */
 .hero {
+  display: none;
   flex: 0 0 auto;
   padding: 2px 2px 0 0;
 }
@@ -2161,10 +2168,6 @@ button.icon-btn {
   .pane-left {
     flex: 1 1 auto;
     min-height: 0;
-  }
-
-  .hero {
-    display: none;
   }
 
   .workspace-split[data-active-pane="cli"] .pane-right {
