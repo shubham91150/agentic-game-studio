@@ -15,6 +15,10 @@ No shortcuts.
 
 ## 1. File Architecture (separate files, no 800-line soup)
 
+Filenames below are a recommended shape, not a mandate — adapt, merge,
+or rename to fit the game. What matters is separation of concerns and
+the quality bars in §2–§8, not exact file names.
+
 | File         | Owns (only this)                                       |
 | ------------ | ------------------------------------------------------ |
 | `main.js`    | Boot, fixed-timestep loop, state machine transitions   |
