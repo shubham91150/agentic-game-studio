@@ -1,0 +1,813 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"
+    />
+    <title>Horizon Sprint — 3D Sports Car Racing</title>
+    <style>
+      :root {
+        --bg: #0b0e13;
+        --glass: rgba(10, 14, 20, 0.74);
+        --line: rgba(255, 255, 255, 0.14);
+        --txt: #f2f5f9;
+        --dim: #aeb8c4;
+        --gold: #ffb300;
+        --ember: #ff6a00;
+        --good: #35d07f;
+        --bad: #ff4d5e;
+      }
+      * {
+        box-sizing: border-box;
+        -webkit-tap-highlight-color: transparent;
+      }
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        overflow: hidden;
+        background: var(--bg);
+        font-family: "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+        color: var(--txt);
+      }
+      #app {
+        position: fixed;
+        inset: 0;
+      }
+      #canvas-container {
+        position: absolute;
+        inset: 0;
+      }
+      #canvas-container canvas {
+        display: block;
+        width: 100%;
+        height: 100%;
+      }
+      .hidden {
+        display: none !important;
+      }
+
+      #vignette {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        background: radial-gradient(
+          ellipse at center,
+          transparent 55%,
+          rgba(0, 0, 0, 0.42) 100%
+        );
+      }
+      #flash {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        background: #fff;
+        opacity: 0;
+      }
+
+      /* ---------- HUD ---------- */
+      #hud {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+      }
+      #hud-topleft {
+        position: absolute;
+        top: 14px;
+        left: 16px;
+        text-shadow: 0 2px 8px rgba(0, 0, 0, 0.7);
+      }
+      #hud-pos {
+        font-size: 52px;
+        font-weight: 900;
+        font-style: italic;
+        line-height: 1;
+        letter-spacing: 1px;
+      }
+      #hud-lap {
+        font-size: 20px;
+        font-weight: 700;
+        letter-spacing: 3px;
+        color: var(--gold);
+      }
+      #hud-topcenter {
+        position: absolute;
+        top: 12px;
+        left: 50%;
+        transform: translateX(-50%);
+        text-align: center;
+        text-shadow: 0 2px 8px rgba(0, 0, 0, 0.7);
+      }
+      #hud-time-cur {
+        font-size: 30px;
+        font-weight: 800;
+        font-variant-numeric: tabular-nums;
+      }
+      #hud-times-sub {
+        font-size: 13px;
+        color: var(--dim);
+        letter-spacing: 1px;
+        display: flex;
+        gap: 14px;
+        justify-content: center;
+        font-variant-numeric: tabular-nums;
+      }
+      #hud-topright {
+        position: absolute;
+        top: 14px;
+        right: 16px;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 8px;
+      }
+      #minimap {
+        width: 172px;
+        height: 172px;
+        border-radius: 12px;
+        border: 1px solid var(--line);
+        background: rgba(8, 10, 14, 0.55);
+      }
+      #hud-btns {
+        display: flex;
+        gap: 8px;
+        pointer-events: auto;
+      }
+      .icon-btn {
+        min-width: 52px;
+        height: 34px;
+        border-radius: 9px;
+        border: 1px solid var(--line);
+        background: var(--glass);
+        color: var(--txt);
+        font-weight: 800;
+        font-size: 12px;
+        letter-spacing: 1px;
+        cursor: pointer;
+        backdrop-filter: blur(6px);
+      }
+      .icon-btn:active {
+        transform: scale(0.94);
+      }
+      #hud-speedbox {
+        position: absolute;
+        right: 20px;
+        bottom: 18px;
+        text-align: right;
+        text-shadow: 0 2px 10px rgba(0, 0, 0, 0.75);
+      }
+      #hud-speed {
+        font-size: 84px;
+        font-weight: 900;
+        font-style: italic;
+        line-height: 0.95;
+        font-variant-numeric: tabular-nums;
+      }
+      #hud-speedunit {
+        font-size: 15px;
+        letter-spacing: 5px;
+        color: var(--dim);
+        margin-bottom: 6px;
+      }
+      #nitro-wrap {
+        position: relative;
+        width: 210px;
+        height: 20px;
+        border-radius: 11px;
+        border: 1px solid var(--line);
+        background: rgba(0, 0, 0, 0.5);
+        overflow: hidden;
+      }
+      #nitro-fill {
+        position: absolute;
+        inset: 2px;
+        width: 50%;
+        border-radius: 8px;
+        background: linear-gradient(90deg, #1f8fff, #54e0ff);
+      }
+      #nitro-label {
+        position: absolute;
+        inset: 0;
+        font-size: 11px;
+        font-weight: 800;
+        letter-spacing: 4px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #eaf6ff;
+        text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+      }
+      #hud-hint {
+        position: absolute;
+        left: 16px;
+        bottom: 16px;
+        font-size: 13px;
+        color: var(--dim);
+        letter-spacing: 1px;
+        text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
+      }
+
+      #countdown {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 150px;
+        font-weight: 900;
+        font-style: italic;
+        color: var(--gold);
+        text-shadow: 0 6px 40px rgba(0, 0, 0, 0.8);
+        pointer-events: none;
+      }
+      #toast {
+        position: absolute;
+        top: 22%;
+        left: 50%;
+        transform: translateX(-50%);
+        font-size: 34px;
+        font-weight: 900;
+        font-style: italic;
+        letter-spacing: 2px;
+        color: #fff;
+        text-shadow: 0 3px 14px rgba(0, 0, 0, 0.8);
+        pointer-events: none;
+        white-space: nowrap;
+      }
+      #caption {
+        position: absolute;
+        left: 50%;
+        bottom: 120px;
+        transform: translateX(-50%);
+        max-width: min(560px, calc(100vw - 48px));
+        padding: 8px 16px;
+        border-radius: 8px;
+        background: rgba(8, 10, 14, 0.82);
+        border: 1px solid var(--line);
+        color: var(--txt);
+        font-size: 14px;
+        line-height: 1.5;
+        text-align: center;
+        pointer-events: none;
+        z-index: 6;
+      }
+      #wrongway {
+        position: absolute;
+        top: 34%;
+        left: 50%;
+        transform: translateX(-50%);
+        font-size: 44px;
+        font-weight: 900;
+        font-style: italic;
+        color: var(--bad);
+        text-shadow: 0 3px 16px rgba(0, 0, 0, 0.9);
+        pointer-events: none;
+        animation: blink 0.5s steps(2) infinite;
+      }
+      @keyframes blink {
+        50% {
+          opacity: 0.25;
+        }
+      }
+
+      /* ---------- Overlays ---------- */
+      #menu,
+      #pause,
+      #results {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(5, 7, 11, 0.45);
+        backdrop-filter: blur(3px);
+        z-index: 5;
+        padding: 16px;
+      }
+      .panel {
+        background: var(--glass);
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        padding: 30px 36px;
+        max-width: 560px;
+        width: 100%;
+        text-align: center;
+        box-shadow: 0 20px 80px rgba(0, 0, 0, 0.6);
+        backdrop-filter: blur(10px);
+        max-height: 94vh;
+        overflow-y: auto;
+      }
+      .kicker {
+        font-size: 12px;
+        letter-spacing: 6px;
+        color: var(--gold);
+        font-weight: 700;
+      }
+      h1 {
+        font-size: 58px;
+        margin: 6px 0 2px;
+        font-weight: 900;
+        font-style: italic;
+        letter-spacing: 1px;
+        line-height: 1;
+      }
+      h1 span {
+        background: linear-gradient(90deg, var(--gold), var(--ember));
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+      }
+      h2 {
+        font-size: 34px;
+        margin: 0 0 10px;
+        font-weight: 900;
+        font-style: italic;
+      }
+      .tag {
+        color: var(--dim);
+        margin: 0 0 16px;
+        letter-spacing: 1px;
+        font-size: 15px;
+      }
+      .lbl {
+        font-size: 12px;
+        letter-spacing: 3px;
+        color: var(--dim);
+        font-weight: 700;
+      }
+      .sw-row {
+        margin: 6px 0 18px;
+      }
+      #swatches {
+        display: flex;
+        gap: 12px;
+        justify-content: center;
+        margin-top: 8px;
+      }
+      .sw {
+        width: 46px;
+        height: 46px;
+        border-radius: 50%;
+        border: 3px solid transparent;
+        background: var(--c);
+        cursor: pointer;
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5);
+      }
+      .sw.sel {
+        border-color: #fff;
+        transform: scale(1.12);
+      }
+      .btn-row {
+        display: flex;
+        gap: 12px;
+        justify-content: center;
+        flex-wrap: wrap;
+      }
+      .big-btn {
+        font-size: 20px;
+        font-weight: 900;
+        font-style: italic;
+        letter-spacing: 2px;
+        padding: 14px 44px;
+        border: none;
+        border-radius: 12px;
+        cursor: pointer;
+        color: #111;
+        background: linear-gradient(90deg, var(--gold), var(--ember));
+        box-shadow: 0 8px 26px rgba(255, 106, 0, 0.35);
+      }
+      .big-btn:active {
+        transform: scale(0.96);
+      }
+      .ghost-btn {
+        font-size: 15px;
+        font-weight: 800;
+        letter-spacing: 2px;
+        padding: 14px 26px;
+        border-radius: 12px;
+        cursor: pointer;
+        color: var(--txt);
+        background: transparent;
+        border: 1px solid var(--line);
+      }
+      .ghost-btn:active {
+        transform: scale(0.96);
+      }
+      #howto {
+        margin-top: 16px;
+        text-align: left;
+        font-size: 14px;
+        color: var(--dim);
+        border-top: 1px solid var(--line);
+        padding-top: 12px;
+        line-height: 1.65;
+      }
+      #howto b {
+        color: var(--txt);
+        display: inline-block;
+        min-width: 118px;
+      }
+      .credit {
+        margin-top: 16px;
+        font-size: 11.5px;
+        color: #7c8794;
+        letter-spacing: 0.4px;
+      }
+      .opt-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin: 10px 0;
+        font-size: 14px;
+        color: var(--dim);
+        letter-spacing: 1px;
+      }
+      .opt-row input[type="range"] {
+        flex: 1;
+        accent-color: var(--gold);
+      }
+      .opt-row select {
+        background: #141a23;
+        color: var(--txt);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 6px 10px;
+        font-weight: 700;
+      }
+      .chk-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        justify-content: center;
+        font-size: 14px;
+        color: var(--dim);
+        margin: 8px 0;
+      }
+      #results-rows {
+        margin: 12px 0;
+        text-align: left;
+      }
+      .rrow {
+        display: flex;
+        justify-content: space-between;
+        padding: 9px 14px;
+        border-radius: 10px;
+        font-size: 16px;
+        font-weight: 700;
+        letter-spacing: 1px;
+        font-variant-numeric: tabular-nums;
+      }
+      .rrow.you {
+        background: rgba(255, 179, 0, 0.14);
+        border: 1px solid rgba(255, 179, 0, 0.4);
+      }
+      .rrow .p1 {
+        color: var(--gold);
+      }
+      #results-best {
+        color: var(--good);
+        font-weight: 800;
+        letter-spacing: 2px;
+        margin: 4px 0 14px;
+      }
+
+      /* ---------- Touch ---------- */
+      #touch {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        z-index: 4;
+      }
+      .tbtn {
+        position: absolute;
+        pointer-events: auto;
+        width: 78px;
+        height: 78px;
+        border-radius: 50%;
+        border: 1px solid var(--line);
+        background: rgba(10, 14, 20, 0.55);
+        color: #fff;
+        font-size: 26px;
+        font-weight: 900;
+        backdrop-filter: blur(4px);
+      }
+      .tbtn.on {
+        background: rgba(255, 179, 0, 0.5);
+      }
+      #t-left {
+        left: 18px;
+        bottom: 96px;
+      }
+      #t-right {
+        left: 112px;
+        bottom: 96px;
+      }
+      #t-gas {
+        right: 18px;
+        bottom: 150px;
+        border-color: rgba(53, 208, 127, 0.6);
+      }
+      #t-brake {
+        right: 112px;
+        bottom: 96px;
+        border-color: rgba(255, 77, 94, 0.6);
+      }
+      #t-nitro {
+        right: 18px;
+        bottom: 56px;
+        width: 64px;
+        height: 64px;
+        font-size: 15px;
+        border-color: rgba(84, 224, 255, 0.7);
+      }
+
+      #fps {
+        position: absolute;
+        left: 8px;
+        top: 8px;
+        font-size: 11px;
+        color: #0f0;
+        font-family: monospace;
+        z-index: 9;
+        pointer-events: none;
+      }
+      #fatal {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #14090b;
+        color: #ffb3b3;
+        z-index: 50;
+        font-size: 17px;
+        padding: 30px;
+        text-align: center;
+      }
+
+      @media (max-width: 760px) {
+        h1 {
+          font-size: 40px;
+        }
+        #minimap {
+          width: 110px;
+          height: 110px;
+        }
+        #hud-pos {
+          font-size: 36px;
+        }
+        #hud-lap {
+          font-size: 15px;
+        }
+        #hud-time-cur {
+          font-size: 20px;
+        }
+        #hud-speed {
+          font-size: 56px;
+        }
+        #nitro-wrap {
+          width: 150px;
+        }
+        #hud-hint {
+          display: none;
+        }
+        #countdown {
+          font-size: 96px;
+        }
+        .panel {
+          padding: 22px;
+        }
+      }
+      @media (pointer: coarse) {
+        #hud-hint {
+          display: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app">
+      <div id="canvas-container"></div>
+      <div id="vignette"></div>
+      <div id="flash"></div>
+
+      <div id="hud" class="hidden">
+        <div id="hud-topleft">
+          <div id="hud-pos">4TH</div>
+          <div id="hud-lap">LAP 1/3</div>
+        </div>
+        <div id="hud-topcenter">
+          <div id="hud-time-cur">0:00.0</div>
+          <div id="hud-times-sub">
+            <span id="hud-time-last">LAST --:--.-</span
+            ><span id="hud-time-best">BEST --:--.-</span>
+          </div>
+        </div>
+        <div id="hud-topright">
+          <canvas id="minimap" width="200" height="200"></canvas>
+          <div id="hud-btns">
+            <button id="btn-cam" class="icon-btn" title="Camera (C)">
+              CAM
+            </button>
+            <button id="btn-mute" class="icon-btn" title="Mute (M)">SND</button>
+            <button id="btn-pause" class="icon-btn" title="Pause (Esc)">
+              | |
+            </button>
+          </div>
+        </div>
+        <div id="hud-speedbox">
+          <div id="hud-speed">0</div>
+          <div id="hud-speedunit">km/h</div>
+          <div id="nitro-wrap">
+            <div id="nitro-fill"></div>
+            <span id="nitro-label">NITRO</span>
+          </div>
+        </div>
+        <div id="hud-hint">
+          W A S D drive &nbsp;·&nbsp; SPACE drift &nbsp;·&nbsp; SHIFT nitro
+          &nbsp;·&nbsp; C camera &nbsp;·&nbsp; R reset
+        </div>
+      </div>
+
+      <div id="countdown" class="hidden"></div>
+      <div id="toast" class="hidden"></div>
+      <div id="caption" class="hidden" role="status" aria-live="polite"></div>
+      <div id="wrongway" class="hidden">WRONG WAY</div>
+
+      <div id="menu">
+        <div class="panel">
+          <div class="kicker">AGENTIC GAME STUDIO</div>
+          <h1>HORIZON <span>SPRINT</span></h1>
+          <p class="tag">
+            3-lap sports-car circuit &nbsp;·&nbsp; golden hour &nbsp;·&nbsp; 3
+            AI rivals
+          </p>
+          <div class="sw-row">
+            <span class="lbl">YOUR CAR</span>
+            <div id="swatches">
+              <button
+                class="sw sel"
+                data-color="210,31,38"
+                style="--c: #d21f26"
+                aria-label="red"
+              ></button>
+              <button
+                class="sw"
+                data-color="31,111,210"
+                style="--c: #1f6fd2"
+                aria-label="blue"
+              ></button>
+              <button
+                class="sw"
+                data-color="242,183,5"
+                style="--c: #f2b705"
+                aria-label="yellow"
+              ></button>
+              <button
+                class="sw"
+                data-color="31,157,85"
+                style="--c: #1f9d55"
+                aria-label="green"
+              ></button>
+              <button
+                class="sw"
+                data-color="123,47,247"
+                style="--c: #7b2ff7"
+                aria-label="violet"
+              ></button>
+            </div>
+          </div>
+          <div class="btn-row">
+            <button id="menu-start" class="big-btn">START RACE</button>
+            <button id="menu-howto" class="ghost-btn">HOW TO PLAY</button>
+          </div>
+          <div id="howto" class="hidden">
+            <div>
+              <b>W / UP</b> accelerate &nbsp; <b>S / DOWN</b> brake · reverse
+            </div>
+            <div><b>A D / LEFT RIGHT</b> steer</div>
+            <div>
+              <b>SPACE</b> handbrake drift &nbsp; <b>SHIFT</b> nitro boost
+            </div>
+            <div>
+              <b>C</b> camera &nbsp; <b>R</b> back on track &nbsp;
+              <b>M</b> sound &nbsp; <b>ESC</b> pause
+            </div>
+            <div style="margin-top: 8px">
+              Finish <b>3 laps</b> first. Hit every checkpoint — cut the track
+              and the lap won't count. Checkpoints refill nitro.
+            </div>
+          </div>
+          <div class="credit">
+            Car body: Blender beveled · asphalt/grass/carbon: Muse Image 1.0 ·
+            rest procedural · three.js local · trackside inspired by Forza
+            Horizon 5
+          </div>
+        </div>
+      </div>
+
+      <div id="pause" class="hidden">
+        <div class="panel">
+          <h2>PAUSED</h2>
+          <div class="btn-row" style="margin-bottom: 14px">
+            <button
+              id="btn-resume"
+              class="big-btn"
+              style="font-size: 16px; padding: 12px 34px"
+            >
+              RESUME
+            </button>
+            <button id="btn-restart-p" class="ghost-btn">RESTART</button>
+            <button id="btn-quit" class="ghost-btn">MENU</button>
+          </div>
+          <div class="opt-row">
+            <span>VOLUME</span
+            ><input id="opt-volume" type="range" min="0" max="100" value="70" />
+          </div>
+          <div class="opt-row">
+            <span>QUALITY</span
+            ><select id="opt-quality">
+              <option value="0">LOW</option>
+              <option value="1" selected>MED</option>
+              <option value="2">HIGH</option>
+            </select>
+          </div>
+          <div class="opt-row">
+            <span>STEERING</span
+            ><input id="opt-sens" type="range" min="50" max="200" value="100" />
+          </div>
+          <div class="chk-row">
+            <input id="opt-mute" type="checkbox" /><label for="opt-mute"
+              >MUTE ALL SOUND</label
+            >
+          </div>
+          <div class="chk-row">
+            <input id="opt-colorblind" type="checkbox" /><label
+              for="opt-colorblind"
+              >COLORBLIND-SAFE COLORS</label
+            >
+          </div>
+          <div class="chk-row">
+            <input id="opt-subs" type="checkbox" checked /><label for="opt-subs"
+              >NPC SUBTITLES + VOICE</label
+            >
+          </div>
+          <div class="opt-row">
+            <span>STEER KEYS</span
+            ><span
+              ><button id="key-left" class="icon-btn" title="Remap steer left">
+                A
+              </button>
+              <button id="key-right" class="icon-btn" title="Remap steer right">
+                D
+              </button></span
+            >
+          </div>
+        </div>
+      </div>
+
+      <div id="results" class="hidden">
+        <div class="panel">
+          <div class="kicker" id="results-kicker">RACE COMPLETE</div>
+          <h2 id="results-title">P1 — VICTORY!</h2>
+          <div id="results-best">BEST LAP --:--.-</div>
+          <div id="results-rows"></div>
+          <div class="btn-row">
+            <button
+              id="btn-restart-r"
+              class="big-btn"
+              style="font-size: 16px; padding: 12px 34px"
+            >
+              RACE AGAIN
+            </button>
+            <button id="btn-menu-r" class="ghost-btn">MENU</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="touch" class="hidden">
+        <button class="tbtn" id="t-left">&#8592;</button>
+        <button class="tbtn" id="t-right">&#8594;</button>
+        <button class="tbtn" id="t-gas">&#8593;</button>
+        <button class="tbtn" id="t-brake">&#8595;</button>
+        <button class="tbtn" id="t-nitro">N2O</button>
+      </div>
+
+      <div id="fps" class="hidden"></div>
+      <div id="fatal" class="hidden"></div>
+    </div>
+    <script src="/studio/vendor/three.min.js" defer></script>
+    <script src="./save.js" defer></script>
+    <script src="./audio.js" defer></script>
+    <script src="./model_data.js" defer></script>
+    <script src="./levels.js" defer></script>
+    <script src="./player.js" defer></script>
+    <script src="./enemies.js" defer></script>
+    <script src="./vfx.js" defer></script>
+    <script src="./ui.js" defer></script>
+    <script src="./game.js" defer></script>
+  </body>
+</html>

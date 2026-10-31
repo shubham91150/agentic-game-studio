@@ -66,6 +66,18 @@ the quality bars in §2–§9, not exact file names.
 
 - Pause menu: Resume, Restart, Volume slider, Quality (Low/Med/High), Sensitivity slider, Mute toggle, Reset-save.
 - `save.js` key `ags_save_v1`: `{ best, volume, quality, sensitivity }`. Load on boot, apply before first frame.
+- Accessibility pack (additive keys only — never rename existing fields):
+  - `colorblind` (bool, default false): swaps orb/enemy colors to the
+    Okabe-Ito-safe set — orb `#E69F00` (orange), enemy `#0072B2` (blue).
+    Toggle in the pause menu; generated games also bind `C` + persist
+    `ags_colorblind_v1`.
+  - `keys: { left, right }` (default `KeyA`/`KeyD`): remappable steer/jump
+    pair in the pause menu (click → press a key, Esc cancels), persisted as
+    `ags_keys_v1`. Arrows/WASD always keep working as fallback.
+  - `subtitles` (bool, default true): every NPC dialogue line renders as a
+    caption bar (`#caption`, `role="status" aria-live="polite"`, 4s
+    auto-hide) AND feeds the §7 `speak()` speechSynthesis text. Voice is
+    audio: gate speech on mute, never on `prefers-reduced-motion`.
 - Reduced-motion: honor `prefers-reduced-motion` (disable shake + flash).
 
 ## 7. Audio (synthesized, zero downloads)
@@ -119,3 +131,45 @@ the quality bars in §2–§9, not exact file names.
 - [ ] Mute silences everything; settings persist across reload.
 - [ ] Win reachable, lose reachable, both show correct screens.
 - [ ] `node --check` passes on every JS file; no inline `<script>` in HTML.
+- [ ] Debug console present: `?debug=1` shows FPS + player XYZ.
+
+## 10. Debug Console (every game ships it)
+
+- Expose `window.game = { scene, player, warp(x, z), win(), giveAll() }`.
+  `warp` clamps to world bounds; `win()` completes the objective and shows
+  the win screen; `giveAll()` collects everything, then calls `win()`.
+- `?debug=1` shows a small overlay: FPS (rolling 0.5s window) + player XYZ.
+  Hidden otherwise; zero deps; no inline scripts (built via DOM APIs).
+- Reference pattern (~30 lines, generated or hand-built):
+  ```js
+  var DEBUG = new URLSearchParams(location.search).get("debug") === "1";
+  var dbgEl = null,
+    dbgFrames = 0,
+    dbgLast = performance.now();
+  if (DEBUG) {
+    dbgEl = document.createElement("div");
+    dbgEl.setAttribute(
+      "style",
+      "position:absolute;top:8px;right:8px;z-index:60;",
+    );
+    document.body.appendChild(dbgEl);
+  }
+  window.game = {
+    scene: scene,
+    player: playerGroup,
+    warp: function (x, z) {
+      /* clamp + set player position */
+    },
+    win: function () {
+      /* full score + show win screen */
+    },
+    giveAll: function () {
+      /* collect all + win() */
+    },
+  };
+  // per frame: dbgFrames++; every 0.5s update dbgEl textContent FPS + XYZ.
+  ```
+- Hand-built games (e.g. `public/live-preview/game.js`) follow the same
+  handle + flag: `player` is the player car object, XYZ comes from
+  `car.x / car.y / car.z`, `win()` calls the finish flow, `giveAll()`
+  grants the collectible equivalent (nitro refill for racers).
