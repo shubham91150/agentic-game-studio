@@ -731,14 +731,14 @@ body {
   width: 100%;
   border: 0;
   resize: none;
-  padding: 13px 15px 6px;
+  padding: 10px 14px 6px;
   font: inherit;
   font-size: 13px;
   line-height: 1.5;
   outline: none;
   background: transparent;
   color: var(--ink);
-  min-height: 52px;
+  min-height: 44px;
 }
 
 #prompt::placeholder {
@@ -868,7 +868,8 @@ button.icon-btn {
   padding: 6px 20px 6px 6px;
   font-size: 12px;
   color: var(--muted);
-  max-width: 110px;
+  max-width: 84px;
+  flex: 0 0 auto;
 }
 
 .picker-ghost:hover {
@@ -957,15 +958,16 @@ button.icon-btn {
   border-color: var(--line);
   border-radius: var(--r-lg);
   background: var(--surface-0);
+  max-width: 100%;
 }
 
 #prompt {
-  padding: 14px 14px 6px;
-  line-height: 1.6;
+  padding: 10px 14px 4px;
+  line-height: 1.5;
 }
 
 .prompt-bar {
-  padding: 2px 8px 6px;
+  padding: 2px 8px 4px;
 }
 
 .prompt-box .icon-btn {
@@ -1017,15 +1019,16 @@ button.icon-btn {
 
 .model-wrap {
   position: relative;
-  flex: 0 1 auto;
+  flex: 1 1 auto;
   min-width: 0;
+  overflow: hidden;
 }
 
 .model-btn {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  max-width: 230px;
+  max-width: 180px;
   border: 0;
   border-radius: var(--r-pill);
   background: transparent;
@@ -2025,7 +2028,7 @@ button.icon-btn {
 
 @media (max-width: 960px) {
   .crumbs {
-    padding: 8px 12px 8px 8px;
+    padding: 8px 8px;
     min-height: 48px;
   }
 
@@ -2049,11 +2052,11 @@ button.icon-btn {
     height: 36px;
   }
 
-  /* Segmented control switcher */
+  /* Segmented control switcher — compact (ui-taste): ~38px tabs */
   .mobile-tabs {
     display: flex;
     gap: 0;
-    margin: 10px 12px 0 8px;
+    margin: 10px 8px 0 8px;
     padding: 3px;
     flex: 0 0 auto;
     background: var(--surface-1);
@@ -2071,8 +2074,8 @@ button.icon-btn {
     font: inherit;
     font-size: var(--fs-13);
     font-weight: 600;
-    padding: 10px 8px;
-    min-height: 44px;
+    padding: 7px 8px;
+    min-height: 38px;
     cursor: pointer;
     display: inline-flex;
     align-items: center;
@@ -2162,14 +2165,14 @@ button.icon-btn {
   .prompt-bar {
     flex-wrap: nowrap;
     gap: 6px;
-    padding: 6px 8px 8px;
+    padding: 4px 8px 6px;
   }
 
   .bar-left {
     flex: 1 1 auto;
     min-width: 0;
     flex-wrap: nowrap;
-    overflow: visible;
+    overflow: hidden;
   }
 
   .bar-right {
@@ -2180,28 +2183,35 @@ button.icon-btn {
   /* 16px inputs prevent iOS Safari zoom-on-focus */
   #prompt {
     font-size: 16px;
-    min-height: 48px;
-    padding: 10px 12px 4px;
+    min-height: 40px;
+    padding: 8px 12px 4px;
+    line-height: 1.45;
   }
 
-  .picker {
-    max-width: 118px;
-    font-size: 12px;
-    white-space: nowrap;
-  }
   .picker {
     font-size: 13px;
     padding: 7px 26px 7px 10px;
     max-width: 185px;
+    white-space: nowrap;
   }
 
-  .picker-ghost {
-    max-width: 64px;
+  /* Scope stays fixed + tiny; model takes priority width with ellipsis. */
+  .picker-ghost,
+  #scope-select.picker-ghost {
+    max-width: 68px;
+    flex: 0 0 auto;
     font-size: 12px;
+    padding: 6px 18px 6px 6px;
+  }
+
+  .model-wrap {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
   }
 
   .model-btn {
-    max-width: 150px;
+    max-width: 100%;
   }
 
   .attach-list {
@@ -2221,9 +2231,9 @@ button.icon-btn {
   }
 
   #attach-btn {
-    width: 44px;
-    height: 44px;
-    font-size: 22px;
+    width: 36px;
+    height: 36px;
+    font-size: 20px;
   }
 
   .send-btn {
@@ -2266,8 +2276,43 @@ button.icon-btn {
 }
 
 @media (max-width: 600px) {
-  .crumb-repo {
-    max-width: 22vw;
+  /* FIX (ui-taste): 360px header — hide low-priority items so New chat +
+   * Library never crush the live pill. Kept: panel icon, avatar, live
+   * pill, New chat, Library. */
+  .crumbs {
+    gap: 6px;
+    padding: 6px 8px;
+    min-height: 44px;
+    overflow: hidden;
+  }
+
+  .crumbs-left {
+    gap: 6px;
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  .crumb-sep,
+  .crumb-repo,
+  .crumb-right a {
+    display: none;
+  }
+
+  .live-pill {
+    padding: 2px 8px;
+    margin-left: 0;
+  }
+
+  .crumb-right {
+    gap: 6px;
+    flex: 0 0 auto;
+  }
+
+  .crumb-btn {
+    padding: 5px 9px;
+    min-height: 36px;
+    white-space: nowrap;
   }
 
   .terminal-head {
@@ -2279,7 +2324,7 @@ button.icon-btn {
   }
 
   .mobile-tabs {
-    margin: 8px 10px 0 8px;
+    margin: 8px 8px 0 8px;
   }
 }
 
