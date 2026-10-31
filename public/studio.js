@@ -1317,15 +1317,46 @@
   if (newchatBtn) newchatBtn.addEventListener("click", newChat);
 
   // Terminal inline preview: auto-load on same-origin VM page.
-  function loadTerminalInline() {
+  // Cross-origin login detector (ui-taste): when logged out, the iframe is
+  // redirected to GitHub login, which refuses framing (CSP frame-ancestors)
+  // and renders a blank box. Keep the connect card visible until the frame
+  // proves same-origin (logged in) via contentDocument access.
+  var terminalLoginCheckBound = false;
+  function checkTerminalLogin() {
     var connectBox = document.getElementById("terminal-connect");
     var frame = document.getElementById("cli-frame");
-    if (connectBox) connectBox.classList.add("hidden");
-    if (frame) {
+    if (!connectBox || !frame) return;
+    var loggedIn = false;
+    try {
+      var doc =
+        frame.contentDocument ||
+        (frame.contentWindow && frame.contentWindow.document);
+      if (doc) loggedIn = true;
+    } catch (e) {
+      loggedIn = false;
+    }
+    if (loggedIn) {
+      connectBox.classList.add("hidden");
       frame.classList.remove("hidden");
-      if (!frame.getAttribute("src")) {
-        frame.src = "https://spurcode.duckdns.org/terminal/";
+    } else {
+      connectBox.classList.remove("hidden");
+      frame.classList.add("hidden");
+      var text = connectBox.querySelector(".terminal-connect-text");
+      if (text) {
+        text.textContent =
+          "The live terminal needs your GitHub sign-in. Open the terminal in a new tab, sign in, then come back and press Load inline preview again.";
       }
+    }
+  }
+  function loadTerminalInline() {
+    var frame = document.getElementById("cli-frame");
+    if (!frame) return;
+    if (!frame.getAttribute("src")) {
+      frame.src = TERMINAL_URL;
+    }
+    if (!terminalLoginCheckBound) {
+      terminalLoginCheckBound = true;
+      frame.addEventListener("load", checkTerminalLogin);
     }
   }
   var isSameOrigin = window.location.hostname === "spurcode.duckdns.org";
@@ -1334,6 +1365,19 @@
   }
   var terminalLoadBtn = document.getElementById("terminal-load");
   if (terminalLoadBtn) {
-    terminalLoadBtn.addEventListener("click", loadTerminalInline);
+    terminalLoadBtn.addEventListener("click", function () {
+      var frame = document.getElementById("cli-frame");
+      // Retry path: a blocked (logged-out) load leaves the frame hidden —
+      // drop its src so this click forces a fresh navigation, then the same
+      // login detector runs on the next load.
+      if (
+        frame &&
+        frame.getAttribute("src") &&
+        frame.classList.contains("hidden")
+      ) {
+        frame.removeAttribute("src");
+      }
+      loadTerminalInline();
+    });
   }
 })();
