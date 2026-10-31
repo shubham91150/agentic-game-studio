@@ -2180,10 +2180,13 @@ button.icon-btn {
     gap: 4px;
   }
 
-  /* 16px inputs prevent iOS Safari zoom-on-focus */
+  /* 16px inputs prevent iOS Safari zoom-on-focus.
+   * FIX (ui-taste): rows="2" forces ~58px so min-height alone never binds —
+   * pin height to one line; longer text scrolls inside (no JS autosize). */
   #prompt {
     font-size: 16px;
     min-height: 40px;
+    height: 40px;
     padding: 8px 12px 4px;
     line-height: 1.45;
   }
