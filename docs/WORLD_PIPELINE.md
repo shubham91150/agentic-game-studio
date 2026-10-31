@@ -48,7 +48,7 @@ Godot reference (copy mat karo, sirf dekho): `/home/opencode/project-data/worksp
 
 ## 5. Submission pitch
 
-> "Agentic Game Studio ek prompt se playable 3D game banata hai — Meta Muse Wonder world reasoning, Muse Spark Open asset planning, Muse Image concept art, aur SAM-family (3.1 segmentation + 3D Objects) image-to-3D ke liye — deterministic layout aur physics QA gate ke saath. Koi third-party end-to-end world model shipped path me nahi hai (Trellis dev-only hai)."
+> "Agentic Game Studio staged pipeline se playable 3D prototype banata hai — Meta Muse Wonder world reasoning, Muse Spark Open asset planning, Muse Image concept art, aur SAM-family (3.1 segmentation + 3D Objects) image-to-3D ke liye — deterministic layout aur physics QA gate ke saath. Koi third-party end-to-end world model shipped path me nahi hai (Trellis dev-only hai)."
 
 ## 6. World-expansion tools (LIVE — tools only, never the shipped path)
 
