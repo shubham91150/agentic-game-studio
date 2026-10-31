@@ -17,7 +17,7 @@ No shortcuts.
 
 Filenames below are a recommended shape, not a mandate — adapt, merge,
 or rename to fit the game. What matters is separation of concerns and
-the quality bars in §2–§8, not exact file names.
+the quality bars in §2–§9, not exact file names.
 
 | File         | Owns (only this)                                       |
 | ------------ | ------------------------------------------------------ |
@@ -83,7 +83,35 @@ the quality bars in §2–§8, not exact file names.
 - Dialogue UI: typewriter text + portrait + voice together (speak on line start, cancel on line skip/close).
 - UPGRADE path (RESEARCH, not existing): Meta SeamlessM4T open weights on Modal for real TTS later.
 
-## 8. Done-Gate (playtest before saying done)
+## 8. Visual Realism (no more boxes)
+
+- PBR always — never ship a flat `MeshStandardMaterial` color.
+- Every surface gets albedo + normal + roughness maps.
+- Pack occlusion/roughness/metalness ORM-style where possible.
+- Texture sources: Muse Image-generated (`src/pipeline/meta_image.js`)
+- or Polyhaven CC0 scans (CC0-only, license check per game-pipeline skill).
+- Budgets live in §5 (≤1024px, shared materials, <100 draws) — not repeated here.
+- Filmic look, cheap stack — do all four, huge payoff:
+- `renderer.toneMapping = THREE.ACESFilmicToneMapping` (r128 supports it).
+- 3-point rig: hemisphere fill + directional key (the §5 shadow light)
+- plus a dim rim/back light for edge separation.
+- `scene.fog = new THREE.FogExp2(color, density)` for depth.
+- Gradient sky dome (canvas-texture sphere) — never a flat background color.
+- Post, gated: `UnrealBloomPass` subtle only (strength ~0.4, threshold ~0.85).
+- Vendor the `examples/jsm` post chain next to `three.min.js` FIRST, then use.
+- Never CDN post shaders; if not vendored, ship without bloom.
+- Skip SSAO on mobile — bake AO into textures instead.
+- Kill box-look in Blender — mandatory on EVERY hard-surface model pre-export:
+- Bevel modifier (angle-limit mode, 2–3 segments) on all hard edges.
+- Weighted-normals modifier after the bevel; no razor-sharp 90° edges ship.
+- Grime sells realism more than geometry does:
+- Baked AO/cavity maps on hero assets.
+- Floating decal planes for edge wear, dirt, scratches.
+- Ambient dust: `THREE.Points`, 200–500 sprites, pooled per §5, off on Low.
+- Free scans over modeling: Polyhaven / Quixel-free-tier CC0 first,
+- kitbash second, model by hand last.
+
+## 9. Done-Gate (playtest before saying done)
 
 - [ ] 60 seconds of play: no jank, fps stable per §5 meter.
 - [ ] Every input works: keyboard AND touch (or reason documented).
