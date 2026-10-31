@@ -104,6 +104,8 @@ const CONTENT_TYPES = {
   ".webp": "image/webp",
   ".mjs": "application/javascript; charset=utf-8",
   ".wasm": "application/wasm",
+  ".hdr": "application/octet-stream",
+  ".exr": "application/octet-stream",
 };
 
 function sendFile(res, filePath) {
@@ -437,36 +439,34 @@ const server = http.createServer(async (req, res) => {
     return fs.createReadStream(scriptPath).pipe(res);
   }
 
-  // ---------- Vendor assets (Three.js) ----------
-  if (pathname === "/studio/vendor/three.min.js") {
+  // ---------- Vendor assets (Three.js, GLTFLoader, World Realism, Rapier physics) ----------
+  const vendorMatch = pathname.match(
+    /^\/studio\/vendor\/(three\.min\.js|GLTFLoader\.js|world_realism\.js|rapier3d-compat\.mjs|rapier_wasm3d_bg\.wasm)$/,
+  );
+  if (vendorMatch) {
     const vendorPath = path.join(
       ROOT_DIR,
       "src",
       "engine",
       "vendor",
-      "three.min.js",
+      vendorMatch[1],
     );
     return sendFile(res, vendorPath);
   }
 
-  // ---------- Vendor assets (Rapier physics, local-only like three.min.js) ----------
-  // @dimforge/rapier3d-compat 0.21.0 (Apache-2.0), self-hosted: CSP bans CDN.
-  // rapier3d-compat.mjs resolves rapier_wasm3d_bg.wasm relative to its own
-  // URL, so both files must stay side by side in src/engine/vendor/.
-  // Browser use: <script type="module"> import * as RAPIER from
-  // '/studio/vendor/rapier3d-compat.mjs'; await RAPIER.init(); ...
-  const rapierMatch = pathname.match(
-    /^\/studio\/vendor\/(rapier3d-compat\.mjs|rapier_wasm3d_bg\.wasm)$/,
-  );
-  if (rapierMatch) {
-    const vendorPath = path.join(
-      ROOT_DIR,
-      "src",
-      "engine",
-      "vendor",
-      rapierMatch[1],
-    );
-    return sendFile(res, vendorPath);
+  // ---------- Studio 3D & PBR assets (public/assets/*) ----------
+  const studioAssetsMatch = pathname.match(/^\/studio\/assets\/([\w.\-/]+)$/);
+  if (studioAssetsMatch) {
+    const assetsDir = path.join(PUBLIC_DIR, "assets");
+    const target = path.resolve(assetsDir, studioAssetsMatch[1]);
+    if (
+      !target.startsWith(path.resolve(assetsDir) + path.sep) &&
+      target !== path.resolve(assetsDir)
+    ) {
+      res.writeHead(403, { "content-type": "text/plain" });
+      return res.end("Forbidden");
+    }
+    return sendFile(res, target);
   }
 
   // ---------- Live CLI preview stage (public/live-preview/*) ----------

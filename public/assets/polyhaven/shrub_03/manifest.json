@@ -1,0 +1,13 @@
+{
+  "assetId": "shrub_03",
+  "type": "model",
+  "resolution": "1k",
+  "license": "CC0 1.0 Universal (Polyhaven)",
+  "files": [
+    {
+      "file": "shrub_03_1k.glb",
+      "url": "/studio/assets/polyhaven/shrub_03/shrub_03_1k.glb",
+      "bytes": 2428416
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "assetId": "jacaranda_tree",
+  "type": "model",
+  "resolution": "1k",
+  "license": "CC0 1.0 Universal (Polyhaven)",
+  "files": [
+    {
+      "file": "jacaranda_tree_1k.glb",
+      "url": "/studio/assets/polyhaven/jacaranda_tree/jacaranda_tree_1k.glb",
+      "bytes": 215215312
+    }
+  ]
+}

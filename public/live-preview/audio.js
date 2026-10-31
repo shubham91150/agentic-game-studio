@@ -1,6 +1,5 @@
 /* Horizon Sprint — audio.js
- * 100% synthesized WebAudio: engine, skid, wind, UI/lap jingles. Zero downloads.
- * Asset credit: original synth code, no external assets. */
+ * WebAudio synthesizer: engine, skid, wind, UI/lap jingles. */
 (function () {
   window.G = window.G || {};
   var G = window.G;

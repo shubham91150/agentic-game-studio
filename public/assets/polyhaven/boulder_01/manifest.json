@@ -1,0 +1,13 @@
+{
+  "assetId": "boulder_01",
+  "type": "model",
+  "resolution": "1k",
+  "license": "CC0 1.0 Universal (Polyhaven)",
+  "files": [
+    {
+      "file": "boulder_01_1k.glb",
+      "url": "/studio/assets/polyhaven/boulder_01/boulder_01_1k.glb",
+      "bytes": 5770992
+    }
+  ]
+}

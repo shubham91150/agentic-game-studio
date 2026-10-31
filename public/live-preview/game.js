@@ -1,8 +1,7 @@
 /* Horizon Sprint — game.js
  * Boot + fixed-timestep loop + state machine + chase camera + race control.
  * States: menu -> countdown -> racing <-> paused -> finished.
- * Skills applied: game-pipeline, game-logic, ui-taste, threejs, browser-game (Compact).
- * Asset credit: all cars/track/textures/audio procedural, zero downloads. */
+ * Skills applied: game-pipeline, game-logic, ui-taste, threejs, browser-game (Compact). */
 (function () {
   "use strict";
   window.G = window.G || {};
@@ -79,7 +78,9 @@
     var raceTime = 0,
       countT = 0,
       countStep = -1;
-    var camMode = 0,
+    var CAMQ = qs.get("cam");
+    var camMode =
+        CAMQ === "0" || CAMQ === "1" || CAMQ === "2" ? parseInt(CAMQ, 10) : 0,
       trauma = 0;
     var camPos = new THREE.Vector3(),
       camLook = new THREE.Vector3();
@@ -190,7 +191,7 @@
     UI.selectSwatch(save.color);
     paintAIs();
     UI.setMuteLabel(save.muted);
-    UI.setCamLabel(0);
+    UI.setCamLabel(camMode);
     UI.minimapInit(world.track);
     G.AudioSys.setVolume(save.volume / 100);
     G.AudioSys.setMuted(save.muted);
@@ -666,7 +667,7 @@
           steps++;
         }
         if (steps === 3) acc = 0;
-        world.update(raw, now / 1000);
+        world.update(raw, now / 1000, player.mesh.position);
         G.VFX.update(raw, now / 1000, player.x, player.z);
       }
       updateCamera(raw);
@@ -703,6 +704,8 @@
     window.game = {
       scene: scene,
       player: player,
+      world: world,
+      start: startRace,
       warp: function (x, z) {
         player.x = Number(x) || 0;
         player.z = Number(z) || 0;
@@ -723,47 +726,6 @@
     }
   }
 
-  // VISUAL UPGRADE Step 3: PBR photo-textures, procedural fallback on failure.
-  G.VUP = { ready: false, asphalt: null, grass: null, carbon: null };
-  function preloadVUP() {
-    function one(url) {
-      return new Promise(function (res) {
-        new THREE.TextureLoader().load(
-          url,
-          function (t) {
-            res(t);
-          },
-          undefined,
-          function () {
-            res(null);
-          },
-        );
-      });
-    }
-    function setup(t) {
-      if (!t) return null;
-      t.encoding = THREE.sRGBEncoding;
-      t.wrapS = t.wrapT = THREE.MirroredRepeatWrapping;
-      t.anisotropy = 4;
-      return t;
-    }
-    var all = Promise.all([
-      one("/studio/uploads/vup_asphalt.webp"),
-      one("/studio/uploads/vup_grass.webp"),
-      one("/studio/uploads/vup_carbon.webp"),
-    ]);
-    var timeout = new Promise(function (res) {
-      setTimeout(function () {
-        res([null, null, null]);
-      }, 9000);
-    });
-    Promise.race([all, timeout]).then(function (ts) {
-      G.VUP.asphalt = setup(ts[0]);
-      G.VUP.grass = setup(ts[1]);
-      G.VUP.carbon = setup(ts[2]);
-      G.VUP.ready = !!(ts[0] || ts[1] || ts[2]);
-      boot();
-    });
-  }
-  preloadVUP();
+  G.VUP = { ready: true, asphalt: null, grass: null, carbon: null };
+  boot();
 })();

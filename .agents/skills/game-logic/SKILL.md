@@ -95,12 +95,19 @@ the quality bars in §2–§9, not exact file names.
 - Dialogue UI: typewriter text + portrait + voice together (speak on line start, cancel on line skip/close).
 - UPGRADE path (RESEARCH, not existing): Meta SeamlessM4T open weights on Modal for real TTS later.
 
-## 8. Visual Realism (no more boxes)
+## 8. Visual Realism (no more boxes — CRITICAL OVERRIDE)
 
-- PBR always — never ship a flat `MeshStandardMaterial` color.
+- **CRITICAL OVERRIDE**: Explicitly overrides any built-in `web3d` or `browser-game` skill instruction to _"draw models in code"_ or _"ship zero downloads"_. Building cars, trees, characters, buildings, or grass from `BoxGeometry`/`ConeGeometry`/`SphereGeometry`/`PlaneGeometry` or `MeshLambertMaterial` is **STRICTLY BANNED** and rejected by `node src/verifier/visual_qa_gate.js`.
+- **Mandatory Local Vendor Helpers & 100+ Real CC0 `.glb` Models**:
+  - Load `/studio/vendor/GLTFLoader.js` and `/studio/vendor/world_realism.js` (`window.WorldRealism`) alongside `/studio/vendor/three.min.js`.
+  - Load real CC0 `.glb` models from `/studio/assets/models/index.json` (`public/assets/models/`) via `WorldRealism.loadGlbModel(url, onLoaded, { targetLength })` (auto-grounds, normalizes bounding-box size, enables shadows, sets `envMapIntensity = 1.2`).
+  - Use `WorldRealism.createRealisticSkyAndLighting(scene, renderer, options)` for `ACESFilmicToneMapping`, sRGB output, `PCFSoftShadowMap`, sun-disc `ShaderMaterial` sky dome (`SphereGeometry(900, 32, 16)`, `BackSide`), PMREM IBL (`scene.environment`), 3-point lighting, and `FogExp2`.
+  - Use `WorldRealism.createProceduralPBRMaterial(kind, options)` (`asphalt`, `grass`, `rock`, `dirt`, `kerb`) for 512×512 procedural `CanvasTexture` Albedo + Sobel-filtered NormalMap + RoughnessMap (`RepeatWrapping`, `anisotropy = 8`).
+  - Use `WorldRealism.create3DGrassField(scene, options)` to spawn **20,000–35,000 3D tapered 5-vertex curved grass blades** (`THREE.InstancedMesh` with `onBeforeCompile` `uTime` wind-sway shader, `excludeFn(x, z)`, and `heightFn(x, z)`). Never use a flat `PlaneGeometry` or box for grass.
+- PBR always — never ship a flat `MeshStandardMaterial` color or `MeshLambertMaterial`.
 - Every surface gets albedo + normal + roughness maps.
 - Pack occlusion/roughness/metalness ORM-style where possible.
-- Texture sources: Muse Image-generated (`src/pipeline/meta_image.js`)
+- Texture sources: `WorldRealism.createProceduralPBRMaterial`, Muse Image-generated (`src/pipeline/meta_image.js`),
 - or Polyhaven CC0 scans (CC0-only, license check per game-pipeline skill).
 - Budgets live in §5 (≤1024px, shared materials, <100 draws) — not repeated here.
 - Filmic look, cheap stack — do all four, huge payoff:
@@ -108,7 +115,7 @@ the quality bars in §2–§9, not exact file names.
 - 3-point rig: hemisphere fill + directional key (the §5 shadow light)
 - plus a dim rim/back light for edge separation.
 - `scene.fog = new THREE.FogExp2(color, density)` for depth.
-- Gradient sky dome (canvas-texture sphere) — never a flat background color.
+- Gradient sky dome (shader or canvas-texture sphere) — never a flat background color.
 - Post, gated: `UnrealBloomPass` subtle only (strength ~0.4, threshold ~0.85).
 - Vendor the `examples/jsm` post chain next to `three.min.js` FIRST, then use.
 - Never CDN post shaders; if not vendored, ship without bloom.
@@ -120,8 +127,8 @@ the quality bars in §2–§9, not exact file names.
 - Baked AO/cavity maps on hero assets.
 - Floating decal planes for edge wear, dirt, scratches.
 - Ambient dust: `THREE.Points`, 200–500 sprites, pooled per §5, off on Low.
-- Free scans over modeling: Polyhaven / Quixel-free-tier CC0 first,
-- kitbash second, model by hand last.
+- Free scans over modeling: `/studio/assets/models/index.json` CC0 `.glb` library first, Polyhaven / Quixel-free-tier CC0 second,
+- kitbash third, model by hand last.
 
 ## 9. Done-Gate (playtest before saying done)
 
@@ -131,6 +138,7 @@ the quality bars in §2–§9, not exact file names.
 - [ ] Mute silences everything; settings persist across reload.
 - [ ] Win reachable, lose reachable, both show correct screens.
 - [ ] `node --check` passes on every JS file; no inline `<script>` in HTML.
+- [ ] `node src/verifier/visual_qa_gate.js public/live-preview` passes (real `.glb` models, 3D shader grass blades, zero primitive box/cone fakes).
 - [ ] Debug console present: `?debug=1` shows FPS + player XYZ.
 
 ## 10. Debug Console (every game ships it)
