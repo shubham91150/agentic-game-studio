@@ -542,6 +542,68 @@ body {
   background: var(--faint);
 }
 
+/* Save-to-library ghost action (ui-taste craft): small, muted, quiet — sits
+ * in the preview header next to the title, only when a game is live. Ghost by
+ * default (transparent + hairline), gains a faint surface on hover. Reuses the
+ * studio token system; no external fonts/CDN. Mobile-safe (collapses to icon). */
+.save-btn {
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: var(--fs-11);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  padding: 4px 9px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  flex: 0 0 auto;
+  transition:
+    color var(--dur-fast) ease,
+    background-color var(--dur-fast) ease,
+    border-color var(--dur-fast) ease,
+    transform var(--dur-fast) var(--ease-out);
+}
+
+.save-btn:hover {
+  color: var(--ink);
+  background: var(--surface-2);
+  border-color: var(--line-strong);
+}
+
+.save-btn:active {
+  transform: scale(0.97);
+}
+
+.save-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.save-btn.is-saved {
+  color: var(--ok);
+  border-color: rgba(74, 222, 128, 0.3);
+  background: rgba(74, 222, 128, 0.08);
+}
+
+.save-btn.is-busy {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+@media (max-width: 480px) {
+  .save-btn-label {
+    display: none;
+  }
+  .save-btn {
+    padding: 5px;
+  }
+}
+
 /* Terminal connect empty state */
 
 /* Fresh-terminal reconnect veil (ui-taste distill): quiet black cover with

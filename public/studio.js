@@ -46,6 +46,7 @@
   var libraryClose = document.getElementById("library-close");
   var libraryGrid = document.getElementById("library-grid");
   var librarySub = document.getElementById("library-sub");
+  var saveLibraryBtn = document.getElementById("save-library-btn");
 
   var attachments = [];
   var activeSkills = [];
@@ -308,20 +309,71 @@
     if (event.key === "Escape") closeLibrary();
   });
 
+  // Library count badge — refreshed on load and after a successful publish.
+  function refreshLibraryCount() {
+    fetch("/api/studio/games")
+      .then(function (res) {
+        return res.ok ? res.json() : [];
+      })
+      .then(function (list) {
+        var games = (Array.isArray(list) ? list : []).filter(isShowcaseGame);
+        if (libraryCount) {
+          libraryCount.textContent = games.length ? String(games.length) : "";
+        }
+      })
+      .catch(function () {
+        /* ignore */
+      });
+  }
   // Library count badge on load (no drawer fetch until opened)
-  fetch("/api/studio/games")
-    .then(function (res) {
-      return res.ok ? res.json() : [];
-    })
-    .then(function (list) {
-      var games = (Array.isArray(list) ? list : []).filter(isShowcaseGame);
-      if (libraryCount && games.length) {
-        libraryCount.textContent = String(games.length);
-      }
-    })
-    .catch(function () {
-      /* ignore */
+  refreshLibraryCount();
+
+  // Save the current live-preview game to the persistent library.
+  // Calls POST /api/studio/publish (same logic as src/tools/publish-game.js),
+  // which copies public/live-preview/ into storage/games/<id>/ and registers
+  // it in the index. Each click publishes a fresh copy; the button stays
+  // enabled and briefly flashes a "Saved ✓" state before reverting.
+  if (saveLibraryBtn) {
+    saveLibraryBtn.addEventListener("click", function () {
+      if (saveLibraryBtn.disabled) return;
+      saveLibraryBtn.disabled = true;
+      saveLibraryBtn.classList.add("is-busy");
+      saveLibraryBtn.classList.remove("is-saved");
+      fetch("/api/studio/publish", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: "{}",
+      })
+        .then(function (res) {
+          return res.json().then(function (data) {
+            return { ok: res.ok, data: data };
+          });
+        })
+        .then(function (result) {
+          if (!result.ok || !result.data || !result.data.ok) {
+            throw new Error("publish failed");
+          }
+          setStatus("Saved to library!", "ok");
+          saveLibraryBtn.classList.remove("is-busy");
+          saveLibraryBtn.classList.add("is-saved");
+          var label = saveLibraryBtn.querySelector(".save-btn-label");
+          if (label) label.textContent = "Saved ✓";
+          setTimeout(function () {
+            saveLibraryBtn.classList.remove("is-saved");
+            if (label) label.textContent = "Save to Library";
+          }, 1800);
+          refreshLibraryCount();
+        })
+        .catch(function () {
+          saveLibraryBtn.classList.remove("is-busy");
+          saveLibraryBtn.classList.remove("is-saved");
+          setStatus("Could not save to library.", "error");
+        })
+        .then(function () {
+          saveLibraryBtn.disabled = false;
+        });
     });
+  }
 
   // Chat history sidebar (LEFT slide-over): archived tmux transcripts.
   // The live terminal is a ttyd iframe, so resume = view transcript +
@@ -555,6 +607,12 @@
       })
       .then(function (data) {
         if (!data) return;
+        // Save-to-library button visibility follows the preview-state ready
+        // flag: only offer to publish when a live game is staged in
+        // public/live-preview/. Hidden otherwise.
+        if (saveLibraryBtn) {
+          saveLibraryBtn.classList.toggle("hidden", !data.ready);
+        }
         if (typeof data.cliBusy === "boolean") {
           if (data.cliBusy) {
             if (!agentWorking) {

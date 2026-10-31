@@ -543,6 +543,168 @@ const server = http.createServer(async (req, res) => {
     return sendFile(res, target);
   }
 
+  // ---------- Publish current live-preview game to the library ----------
+  // POST /api/studio/publish — copies public/live-preview/ into
+  // storage/games/<id>/ using the same logic as src/tools/publish-game.js
+  // (manifest schema matched exactly), so the live game appears in the
+  // Library drawer. Title comes from the live-preview <title> tag
+  // (fallback "Untitled Game"). Validates: title not empty, files exist.
+  if (pathname === "/api/studio/publish" && req.method === "POST") {
+    req.resume();
+    try {
+      const indexPath = path.join(livePreviewDir, "index.html");
+      if (!fs.existsSync(indexPath)) {
+        return json(res, 400, {
+          ok: false,
+          error: "No live preview to publish. Build a game first.",
+        });
+      }
+
+      // Title from the live-preview <title> tag (fallback "Untitled Game").
+      let title = "Untitled Game";
+      try {
+        const html = fs.readFileSync(indexPath, "utf8");
+        const m = html.match(/<title>([^<]+)<\/title>/i);
+        if (m && m[1].trim()) title = m[1].trim();
+      } catch {
+        /* keep fallback */
+      }
+      if (!title) title = "Untitled Game";
+
+      // Co-located asset extensions copied verbatim (matches publish-game.js).
+      const ASSET_EXTS = new Set([
+        ".js",
+        ".css",
+        ".png",
+        ".jpg",
+        ".jpeg",
+        ".webp",
+        ".svg",
+        ".json",
+        ".glb",
+        ".mp3",
+        ".wav",
+        ".ogg",
+      ]);
+
+      const gameId =
+        "game_" + Date.now() + "_" + crypto.randomBytes(3).toString("hex");
+      const gameDir = path.join(STORAGE_DIR, gameId);
+      fs.mkdirSync(gameDir, { recursive: true });
+
+      // Copy index.html + co-located assets verbatim (flat, top level).
+      const copied = [];
+      for (const entry of fs.readdirSync(livePreviewDir, {
+        withFileTypes: true,
+      })) {
+        if (!entry.isFile()) continue;
+        const ext = path.extname(entry.name).toLowerCase();
+        if (entry.name === "index.html" || ASSET_EXTS.has(ext)) {
+          fs.copyFileSync(
+            path.join(livePreviewDir, entry.name),
+            path.join(gameDir, entry.name),
+          );
+          copied.push(entry.name);
+        }
+      }
+      // Recurse into assets/ if the live-preview ships one (matches
+      // publish-game.js).
+      const srcAssets = path.join(livePreviewDir, "assets");
+      if (fs.existsSync(srcAssets) && fs.statSync(srcAssets).isDirectory()) {
+        const destAssets = path.join(gameDir, "assets");
+        fs.mkdirSync(destAssets, { recursive: true });
+        for (const entry of fs.readdirSync(srcAssets, {
+          withFileTypes: true,
+        })) {
+          if (!entry.isFile()) continue;
+          fs.copyFileSync(
+            path.join(srcAssets, entry.name),
+            path.join(destAssets, entry.name),
+          );
+          copied.push("assets/" + entry.name);
+        }
+      }
+      if (!copied.includes("index.html")) {
+        return json(res, 500, {
+          ok: false,
+          error: "Could not copy live preview files.",
+        });
+      }
+
+      // Manifest in the EXACT GameStorageManager schema (matches
+      // publish-game.js).
+      const hasJs = copied.some((f) => f.endsWith(".js"));
+      const hasConcept =
+        copied.includes("assets/concept.webp") ||
+        copied.includes("assets/concept.png") ||
+        copied.includes("assets/concept.jpg");
+      const manifest = {
+        id: gameId,
+        title,
+        prompt: "",
+        biome: "live-preview",
+        metaModel: "hand-made",
+        enrichmentModel: null,
+        objective: "",
+        createdAt: new Date().toISOString(),
+        playUrl: `/studio/games/${gameId}/index.html`,
+        imageUrl: hasConcept
+          ? `/studio/games/${gameId}/assets/${copied.find((f) => f.startsWith("assets/concept"))}`
+          : null,
+        files: {
+          html: "index.html",
+          manifest: "manifest.json",
+          unity: [],
+        },
+      };
+      if (hasJs) {
+        const main = copied.includes("game.js")
+          ? "game.js"
+          : copied.find((f) => f.endsWith(".js"));
+        manifest.files.js = main;
+      }
+
+      await fs.promises.writeFile(
+        path.join(gameDir, "manifest.json"),
+        JSON.stringify(manifest, null, 2),
+        "utf8",
+      );
+
+      // Upsert index.json entry (newest first) — matches publish-game.js.
+      let index = [];
+      try {
+        index = JSON.parse(
+          (await fs.promises.readFile(
+            path.join(STORAGE_DIR, "index.json"),
+            "utf8",
+          )) || "[]",
+        );
+        if (!Array.isArray(index)) index = [];
+      } catch {
+        index = [];
+      }
+      index = index.filter((e) => e && e.id !== gameId);
+      index.unshift(manifest);
+      await fs.promises.writeFile(
+        path.join(STORAGE_DIR, "index.json"),
+        JSON.stringify(index, null, 2),
+        "utf8",
+      );
+
+      return json(res, 200, {
+        ok: true,
+        gameId,
+        playUrl: manifest.playUrl,
+        title,
+      });
+    } catch {
+      return json(res, 500, {
+        ok: false,
+        error: "Could not publish the live preview.",
+      });
+    }
+  }
+
   // ---------- Uploaded reference files (/studio/uploads/* or /storage/.uploads/*) ----------
   const uploadServeMatch = pathname.match(
     /^\/(?:studio\/uploads|storage\/\.uploads)\/([\w.\-]+)$/,
