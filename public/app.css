@@ -219,7 +219,7 @@ body {
   text-decoration: none;
   padding: 6px 10px;
   border-radius: 6px;
-  border: 2px solid var(--line);
+  border: 1px solid var(--line);
   transition:
     color var(--dur-fast) ease,
     background-color var(--dur-fast) ease,
@@ -288,7 +288,7 @@ body {
   display: grid;
   grid-template-columns: minmax(400px, 46%) minmax(0, 1fr);
   gap: var(--gap);
-  padding: 0 var(--pad) 0 8px;
+  padding: 0 0 0 8px;
 }
 
 .pane-left {
@@ -1810,7 +1810,7 @@ button.icon-btn {
 .panel-btn {
   width: 28px;
   height: 28px;
-  border: 2px solid var(--line);
+  border: 1px solid var(--line);
   border-radius: 6px;
   background: transparent;
   color: var(--muted);
@@ -2436,4 +2436,16 @@ button.icon-btn {
 .chain-foot a:hover {
   color: var(--accent);
   border-bottom-color: var(--accent);
+}
+
+/* Game title in header (replaces breadcrumb) */
+.crumb-game-title {
+  font-family: var(--font-ui);
+  font-size: var(--fs-13);
+  font-weight: 600;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 50vw;
 }
