@@ -101,13 +101,17 @@
     function applyQuality(q) {
       save.quality = q;
       var dpr = window.devicePixelRatio || 1;
-      renderer.setPixelRatio(
-        q === 0
-          ? Math.min(dpr, 1)
-          : q === 1
-            ? Math.min(dpr, 1.5)
-            : Math.min(dpr, 2),
-      );
+      // Pixel ratio caps (ui-taste craft): mobile (pointer:coarse or narrow
+      // viewport) caps at 1.5 even on HIGH to keep fill-rate sane; desktop
+      // HIGH caps at 2, MED at 1.5, LOW at 1. Always min(devicePixelRatio, cap).
+      var mobile =
+        (window.matchMedia && matchMedia("(pointer:coarse)").matches) ||
+        window.innerWidth <= 760;
+      var cap;
+      if (q === 0) cap = 1;
+      else if (q === 2 && !mobile) cap = 2;
+      else cap = 1.5; // MED, or HIGH on mobile
+      renderer.setPixelRatio(Math.min(dpr, cap));
       world.setQuality(q);
       G.VFX.setAmbient(q > 0);
       onResize();

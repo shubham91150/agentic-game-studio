@@ -47,6 +47,10 @@
   var libraryGrid = document.getElementById("library-grid");
   var librarySub = document.getElementById("library-sub");
   var saveLibraryBtn = document.getElementById("save-library-btn");
+  var refreshPreviewBtn = document.getElementById("refresh-preview-btn");
+  // Base preview URL (without cache-bust ?t=) tracked client-side so the
+  // Refresh button can reload the iframe without a backend round-trip.
+  var currentPreviewUrl = null;
 
   var attachments = [];
   var activeSkills = [];
@@ -115,6 +119,7 @@
     if (emptyEl) emptyEl.classList.add("hidden");
     if (frameEl) {
       frameEl.classList.remove("hidden");
+      currentPreviewUrl = url;
       frameEl.src = url + "?t=" + Date.now();
     }
     closeLibrary();
@@ -380,6 +385,26 @@
     });
   }
 
+  // Refresh the live game preview: reload the #game-frame iframe against the
+  // same staged URL with a fresh cache-bust timestamp. Purely client-side —
+  // no backend call, no re-publish. The icon does a single half-second spin
+  // to confirm the reload fired (ui-taste: quiet affordance, no hover anim).
+  if (refreshPreviewBtn) {
+    refreshPreviewBtn.addEventListener("click", function () {
+      if (refreshPreviewBtn.disabled) return;
+      if (!currentPreviewUrl || !frameEl) return;
+      refreshPreviewBtn.disabled = true;
+      refreshPreviewBtn.classList.add("is-spinning");
+      frameEl.src = currentPreviewUrl + "?t=" + Date.now();
+      setStatus("Reloading preview…", "ok");
+      window.setTimeout(function () {
+        refreshPreviewBtn.classList.remove("is-spinning");
+        refreshPreviewBtn.disabled = false;
+        setStatus("Ready.", "ok");
+      }, 500);
+    });
+  }
+
   // Chat history sidebar (LEFT slide-over): archived tmux transcripts.
   // The live terminal is a ttyd iframe, so resume = view transcript +
   // seed the fresh live terminal with context. Never claim full restore.
@@ -612,11 +637,14 @@
       })
       .then(function (data) {
         if (!data) return;
-        // Save-to-library button visibility follows the preview-state ready
-        // flag: only offer to publish when a live game is staged in
-        // public/live-preview/. Hidden otherwise.
+        // Save-to-library + Refresh-preview button visibility follow the
+        // preview-state ready flag: only show header actions when a live game
+        // is staged in public/live-preview/. Hidden otherwise.
         if (saveLibraryBtn) {
           saveLibraryBtn.classList.toggle("hidden", !data.ready);
+        }
+        if (refreshPreviewBtn) {
+          refreshPreviewBtn.classList.toggle("hidden", !data.ready);
         }
         if (typeof data.cliBusy === "boolean") {
           if (data.cliBusy) {
@@ -639,6 +667,7 @@
           if (emptyEl) emptyEl.classList.add("hidden");
           if (frameEl) {
             frameEl.classList.remove("hidden");
+            currentPreviewUrl = data.url;
             frameEl.src = data.url + "?t=" + data.updatedAt;
           }
           if (

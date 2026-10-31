@@ -570,6 +570,28 @@ body {
   }
 }
 
+/* Refresh-preview action (ui-taste craft): reuses the shared .save-btn ghost
+ * treatment so the two preview-header buttons read as one consistent family
+ * (same border/radius/padding/hover/focus, same mobile icon-only collapse).
+ * The only thing added is a quiet half-turn spin of the reload icon on click
+ * to confirm the reload fired — no hover animation (kept quiet, not flashy). */
+.refresh-btn.is-spinning svg {
+  animation: refresh-btn-spin 0.5s var(--ease-out);
+}
+@keyframes refresh-btn-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .refresh-btn.is-spinning svg {
+    animation: none;
+  }
+}
+
 /* Terminal connect empty state */
 
 /* Fresh-terminal reconnect veil (ui-taste distill): quiet black cover with

@@ -4,9 +4,10 @@
  * S-bend, a tight crest hairpin, a descending back-leg, a chicane on the return
  * straight and a sweeping SW loop; WorldRealism shader sky + PMREM IBL, Sobel
  * normal-mapped PBR road/kerbs/terrain, gentle along-track elevation (flat in
- * the south, rising to the hairpin crest), 35,000 3D wind-swaying grass blades,
- * and real GLTF (.glb) trackside scenery (trees, palms, rocks, boulders,
- * buildings, tents, street lights, and concrete barriers). */
+ * the south, rising to the hairpin crest), 20,000 3D wind-swaying grass blades
+ * in 8 distance-cullable track sectors, and real GLTF (.glb) trackside scenery
+ * (trees, palms, rocks, boulders, buildings, tents, street lights, and
+ * concrete barriers) with per-object distance culling. */
 (function () {
   "use strict";
   window.G = window.G || {};
@@ -31,46 +32,46 @@
   // at the crest, a descending back-leg, a return straight broken by a
   // chicane, and a sweeping SW loop back to the start. Bounds ~709 x 717 m.
   var CTRL = [
-    [-77, -378], // 0  START/FINISH (south main straight, heading +x)
-    [77, -374], // 1
-    [205, -368], // 2  main straight
-    [288, -348], // 3  Turn 1 sweep (SE -> up the east side)
-    [336, -300], // 4
-    [354, -238], // 5  out-leg climb (uphill)
-    [362, -170], // 6
-    [354, -100], // 7
-    [348, -43], // 8  sweep
-    [374, 21], // 9  S-bend
-    [343, 78], // 10
-    [366, 136], // 11
-    [356, 206], // 12 short straight to the hairpin
-    [388, 255], // 13 approach (heading N)
-    [388, 300], // 14 HAIRPIN entry (R~35 U-turn)
-    [378, 325], // 15
-    [353, 335], // 16 crest apex (northmost point of the lap)
-    [328, 325], // 17
-    [318, 300], // 18 hairpin exit (heading S)
-    [300, 268], // 19 exit S
-    [274, 225], // 20 back-leg descent (downhill)
-    [256, 149], // 21
-    [274, 72], // 22
-    [250, -5], // 23
-    [269, -82], // 24
-    [250, -156], // 25
-    [263, -223], // 26 sweep back to the return straight
-    [215, -258], // 27
-    [102, -260], // 28 return straight (W-bound)
-    [44, -258], // 29 CHICANE entry
-    [0, -242], // 30 chicane kink N
-    [-44, -258], // 31 chicane kink back
-    [-120, -259], // 32 return straight
-    [-200, -260], // 33 return straight
-    [-256, -258], // 34 SW sweep start (big R~61 loop)
-    [-300, -280], // 35 SW loop
-    [-318, -319], // 36 westernmost point
-    [-300, -358], // 37
-    [-256, -380], // 38 grid run-up west end
-    [-168, -380], // 39 grid run-up mid (closes to start line)
+    [-81.2, -398.8], // 0  START/FINISH (south main straight, heading +x)
+    [81.2, -394.6], // 1
+    [216.3, -388.2], // 2  main straight
+    [303.8, -367.1], // 3  Turn 1 sweep (SE -> up the east side)
+    [354.5, -316.5], // 4
+    [373.5, -251.1], // 5  out-leg climb (uphill)
+    [381.9, -179.3], // 6
+    [373.5, -105.5], // 7
+    [367.1, -45.4], // 8  sweep
+    [394.6, 22.2], // 9  S-bend
+    [361.9, 82.3], // 10
+    [386.1, 143.5], // 11
+    [375.6, 217.3], // 12 short straight to the hairpin
+    [409.3, 269.0], // 13 approach (heading N)
+    [409.3, 316.5], // 14 HAIRPIN entry (R~35 U-turn)
+    [398.8, 342.9], // 15
+    [372.4, 353.4], // 16 crest apex (northmost point of the lap)
+    [346.0, 342.9], // 17
+    [335.5, 316.5], // 18 hairpin exit (heading S)
+    [316.5, 282.7], // 19 exit S
+    [289.1, 237.4], // 20 back-leg descent (downhill)
+    [270.1, 157.2], // 21
+    [289.1, 76.0], // 22
+    [263.8, -5.3], // 23
+    [283.8, -86.5], // 24
+    [263.8, -164.6], // 25
+    [277.5, -235.3], // 26 sweep back to the return straight
+    [226.8, -272.2], // 27
+    [107.6, -274.3], // 28 return straight (W-bound)
+    [46.4, -272.2], // 29 CHICANE entry
+    [0.0, -255.3], // 30 chicane kink N
+    [-46.4, -272.2], // 31 chicane kink back
+    [-126.6, -273.2], // 32 return straight
+    [-211.0, -274.3], // 33 return straight
+    [-270.1, -272.2], // 34 SW sweep start (big R~61 loop)
+    [-316.5, -295.4], // 35 SW loop
+    [-335.5, -336.5], // 36 westernmost point
+    [-316.5, -377.7], // 37
+    [-270.1, -400.9], // 38 grid run-up west end
+    [-177.2, -400.9], // 39 grid run-up mid (closes to start line)
   ];
   var SAMPLES = 1500,
     ROAD_HALF = 6;
@@ -227,8 +228,8 @@
       return distGrid[iz * DF_SIZE + ix];
     }
 
-    var LAKE_X = -20.0,
-      LAKE_Z = -30.0,
+    var LAKE_X = -79.0,
+      LAKE_Z = -514.0,
       LAKE_RX = 85.0,
       LAKE_RZ = 85.0;
 
@@ -486,39 +487,79 @@
       scene.add(terrainMesh);
     })();
 
-    // 5. 35,000 3-Blade Crossed Grass Tufts (105,000 3D Wind-Swaying Blades) via WorldRealism.create3DGrassField
-    var grassField = WR.create3DGrassField(scene, {
-      count: 35000,
-      radius: 160,
-      spread: 700,
-      bladeHeight: 0.72,
-      bladeWidth: 0.18,
-      excludeFn: function (x, z) {
-        return isOnTrack(x, z) || isInLake(x, z);
-      },
-      heightFn: getTerrainHeight,
-      sampleFn: function (attempt, u1, u2) {
-        // Spread tufts along the whole expanded circuit (8-130m verge) with a
-        // denser band near the start/finish village so the grid looks lush.
-        var idx;
-        if (attempt % 10 < 3) {
-          var span = 300;
-          idx = (S - 140 + Math.floor(u1 * span)) % S;
-        } else {
-          idx = Math.floor(u1 * S) % S;
-        }
-        var P = pts[idx],
-          Sd = side[idx],
-          Tn = tan[idx];
-        var sideSign = attempt % 2 === 0 ? 1 : -1;
-        var latDist = 8.0 + Math.pow(u2, 2.2) * 122.0;
-        var alongJitter = (((attempt * 0.6180339887) % 1.0) - 0.5) * 7.0;
-        var wx = P.x + Sd.x * (sideSign * latDist) + Tn.x * alongJitter;
-        var wz = P.z + Sd.z * (sideSign * latDist) + Tn.z * alongJitter;
-        return [wx, wz];
-      },
-    });
-    world.grassField = grassField;
+    // 5. Chunked 3D Grass — 8 track sectors × 2,500 tufts = 20,000 3D wind-
+    // swaying blades (down from a single 35,000-instance field). Chunking lets
+    // world.update() distance-cull whole sectors: only the ~2-3 sectors near
+    // the player render each frame (~5-7.5k instances) instead of the whole
+    // field, a ~60-78% per-frame reduction in grass vertex-shader work while
+    // staying dense around the car. Each chunk still uses the vendor 3D blade
+    // InstancedMesh + onBeforeCompile wind shader via WorldRealism.
+    var GRASS_CHUNKS = 8;
+    var GRASS_PER_CHUNK = 2500; // 8 × 2500 = 20,000 (AGENTS.md 20k-35k floor)
+    var grassSectorSize = Math.floor(S / GRASS_CHUNKS);
+    var grassGroup = new THREE.Group();
+    grassGroup.name = "GrassChunks";
+    scene.add(grassGroup);
+    var grassChunks = [];
+    for (var gc = 0; gc < GRASS_CHUNKS; gc++) {
+      var gStart = gc * grassSectorSize;
+      var gEnd = gc === GRASS_CHUNKS - 1 ? S : gStart + grassSectorSize;
+      var gMidIdx = ((Math.floor((gStart + gEnd) / 2) % S) + S) % S;
+      var gMidP = pts[gMidIdx];
+      var chunk = WR.create3DGrassField(grassGroup, {
+        count: GRASS_PER_CHUNK,
+        minCount: 1500, // opt-in: allow a sub-20k chunk (vendor default is 20k)
+        radius: 160,
+        spread: 700,
+        bladeHeight: 0.72,
+        bladeWidth: 0.18,
+        excludeFn: function (x, z) {
+          return isOnTrack(x, z) || isInLake(x, z);
+        },
+        heightFn: getTerrainHeight,
+        sampleFn: (function (a, b) {
+          var span = Math.max(1, b - a);
+          return function (attempt, u1, u2) {
+            // Confine this chunk's tufts to its track index range [a, b),
+            // with a denser band near the start/finish village (first 30%
+            // of attempts) so the grid still looks lush.
+            var idx;
+            if (attempt % 10 < 3) {
+              var sub = Math.max(1, Math.floor(span * 0.6));
+              idx = (a + Math.floor(u1 * sub)) % S;
+            } else {
+              idx = (a + Math.floor(u1 * span)) % S;
+            }
+            if (idx < 0) idx += S;
+            var P = pts[idx],
+              Sd = side[idx],
+              Tn = tan[idx];
+            var sideSign = attempt % 2 === 0 ? 1 : -1;
+            var latDist = 8.0 + Math.pow(u2, 2.2) * 122.0;
+            var alongJitter = (((attempt * 0.6180339887) % 1.0) - 0.5) * 7.0;
+            var wx = P.x + Sd.x * (sideSign * latDist) + Tn.x * alongJitter;
+            var wz = P.z + Sd.z * (sideSign * latDist) + Tn.z * alongJitter;
+            return [wx, wz];
+          };
+        })(gStart, gEnd),
+      });
+      grassChunks.push({
+        mesh: chunk.mesh,
+        field: chunk,
+        cx: gMidP.x,
+        cz: gMidP.z,
+      });
+    }
+    world.grassChunks = grassChunks;
+
+    // Scenery registry: every placed GLB model + building gets pushed here so
+    // world.update() can distance-cull objects >220m from the player (saves
+    // their draw calls when the car is on the far side of the lap). The
+    // start/finish village (buildings, coffee cart, seating, barrels,
+    // lantern, drill) clusters near sample 0 and is ~300-600m away for most
+    // of a lap — culling it removes dozens of multi-mesh GLB draw calls.
+    var scenery = [];
+    world.scenery = scenery;
 
     // 5b. Scenic Lakeside Water Body beside the opening straight & turn 1
     var waterSurface = null;
@@ -526,13 +567,14 @@
       waterSurface = WR.createRealisticWater(scene, {
         width: LAKE_RX * 2.0,
         depth: LAKE_RZ * 2.0,
-        segmentsX: 64,
-        segmentsZ: 64,
+        segmentsX: 32,
+        segmentsZ: 32,
         position: [LAKE_X, 0.06, LAKE_Z],
         sunDirection: [120, 95, 60],
         deepColor: "#0a3246",
         skyColor: "#7ab8d6",
         waveHeight: 0.12,
+        simpleFoam: true,
       });
       world.water = waterSurface;
     }
@@ -595,7 +637,7 @@
         var bx = bP.x + bSd.x * bd.lat;
         var bz = bP.z + bSd.z * bd.lat;
         var by = Math.max(0, getTerrainHeight(bx, bz) - 0.15);
-        WR.createRealisticBuilding(scene, {
+        var bGroup = WR.createRealisticBuilding(scene, {
           width: bd.width,
           depth: bd.depth,
           floors: bd.floors,
@@ -603,6 +645,7 @@
           position: [bx, by, bz],
           rotationY: Math.atan2(bT.x, bT.z) + bd.yawOffset,
         });
+        if (bGroup) scenery.push({ obj: bGroup, x: bx, z: bz });
       }
     }
 
@@ -790,6 +833,7 @@
         var baseYaw = Math.atan2(T.x, T.z);
         inst.rotation.y = baseYaw + (sp.yawOffset || 0);
         scene.add(inst);
+        scenery.push({ obj: inst, x: wx, z: wz });
       }
     }
 
@@ -1164,9 +1208,54 @@
     };
 
     world.update = function (dt, time, playerPos) {
-      if (grassField && typeof grassField.update === "function") {
-        grassField.update(dt, playerPos);
+      var px = playerPos ? playerPos.x : 0;
+      var pz = playerPos ? playerPos.z : 0;
+      var CULL2 = 220 * 220; // ~220m distance culling radius
+
+      // Grass chunk distance culling: always render the player's nearest
+      // chunk + its two loop-neighbours (no pop-in around the car), plus any
+      // other chunk whose centre is within ~220m. Wind uTime advances on
+      // every chunk so culled chunks resume mid-wave, not frozen.
+      if (grassChunks.length) {
+        var bestK = 0,
+          bestD = Infinity;
+        for (var ci = 0; ci < grassChunks.length; ci++) {
+          var ddx = grassChunks[ci].cx - px,
+            ddz = grassChunks[ci].cz - pz;
+          var dd = ddx * ddx + ddz * ddz;
+          if (dd < bestD) {
+            bestD = dd;
+            bestK = ci;
+          }
+        }
+        var KC = grassChunks.length;
+        for (var k = 0; k < KC; k++) {
+          var ch = grassChunks[k];
+          var isNeighbour =
+            k === bestK ||
+            k === (bestK - 1 + KC) % KC ||
+            k === (bestK + 1) % KC;
+          var cdx = ch.cx - px,
+            cdz = ch.cz - pz;
+          var near = cdx * cdx + cdz * cdz < CULL2;
+          ch.mesh.visible = isNeighbour || near;
+          if (ch.field && typeof ch.field.update === "function") {
+            ch.field.update(dt, playerPos);
+          }
+        }
       }
+
+      // Scenery distance culling: hide every trackside GLB / building farther
+      // than ~220m from the player.
+      if (scenery.length) {
+        for (var si = 0; si < scenery.length; si++) {
+          var s = scenery[si];
+          var sx = s.x - px,
+            sz = s.z - pz;
+          s.obj.visible = sx * sx + sz * sz < CULL2;
+        }
+      }
+
       if (waterSurface && typeof waterSurface.update === "function") {
         waterSurface.update(dt);
       }
@@ -1184,7 +1273,9 @@
         return;
       }
       sun.castShadow = true;
-      var sz = q === 1 ? 1024 : 2048;
+      // Shadow map capped at 1024px for perf (was 2048 at HIGH). 1024 is
+      // plenty for a single follow-light over a 95m frustum around the car.
+      var sz = 1024;
       if (sun.shadow && sun.shadow.mapSize && sun.shadow.mapSize.x !== sz) {
         sun.shadow.mapSize.set(sz, sz);
         if (sun.shadow.map) {

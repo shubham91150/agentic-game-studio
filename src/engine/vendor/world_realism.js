@@ -740,7 +740,14 @@
     }
     var opts = options || {};
     var requestedCount = typeof opts.count === "number" ? opts.count : 26000;
-    var count = clamp(Math.floor(requestedCount), 20000, 35000);
+    // Default floor is 20,000 (AGENTS.md mandate). Callers that want smaller
+    // per-chunk fields for distance culling may opt in via opts.minCount;
+    // existing callers are unaffected (clamp still caps at 35,000).
+    var minCount =
+      typeof opts.minCount === "number"
+        ? Math.max(200, Math.floor(opts.minCount))
+        : 20000;
+    var count = clamp(Math.floor(requestedCount), minCount, 35000);
     var spread = opts.spread || opts.areaSize || 380;
     var bladeHeight = opts.bladeHeight || 0.68;
     var bladeWidth = opts.bladeWidth || 0.18;
@@ -1099,6 +1106,9 @@
     var foamColor = new THREE.Color(
       opts.foamColor !== undefined ? opts.foamColor : "#e6f5fa",
     );
+    // opts.simpleFoam: drop the secondary cosine ripple term in the foam ring
+    // (one fewer trig op per fragment). Opt-in; default keeps full detail.
+    var simpleFoam = !!opts.simpleFoam;
 
     var waterUniforms = {
       uTime: { value: 0.0 },
@@ -1161,7 +1171,9 @@
       "  // Shoreline foam edge ring + alpha feathering",
       "  vec2 centered = (vUv - 0.5) * 2.0;",
       "  float radialDist = length(centered);",
-      "  float ripple = sin(radialDist * 26.0 - uTime * 2.8) * 0.025 + cos(p.x * 0.45 + p.y * 0.45 + uTime * 1.9) * 0.015;",
+      simpleFoam
+        ? "  float ripple = sin(radialDist * 26.0 - uTime * 2.8) * 0.025;"
+        : "  float ripple = sin(radialDist * 26.0 - uTime * 2.8) * 0.025 + cos(p.x * 0.45 + p.y * 0.45 + uTime * 1.9) * 0.015;",
       "  float edgeDist = 1.0 - clamp(radialDist + ripple, 0.0, 1.05);",
       "  float foamRing = smoothstep(0.18, 0.05, edgeDist) * smoothstep(0.0, 0.04, edgeDist);",
       "  waterCol = mix(waterCol, uFoamColor, foamRing * 0.72);",
