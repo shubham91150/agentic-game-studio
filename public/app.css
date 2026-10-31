@@ -471,56 +471,15 @@ body {
   border-color: var(--line-strong);
 }
 
-/* LEFT terminal chrome — minimal (ui-taste distill): slim hairline header, quiet link. */
+/* LEFT terminal box — quieter container (ui-taste): no outer border or
+ * shadow, lg radius. The header now uses the shared base .terminal-head so
+ * the Muse CLI terminal and the Game Preview window-headers share the same
+ * padding, min-height, and background treatment (ui-taste polish —
+ * consistent window headers). Only the box chrome stays distilled. */
 .terminal-section .terminal-box {
   box-shadow: none;
   border: none;
   border-radius: var(--r-lg);
-}
-
-.terminal-section .terminal-head {
-  padding: 5px 10px;
-  min-height: 32px;
-  background: transparent;
-}
-
-.terminal-section .terminal-title {
-  font-size: 10px;
-  color: var(--faint);
-  letter-spacing: 0.06em;
-}
-
-.terminal-section .window-dots {
-  gap: 0;
-}
-
-.terminal-section .window-dots span {
-  width: 7px;
-  height: 7px;
-}
-
-.terminal-section .window-dots span:nth-child(2),
-.terminal-section .window-dots span:nth-child(3) {
-  display: none;
-}
-
-.terminal-section .window-dots span:nth-child(1) {
-  background: transparent;
-  border-color: var(--line-strong);
-}
-
-.terminal-section .terminal-open {
-  border: 0;
-  background: transparent;
-  padding: 4px 2px;
-  font-size: var(--fs-11);
-  color: var(--faint);
-}
-
-.terminal-section .terminal-open:hover {
-  color: var(--ink-2);
-  background: transparent;
-  border-color: transparent;
 }
 
 .stage-badge {
@@ -2367,8 +2326,8 @@ button.icon-btn {
 
 @media (max-width: 600px) {
   /* FIX (ui-taste): 360px header — hide low-priority items so New chat +
-   * Library never crush the live pill. Kept: panel icon, avatar, live
-   * pill, New chat, Library. */
+   * Library never crush the live pill. Kept: panel icon, avatar, repo
+   * name (small, truncates), live pill, New chat, Library. */
   .crumbs {
     gap: 6px;
     padding: 6px 8px;
@@ -2384,9 +2343,18 @@ button.icon-btn {
   }
 
   .crumb-sep,
-  .crumb-repo,
   .crumb-right a {
     display: none;
+  }
+
+  /* FIX (ui-taste): keep the repo name visible next to the avatar so the
+   * user always knows which project. Small + truncates with ellipsis when
+   * the 360px header gets tight. Other low-priority items stay hidden.
+   * min-width:0 lets the flex item shrink so the ellipsis can engage. */
+  .crumb-repo {
+    font-size: var(--fs-11);
+    min-width: 0;
+    max-width: 38vw;
   }
 
   .live-pill {

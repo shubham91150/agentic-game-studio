@@ -126,6 +126,11 @@
     statusEl.className = "status" + (cls ? " " + cls : "");
   }
 
+  // Default rest state (ui-taste): seed the hero status line with "Ready."
+  // on load, before any fetch, so it is never empty at rest. Agent activity
+  // and pollPreviewState() overwrite it as the session evolves.
+  setStatus("Ready.");
+
   function updateSendStopButton() {
     if (!sendBtn) return;
     var active = Boolean(running || agentWorking);
