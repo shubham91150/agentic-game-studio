@@ -1,6 +1,5 @@
 /* Horizon Sprint — ui.js
- * Menu / HUD / pause / results / minimap / touch. No game logic here.
- * Asset credit: 100% original code + system fonts, zero downloads. */
+ * Menu / HUD / pause / results / minimap / touch. No game logic here. */
 (function () {
   window.G = window.G || {};
   var G = window.G;

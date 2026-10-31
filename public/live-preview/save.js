@@ -1,6 +1,5 @@
 /* Horizon Sprint — save.js
- * localStorage persistence: best lap, volume, quality, steering, car color.
- * Asset credit: 100% original code, no external assets. */
+ * localStorage persistence: best lap, volume, quality, steering, car color. */
 (function () {
   window.G = window.G || {};
   var G = window.G;

@@ -1,0 +1,26 @@
+{
+  "assetId": "asphalt_02",
+  "type": "textures",
+  "resolution": "1k",
+  "license": "CC0 1.0 Universal (Polyhaven)",
+  "files": [
+    {
+      "map": "diff",
+      "file": "asphalt_02_diff_1k.jpg",
+      "url": "/studio/assets/polyhaven/asphalt_02/asphalt_02_diff_1k.jpg",
+      "bytes": 731707
+    },
+    {
+      "map": "nor_gl",
+      "file": "asphalt_02_nor_gl_1k.jpg",
+      "url": "/studio/assets/polyhaven/asphalt_02/asphalt_02_nor_gl_1k.jpg",
+      "bytes": 1240122
+    },
+    {
+      "map": "arm",
+      "file": "asphalt_02_arm_1k.jpg",
+      "url": "/studio/assets/polyhaven/asphalt_02/asphalt_02_arm_1k.jpg",
+      "bytes": 296770
+    }
+  ]
+}

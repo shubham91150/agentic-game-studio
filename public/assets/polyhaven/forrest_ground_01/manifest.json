@@ -1,0 +1,26 @@
+{
+  "assetId": "forrest_ground_01",
+  "type": "textures",
+  "resolution": "1k",
+  "license": "CC0 1.0 Universal (Polyhaven)",
+  "files": [
+    {
+      "map": "diff",
+      "file": "forrest_ground_01_diff_1k.jpg",
+      "url": "/studio/assets/polyhaven/forrest_ground_01/forrest_ground_01_diff_1k.jpg",
+      "bytes": 833711
+    },
+    {
+      "map": "nor_gl",
+      "file": "forrest_ground_01_nor_gl_1k.jpg",
+      "url": "/studio/assets/polyhaven/forrest_ground_01/forrest_ground_01_nor_gl_1k.jpg",
+      "bytes": 1428763
+    },
+    {
+      "map": "arm",
+      "file": "forrest_ground_01_arm_1k.jpg",
+      "url": "/studio/assets/polyhaven/forrest_ground_01/forrest_ground_01_arm_1k.jpg",
+      "bytes": 296969
+    }
+  ]
+}

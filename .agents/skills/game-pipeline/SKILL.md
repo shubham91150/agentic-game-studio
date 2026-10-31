@@ -9,6 +9,17 @@ metadata:
 
 # Game Pipeline — Complete 3D Browser Game Builder
 
+## CRITICAL OVERRIDE: Real `.glb` Models & 3D Shader Grass ONLY (Bans `web3d` / `browser-game` Primitive Advice)
+
+**THIS RULE EXPLICITLY OVERRIDES ANY BUILT-IN `web3d` OR `browser-game` SKILL INSTRUCTION TO _"DRAW MODELS IN CODE"_ OR _"SHIP ZERO DOWNLOADS"_.**
+
+1. **STRICT BAN ON PRIMITIVE FAKES**: Building cars, trees, characters, buildings, or grass from `BoxGeometry`, `ConeGeometry`, `CylinderGeometry`, `SphereGeometry`, `PlaneGeometry`, `function box(...)` helpers, or `MeshLambertMaterial` is **STRICTLY BANNED** and automatically rejected by `node src/verifier/visual_qa_gate.js`.
+2. **LOCAL VENDOR HELPERS & 100+ REAL CC0 `.glb` MODELS**:
+   - Load `/studio/vendor/three.min.js`, `/studio/vendor/GLTFLoader.js`, and `/studio/vendor/world_realism.js` (`window.WorldRealism`) in `public/live-preview/index.html`.
+   - Browse the **100+ real CC0 `.glb` models** in `/studio/assets/models/index.json` (on disk at `public/assets/models/`, served at `/studio/assets/models/...`) and load them with `WorldRealism.loadGlbModel(url, onLoaded, { targetLength })`.
+   - Use `WorldRealism.createRealisticSkyAndLighting(scene, renderer, options)` (ACESFilmicToneMapping + PMREM `scene.environment` + sun-disc sky dome + 3-point shadows), `WorldRealism.createProceduralPBRMaterial(kind, options)` (`asphalt`, `grass`, `rock`, `dirt`, `kerb` with 512×512 Sobel normal maps), and `WorldRealism.create3DGrassField(scene, options)` (20,000–35,000 3D tapered 5-vertex curved grass blades with `onBeforeCompile` wind-sway vertex shader).
+3. **MANDATORY VISUAL QA GATE**: Every 3D preview build MUST pass `node src/verifier/visual_qa_gate.js public/live-preview`.
+
 You are inside the Agentic Game Studio live terminal. The user's browser has TWO panes:
 
 - **Left:** this terminal (you).
@@ -188,10 +199,10 @@ Minimum viable game MUST have: state machine (`menu/playing/paused/over`), playe
 ## Hard Rules (CSP + Preview)
 
 1. **NEVER** inline `<script>...</script>` or `onclick=` in `index.html` — the reverse proxy sends `Content-Security-Policy: script-src 'self'` and blocks inline scripts.
-2. Load order at end of `<body>`: `<script src="/studio/vendor/three.min.js" defer></script>` then your files with `defer` (3D). For 2D Godot web-export games: follow the `godot-web` skill's export output layout.
+2. Load order at end of `<body>`: `<script src="/studio/vendor/three.min.js" defer></script>`, `<script src="/studio/vendor/GLTFLoader.js" defer></script>`, `<script src="/studio/vendor/world_realism.js" defer></script>`, then your files with `defer` (3D). For 2D Godot web-export games: follow the `godot-web` skill's export output layout.
 3. Guard DOM access: `document.getElementById('canvas-container') || document.body`.
 4. Uploaded files in `storage/.uploads/<name>` are served at `/studio/uploads/<name>` — reference that URL from game code.
-5. For `.glb` without a loader: parse the `GLB` magic (`0x46546C67`) chunks into `THREE.BufferGeometry`/`THREE.MeshStandardMaterial` directly, or extract meshes to `model_data.js` with a quick `node`/`python3` script. No external CDN scripts — only local `/studio/vendor/` and relative `./` files.
+5. **Real `.glb` Models + WorldRealism Required**: Load 3D models from `/studio/assets/models/index.json` (`public/assets/models/`) using `/studio/vendor/GLTFLoader.js` and `WorldRealism.loadGlbModel(url, onLoaded)`. Never fake cars, trees, buildings, or characters with `BoxGeometry`/`ConeGeometry`/`SphereGeometry`, and never use flat `PlaneGeometry` grass without `WorldRealism.create3DGrassField`. No external CDN scripts — only local `/studio/vendor/`, `/studio/assets/models/`, and relative `./` files.
 
 ## Publish Rule — Hand-Made Games Publish Verbatim (NEVER Regenerate)
 
@@ -235,6 +246,7 @@ After each stage, say what is done vs what is pending.
 ## Before You Say "Done"
 
 - [ ] `node --check public/live-preview/game.js` passes (and every other JS file you wrote).
+- [ ] `node src/verifier/visual_qa_gate.js public/live-preview` passes with zero failures (no inline scripts, real `.glb` models loaded via `GLTFLoader`, no primitive box/cone fakes, 3D `InstancedMesh` shader grass blades, `ACESFilmicToneMapping` enabled).
 - [ ] No inline `<script>` blocks in `index.html` (`grep -c '<script>'` excluding `src=` should be 0).
 - [ ] Game shows a recognisable scene, player moves, orbs/enemies behave, win/lose reachable.
 - [ ] Tell the user what was built + controls in 2–3 lines. Keep it short.

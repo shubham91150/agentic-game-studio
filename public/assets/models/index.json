@@ -1,0 +1,3004 @@
+{
+  "version": 1,
+  "baseUrl": "/studio/assets/models",
+  "totalModels": 86,
+  "categories": {
+    "vehicles": [
+      {
+        "id": "ambulance",
+        "file": "ambulance.glb",
+        "category": "vehicles",
+        "url": "/studio/assets/models/vehicles/ambulance.glb",
+        "byteSize": 233612,
+        "meshes": [
+          "body",
+          "wheel-front-right",
+          "wheel-front-left",
+          "wheel-back-right",
+          "wheel-back-left",
+          "door-right",
+          "door-left"
+        ],
+        "nodes": [
+          "body",
+          "wheel-front-right",
+          "wheel-front-left",
+          "wheel-back-right",
+          "wheel-back-left",
+          "door-right",
+          "door-left"
+        ],
+        "animations": [],
+        "boundingBox": {
+          "min": [
+            -0.75,
+            -0.3,
+            -1.625
+          ],
+          "max": [
+            0.75,
+            1.6,
+            1.625
+          ],
+          "size": [
+            1.5,
+            1.9,
+            3.25
+          ]
+        }
+      },
+      {
+        "id": "delivery",
+        "file": "delivery.glb",
+        "category": "vehicles",
+        "url": "/studio/assets/models/vehicles/delivery.glb",
+        "byteSize": 240264,
+        "meshes": [
+          "door",
+          "wheel-front-right",
+          "wheel-front-left",
+          "wheel-back-right",
+          "wheel-back-left",
+          "body"
+        ],
+        "nodes": [
+          "door",
+          "wheel-front-right",
+          "wheel-front-left",
+          "wheel-back-right",
+          "wheel-back-left",
+          "body"
+        ],
+        "animations": [],
+        "boundingBox": {
+          "min": [
+            -0.75,
+            -1.0,
+            -1.625
+          ],
+          "max": [
+            0.75,
+            1.5,
+            1.625
+          ],
+          "size": [
+            1.5,
+            2.5,
+            3.25
+          ]
+        }
+      },
+      {
+        "id": "drone",
+        "file": "drone.glb",
+        "category": "vehicles",
+        "url": "/studio/assets/models/vehicles/drone.glb",
+        "byteSize": 133888,
+        "meshes": [
+          "Sphere",
+          "Cylinder",
+          "Cylinder.001",
+          "Cylinder.002",
+          "Cylinder.003",
+          "Cylinder.004",
+          "Cylinder.005",
+          "Cylinder.006",
+          "Cylinder.007",
+          "Cylinder.008"
+        ],
+        "nodes": [
+          "Sphere",
+          "Cylinder",
+          "Cylinder.001",
+          "Cylinder.002",
+          "Cylinder.003",
+          "Cylinder.004",
+          "Cylinder.005",
+          "Cylinder.006",
+          "Cylinder.007",
+          "Cylinder.008"
+        ],
+        "animations": [],
+        "boundingBox": {
+          "min": [
+            -0.7,
+            -0.7,
+            -0.7
+          ],
+          "max": [
+            0.7,
+            0.7,
+            0.7
+          ],
+          "size": [
+            1.4,
+            1.4,
+            1.4
+          ]
+        }
+      },
+      {
+        "id": "firetruck",
+        "file": "firetruck.glb",
+        "category": "vehicles",
+        "url": "/studio/assets/models/vehicles/firetruck.glb",
+        "byteSize": 232448,
+        "meshes": [
+          "body",
+          "grill",
+          "wheel-front-right",
+          "wheel-front-left",
+          "wheel-back-right",
+          "wheel-back-left"
+        ],
+        "nodes": [
+          "body",
+          "grill",
+          "wheel-front-right",
+          "wheel-front-left",
+          "wheel-back-right",
+          "wheel-back-left"
+        ],
+        "animations": [],
+        "boundingBox": {
+          "min": [
+            -0.75,
+            -0.3,
+            -1.7
+          ],
+          "max": [
+            0.75,
+            1.5,
+            1.55
+          ],
+          "size": [
+            1.5,
+            1.8,
+            3.25
+          ]
+        }
+      },
+      {
+        "id": "police",
+        "file": "police.glb",
+        "category": "vehicles",
+        "url": "/studio/assets/models/vehicles/police.glb",
+        "byteSize": 195336,
+        "meshes": [
+          "wheel-back-left",
+          "wheel-front-left",
+          "wheel-back-right",
+          "body",
+          "grill",
+          "wheel-front-right"
+        ],
+        "nodes": [
+          "wheel-back-left",
+          "wheel-front-left",
+          "wheel-back-right",
+          "body",
+          "grill",
+          "wheel-front-right"
+        ],
+        "animations": [],
+        "boundingBox": {
+          "min": [
+            -0.75,
+            -0.3,
+            -1.525
+          ],
+          "max": [
+            0.75,
+            1.1,
+            1.375
+          ],
+          "size": [
+            1.5,
+            1.4,
+            2.9
+          ]
+        }
+      },
+      {
+        "id": "sedan-sports",
+        "file": "sedan-sports.glb",
+        "category": "vehicles",
+        "url": "/studio/assets/models/vehicles/sedan-sports.glb",
+        "byteSize": 177676,
+        "meshes": [
+          "wheel-back-right",
+          "body",
+          "spoiler",
+          "wheel-back-left",
+          "wheel-front-left",
+          "wheel-front-right"
+        ],
+        "nodes": [
+          "wheel-back-right",
+          "body",
+          "spoiler",
+          "wheel-back-left",
+          "wheel-front-left",
+          "wheel-front-right"
+        ],
+        "animations": [],
+        "boundingBox": {
+          "min": [
+            -0.65,
+            -0.3,
+            -1.275
+          ],
+          "max": [
+            0.65,
+            0.95,
+            1.275
+          ],
+          "size": [
+            1.3,
+            1.25,
+            2.55
+          ]
+        }
+      },
+      {
+        "id": "skateboard",
+        "file": "skateboard.glb",
+        "category": "vehicles",
+        "url": "/studio/assets/models/vehicles/skateboard.glb",
+        "byteSize": 21060,
+        "meshes": [
+          "skateboard"
+        ],
+        "nodes": [
+          "skateboard"
+        ],
+        "animations": [],
+        "boundingBox": {
+          "min": [
+            -0.15,
+            -0.0,
+            -0.35
+          ],
+          "max": [
+            0.15,
+            0.1366,
+            0.35
+          ],
+          "size": [
+            0.3,
+            0.1366,
+            0.7
+          ]
+        }
+      },
+      {
+        "id": "suv-luxury",
+        "file": "suv-luxury.glb",
+        "category": "vehicles",
+        "url": "/studio/assets/models/vehicles/suv-luxury.glb",
+        "byteSize": 175908,
+        "meshes": [
+          "wheel-back-right",
+          "wheel-front-right",
+          "wheel-front-left",
+          "body",
+          "wheel-back-left"
+        ],
+        "nodes": [
+          "wheel-back-right",
+          "wheel-front-right",
+          "wheel-front-left",
+          "body",
+          "wheel-back-left"
+        ],
+        "animations": [],
+        "boundingBox": {
+          "min": [
+            -0.75,
+            -0.3,
+            -1.425
+          ],
+          "max": [
+            0.75,
+            1.175,
+            1.425
+          ],
+          "size": [
+            1.5,
+            1.475,
+            2.85
+          ]
+        }
+      },
+      {
+        "id": "train-carriage-container-blue",
+        "file": "train-carriage-container-blue.glb",
+        "category": "vehicles",
+        "url": "/studio/assets/models/vehicles/train-carriage-container-blue.glb",
+        "byteSize": 116192,
+        "meshes": [
+          "train-carriage-container-blue",
+          "wheels-front",
+          "wheels-back",
+          "cargo"
+        ],
+        "nodes": [
+          "train-carriage-container-blue",
+          "wheels-front",
+          "wheels-back",
+          "cargo"
+        ],
+        "animations": [],
+        "boundingBox": {
+          "min": [
+            -0.5,
+            -0.3595,
+            -1.35
+          ],
+          "max": [
+            0.5,
+            0.9,
+            1.35
+          ],
+          "size": [
+            1.0,
+            1.2595,
+            2.7
+          ]
+        }
+      },
+      {
+        "id": "train-carriage-container-green",
+        "file": "train-carriage-container-green.glb",
+        "category": "vehicles",
+        "url": "/studio/assets/models/vehicles/train-carriage-container-green.glb",
+        "byteSize": 116196,
+        "meshes": [
+          "train-carriage-container-green",
+          "wheels-front",
+          "wheels-back",
+          "cargo"
+        ],
+        "nodes": [
+          "train-carriage-container-green",
+          "wheels-front",
+          "wheels-back",
+          "cargo"
+        ],
+        "animations": [],
+        "boundingBox": {
+          "min": [
+            -0.5,
+            -0.3595,
+            -1.35
+          ],
+          "max": [
+            0.5,
+            0.9,
+            1.35
+          ],
+          "size": [
+            1.0,
+            1.2595,
+            2.7
+          ]
+        }
+      },
+      {
+        "id": "train-carriage-container-red",
+        "file": "train-carriage-container-red.glb",
+        "category": "vehicles",
+        "url": "/studio/assets/models/vehicles/train-carriage-container-red.glb",
+        "byteSize": 116192,
+        "meshes": [
+          "train-carriage-container-red",
+          "wheels-back",
+          "cargo",
+          "wheels-front"
+        ],
+        "nodes": [
+          "train-carriage-container-red",
+          "wheels-back",
+          "cargo",
+          "wheels-front"
+        ],
+        "animations": [],
+        "boundingBox": {
+          "min": [
+            -0.5,
+            -0.3595,
+            -1.35
+          ],
+          "max": [
+            0.5,
+            0.9,
+            1.35
+          ],
+          "size": [
+            1.0,
+            1.2595,
+            2.7
+          ]
+        }
+      },
+      {
+        "id": "train-carriage-flatbed",
+        "file": "train-carriage-flatbed.glb",
+        "category": "vehicles",
+        "url": "/studio/assets/models/vehicles/train-carriage-flatbed.glb",
+        "byteSize": 100148,
+        "meshes": [
+          "train-carriage-flatbed",
+          "wheels-front",
+          "wheels-back"
+        ],
+        "nodes": [
+          "train-carriage-flatbed",
+          "wheels-front",
+          "wheels-back"
+        ],
+        "animations": [],
+        "boundingBox": {
+          "min": [
+            -0.55,
+            -0.3595,
+            -1.35
+          ],
+          "max": [
+            0.55,
+            1.1595,
+            1.35
+          ],
+          "size": [
+            1.1,
+            1.519,
+            2.7
+          ]
+        }
+      },
+      {
+        "id": "train-electric-bullet-a",
+        "file": "train-electric-bullet-a.glb",
+        "category": "vehicles",
+        "url": "/studio/assets/models/vehicles/train-electric-bullet-a.glb",
+        "byteSize": 114608,
+        "meshes": [
+          "train-electric-bullet-a",
+          "wheels-front",
+          "wheels-back"
+        ],
+        "nodes": [
+          "train-electric-bullet-a",
+          "wheels-front",
+          "wheels-back"
+        ],
+        "animations": [],
+        "boundingBox": {
+          "min": [
+            -0.66,
+            -0.3595,
+            -1.3995
+          ],
+          "max": [
+            0.66,
+            1.6374,
+            1.3995
+          ],
+          "size": [
+            1.32,
+            1.9969,
+            2.799
+          ]
+        }
+      },
+      {
+        "id": "train-electric-bullet-b",
+        "file": "train-electric-bullet-b.glb",
+        "category": "vehicles",
+        "url": "/studio/assets/models/vehicles/train-electric-bullet-b.glb",
+        "byteSize": 125828,
+        "meshes": [
+          "train-electric-bullet-b",
+          "wheels-back",
+          "wheels-front"
+        ],
+        "nodes": [
+          "train-electric-bullet-b",
+          "wheels-back",
+          "wheels-front"
+        ],
+        "animations": [],
+        "boundingBox": {
+          "min": [
+            -0.65,
+            -0.3595,
+            -1.3
+          ],
+          "max": [
+            0.65,
+            1.6374,
+            1.3
+          ],
+          "size": [
+            1.3,
+            1.9969,
+            2.6
+          ]
+        }
+      },
+      {
+        "id": "train-electric-subway-a",
+        "file": "train-electric-subway-a.glb",
+        "category": "vehicles",
+        "url": "/studio/assets/models/vehicles/train-electric-subway-a.glb",
+        "byteSize": 139896,
+        "meshes": [
+          "train-electric-subway-a",
+          "wheels-front",
+          "wheels-back"
+        ],
+        "nodes": [
+          "train-electric-subway-a",
+          "wheels-front",
+          "wheels-back"
+        ],
+        "animations": [],
+        "boundingBox": {
+          "min": [
+            -0.7625,
+            -0.3595,
+            -1.3
+          ],
+          "max": [
+            0.5875,
+            1.5712,
+            1.3
+          ],
+          "size": [
+            1.35,
+            1.9307,
+            2.6
+          ]
+        }
+      },
+      {
+        "id": "train-electric-subway-b",
+        "file": "train-electric-subway-b.glb",
+        "category": "vehicles",
+        "url": "/studio/assets/models/vehicles/train-electric-subway-b.glb",
+        "byteSize": 119664,
+        "meshes": [
+          "train-electric-subway-b",
+          "wheels-front",
+          "wheels-back"
+        ],
+        "nodes": [
+          "train-electric-subway-b",
+          "wheels-front",
+          "wheels-back"
+        ],
+        "animations": [],
+        "boundingBox": {
+          "min": [
+            -0.55,
+            -0.3595,
+            -1.3
+          ],
+          "max": [
+            0.55,
+            1.5712,
+            1.3
+          ],
+          "size": [
+            1.1,
+            1.9307,
+            2.6
+          ]
+        }
+      },
+      {
+        "id": "train-electric-subway-c",
+        "file": "train-electric-subway-c.glb",
+        "category": "vehicles",
+        "url": "/studio/assets/models/vehicles/train-electric-subway-c.glb",
+        "byteSize": 140064,
+        "meshes": [
+          "train-electric-subway-c",
+          "wheels-front",
+          "wheels-back"
+        ],
+        "nodes": [
+          "train-electric-subway-c",
+          "wheels-front",
+          "wheels-back"
+        ],
+        "animations": [],
+        "boundingBox": {
+          "min": [
+            -0.675,
+            -0.3595,
+            -1.3
+          ],
+          "max": [
+            0.675,
+            1.5712,
+            1.3
+          ],
+          "size": [
+            1.35,
+            1.9307,
+            2.6
+          ]
+        }
+      }
+    ],
+    "nature": [
+      {
+        "id": "boulder_01",
+        "file": "boulder_01.glb",
+        "category": "nature",
+        "url": "/studio/assets/models/nature/boulder_01.glb",
+        "byteSize": 5770992,
+        "meshes": [
+          "rock_PROXY_5m.002"
+        ],
+        "nodes": [
+          "boulder_01"
+        ],
+        "animations": [],
+        "boundingBox": {
+          "min": [
+            -0.7482,
+            -0.0736,
+            -0.9484
+          ],
+          "max": [
+            0.524,
+            0.9302,
+            0.8819
+          ],
+          "size": [
+            1.2721,
+            1.0038,
+            1.8303
+          ]
+        }
+      },
+      {
+        "id": "campfire-pit",
+        "file": "campfire-pit.glb",
+        "category": "nature",
+        "url": "/studio/assets/models/nature/campfire-pit.glb",
+        "byteSize": 26468,
+        "meshes": [
+          "campfire-pit",
+          "wood"
+        ],
+        "nodes": [
+          "campfire-pit",
+          "wood"
+        ],
+        "animations": [],
+        "boundingBox": {
+          "min": [
+            -0.1389,
+            0.0,
+            -0.1346
+          ],
+          "max": [
+            0.1389,
+            0.0935,
+            0.1346
+          ],
+          "size": [
+            0.2778,
+            0.0935,
+            0.2692
+          ]
+        }
+      },
+      {
+        "id": "palm-detailed-bend",
+        "file": "palm-detailed-bend.glb",
+        "category": "nature",
+        "url": "/studio/assets/models/nature/palm-detailed-bend.glb",
+        "byteSize": 52012,
+        "meshes": [
+          "palm-detailed-bend"
+        ],
+        "nodes": [
+          "palm-detailed-bend"
+        ],
+        "animations": [],
+        "boundingBox": {
+          "min": [
+            -2.1736,
+            0.0,
+            -1.608
+          ],
+          "max": [
+            0.7067,
+            4.2513,
+            1.608
+          ],
+          "size": [
+            2.8804,
+            4.2513,
+            3.216
+          ]
+        }
+      },
+      {
+        "id": "palm-detailed-straight",
+        "file": "palm-detailed-straight.glb",
+        "category": "nature",
+        "url": "/studio/assets/models/nature/palm-detailed-straight.glb",
+        "byteSize": 51916,
+        "meshes": [
+          "palm-detailed-straight"
+        ],
+        "nodes": [
+          "palm-detailed-straight"
+        ],
+        "animations": [],
+        "boundingBox": {
+          "min": [
+            -1.608,
+            0.0,
+            -1.608
+          ],
+          "max": [
+            1.608,
+            4.2129,
+            1.608
+          ],
+          "size": [
+            3.216,
+            4.2129,
+            3.216
+          ]
+        }
+      },
+      {
+        "id": "plant",
+        "file": "plant.glb",
+        "category": "nature",
+        "url": "/studio/assets/models/nature/plant.glb",
+        "byteSize": 22424,
+        "meshes": [
+          "plant"
+        ],
+        "nodes": [
+          "plant"
+        ],
+        "animations": [],
+        "boundingBox": {
+          "min": [
+            -0.1478,
+            -0.017,
+            -0.2152
+          ],
+          "max": [
+            0.2485,
+            0.1749,
+            0.2152
+          ],
+          "size": [
+            0.3964,
+            0.1919,
+            0.4305
+          ]
+        }
+      },
+      {
+        "id": "rocks-high",
+        "file": "rocks-high.glb",
+        "category": "nature",
+        "url": "/studio/assets/models/nature/rocks-high.glb",
+        "byteSize": 31952,
+        "meshes": [
+          "rocks-high"
+        ],
+        "nodes": [
+          "rocks-high"
+        ],
+        "animations": [],
+        "boundingBox": {
+          "min": [
+            -0.5,
+            -0.5,
+            -0.5
+          ],
+          "max": [
+            0.5,
+            0.5,
+            0.5
+          ],
+          "size": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        }
+      },
+      {
+        "id": "rocks-low",
+        "file": "rocks-low.glb",
+        "category": "nature",
+        "url": "/studio/assets/models/nature/rocks-low.glb",
+        "byteSize": 31964,
+        "meshes": [
+          "rocks-low"
+        ],
+        "nodes": [
+          "rocks-low"
+        ],
+        "animations": [],
+        "boundingBox": {
+          "min": [
+            -0.5,
+            0.0,
+            -0.5
+          ],
+          "max": [
+            0.5,
+            0.5228,
+            0.5
+          ],
+          "size": [
+            1.0,
+            0.5228,
+            1.0
+          ]
+        }
+      },
+      {
+        "id": "rocks-sand-a",
+        "file": "rocks-sand-a.glb",
+        "category": "nature",
+        "url": "/studio/assets/models/nature/rocks-sand-a.glb",
+        "byteSize": 57052,
+        "meshes": [
+          "rocks-sand-a"
+        ],
+        "nodes": [
+          "rocks-sand-a"
+        ],
+        "animations": [],
+        "boundingBox": {
+          "min": [
+            -2.6956,
+            0.0,
+            -2.2531
+          ],
+          "max": [
+            2.417,
+            3.2119,
+            2.1334
+          ],
+          "size": [
+            5.1126,
+            3.2119,
+            4.3864
+          ]
+        }
+      },
+      {
+        "id": "tree-high",
+        "file": "tree-high.glb",
+        "category": "nature",
+        "url": "/studio/assets/models/nature/tree-high.glb",
+        "byteSize": 31176,
+        "meshes": [
+          "tree-high"
+        ],
+        "nodes": [
+          "tree-high"
+        ],
+        "animations": [],
+        "boundingBox": {
+          "min": [
+            -0.4637,
+            -0.0,
+            -0.4414
+          ],
+          "max": [
+            0.4637,
+            2.2839,
+            0.4414
+          ],
+          "size": [
+            0.9274,
+            2.2839,
+            0.8828
+          ]
+        }
+      }
+    ],
+    "buildings": [
+      {
+        "id": "building-a",
+        "file": "building-a.glb",
+        "category": "buildings",
+        "url": "/studio/assets/models/buildings/building-a.glb",
+        "byteSize": 108936,
+        "meshes": [
+          "building-a"
+        ],
+        "nodes": [
+          "building-a"
+        ],
+        "animations": [],
+        "boundingBox": {
+          "min": [
+            -0.4418,
+            0.0,
+            -0.47
+          ],
+          "max": [
+            0.4418,
+            1.293,
+            0.47
+          ],
+          "size": [
+            0.8836,
+            1.293,
+            0.94
+          ]
+        }
+      },
+      {
+        "id": "building-b",
+        "file": "building-b.glb",
+        "category": "buildings",
+        "url": "/studio/assets/models/buildings/building-b.glb",
+        "byteSize": 106408,
+        "meshes": [
+          "building-b"
+        ],
+        "nodes": [
+          "building-b"
+        ],
+        "animations": [],
+        "boundingBox": {
+          "min": [
+            -0.485,
+            0.0,
+            -0.47
+          ],
+          "max": [
+            0.485,
+            1.293,
+            0.47
+          ],
+          "size": [
+            0.97,
+            1.293,
+            0.94
+          ]
+        }
+      },
+      {
+        "id": "building-c",
+        "file": "building-c.glb",
+        "category": "buildings",
+        "url": "/studio/assets/models/buildings/building-c.glb",
+        "byteSize": 102788,
+        "meshes": [
+          "building-c"
+        ],
+        "nodes": [
+          "building-c"
+        ],
+        "animations": [],
+        "boundingBox": {
+          "min": [
+            -0.4418,
+            0.0,
+            -0.545
+          ],
+          "max": [
+            0.4418,
+            0.893,
+            0.545
+          ],
+          "size": [
+            0.8836,
+            0.893,
+            1.09
+          ]
+        }
+      },
+      {
+        "id": "building-commercial-a",
+        "file": "building-commercial-a.glb",
+        "category": "buildings",
+        "url": "/studio/assets/models/buildings/building-commercial-a.glb",
+        "byteSize": 108936,
+        "meshes": [
+          "building-a"
+        ],
+        "nodes": [
+          "building-a"
+        ],
+        "animations": [],
+        "boundingBox": {
+          "min": [
+            -0.4418,
+            0.0,
+            -0.47
+          ],
+          "max": [
+            0.4418,
+            1.293,
+            0.47
+          ],
+          "size": [
+            0.8836,
+            1.293,
+            0.94
+          ]
+        }
+      },
+      {
+        "id": "building-commercial-b",
+        "file": "building-commercial-b.glb",
+        "category": "buildings",
+        "url": "/studio/assets/models/buildings/building-commercial-b.glb",
+        "byteSize": 106408,
+        "meshes": [
+          "building-b"
+        ],
+        "nodes": [
+          "building-b"
+        ],
+        "animations": [],
+        "boundingBox": {
+          "min": [
+            -0.485,
+            0.0,
+            -0.47
+          ],
+          "max": [
+            0.485,
+            1.293,
+            0.47
+          ],
+          "size": [
+            0.97,
+            1.293,
+            0.94
+          ]
+        }
+      },
+      {
+        "id": "building-commercial-c",
+        "file": "building-commercial-c.glb",
+        "category": "buildings",
+        "url": "/studio/assets/models/buildings/building-commercial-c.glb",
+        "byteSize": 102788,
+        "meshes": [
+          "building-c"
+        ],
+        "nodes": [
+          "building-c"
+        ],
+        "animations": [],
+        "boundingBox": {
+          "min": [
+            -0.4418,
+            0.0,
+            -0.545
+          ],
+          "max": [
+            0.4418,
+            0.893,
+            0.545
+          ],
+          "size": [
+            0.8836,
+            0.893,
+            1.09
+          ]
+        }
+      },
+      {
+        "id": "building-commercial-d",
+        "file": "building-commercial-d.glb",
+        "category": "buildings",
+        "url": "/studio/assets/models/buildings/building-commercial-d.glb",
+        "byteSize": 95160,
+        "meshes": [
+          "building-d"
+        ],
+        "nodes": [
+          "building-d"
+        ],
+        "animations": [],
+        "boundingBox": {
+          "min": [
+            -0.42,
+            0.0,
+            -0.45
+          ],
+          "max": [
+            0.42,
+            1.293,
+            0.45
+          ],
+          "size": [
+            0.84,
+            1.293,
+            0.9
+          ]
+        }
+      },
+      {
+        "id": "building-d",
+        "file": "building-d.glb",
+        "category": "buildings",
+        "url": "/studio/assets/models/buildings/building-d.glb",
+        "byteSize": 95160,
+        "meshes": [
+          "building-d"
+        ],
+        "nodes": [
+          "building-d"
+        ],
+        "animations": [],
+        "boundingBox": {
+          "min": [
+            -0.42,
+            0.0,
+            -0.45
+          ],
+          "max": [
+            0.42,
+            1.293,
+            0.45
+          ],
+          "size": [
+            0.84,
+            1.293,
+            0.9
+          ]
+        }
+      },
+      {
+        "id": "building-industrial-a",
+        "file": "building-industrial-a.glb",
+        "category": "buildings",
+        "url": "/studio/assets/models/buildings/building-industrial-a.glb",
+        "byteSize": 176884,
+        "meshes": [
+          "building-a"
+        ],
+        "nodes": [
+          "building-a"
+        ],
+        "animations": [],
+        "boundingBox": {
+          "min": [
+            -1.0411,
+            0.0,
+            -0.621
+          ],
+          "max": [
+            1.0425,
+            1.47,
+            0.621
+          ],
+          "size": [
+            2.0836,
+            1.47,
+            1.242
+          ]
+        }
+      },
+      {
+        "id": "building-industrial-b",
+        "file": "building-industrial-b.glb",
+        "category": "buildings",
+        "url": "/studio/assets/models/buildings/building-industrial-b.glb",
+        "byteSize": 211608,
+        "meshes": [
+          "building-b"
+        ],
+        "nodes": [
+          "building-b"
+        ],
+        "animations": [],
+        "boundingBox": {
+          "min": [
+            -1.0411,
+            -0.0,
+            -0.639
+          ],
+          "max": [
+            1.0425,
+            1.47,
+            0.623
+          ],
+          "size": [
+            2.0836,
+            1.47,
+            1.262
+          ]
+        }
+      },
+      {
+        "id": "building-industrial-c",
+        "file": "building-industrial-c.glb",
+        "category": "buildings",
+        "url": "/studio/assets/models/buildings/building-industrial-c.glb",
+        "byteSize": 159552,
+        "meshes": [
+          "building-c"
+        ],
+        "nodes": [
+          "building-c"
+        ],
+        "animations": [],
+        "boundingBox": {
+          "min": [
+            -0.8418,
+            -0.0,
+            -0.911
+          ],
+          "max": [
+            1.0341,
+            1.25,
+            1.197
+          ],
+          "size": [
+            1.8759,
+            1.25,
+            2.108
+          ]
+        }
+      },
+      {
+        "id": "building-industrial-d",
+        "file": "building-industrial-d.glb",
+        "category": "buildings",
+        "url": "/studio/assets/models/buildings/building-industrial-d.glb",
+        "byteSize": 100336,
+        "meshes": [
+          "building-d"
+        ],
+        "nodes": [
+          "building-d"
+        ],
+        "animations": [],
+        "boundingBox": {
+          "min": [
+            -0.4418,
+            -0.0,
+            -0.8
+          ],
+          "max": [
+            0.4418,
+            1.4146,
+            0.62
+          ],
+          "size": [
+            0.8836,
+            1.4146,
+            1.42
+          ]
+        }
+      },
+      {
+        "id": "building-industrial-e",
+        "file": "building-industrial-e.glb",
+        "category": "buildings",
+        "url": "/studio/assets/models/buildings/building-industrial-e.glb",
+        "byteSize": 128964,
+        "meshes": [
+          "building-e"
+        ],
+        "nodes": [
+          "building-e"
+        ],
+        "animations": [],
+        "boundingBox": {
+          "min": [
+            -0.8418,
+            0.0,
+            -0.396
+          ],
+          "max": [
+            0.8418,
+            1.65,
+            0.894
+          ],
+          "size": [
+            1.6836,
+            1.65,
+            1.29
+          ]
+        }
+      },
+      {
+        "id": "building-platform",
+        "file": "building-platform.glb",
+        "category": "buildings",
+        "url": "/studio/assets/models/buildings/building-platform.glb",
+        "byteSize": 48212,
+        "meshes": [
+          "building-platform"
+        ],
+        "nodes": [
+          "building-platform"
+        ],
+        "animations": [],
+        "boundingBox": {
+          "min": [
+            -0.65,
+            0.0,
+            -0.65
+          ],
+          "max": [
+            0.65,
+            0.5,
+            0.65
+          ],
+          "size": [
+            1.3,
+            0.5,
+            1.3
+          ]
+        }
+      },
+      {
+        "id": "building-skyscraper-a",
+        "file": "building-skyscraper-a.glb",
+        "category": "buildings",
+        "url": "/studio/assets/models/buildings/building-skyscraper-a.glb",
+        "byteSize": 111336,
+        "meshes": [
+          "building-skyscraper-a"
+        ],
+        "nodes": [
+          "building-skyscraper-a"
+        ],
+        "animations": [],
+        "boundingBox": {
+          "min": [
+            -0.68,
+            0.0,
+            -0.68
+          ],
+          "max": [
+            0.68,
+            2.88,
+            0.68
+          ],
+          "size": [
+            1.36,
+            2.88,
+            1.36
+          ]
+        }
+      },
+      {
+        "id": "building-skyscraper-b",
+        "file": "building-skyscraper-b.glb",
+        "category": "buildings",
+        "url": "/studio/assets/models/buildings/building-skyscraper-b.glb",
+        "byteSize": 138480,
+        "meshes": [
+          "building-skyscraper-b"
+        ],
+        "nodes": [
+          "building-skyscraper-b"
+        ],
+        "animations": [],
+        "boundingBox": {
+          "min": [
+            -0.68,
+            0.0,
+            -0.68
+          ],
+          "max": [
+            0.68,
+            4.48,
+            0.68
+          ],
+          "size": [
+            1.36,
+            4.48,
+            1.36
+          ]
+        }
+      },
+      {
+        "id": "building-skyscraper-c",
+        "file": "building-skyscraper-c.glb",
+        "category": "buildings",
+        "url": "/studio/assets/models/buildings/building-skyscraper-c.glb",
+        "byteSize": 149524,
+        "meshes": [
+          "building-skyscraper-c"
+        ],
+        "nodes": [
+          "building-skyscraper-c"
+        ],
+        "animations": [],
+        "boundingBox": {
+          "min": [
+            -0.64,
+            0.0,
+            -0.6939
+          ],
+          "max": [
+            0.64,
+            4.08,
+            0.6939
+          ],
+          "size": [
+            1.28,
+            4.08,
+            1.3879
+          ]
+        }
+      },
+      {
+        "id": "building-skyscraper-d",
+        "file": "building-skyscraper-d.glb",
+        "category": "buildings",
+        "url": "/studio/assets/models/buildings/building-skyscraper-d.glb",
+        "byteSize": 167148,
+        "meshes": [
+          "building-skyscraper-d"
+        ],
+        "nodes": [
+          "building-skyscraper-d"
+        ],
+        "animations": [],
+        "boundingBox": {
+          "min": [
+            -0.64,
+            0.0,
+            -0.6939
+          ],
+          "max": [
+            0.64,
+            5.47,
+            0.6939
+          ],
+          "size": [
+            1.28,
+            5.47,
+            1.3879
+          ]
+        }
+      },
+      {
+        "id": "building-suburban-a",
+        "file": "building-suburban-a.glb",
+        "category": "buildings",
+        "url": "/studio/assets/models/buildings/building-suburban-a.glb",
+        "byteSize": 98604,
+        "meshes": [
+          "building-type-a"
+        ],
+        "nodes": [
+          "building-type-a"
+        ],
+        "animations": [],
+        "boundingBox": {
+          "min": [
+            -0.65,
+            0.0,
+            -0.5141
+          ],
+          "max": [
+            0.65,
+            0.8335,
+            0.5141
+          ],
+          "size": [
+            1.3,
+            0.8335,
+            1.0281
+          ]
+        }
+      },
+      {
+        "id": "building-suburban-b",
+        "file": "building-suburban-b.glb",
+        "category": "buildings",
+        "url": "/studio/assets/models/buildings/building-suburban-b.glb",
+        "byteSize": 146720,
+        "meshes": [
+          "building-type-b"
+        ],
+        "nodes": [
+          "building-type-b"
+        ],
+        "animations": [],
+        "boundingBox": {
+          "min": [
+            -0.914,
+            0.0,
+            -0.57
+          ],
+          "max": [
+            0.914,
+            1.1375,
+            0.57
+          ],
+          "size": [
+            1.828,
+            1.1375,
+            1.14
+          ]
+        }
+      },
+      {
+        "id": "building-suburban-c",
+        "file": "building-suburban-c.glb",
+        "category": "buildings",
+        "url": "/studio/assets/models/buildings/building-suburban-c.glb",
+        "byteSize": 99592,
+        "meshes": [
+          "building-type-c"
+        ],
+        "nodes": [
+          "building-type-c"
+        ],
+        "animations": [],
+        "boundingBox": {
+          "min": [
+            -0.6432,
+            0.0,
+            -0.5141
+          ],
+          "max": [
+            0.6432,
+            1.0335,
+            0.5141
+          ],
+          "size": [
+            1.2864,
+            1.0335,
+            1.0281
+          ]
+        }
+      },
+      {
+        "id": "building-suburban-d",
+        "file": "building-suburban-d.glb",
+        "category": "buildings",
+        "url": "/studio/assets/models/buildings/building-suburban-d.glb",
+        "byteSize": 147368,
+        "meshes": [
+          "building-type-d"
+        ],
+        "nodes": [
+          "building-type-d"
+        ],
+        "animations": [],
+        "boundingBox": {
+          "min": [
+            -0.8782,
+            0.0,
+            -0.514
+          ],
+          "max": [
+            0.8782,
+            1.2375,
+            0.514
+          ],
+          "size": [
+            1.7564,
+            1.2375,
+            1.028
+          ]
+        }
+      },
+      {
+        "id": "building-suburban-e",
+        "file": "building-suburban-e.glb",
+        "category": "buildings",
+        "url": "/studio/assets/models/buildings/building-suburban-e.glb",
+        "byteSize": 145512,
+        "meshes": [
+          "building-type-e"
+        ],
+        "nodes": [
+          "building-type-e"
+        ],
+        "animations": [],
+        "boundingBox": {
+          "min": [
+            -0.65,
+            0.0,
+            -0.514
+          ],
+          "max": [
+            0.65,
+            1.1375,
+            0.514
+          ],
+          "size": [
+            1.3,
+            1.1375,
+            1.028
+          ]
+        }
+      },
+      {
+        "id": "chimney-large",
+        "file": "chimney-large.glb",
+        "category": "buildings",
+        "url": "/studio/assets/models/buildings/chimney-large.glb",
+        "byteSize": 21408,
+        "meshes": [
+          "chimney-large"
+        ],
+        "nodes": [
+          "chimney-large"
+        ],
+        "animations": [],
+        "boundingBox": {
+          "min": [
+            -0.5,
+            0.0,
+            -0.5
+          ],
+          "max": [
+            0.5,
+            1.7,
+            0.5
+          ],
+          "size": [
+            1.0,
+            1.7,
+            1.0
+          ]
+        }
+      },
+      {
+        "id": "fence-1x3",
+        "file": "fence-1x3.glb",
+        "category": "buildings",
+        "url": "/studio/assets/models/buildings/fence-1x3.glb",
+        "byteSize": 21032,
+        "meshes": [
+          "fence-1x3"
+        ],
+        "nodes": [
+          "fence-1x3"
+        ],
+        "animations": [],
+        "boundingBox": {
+          "min": [
+            -0.6375,
+            -0.0,
+            -0.2
+          ],
+          "max": [
+            0.6375,
+            0.27,
+            0.2375
+          ],
+          "size": [
+            1.275,
+            0.27,
+            0.4375
+          ]
+        }
+      },
+      {
+        "id": "fence-fortified",
+        "file": "fence-fortified.glb",
+        "category": "buildings",
+        "url": "/studio/assets/models/buildings/fence-fortified.glb",
+        "byteSize": 13592,
+        "meshes": [
+          "fence-fortified"
+        ],
+        "nodes": [
+          "fence-fortified"
+        ],
+        "animations": [],
+        "boundingBox": {
+          "min": [
+            -0.25,
+            0.0,
+            -0.25
+          ],
+          "max": [
+            0.25,
+            0.5175,
+            -0.197
+          ],
+          "size": [
+            0.5,
+            0.5175,
+            0.053
+          ]
+        }
+      },
+      {
+        "id": "fence",
+        "file": "fence.glb",
+        "category": "buildings",
+        "url": "/studio/assets/models/buildings/fence.glb",
+        "byteSize": 29904,
+        "meshes": [
+          "fence"
+        ],
+        "nodes": [
+          "fence"
+        ],
+        "animations": [],
+        "boundingBox": {
+          "min": [
+            -0.5479,
+            -0.0,
+            -0.1229
+          ],
+          "max": [
+            0.5479,
+            0.4,
+            0.1229
+          ],
+          "size": [
+            1.0958,
+            0.4,
+            0.2458
+          ]
+        }
+      },
+      {
+        "id": "ship-wreck",
+        "file": "ship-wreck.glb",
+        "category": "buildings",
+        "url": "/studio/assets/models/buildings/ship-wreck.glb",
+        "byteSize": 223676,
+        "meshes": [
+          "ship-wreck",
+          "grass",
+          "grass",
+          "grass",
+          "grass",
+          "grass",
+          "grass",
+          "grass",
+          "grass",
+          "grass",
+          "Group",
+          "sail-a",
+          "Group",
+          "Group",
+          "Group",
+          "Group"
+        ],
+        "nodes": [
+          "ship-wreck",
+          "grass",
+          "grass",
+          "grass",
+          "grass",
+          "grass",
+          "grass",
+          "grass",
+          "grass",
+          "grass",
+          "Group",
+          "sail-a",
+          "Group",
+          "Group",
+          "Group",
+          "Group"
+        ],
+        "animations": [],
+        "boundingBox": {
+          "min": [
+            -2.4,
+            -0.7855,
+            -5.3
+          ],
+          "max": [
+            2.4,
+            9.9635,
+            5.3
+          ],
+          "size": [
+            4.8,
+            10.749,
+            10.6
+          ]
+        }
+      },
+      {
+        "id": "structure-platform-dock",
+        "file": "structure-platform-dock.glb",
+        "category": "buildings",
+        "url": "/studio/assets/models/buildings/structure-platform-dock.glb",
+        "byteSize": 33336,
+        "meshes": [
+          "structure-platform-dock"
+        ],
+        "nodes": [
+          "structure-platform-dock"
+        ],
+        "animations": [],
+        "boundingBox": {
+          "min": [
+            -1.25,
+            0.0,
+            -1.2563
+          ],
+          "max": [
+            1.25,
+            1.3123,
+            1.2563
+          ],
+          "size": [
+            2.5,
+            1.3123,
+            2.5127
+          ]
+        }
+      },
+      {
+        "id": "tent",
+        "file": "tent.glb",
+        "category": "buildings",
+        "url": "/studio/assets/models/buildings/tent.glb",
+        "byteSize": 77896,
+        "meshes": [
+          "tent"
+        ],
+        "nodes": [
+          "tent"
+        ],
+        "animations": [],
+        "boundingBox": {
+          "min": [
+            -0.631,
+            -0.0,
+            -0.5374
+          ],
+          "max": [
+            0.631,
+            1.0,
+            0.5374
+          ],
+          "size": [
+            1.2619,
+            1.0,
+            1.0747
+          ]
+        }
+      },
+      {
+        "id": "tower-complete-large",
+        "file": "tower-complete-large.glb",
+        "category": "buildings",
+        "url": "/studio/assets/models/buildings/tower-complete-large.glb",
+        "byteSize": 54660,
+        "meshes": [
+          "tower-complete-large"
+        ],
+        "nodes": [
+          "tower-complete-large"
+        ],
+        "animations": [],
+        "boundingBox": {
+          "min": [
+            -1.814,
+            0.0,
+            -1.814
+          ],
+          "max": [
+            1.814,
+            10.225,
+            1.814
+          ],
+          "size": [
+            3.6281,
+            10.225,
+            3.6281
+          ]
+        }
+      },
+      {
+        "id": "tower-watch",
+        "file": "tower-watch.glb",
+        "category": "buildings",
+        "url": "/studio/assets/models/buildings/tower-watch.glb",
+        "byteSize": 21672,
+        "meshes": [
+          "tower-watch"
+        ],
+        "nodes": [
+          "tower-watch"
+        ],
+        "animations": [],
+        "boundingBox": {
+          "min": [
+            -1.5244,
+            0.0,
+            -1.5244
+          ],
+          "max": [
+            1.5244,
+            2.785,
+            1.5244
+          ],
+          "size": [
+            3.0488,
+            2.785,
+            3.0488
+          ]
+        }
+      }
+    ],
+    "roads": [
+      {
+        "id": "bridge-pillar-wide",
+        "file": "bridge-pillar-wide.glb",
+        "category": "roads",
+        "url": "/studio/assets/models/roads/bridge-pillar-wide.glb",
+        "byteSize": 5700,
+        "meshes": [
+          "bridge-pillar-wide"
+        ],
+        "nodes": [
+          "bridge-pillar-wide"
+        ],
+        "animations": [],
+        "boundingBox": {
+          "min": [
+            -0.07,
+            0.0,
+            -0.07
+          ],
+          "max": [
+            0.07,
+            0.5,
+            0.07
+          ],
+          "size": [
+            0.14,
+            0.5,
+            0.14
+          ]
+        }
+      },
+      {
+        "id": "construction-barrier",
+        "file": "construction-barrier.glb",
+        "category": "roads",
+        "url": "/studio/assets/models/roads/construction-barrier.glb",
+        "byteSize": 6556,
+        "meshes": [
+          "construction-barrier"
+        ],
+        "nodes": [
+          "construction-barrier"
+        ],
+        "animations": [],
+        "boundingBox": {
+          "min": [
+            -0.0525,
+            0.0,
+            -0.1125
+          ],
+          "max": [
+            0.0525,
+            0.1187,
+            0.1125
+          ],
+          "size": [
+            0.105,
+            0.1187,
+            0.225
+          ]
+        }
+      },
+      {
+        "id": "construction-cone",
+        "file": "construction-cone.glb",
+        "category": "roads",
+        "url": "/studio/assets/models/roads/construction-cone.glb",
+        "byteSize": 7068,
+        "meshes": [
+          "construction-cone"
+        ],
+        "nodes": [
+          "construction-cone"
+        ],
+        "animations": [],
+        "boundingBox": {
+          "min": [
+            -0.0375,
+            0.0,
+            -0.0375
+          ],
+          "max": [
+            0.0375,
+            0.0938,
+            0.0375
+          ],
+          "size": [
+            0.075,
+            0.0938,
+            0.075
+          ]
+        }
+      },
+      {
+        "id": "construction-light",
+        "file": "construction-light.glb",
+        "category": "roads",
+        "url": "/studio/assets/models/roads/construction-light.glb",
+        "byteSize": 10516,
+        "meshes": [
+          "construction-light"
+        ],
+        "nodes": [
+          "construction-light"
+        ],
+        "animations": [],
+        "boundingBox": {
+          "min": [
+            -0.0375,
+            0.0,
+            -0.0375
+          ],
+          "max": [
+            0.0375,
+            0.2337,
+            0.0375
+          ],
+          "size": [
+            0.075,
+            0.2337,
+            0.075
+          ]
+        }
+      },
+      {
+        "id": "detail-barrier-strong-type-a",
+        "file": "detail-barrier-strong-type-a.glb",
+        "category": "roads",
+        "url": "/studio/assets/models/roads/detail-barrier-strong-type-a.glb",
+        "byteSize": 4212,
+        "meshes": [
+          "detail-barrier-strong-type-a"
+        ],
+        "nodes": [
+          "detail-barrier-strong-type-a"
+        ],
+        "animations": [],
+        "boundingBox": {
+          "min": [
+            -0.332,
+            0.0,
+            -0.1245
+          ],
+          "max": [
+            0.332,
+            0.332,
+            0.1245
+          ],
+          "size": [
+            0.664,
+            0.332,
+            0.249
+          ]
+        }
+      },
+      {
+        "id": "detail-barrier-type-a",
+        "file": "detail-barrier-type-a.glb",
+        "category": "roads",
+        "url": "/studio/assets/models/roads/detail-barrier-type-a.glb",
+        "byteSize": 5936,
+        "meshes": [
+          "detail-barrier-type-a"
+        ],
+        "nodes": [
+          "detail-barrier-type-a"
+        ],
+        "animations": [],
+        "boundingBox": {
+          "min": [
+            -0.2165,
+            0.0,
+            -0.067
+          ],
+          "max": [
+            0.2165,
+            0.4,
+            0.067
+          ],
+          "size": [
+            0.433,
+            0.4,
+            0.134
+          ]
+        }
+      },
+      {
+        "id": "detail-dumpster-closed",
+        "file": "detail-dumpster-closed.glb",
+        "category": "roads",
+        "url": "/studio/assets/models/roads/detail-dumpster-closed.glb",
+        "byteSize": 5056,
+        "meshes": [
+          "detail-dumpster-closed"
+        ],
+        "nodes": [
+          "detail-dumpster-closed"
+        ],
+        "animations": [],
+        "boundingBox": {
+          "min": [
+            -0.3,
+            0.0,
+            -0.2537
+          ],
+          "max": [
+            0.3,
+            0.5447,
+            0.2
+          ],
+          "size": [
+            0.6,
+            0.5447,
+            0.4537
+          ]
+        }
+      },
+      {
+        "id": "detail-light-traffic",
+        "file": "detail-light-traffic.glb",
+        "category": "roads",
+        "url": "/studio/assets/models/roads/detail-light-traffic.glb",
+        "byteSize": 11332,
+        "meshes": [
+          "detail-light-traffic"
+        ],
+        "nodes": [
+          "detail-light-traffic"
+        ],
+        "animations": [],
+        "boundingBox": {
+          "min": [
+            -0.1131,
+            0.0,
+            -0.541
+          ],
+          "max": [
+            0.0431,
+            1.04,
+            0.0431
+          ],
+          "size": [
+            0.1562,
+            1.04,
+            0.5841
+          ]
+        }
+      },
+      {
+        "id": "light-curved-double",
+        "file": "light-curved-double.glb",
+        "category": "roads",
+        "url": "/studio/assets/models/roads/light-curved-double.glb",
+        "byteSize": 14212,
+        "meshes": [
+          "light-curved-double"
+        ],
+        "nodes": [
+          "light-curved-double"
+        ],
+        "animations": [],
+        "boundingBox": {
+          "min": [
+            -0.025,
+            0.0,
+            -0.2
+          ],
+          "max": [
+            0.025,
+            0.675,
+            0.2
+          ],
+          "size": [
+            0.05,
+            0.675,
+            0.4
+          ]
+        }
+      },
+      {
+        "id": "rail-high",
+        "file": "rail-high.glb",
+        "category": "roads",
+        "url": "/studio/assets/models/roads/rail-high.glb",
+        "byteSize": 9640,
+        "meshes": [
+          "rail-high"
+        ],
+        "nodes": [
+          "rail-high"
+        ],
+        "animations": [],
+        "boundingBox": {
+          "min": [
+            -0.075,
+            -0.0,
+            -0.5
+          ],
+          "max": [
+            0.075,
+            0.45,
+            0.5
+          ],
+          "size": [
+            0.15,
+            0.45,
+            1.0
+          ]
+        }
+      },
+      {
+        "id": "rail-low",
+        "file": "rail-low.glb",
+        "category": "roads",
+        "url": "/studio/assets/models/roads/rail-low.glb",
+        "byteSize": 9620,
+        "meshes": [
+          "rail-low"
+        ],
+        "nodes": [
+          "rail-low"
+        ],
+        "animations": [],
+        "boundingBox": {
+          "min": [
+            -0.075,
+            0.0,
+            -0.5
+          ],
+          "max": [
+            0.075,
+            0.25,
+            0.5
+          ],
+          "size": [
+            0.15,
+            0.25,
+            1.0
+          ]
+        }
+      },
+      {
+        "id": "railroad-straight-hill-beginning",
+        "file": "railroad-straight-hill-beginning.glb",
+        "category": "roads",
+        "url": "/studio/assets/models/roads/railroad-straight-hill-beginning.glb",
+        "byteSize": 38176,
+        "meshes": [
+          "railroad-straight-hill-beginning"
+        ],
+        "nodes": [
+          "railroad-straight-hill-beginning"
+        ],
+        "animations": [],
+        "boundingBox": {
+          "min": [
+            -0.5,
+            0.0,
+            0.0
+          ],
+          "max": [
+            0.5,
+            1.0707,
+            4.0
+          ],
+          "size": [
+            1.0,
+            1.0707,
+            4.0
+          ]
+        }
+      },
+      {
+        "id": "railroad-straight",
+        "file": "railroad-straight.glb",
+        "category": "roads",
+        "url": "/studio/assets/models/roads/railroad-straight.glb",
+        "byteSize": 34736,
+        "meshes": [
+          "railroad-straight"
+        ],
+        "nodes": [
+          "railroad-straight"
+        ],
+        "animations": [],
+        "boundingBox": {
+          "min": [
+            -0.5,
+            0.0,
+            0.0
+          ],
+          "max": [
+            0.5,
+            0.1,
+            4.0
+          ],
+          "size": [
+            1.0,
+            0.1,
+            4.0
+          ]
+        }
+      }
+    ],
+    "characters": [
+      {
+        "id": "RobotExpressive",
+        "file": "RobotExpressive.glb",
+        "category": "characters",
+        "url": "/studio/assets/models/characters/RobotExpressive.glb",
+        "byteSize": 463988,
+        "meshes": [
+          "Foot.L",
+          "Torso",
+          "Head",
+          "Foot.R",
+          "Shoulder.L",
+          "Arm.L",
+          "Shoulder.R",
+          "Arm.R",
+          "Leg.L",
+          "LowerLeg.L",
+          "Leg.R",
+          "LowerLeg.R",
+          "Hand.R",
+          "Hand.L"
+        ],
+        "nodes": [
+          "RootNode",
+          "RobotArmature",
+          "Bone",
+          "Foot.L",
+          "Foot.L",
+          "Foot.L_end",
+          "Body",
+          "Torso",
+          "Hips",
+          "Abdomen",
+          "Torso",
+          "Neck",
+          "Head",
+          "Head",
+          "Head_end",
+          "Shoulder.L",
+          "Shoulder.L",
+          "UpperArm.L",
+          "Arm.L",
+          "LowerArm.L",
+          "Palm2.L",
+          "Middle1.L",
+          "Middle2.L",
+          "Middle2.L_end",
+          "Thumb.L"
+        ],
+        "animations": [
+          "Dance",
+          "Death",
+          "Idle",
+          "Jump",
+          "No",
+          "Punch",
+          "Running",
+          "Sitting",
+          "Standing",
+          "ThumbsUp",
+          "Walking",
+          "WalkJump",
+          "Wave",
+          "Yes"
+        ],
+        "boundingBox": {
+          "min": [
+            -0.0331,
+            -0.0131,
+            -0.009
+          ],
+          "max": [
+            0.0331,
+            0.0131,
+            0.0083
+          ],
+          "size": [
+            0.0662,
+            0.0262,
+            0.0173
+          ]
+        }
+      },
+      {
+        "id": "animal-dog",
+        "file": "animal-dog.glb",
+        "category": "characters",
+        "url": "/studio/assets/models/characters/animal-dog.glb",
+        "byteSize": 119544,
+        "meshes": [
+          "body",
+          "leg-back-left",
+          "leg-back-right",
+          "leg-front-left",
+          "leg-front-right"
+        ],
+        "nodes": [
+          "animal-dog",
+          "root",
+          "body",
+          "leg-back-left",
+          "leg-back-right",
+          "leg-front-left",
+          "leg-front-right"
+        ],
+        "animations": [
+          "static",
+          "idle",
+          "walk",
+          "run",
+          "eat",
+          "dance",
+          "gesture-positive",
+          "gesture-negative"
+        ],
+        "boundingBox": {
+          "min": [
+            -0.625,
+            -0.3,
+            -0.625
+          ],
+          "max": [
+            0.635,
+            1.4032,
+            0.8755
+          ],
+          "size": [
+            1.26,
+            1.7032,
+            1.5005
+          ]
+        }
+      },
+      {
+        "id": "character-skate-boy",
+        "file": "character-skate-boy.glb",
+        "category": "characters",
+        "url": "/studio/assets/models/characters/character-skate-boy.glb",
+        "byteSize": 190900,
+        "meshes": [
+          "body-mesh",
+          "head-mesh"
+        ],
+        "nodes": [
+          "character-skate-boy",
+          "root",
+          "leg-left",
+          "leg-right",
+          "torso",
+          "arm-left",
+          "arm-right",
+          "head",
+          "body-mesh",
+          "head-mesh"
+        ],
+        "animations": [
+          "static",
+          "idle",
+          "walk",
+          "sprint",
+          "jump",
+          "fall",
+          "crouch",
+          "sit",
+          "drive",
+          "die",
+          "pick-up",
+          "emote-yes",
+          "emote-no",
+          "holding-right",
+          "holding-left",
+          "holding-both",
+          "holding-right-shoot",
+          "holding-left-shoot",
+          "holding-both-shoot",
+          "attack-melee-right",
+          "attack-melee-left",
+          "attack-kick-right",
+          "attack-kick-left",
+          "interact-right",
+          "interact-left",
+          "skate",
+          "skate-stand",
+          "skate-air",
+          "skate-grab"
+        ],
+        "boundingBox": {
+          "min": [
+            -0.3903,
+            0.0,
+            -0.1866
+          ],
+          "max": [
+            0.3903,
+            0.7733,
+            0.2741
+          ],
+          "size": [
+            0.7806,
+            0.7733,
+            0.4607
+          ]
+        }
+      },
+      {
+        "id": "character-skate-girl",
+        "file": "character-skate-girl.glb",
+        "category": "characters",
+        "url": "/studio/assets/models/characters/character-skate-girl.glb",
+        "byteSize": 190388,
+        "meshes": [
+          "body-mesh",
+          "head-mesh"
+        ],
+        "nodes": [
+          "character-skate-girl",
+          "root",
+          "leg-left",
+          "leg-right",
+          "torso",
+          "arm-left",
+          "arm-right",
+          "head",
+          "body-mesh",
+          "head-mesh"
+        ],
+        "animations": [
+          "static",
+          "idle",
+          "walk",
+          "sprint",
+          "jump",
+          "fall",
+          "crouch",
+          "sit",
+          "drive",
+          "die",
+          "pick-up",
+          "emote-yes",
+          "emote-no",
+          "holding-right",
+          "holding-left",
+          "holding-both",
+          "holding-right-shoot",
+          "holding-left-shoot",
+          "holding-both-shoot",
+          "attack-melee-right",
+          "attack-melee-left",
+          "attack-kick-right",
+          "attack-kick-left",
+          "interact-right",
+          "interact-left",
+          "skate",
+          "skate-stand",
+          "skate-air",
+          "skate-grab"
+        ],
+        "boundingBox": {
+          "min": [
+            -0.3903,
+            0.0,
+            -0.3231
+          ],
+          "max": [
+            0.3903,
+            0.6644,
+            0.1905
+          ],
+          "size": [
+            0.7806,
+            0.6644,
+            0.5135
+          ]
+        }
+      }
+    ],
+    "props": [
+      {
+        "id": "barrel",
+        "file": "barrel.glb",
+        "category": "props",
+        "url": "/studio/assets/models/props/barrel.glb",
+        "byteSize": 14092,
+        "meshes": [
+          "barrel"
+        ],
+        "nodes": [
+          "barrel"
+        ],
+        "animations": [],
+        "boundingBox": {
+          "min": [
+            -0.2588,
+            0.0,
+            -0.2588
+          ],
+          "max": [
+            0.2588,
+            0.4762,
+            0.2588
+          ],
+          "size": [
+            0.5176,
+            0.4762,
+            0.5176
+          ]
+        }
+      },
+      {
+        "id": "box-large",
+        "file": "box-large.glb",
+        "category": "props",
+        "url": "/studio/assets/models/props/box-large.glb",
+        "byteSize": 14072,
+        "meshes": [
+          "box-large"
+        ],
+        "nodes": [
+          "box-large"
+        ],
+        "animations": [],
+        "boundingBox": {
+          "min": [
+            -0.125,
+            0.0,
+            -0.25
+          ],
+          "max": [
+            0.125,
+            0.25,
+            0.25
+          ],
+          "size": [
+            0.25,
+            0.25,
+            0.5
+          ]
+        }
+      },
+      {
+        "id": "chest",
+        "file": "chest.glb",
+        "category": "props",
+        "url": "/studio/assets/models/props/chest.glb",
+        "byteSize": 28012,
+        "meshes": [
+          "chest",
+          "lid"
+        ],
+        "nodes": [
+          "chest",
+          "lid"
+        ],
+        "animations": [
+          "open",
+          "close",
+          "open-close"
+        ],
+        "boundingBox": {
+          "min": [
+            -0.25,
+            -0.05,
+            -0.25
+          ],
+          "max": [
+            0.25,
+            0.25,
+            0.45
+          ],
+          "size": [
+            0.5,
+            0.3,
+            0.7
+          ]
+        }
+      },
+      {
+        "id": "coin-gold",
+        "file": "coin-gold.glb",
+        "category": "props",
+        "url": "/studio/assets/models/props/coin-gold.glb",
+        "byteSize": 10608,
+        "meshes": [
+          "coin-gold"
+        ],
+        "nodes": [
+          "coin-gold"
+        ],
+        "animations": [],
+        "boundingBox": {
+          "min": [
+            -0.2,
+            0.0,
+            -0.0875
+          ],
+          "max": [
+            0.2,
+            0.4,
+            0.0875
+          ],
+          "size": [
+            0.4,
+            0.4,
+            0.175
+          ]
+        }
+      },
+      {
+        "id": "crate",
+        "file": "crate.glb",
+        "category": "props",
+        "url": "/studio/assets/models/props/crate.glb",
+        "byteSize": 14336,
+        "meshes": [
+          "crate"
+        ],
+        "nodes": [
+          "crate"
+        ],
+        "animations": [],
+        "boundingBox": {
+          "min": [
+            -0.25,
+            0.0,
+            -0.25
+          ],
+          "max": [
+            0.25,
+            0.5,
+            0.25
+          ],
+          "size": [
+            0.5,
+            0.5,
+            0.5
+          ]
+        }
+      },
+      {
+        "id": "heart",
+        "file": "heart.glb",
+        "category": "props",
+        "url": "/studio/assets/models/props/heart.glb",
+        "byteSize": 5828,
+        "meshes": [
+          "heart"
+        ],
+        "nodes": [
+          "heart"
+        ],
+        "animations": [],
+        "boundingBox": {
+          "min": [
+            -0.2061,
+            0.0,
+            -0.0595
+          ],
+          "max": [
+            0.2061,
+            0.3839,
+            0.0595
+          ],
+          "size": [
+            0.4122,
+            0.3839,
+            0.119
+          ]
+        }
+      },
+      {
+        "id": "key",
+        "file": "key.glb",
+        "category": "props",
+        "url": "/studio/assets/models/props/key.glb",
+        "byteSize": 13240,
+        "meshes": [
+          "key"
+        ],
+        "nodes": [
+          "key"
+        ],
+        "animations": [],
+        "boundingBox": {
+          "min": [
+            -0.1889,
+            0.0015,
+            -0.0339
+          ],
+          "max": [
+            0.1929,
+            0.2187,
+            0.0339
+          ],
+          "size": [
+            0.3817,
+            0.2172,
+            0.0679
+          ]
+        }
+      },
+      {
+        "id": "ladder",
+        "file": "ladder.glb",
+        "category": "props",
+        "url": "/studio/assets/models/props/ladder.glb",
+        "byteSize": 22260,
+        "meshes": [
+          "ladder"
+        ],
+        "nodes": [
+          "ladder"
+        ],
+        "animations": [],
+        "boundingBox": {
+          "min": [
+            -0.2524,
+            0.0,
+            -0.05
+          ],
+          "max": [
+            0.2524,
+            1.0,
+            0.0875
+          ],
+          "size": [
+            0.5049,
+            1.0,
+            0.1375
+          ]
+        }
+      },
+      {
+        "id": "scifi_power_crystal",
+        "file": "scifi_power_crystal.glb",
+        "category": "props",
+        "url": "/studio/assets/models/props/scifi_power_crystal.glb",
+        "byteSize": 61884,
+        "meshes": [
+          "Cylinder",
+          "Icosphere",
+          "Torus",
+          "Torus.001"
+        ],
+        "nodes": [
+          "Pedestal",
+          "PowerCrystal",
+          "Ring1",
+          "Ring2"
+        ],
+        "animations": [],
+        "boundingBox": {
+          "min": [
+            -1.56,
+            -0.9,
+            -1.56
+          ],
+          "max": [
+            1.56,
+            0.9,
+            1.56
+          ],
+          "size": [
+            3.12,
+            1.8,
+            3.12
+          ]
+        }
+      },
+      {
+        "id": "spring",
+        "file": "spring.glb",
+        "category": "props",
+        "url": "/studio/assets/models/props/spring.glb",
+        "byteSize": 38748,
+        "meshes": [
+          "spring",
+          "platform",
+          "spring"
+        ],
+        "nodes": [
+          "spring",
+          "platform",
+          "spring"
+        ],
+        "animations": [],
+        "boundingBox": {
+          "min": [
+            -0.375,
+            0.0,
+            -0.375
+          ],
+          "max": [
+            0.375,
+            0.3318,
+            0.375
+          ],
+          "size": [
+            0.75,
+            0.3318,
+            0.75
+          ]
+        }
+      },
+      {
+        "id": "star",
+        "file": "star.glb",
+        "category": "props",
+        "url": "/studio/assets/models/props/star.glb",
+        "byteSize": 6268,
+        "meshes": [
+          "star"
+        ],
+        "nodes": [
+          "star"
+        ],
+        "animations": [],
+        "boundingBox": {
+          "min": [
+            -0.1825,
+            0.0,
+            -0.1193
+          ],
+          "max": [
+            0.1825,
+            0.3631,
+            0.1193
+          ],
+          "size": [
+            0.365,
+            0.3631,
+            0.2385
+          ]
+        }
+      }
+    ]
+  }
+}

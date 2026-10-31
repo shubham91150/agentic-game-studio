@@ -1,0 +1,13 @@
+{
+  "assetId": "concrete_road_barrier_02",
+  "type": "model",
+  "resolution": "1k",
+  "license": "CC0 1.0 Universal (Polyhaven)",
+  "files": [
+    {
+      "file": "concrete_road_barrier_02_1k.glb",
+      "url": "/studio/assets/polyhaven/concrete_road_barrier_02/concrete_road_barrier_02_1k.glb",
+      "bytes": 2927052
+    }
+  ]
+}
