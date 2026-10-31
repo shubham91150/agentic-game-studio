@@ -82,7 +82,7 @@ line. Never lecture, just build.
 
 ## Scope rule: build as big as quality holds
 
-Start bounded (single arena / track / room / island, our `worldBound:72` pattern in `src/pipeline/layout.js`), then scale up freely — multi-arena, connected zones, larger bounds, richer dressing via Blender/SAM3D/Image — as long as fps budgets, the QA gate, and the done-gate pass. The ceiling is QUALITY, not size: grow until perf/playtest says stop, then stop.
+Start bounded (single arena / track / room / island, our `worldBound:72` pattern in `src/pipeline/layout.js`), then scale up freely — multi-arena, connected zones, larger bounds, richer dressing (hero assets via SAM 3D when GPU-available, else Blender/kit assets; Trellis dev-only, never ships) — as long as fps budgets, the QA gate, and the done-gate pass. The ceiling is QUALITY, not size: grow until perf/playtest says stop, then stop.
 Scaling ladder: arena → connected zones → larger bounds; each step up is gated by the fps meter + QA gate (`src/verifier/physics_qa_gate.js`) passing.
 Never shrink ambition by default — only scope down when measurements (fps, QA, playtest) demand it. If the user asks open-world, still start bounded, scale toward it, and say in ONE line where the build stands and why (engine + deadline honesty, no lecture).
 

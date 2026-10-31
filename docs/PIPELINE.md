@@ -29,7 +29,7 @@ flowchart TD
         IMG["Step 1b Concept art Muse Image 1.0<br/>key art, cached webp [Meta]"]
         SEG["SAM 3.1 segment_image<br/>boxes + masks → overlay + cutout [Meta]"]
         T3D["SAM 3D Objects Modal A100 → .glb<br/>shipped --backend sam3d [Meta]"]
-        TRE["Trellis Modal backend<br/>DEV-ONLY, remove by Nov 3 [DEV]"]
+        TRE["Trellis Modal backend<br/>DEV-ONLY, removed before submission Nov 3 [DEV]"]
         DWP["Depth/warp/projection chain [Tool]<br/>depth_map + novel_view + blender_project"]
         BCL["Blender cleanup headless<br/>decimate + merge + export .glb [Tool]"]
         NPC["NPC dialogue via Spark Open<br/>npc_dialogue.js, Baseten [Meta open]"]
@@ -99,15 +99,18 @@ flowchart TD
    (cached) → 3. Terrain + layout → 4. Three.js + Unity compile → 5. QA gate →
 1. Library save → `done` (gameId, playUrl, imageUrl, unitySource).
 
-## ⚠️ Nov-3 Trellis → SAM3D swap (REMINDERS.md)
+## ⚠️ Nov-3: remove Trellis, confirm zero trellis references ship (REMINDERS.md)
 
 Dev/testing uses `ASSET_3D_BACKEND=trellis` (Microsoft TRELLIS on Modal).
 Trellis is **NOT a Meta model** — shipping it breaks the Meta-models-only rule.
-**By Nov 3:** set `ASSET_3D_BACKEND=sam3d` (Meta SAM 3D Objects) in VM env +
-`startup.sh`, rebuild one asset end-to-end, then submit. After Nov 3,
+**By Nov 3:** REMOVE the Trellis backend (dev-only, never ships); confirm no
+trellis references ship: `grep -rni trellis src/ public/` must show zero
+live calls (warnings/comments only). SAM 3D stays as VERIFIED-but-limited:
+integrated, trial-verified (2 green runs, evidence in
+`docs/evidence-sam3d/`), used for hero assets subject to GPU availability;
+shipped game path uses Blender/kit assets. After Nov 3,
 `src/pipeline/assets_3d.js` prints a SUBMISSION BLOCKER warning on every
-Trellis call. Pre-submit: `grep -rni trellis src/ public/` must show only
-warnings/comments, zero live calls.
+Trellis call.
 
 ## Skills (`.agents/skills/` — composer capabilities)
 
