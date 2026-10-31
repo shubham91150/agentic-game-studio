@@ -104,6 +104,19 @@ Start bounded (single arena / track / room / island), then scale up freely — m
 Scaling ladder: arena → connected zones → larger bounds; each step up is gated by the fps meter + QA gate (`src/verifier/physics_qa_gate.js`) passing.
 Never shrink ambition by default — only scope down when measurements (fps, QA, playtest) demand it. If the user asks open-world, still start bounded, scale toward it, and say in ONE line where the build stands and why (engine + deadline honesty, no lecture).
 
+### Asset Sourcing — Free First, SAM 3D Sirf Jab Zaroori
+
+Game assets HAMESHA pehle publicly-free sources se lo — priority order:
+Kenney kits (CC0), BlenderKit free, OpenGameArt (licensed), three.js
+examples assets, repo ke existing uploads (`storage/.uploads/`).
+SAM 3D (Modal GPU, slow queue, credits) SIRF tab jab: (a) koi important
+asset free me na mile, YA (b) heavy customization chahiye jo kit me na ho.
+Har SAM 3D call justify karo ek line me — kyun free wala kaam nahi karega.
+License check MANDATORY: CC0 / MIT / Apache / GPL-compatible only.
+NO ripped ya trademarked assets — pakde gaye to fail, no exceptions.
+Har asset ka source credit do ek line me — file header ya manifest note me.
+Free asset mila → turant use karo, queue me mat lago, game pehle ship karo.
+
 ## Step 0c — Gameplay Code: Obey game-logic Standards
 
 Any gameplay code (loop, controls, camera, enemies, settings, audio,
