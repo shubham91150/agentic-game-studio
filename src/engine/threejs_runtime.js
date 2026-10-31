@@ -134,6 +134,13 @@ export function generateThreeJsGameFiles(gameSpec, worldData, layout) {
       #mobile-controls { display: block; }
       #btn-mobile-jump { display: flex; }
     }
+    #caption {
+      position: absolute; left: 50%; bottom: 88px; transform: translateX(-50%); z-index: 25;
+      display: none; max-width: min(560px, calc(100vw - 48px));
+      color: #f8fafc; font-size: 14px; line-height: 1.5; text-align: center;
+      background: rgba(9, 9, 11, 0.82); border: 1px solid rgba(255, 255, 255, 0.16);
+      padding: 8px 16px; border-radius: 8px; pointer-events: none;
+    }
   </style>
 </head>
 <body>
@@ -152,6 +159,7 @@ export function generateThreeJsGameFiles(gameSpec, worldData, layout) {
 
   <div id="mobile-controls"><div id="joystick-stick"></div></div>
   <div id="btn-mobile-jump">JUMP</div>
+  <div id="caption" role="status" aria-live="polite"></div>
   <script src="/studio/vendor/three.min.js" defer></script>
   <script src="./game.js" defer></script>
 </body>
@@ -331,6 +339,96 @@ export function generateThreeJsGameFiles(gameSpec, worldData, layout) {
 
   const clock = new THREE.Clock();
 
+  // --- Debug console (?debug=1): FPS + player XYZ overlay + window.game handle.
+  var DEBUG = false;
+  try { DEBUG = new URLSearchParams(window.location.search).get('debug') === '1'; } catch (e) {}
+  var dbgEl = null, dbgFrames = 0, dbgLast = performance.now();
+  if (DEBUG) {
+    dbgEl = document.createElement('div');
+    dbgEl.setAttribute('style', 'position:absolute;top:8px;right:8px;z-index:60;font:11px/1.5 monospace;color:#0f0;background:rgba(0,0,0,.65);padding:6px 8px;border-radius:6px;pointer-events:none;white-space:pre;');
+    document.body.appendChild(dbgEl);
+  }
+  window.game = {
+    scene: scene,
+    player: playerGroup,
+    warp: function (x, z) {
+      playerGroup.position.x = Math.max(-WORLD_BOUND, Math.min(WORLD_BOUND, Number(x) || 0));
+      playerGroup.position.z = Math.max(-WORLD_BOUND, Math.min(WORLD_BOUND, Number(z) || 0));
+    },
+    win: function () {
+      score = TARGET_ORBS;
+      valScore.textContent = score + ' / ' + TARGET_ORBS;
+      won = true;
+      banner.style.display = 'flex';
+    },
+    giveAll: function () {
+      for (var i = collectibles.length - 1; i >= 0; i--) scene.remove(collectibles[i]);
+      collectibles.length = 0;
+      window.game.win();
+      if (window.speak) window.speak('All orbs collected. You win.');
+    }
+  };
+  function dbgTick() {
+    if (!DEBUG || !dbgEl) return;
+    dbgFrames++;
+    var now = performance.now();
+    if (now - dbgLast >= 500) {
+      var fps = Math.round(dbgFrames * 1000 / (now - dbgLast));
+      dbgFrames = 0; dbgLast = now;
+      dbgEl.textContent = fps + ' fps\\nx:' + playerGroup.position.x.toFixed(1) +
+        ' y:' + playerGroup.position.y.toFixed(1) + ' z:' + playerGroup.position.z.toFixed(1);
+    }
+  }
+
+  // --- Accessibility: colorblind-safe palette (C toggles, persists).
+  var colorblind = false;
+  try { colorblind = localStorage.getItem('ags_colorblind_v1') === '1'; } catch (e) {}
+  function applyPalette() {
+    var orb = colorblind ? '#E69F00' : '${preset.collectible}';
+    var foe = colorblind ? '#0072B2' : '${preset.obstacle}';
+    colMat.color.set(orb); colMat.emissive.set(orb);
+    obstacleMat.color.set(foe);
+    try { localStorage.setItem('ags_colorblind_v1', colorblind ? '1' : '0'); } catch (e2) {}
+  }
+  window.addEventListener('keydown', function (e) { if (e.code === 'KeyC') { colorblind = !colorblind; applyPalette(); } });
+  applyPalette();
+
+  // --- Accessibility: key remap for strafe keys (additive, persists).
+  var KEYMAP = { left: 'KeyA', right: 'KeyD' };
+  try {
+    var savedKeys = JSON.parse(localStorage.getItem('ags_keys_v1') || 'null');
+    if (savedKeys && typeof savedKeys.left === 'string') KEYMAP.left = savedKeys.left;
+    if (savedKeys && typeof savedKeys.right === 'string') KEYMAP.right = savedKeys.right;
+  } catch (e) {}
+  window.setGameKeys = function (patch) {
+    if (patch && typeof patch.left === 'string') KEYMAP.left = patch.left;
+    if (patch && typeof patch.right === 'string') KEYMAP.right = patch.right;
+    try { localStorage.setItem('ags_keys_v1', JSON.stringify(KEYMAP)); } catch (e) {}
+  };
+
+  // --- Accessibility: NPC subtitles caption bar + speechSynthesis voice.
+  var captionEl = document.getElementById('caption');
+  var subsOn = true;
+  try { subsOn = localStorage.getItem('ags_subs_v1') !== '0'; } catch (e) {}
+  window.speak = function (line, opts) {
+    var text = String(line || '');
+    if (!text) return;
+    if (subsOn && captionEl) {
+      captionEl.textContent = text;
+      captionEl.style.display = 'block';
+      if (window.__capT) clearTimeout(window.__capT);
+      window.__capT = setTimeout(function () { captionEl.style.display = 'none'; }, 4000);
+    }
+    try {
+      if (!('speechSynthesis' in window)) return;
+      window.speechSynthesis.cancel();
+      var u = new SpeechSynthesisUtterance(text);
+      u.rate = (opts && opts.rate) || 1.0;
+      u.pitch = (opts && opts.pitch) || 1.0;
+      window.speechSynthesis.speak(u);
+    } catch (e2) {}
+  };
+
   function animate() {
     requestAnimationFrame(animate);
     const dt = Math.min(clock.getDelta(), 0.05);
@@ -340,8 +438,8 @@ export function generateThreeJsGameFiles(gameSpec, worldData, layout) {
     if (!won) {
       if (keys['KeyW'] || keys['ArrowUp']) moveZ -= 1;
       if (keys['KeyS'] || keys['ArrowDown']) moveZ += 1;
-      if (keys['KeyA'] || keys['ArrowLeft']) moveX -= 1;
-      if (keys['KeyD'] || keys['ArrowRight']) moveX += 1;
+      if (keys['KeyA'] || keys[KEYMAP.left] || keys['ArrowLeft']) moveX -= 1;
+      if (keys['KeyD'] || keys[KEYMAP.right] || keys['ArrowRight']) moveX += 1;
       if (joystick.active) { moveX = joystick.x; moveZ = joystick.y; }
     }
 
@@ -399,6 +497,7 @@ export function generateThreeJsGameFiles(gameSpec, worldData, layout) {
           won = true;
           document.getElementById('banner-text').textContent =
             'All ' + TARGET_ORBS + ' orbs collected. ' + '${objective}';
+          if (window.speak) window.speak(document.getElementById('banner-text').textContent);
           banner.style.display = 'flex';
         }
       }
@@ -407,6 +506,7 @@ export function generateThreeJsGameFiles(gameSpec, worldData, layout) {
     const currentSpeed = (moveX || moveZ) ? SPEED : 0;
     valSpeed.textContent = currentSpeed.toFixed(1);
 
+    dbgTick();
     renderer.render(scene, camera);
   }
 

@@ -95,6 +95,7 @@ const CONTENT_TYPES = {
   ".js": "application/javascript; charset=utf-8",
   ".css": "text/css; charset=utf-8",
   ".json": "application/json; charset=utf-8",
+  ".webmanifest": "application/manifest+json; charset=utf-8",
   ".glb": "model/gltf-binary",
   ".png": "image/png",
   ".jpg": "image/jpeg",
@@ -191,6 +192,14 @@ const server = http.createServer(async (req, res) => {
       return res.end("Forbidden");
     }
     return sendFile(res, target);
+  }
+
+  // ---------- PWA offline (manifest, icon, service worker — no build step) ----------
+  const pwaMatch = pathname.match(
+    /^\/studio\/(sw\.js|manifest\.webmanifest|icon\.svg)$/,
+  );
+  if (pwaMatch) {
+    return sendFile(res, path.join(PUBLIC_DIR, pwaMatch[1]));
   }
 
   // ---------- Health ----------

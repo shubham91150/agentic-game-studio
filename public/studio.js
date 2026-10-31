@@ -1380,4 +1380,24 @@
       loadTerminalInline();
     });
   }
+
+  // PWA offline (ui-taste: silent, no UI chrome): register the service
+  // worker only where it can work — https or localhost. No inline scripts
+  // anywhere (CSP script-src 'self'), so this lives in studio.js.
+  (function registerOfflineWorker() {
+    if (!("serviceWorker" in navigator)) return;
+    var proto = window.location.protocol;
+    var host = window.location.hostname;
+    var local =
+      host === "localhost" ||
+      host === "127.0.0.1" ||
+      host === "[::1]" ||
+      host === "";
+    if (proto !== "https:" && !local) return;
+    window.addEventListener("load", function () {
+      navigator.serviceWorker.register("/studio/sw.js").catch(function () {
+        /* offline support unavailable — app still works online */
+      });
+    });
+  })();
 })();
