@@ -71,8 +71,9 @@ supported". Design from the prompt's own words: goal, rules, win/lose, world,
 characters.
 
 The orb-collector runner is just ONE past example, never the default.
-Each game reuses the same file architecture and done-gate from
-`.agents/skills/game-logic/SKILL.md` — only the rules, level data, and
+Each game may reuse the file architecture and done-gate from
+`.agents/skills/game-logic/SKILL.md` as guidance — adapt, rename, or
+restructure freely; only the rules, level data, and
 win/lose conditions change per the user's idea.
 
 BANNED always: war, weapons, military, killing, blood, gore. If the user asks
@@ -82,7 +83,7 @@ line. Never lecture, just build.
 
 ## Scope rule: build as big as quality holds
 
-Start bounded (single arena / track / room / island, our `worldBound:72` pattern in `src/pipeline/layout.js`), then scale up freely — multi-arena, connected zones, larger bounds, richer dressing (hero assets via SAM 3D when GPU-available, else Blender/kit assets; Trellis dev-only, never ships) — as long as fps budgets, the QA gate, and the done-gate pass. The ceiling is QUALITY, not size: grow until perf/playtest says stop, then stop.
+Start bounded (single arena / track / room / island), then scale up freely — multi-arena, connected zones, larger bounds, richer dressing (hero assets via Blender/kit assets; SAM 3D is proof-only — evidence in `docs/evidence-sam3d/`, never the shipped hero path; Trellis dev-only, never ships) — as long as fps budgets, the QA gate, and the done-gate pass. The ceiling is QUALITY, not size: grow until perf/playtest says stop, then stop.
 Scaling ladder: arena → connected zones → larger bounds; each step up is gated by the fps meter + QA gate (`src/verifier/physics_qa_gate.js`) passing.
 Never shrink ambition by default — only scope down when measurements (fps, QA, playtest) demand it. If the user asks open-world, still start bounded, scale toward it, and say in ONE line where the build stands and why (engine + deadline honesty, no lecture).
 
@@ -94,9 +95,9 @@ fixed timestep, pooled objects, perf budgets, settings screens, done-gate.
 Placeholder "box moves" code is a fail. The done-gate playtest is mandatory
 before telling the user the game is ready.
 
-## Step 1 — Fast Path: Run the Deterministic Pipeline Tool
+## Step 1 — Fast Path (OPTIONAL): The Deterministic Pipeline Tool
 
-For a fresh game from a text prompt, prefer the pipeline tool over hand-writing everything. It runs safety check → Wonder/Baseten design → terrain + layout → Three.js files → Unity C# → physics QA → library save → copies into `public/live-preview/`:
+For a fresh game from a text prompt, the pipeline tool is ONE optional fast-path — hand-building (Step 2) is equally fine. Pick whichever fits the prompt; never treat the tool as required. It runs safety check → Wonder/Baseten design → terrain + layout → Three.js files → Unity C# → physics QA → library save → copies into `public/live-preview/`:
 
 ```bash
 node src/tools/build-game.js --prompt "a desert rover rally with 3 jump ramps and 12 beacons"
@@ -104,7 +105,7 @@ node src/tools/build-game.js --prompt "a desert rover rally with 3 jump ramps an
 
 - Takes ~30–90s (Wonder + Baseten + Image API calls). Reuses `storage/cache/` on repeat prompts (0 credits).
 - On success it prints `PREVIEW_READY public/live-preview/index.html` — the right pane picks it up automatically within ~2s. Just tell the user it's ready.
-- If the tool fails (API down), fall back to Step 2 and hand-write the files.
+- If you skip the tool (or it fails — API down), build by hand in Step 2 — a first-class path, not a fallback.
 
 ## Step 1b — Game Images (works with ANY active CLI model)
 
@@ -135,7 +136,7 @@ Mesh cleanup (dense SAM 3D output, TOOL ONLY — never the shipped Meta path): `
 
 Preview (browser) physics runs on the self-hosted Rapier build — `@dimforge/rapier3d-compat` 0.21.0 (Apache-2.0, TOOL not model), vendored at `src/engine/vendor/rapier3d-compat.mjs` + `rapier_wasm3d_bg.wasm` and served local-only at `/studio/vendor/` (same CSP-safe pattern as `three.min.js`; the `.mjs` resolves its `.wasm` relative to its own URL so both files must stay side by side). Browser use is one module import — `import * as RAPIER from '/studio/vendor/rapier3d-compat.mjs'; await RAPIER.init();` then `new RAPIER.World({x:0,y:-9.81,z:0})` with dynamic/fixed rigid-bodies + colliders stepped each frame (verified: dynamic ball falls and rests exactly on a fixed ground cuboid). Prefer real Rapier rigid-bodies + colliders for ALL preview movement, stacking, bouncing, and collision; hand-rolled custom gravity is allowed ONLY for trivial cases (single-axis constant fall with no collisions, e.g. a menu backdrop). Unity/Godot exports still use their own Rigidbody wiring; the deterministic `physics_qa_gate.js` still gates layout before anything ships.
 
-## Step 2 — Hand-Written Multi-File Game Structure (fallback or edits)
+## Step 2 — Hand-Written Multi-File Game Structure (first-class path, equal to Step 1)
 
 Write these files under `public/live-preview/`. Keep each file focused:
 
