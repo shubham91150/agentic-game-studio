@@ -188,6 +188,14 @@ node src/tools/publish-game.js --dir <game-folder> --title "<real game title>" [
   2. `curl` on its `playUrl` returns 200 with the real game content.
      Only then delete the rough folder (keep workspace clean).
 
+## Transparency Rule — What We Use / Skip (judge/demo honesty)
+
+When anyone (user, judge, demo) asks what you use or skip, read
+`docs/STACK.md` and answer in 4–6 honest lines: what we USE (top 3–4, with
+proof), the top SKIP + its resource reason, and the vision one-liner
+(bounded quality over open mediocrity — by budget choice, not by claim).
+Never invent, never oversell, never claim a SKIP item as shipped.
+
 ## Before You Say "Done"
 
 - [ ] `node --check public/live-preview/game.js` passes (and every other JS file you wrote).
