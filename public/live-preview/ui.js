@@ -457,6 +457,10 @@
     },
 
     results: function (won, posStr, rows, bestStr, newBest) {
+      // Stage 5: park the dial at rest (updateHud only runs while racing, so
+      // this persists; restart re-arms gear/needle via the lap-drop edge).
+      this.set("dial-gear", "N"); this.set("dial-digital", "0");
+      this._ang = -120; this._angV = 0; this._els["dial-needle"].setAttribute("transform", "rotate(-120 100 100)");
       this._els["results-kicker"].textContent = won
         ? "VICTORY"
         : "RACE COMPLETE";

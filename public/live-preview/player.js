@@ -1,6 +1,7 @@
 /* Horizon Sprint — player.js
  * Real GLTF (.glb) sports car & rival vehicles via WorldRealism.loadGlbModel
- * + arcade-sim physics (shared by player & AI). */
+ * + arcade-sim physics (shared by player & AI).
+ * Stage 4: carflake_detail.webp paint roughness (generated 2026-11-01 via make-image.js, Muse Image). */
 (function () {
   "use strict";
   window.G = window.G || {};
@@ -68,6 +69,36 @@
     return t;
   }
 
+  // carflake_detail.webp: generated 2026-11-01 via make-image.js (Muse Image).
+  // Justification: flat clearcoat reads toy-like in close chase cam.
+  // ONE shared linear roughnessMap for all 4 car paints: a single
+  // TextureLoader request fired once at boot (FLAKE_REQUESTED guard), never
+  // per-car. Micro grain variation only — envMapIntensity stays 1.5 (no delta
+  // needed). On load error the paints keep the current procedural roughness
+  // (G.roughTex) — never black/blank.
+  var FLAKE_TEX = null;
+  var FLAKE_REQUESTED = false;
+  var FLAKE_PAINTS = [];
+  function ensureFlakeTex() {
+    if (FLAKE_REQUESTED) return;
+    FLAKE_REQUESTED = true;
+    new THREE.TextureLoader().load(
+      "/studio/uploads/carflake_detail.webp",
+      function (tex) {
+        tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+        tex.repeat.set(2, 2);
+        tex.anisotropy = 8;
+        FLAKE_TEX = tex; // linear data map: NO sRGBEncoding
+        for (var i = 0; i < FLAKE_PAINTS.length; i++) {
+          FLAKE_PAINTS[i].roughnessMap = tex;
+          FLAKE_PAINTS[i].needsUpdate = true;
+        }
+      },
+      undefined,
+      function () {},
+    );
+  }
+
   G.createCarMesh = function (rgbStr, num, modelUrl, isPlayer) {
     ensureFlameTex();
     var paint = new THREE.MeshStandardMaterial({
@@ -77,6 +108,9 @@
       envMapIntensity: 1.5,
     });
     if (G.roughTex) paint.roughnessMap = G.roughTex;
+    ensureFlakeTex(); // single shared request; no-op after first car
+    if (FLAKE_TEX) paint.roughnessMap = FLAKE_TEX;
+    FLAKE_PAINTS.push(paint); // updated in place when the flake map arrives
 
     var tailMat = new THREE.MeshStandardMaterial({
       color: 0x550000,
@@ -125,27 +159,12 @@
               if (nm === "body" || nm === "spoiler") {
                 node.material = paint;
               } else if (nm === "toycar" && node.material) {
-                var tcMat = node.material.clone();
-                if (rgbStr) {
-                  var parts = String(rgbStr).split(",");
-                  if (parts.length === 3) {
-                    var r = Math.min(
-                      1.3,
-                      (parseFloat(parts[0]) / 255) * 1.05 + 0.15,
-                    );
-                    var g = Math.min(
-                      1.3,
-                      (parseFloat(parts[1]) / 255) * 1.05 + 0.15,
-                    );
-                    var b = Math.min(
-                      1.3,
-                      (parseFloat(parts[2]) / 255) * 1.05 + 0.15,
-                    );
-                    tcMat.color.setRGB(r, g, b);
-                  }
-                }
-                tcMat.envMapIntensity = 1.65;
-                node.material = tcMat;
+                // Stage 5 (user-chose BIND): the car's paint — per-car color +
+                // metalness 0.75 + shared flake roughnessMap + env — drives the
+                // ToyCar mesh directly, so all 4 cars show distinct glossy
+                // colors (menu recolor + colorblind toggles apply live too).
+                // Fallback: if paint is ever missing, keep the GLB material.
+                node.material = paint || node.material;
               }
               if (nm.indexOf("wheel-") === 0) {
                 wheelNodes.push(node);

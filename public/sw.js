@@ -1,7 +1,10 @@
 /* Agentic Game Studio — offline service worker (no build step).
  * App shell precache + runtime cache-first for games/uploads.
+ * Live CLI preview stage (/studio/live-preview/) is NEVER cached: it changes
+ * on every agent save and the pane's ?t= busting only covers index.html, so
+ * cache-first would pin stale game.js/ui.js forever.
  * Same-origin only, GET only. No external URLs (CSP-safe). */
-var CACHE = "ags-studio-v2";
+var CACHE = "ags-studio-v3";
 
 var APP_SHELL = [
   "/",
@@ -23,7 +26,6 @@ var RUNTIME_PREFIXES = [
   "/studio/games/",
   "/studio/uploads/",
   "/storage/.uploads/",
-  "/studio/live-preview/",
   "/studio/vendor/",
   "/studio/fonts/",
   "/studio/assets/",

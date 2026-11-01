@@ -109,15 +109,7 @@
       fpsN = 0,
       fpsAvg = 60,
       lowT = 0,
-      fpsUiT = 0,
-      // Aggressive frame-budget emergency: if FPS stays < 30 for 2s we latch
-      // a one-time pixel-ratio drop to 1.0 (the big fragment-cost saver).
-      // Quality auto-drop (above) handles the graceful path; this is the hard
-      // floor that catches a sustained stall. Shadows + grass are preserved so
-      // the scene keeps looking correct (the shadow pass is cheap — only the
-      // player car casts).
-      emergencyLowT = 0,
-      emergencyApplied = false;
+      fpsUiT = 0;
 
     function applyQuality(q) {
       save.quality = q;
@@ -856,25 +848,6 @@
           } else lowT = 0;
         }
 
-        // Hard frame-budget floor: FPS < 30 for 2s -> latch an emergency
-        // PIXEL-RATIO drop. We no longer disable shadows or halve the grass:
-        // only the player car casts a shadow now (the shadow pass shades just
-        // the player's meshes, so it's cheap), and the grass is already chunk-
-        // culled to ~2k visible instances, so those old cuts only wrecked image
-        // quality ("models look bad") without meaningfully helping the frame
-        // budget. Dropping to pixel ratio 1.0 is the big fragment-cost saver and
-        // preserves shadows + grass so the scene keeps looking correct.
-        if (fpsAvg < 30 && !emergencyApplied) {
-          emergencyLowT += 0.5;
-          if (emergencyLowT >= 2) {
-            emergencyApplied = true;
-            emergencyLowT = 0;
-            renderer.setPixelRatio(1);
-            console.log("Frame budget: emergency pixel-ratio floor applied");
-          }
-        } else {
-          emergencyLowT = 0;
-        }
       }
 
       // Stage 1: hit-stop restores on REAL time; rendering continues at full

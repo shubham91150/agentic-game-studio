@@ -187,6 +187,7 @@
       if (!this.started) return;
       var t = this.ctx.currentTime;
       if (typeof slip01 !== "number") slip01 = drifting ? 0.7 : 0;
+      slip01 = +slip01 || 0; // Stage 5: NaN guard (mirrors thud(); NaN is typeof number)
       slip01 = Math.max(0, Math.min(1, slip01));
       gear = gear >= 1 && gear <= 5 ? gear | 0 : gearFromSpeed(speed01);
       // Gear-stepped RPM: ramp with in-gear progress; upshift drops ~25%.

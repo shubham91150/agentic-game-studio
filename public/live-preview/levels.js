@@ -8,7 +8,8 @@
  * in 8 distance-cullable track sectors, and real GLTF (.glb) trackside scenery
  * (trees, rocks, plants, buildings, street lights, and concrete barriers)
  * using lightweight Kenney CC0 .glb models with per-sector InstancedMesh
- * instancing and per-object distance culling. */
+ * instancing and per-object distance culling.
+ * Stage 4: road_detail.webp overlay (generated 2026-11-01 via make-image.js, Muse Image). */
 (function () {
   "use strict";
   window.G = window.G || {};
@@ -387,6 +388,27 @@
         norTex.repeat.set(1, 1);
         norTex.anisotropy = 8;
         asphaltMat.normalMap = norTex;
+        asphaltMat.needsUpdate = true;
+      },
+      undefined,
+      function () {},
+    );
+    // road_detail.webp: generated 2026-11-01 via make-image.js (Muse Image).
+    // Justification: procedural asphalt lacks worn-line storytelling.
+    // Detail overlay as roughnessMap (that slot is free: Polyhaven owns map +
+    // normalMap above; G.roughTex already captured the procedural roughnessMap,
+    // so the paint fallback is unaffected). Darker worn-line pixels read as
+    // lower roughness = subtle sheen on the rubbered racing line. Repeat (1,1):
+    // the road UVs already tile one texture per 14 m of track (stripGeo v =
+    // cum/14), so no visible tiling at chase-cam distance. Linear data map (no
+    // sRGB encoding). On error: keep pure procedural.
+    texLoader.load(
+      "/studio/uploads/road_detail.webp",
+      function (roadDetailTex) {
+        roadDetailTex.wrapS = roadDetailTex.wrapT = THREE.RepeatWrapping;
+        roadDetailTex.repeat.set(1, 1);
+        roadDetailTex.anisotropy = 8;
+        asphaltMat.roughnessMap = roadDetailTex;
         asphaltMat.needsUpdate = true;
       },
       undefined,
