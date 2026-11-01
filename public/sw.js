@@ -4,7 +4,7 @@
  * on every agent save and the pane's ?t= busting only covers index.html, so
  * cache-first would pin stale game.js/ui.js forever.
  * Same-origin only, GET only. No external URLs (CSP-safe). */
-var CACHE = "ags-studio-v3";
+var CACHE = "ags-studio-v4";
 
 var APP_SHELL = [
   "/",

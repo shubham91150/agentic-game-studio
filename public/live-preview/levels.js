@@ -889,6 +889,10 @@
           if (n && n.isMesh) {
             n.castShadow = false;
             n.receiveShadow = true;
+            // r128 InstancedMesh has no per-instance bounds, so a sector mesh
+            // at the origin culls as one object at the origin; disable frustum
+            // culling here — the 120m distance cull in world.update() stays.
+            n.frustumCulled = false;
           }
         });
         scene.add(inst);
@@ -964,63 +968,96 @@
         { targetLength: 3.4, envMapIntensity: 1.0, castShadow: false },
       ).catch(function () {});
 
-      // ---- Trees: Kenney tree-high (31KB). Broadleaf + pine spots are merged
-      //      into one forest and bucketed into per-sector InstancedMeshes so
-      //      only the player's nearest sectors render. Replaces the 4.8MB
-      //      lush_tree + 3.5MB pine_tree (which were also wrapped in the buggy
-      //      LOD system that hid trees near the camera).
+      // ---- Trees: custom HD broadleaf + pine (QF mission, Blender-built via
+      //      src/tools/build_trees.py: tree_broadleaf_hd.glb 10.9m/6.3k tris +
+      //      tree_pine_hd.glb 10.8m/6.9k tris, each with an embedded 512px
+      //      bark/leaf/needle atlas, 1 mesh = 1 draw per non-empty sector).
+      //      Split method: the spots below are the two PRE-EXISTING groups
+      //      (broadleaf layout + the "pine spots" layout added after it) that
+      //      used to be merged into one Kenney tree-high forest; each group
+      //      now instances its own species per track sector (<=2 draws/sector
+      //      where both co-locate). 120m culling untouched. FALLBACK: on a
+      //      custom load error each group falls back to Kenney tree-high, so
+      //      a bad export never blanks the forest.
+      function buildBroadleafSpots() {
+        var treeSpots = [
+          { idx: S - 36, lat: -15, yawOffset: 0.4, scale: 1.15 },
+          { idx: S - 24, lat: 15.5, yawOffset: 1.9, scale: 1.2 },
+          { idx: S - 10, lat: -16, yawOffset: 3.1, scale: 1.1 },
+          { idx: 8, lat: 16, yawOffset: 0.8, scale: 1.15 },
+          { idx: 22, lat: -16.5, yawOffset: 2.4, scale: 1.25 },
+          { idx: 36, lat: 17, yawOffset: 1.2, scale: 1.18 },
+        ];
+        for (var i = 55; i < S - 50; i += 45) {
+          var sideSign = i % 90 === 0 ? 1 : -1;
+          var dist = 15 + ((i * 37) % 16);
+          var sc = 0.95 + ((i * 19) % 8) * 0.08;
+          treeSpots.push({
+            idx: i,
+            lat: sideSign * dist,
+            yawOffset: (i * 1.3) % 6.28,
+            scale: sc,
+          });
+        }
+        return treeSpots;
+      }
+      function buildPineSpots() {
+        var pineSpots = [
+          { idx: S - 30, lat: 18.5, yawOffset: 0.7, scale: 1.12 },
+          { idx: S - 16, lat: 17.5, yawOffset: 2.2, scale: 1.08 },
+          { idx: 2, lat: -17.5, yawOffset: 1.5, scale: 1.15 },
+          { idx: 16, lat: 18.0, yawOffset: 2.9, scale: 1.1 },
+          { idx: 30, lat: -18.0, yawOffset: 0.5, scale: 1.18 },
+        ];
+        for (var j = 12; j < S; j += 38) {
+          var pSide = j % 76 < 38 ? -1 : 1;
+          var pDist = 15 + ((j * 23) % 16);
+          pineSpots.push({
+            idx: j,
+            lat: pSide * pDist,
+            yawOffset: (j * 0.9) % 6.28,
+            scale: 0.96 + ((j * 11) % 5) * 0.08,
+          });
+        }
+        return pineSpots;
+      }
+      var KENNEY_TREE_URL = "/studio/assets/models/nature/tree-high.glb";
       WR.loadGlbModel(
-        "/studio/assets/models/nature/tree-high.glb",
-        function (treeProto) {
-          var treeSpots = [
-            { idx: S - 36, lat: -15, yawOffset: 0.4, scale: 1.15 },
-            { idx: S - 24, lat: 15.5, yawOffset: 1.9, scale: 1.2 },
-            { idx: S - 10, lat: -16, yawOffset: 3.1, scale: 1.1 },
-            { idx: 8, lat: 16, yawOffset: 0.8, scale: 1.15 },
-            { idx: 22, lat: -16.5, yawOffset: 2.4, scale: 1.25 },
-            { idx: 36, lat: 17, yawOffset: 1.2, scale: 1.18 },
-          ];
-          for (var i = 55; i < S - 50; i += 45) {
-            var sideSign = i % 90 === 0 ? 1 : -1;
-            var dist = 15 + ((i * 37) % 16);
-            var sc = 0.95 + ((i * 19) % 8) * 0.08;
-            treeSpots.push({
-              idx: i,
-              lat: sideSign * dist,
-              yawOffset: (i * 1.3) % 6.28,
-              scale: sc,
-            });
-          }
-          // Pine spots merged into the same forest.
-          treeSpots.push({
-            idx: S - 30,
-            lat: 18.5,
-            yawOffset: 0.7,
-            scale: 1.12,
+        "/studio/assets/custom/tree_broadleaf_hd.glb",
+        function (broadProto) {
+          placeInstancedBySector(broadProto, buildBroadleafSpots(), {
+            sectors: 8,
           });
-          treeSpots.push({
-            idx: S - 16,
-            lat: 17.5,
-            yawOffset: 2.2,
-            scale: 1.08,
-          });
-          treeSpots.push({ idx: 2, lat: -17.5, yawOffset: 1.5, scale: 1.15 });
-          treeSpots.push({ idx: 16, lat: 18.0, yawOffset: 2.9, scale: 1.1 });
-          treeSpots.push({ idx: 30, lat: -18.0, yawOffset: 0.5, scale: 1.18 });
-          for (var j = 12; j < S; j += 38) {
-            var pSide = j % 76 < 38 ? -1 : 1;
-            var pDist = 15 + ((j * 23) % 16);
-            treeSpots.push({
-              idx: j,
-              lat: pSide * pDist,
-              yawOffset: (j * 0.9) % 6.28,
-              scale: 0.96 + ((j * 11) % 5) * 0.08,
-            });
-          }
-          placeInstancedBySector(treeProto, treeSpots, { sectors: 8 });
         },
-        { targetLength: 10.0, envMapIntensity: 1.0, castShadow: false },
-      ).catch(function () {});
+        { targetLength: 11.0, envMapIntensity: 1.0, castShadow: false },
+      ).catch(function () {
+        WR.loadGlbModel(
+          KENNEY_TREE_URL,
+          function (treeProto) {
+            placeInstancedBySector(treeProto, buildBroadleafSpots(), {
+              sectors: 8,
+            });
+          },
+          { targetLength: 10.0, envMapIntensity: 1.0, castShadow: false },
+        ).catch(function () {});
+      });
+      WR.loadGlbModel(
+        "/studio/assets/custom/tree_pine_hd.glb",
+        function (pineProto) {
+          placeInstancedBySector(pineProto, buildPineSpots(), { sectors: 8 });
+        },
+        { targetLength: 11.0, envMapIntensity: 1.0, castShadow: false },
+      ).catch(function () {
+        WR.loadGlbModel(
+          KENNEY_TREE_URL,
+          function (treeProto) {
+            placeInstancedBySector(treeProto, buildPineSpots(), {
+              sectors: 8,
+            });
+          },
+          { targetLength: 10.0, envMapIntensity: 1.0, castShadow: false },
+        ).catch(function () {});
+      });
 
       // ---- Rocks: Kenney rocks-high (32KB). Boulder + Namaqualand cluster
       //      spots merged into per-sector InstancedMeshes. Replaces the 5.7MB

@@ -69,33 +69,52 @@
     return t;
   }
 
-  // carflake_detail.webp: generated 2026-11-01 via make-image.js (Muse Image).
-  // Justification: flat clearcoat reads toy-like in close chase cam.
-  // ONE shared linear roughnessMap for all 4 car paints: a single
-  // TextureLoader request fired once at boot (FLAKE_REQUESTED guard), never
-  // per-car. Micro grain variation only — envMapIntensity stays 1.5 (no delta
-  // needed). On load error the paints keep the current procedural roughness
-  // (G.roughTex) — never black/blank.
+  // carpaint_hd.webp (QF mission, generated 2026-11-01 via make-image.js):
+  // candy-metallic micro sparkle, wired as the PRIMARY shared paint
+  // roughnessMap. Justification: HD flake grain in close chase cam.
+  // Fallback chain, missing-file safe at every step: HD -> Stage-4 flake
+  // (carflake_detail.webp) -> procedural (G.roughTex, assigned at creation).
+  // ONE shared linear roughnessMap for all 4 car paints: a single chained
+  // request fired once at boot (FLAKE_REQUESTED guard), never per-car.
+  // Micro grain variation only — envMapIntensity stays 1.5 (no delta
+  // needed). On every load error the paints keep procedural roughness —
+  // never black/blank.
   var FLAKE_TEX = null;
   var FLAKE_REQUESTED = false;
   var FLAKE_PAINTS = [];
   function ensureFlakeTex() {
     if (FLAKE_REQUESTED) return;
     FLAKE_REQUESTED = true;
+    function prepPaintTex(tex) {
+      tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+      tex.repeat.set(2, 2);
+      tex.anisotropy = 8;
+      return tex; // linear data map: NO sRGBEncoding
+    }
+    function applyPaintTex(tex) {
+      FLAKE_TEX = tex;
+      for (var i = 0; i < FLAKE_PAINTS.length; i++) {
+        FLAKE_PAINTS[i].roughnessMap = tex;
+        FLAKE_PAINTS[i].needsUpdate = true;
+      }
+    }
     new THREE.TextureLoader().load(
-      "/studio/uploads/carflake_detail.webp",
+      "/studio/uploads/carpaint_hd.webp",
       function (tex) {
-        tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
-        tex.repeat.set(2, 2);
-        tex.anisotropy = 8;
-        FLAKE_TEX = tex; // linear data map: NO sRGBEncoding
-        for (var i = 0; i < FLAKE_PAINTS.length; i++) {
-          FLAKE_PAINTS[i].roughnessMap = tex;
-          FLAKE_PAINTS[i].needsUpdate = true;
-        }
+        applyPaintTex(prepPaintTex(tex));
       },
       undefined,
-      function () {},
+      function () {
+        // HD missing: same wiring falls back to the Stage-4 flake map.
+        new THREE.TextureLoader().load(
+          "/studio/uploads/carflake_detail.webp",
+          function (tex2) {
+            applyPaintTex(prepPaintTex(tex2));
+          },
+          undefined,
+          function () {}, // flake missing too: procedural G.roughTex stays
+        );
+      },
     );
   }
 
