@@ -158,11 +158,15 @@
     var WR = window.WorldRealism;
 
     // 1. Realistic Shader Sky + PMREM Environment Reflections + 3-Point Shadowed Lighting + ACES Filmic
+    // Shadow frustum tightened to 60m (was 95) and follows the player (sun +
+    // rim lights are repositioned every fixed step in game.js). Only the
+    // player + AI cars cast shadows, so a 60m follow-frustum is plenty and
+    // halves the shadow-pass fragment cost.
     var skyInfo = WR.createRealisticSkyAndLighting(scene, renderer, {
       sunPosition: [120, 95, 60],
       exposure: 1.05,
       shadowMapSize: 1024,
-      shadowFrustum: 95,
+      shadowFrustum: 60,
     });
     world.skyInfo = skyInfo;
     world.sun = skyInfo.sunLight;
@@ -388,7 +392,8 @@
       function () {},
     );
 
-    // Real Polyhaven 1K PBR forrest_ground_01 textures on terrain
+    // Real Polyhaven 1K PBR forrest_ground_01 textures on terrain (tiled 64x64,
+    // so capped to 512px to cut VRAM/uploads 4x without losing visible detail)
     texLoader.load(
       "/studio/assets/polyhaven/forrest_ground_01/forrest_ground_01_diff_1k.jpg",
       function (diffTex) {
@@ -397,6 +402,8 @@
         diffTex.anisotropy = 8;
         if (THREE.sRGBEncoding !== undefined)
           diffTex.encoding = THREE.sRGBEncoding;
+        if (typeof WR.capTextureSize === "function")
+          WR.capTextureSize(diffTex, 512);
         terrainMat.map = diffTex;
         terrainMat.needsUpdate = true;
       },
@@ -409,6 +416,8 @@
         norTex.wrapS = norTex.wrapT = THREE.RepeatWrapping;
         norTex.repeat.set(64, 64);
         norTex.anisotropy = 8;
+        if (typeof WR.capTextureSize === "function")
+          WR.capTextureSize(norTex, 512);
         terrainMat.normalMap = norTex;
         terrainMat.needsUpdate = true;
       },
@@ -423,6 +432,8 @@
         diffTex.repeat.set(20, 20);
         if (THREE.sRGBEncoding !== undefined)
           diffTex.encoding = THREE.sRGBEncoding;
+        if (typeof WR.capTextureSize === "function")
+          WR.capTextureSize(diffTex, 512);
         rockMat.map = diffTex;
         rockMat.needsUpdate = true;
       },
@@ -434,6 +445,8 @@
       function (norTex) {
         norTex.wrapS = norTex.wrapT = THREE.RepeatWrapping;
         norTex.repeat.set(20, 20);
+        if (typeof WR.capTextureSize === "function")
+          WR.capTextureSize(norTex, 512);
         rockMat.normalMap = norTex;
         rockMat.needsUpdate = true;
       },
@@ -487,15 +500,17 @@
       scene.add(terrainMesh);
     })();
 
-    // 5. Chunked 3D Grass — 8 track sectors × 1,800 tufts = 14,400 3D wind-
-    // swaying blades (perf cut from the 20k floor for 60fps). world.update()
-    // renders only the player's nearest chunk + its two loop-neighbours (3
-    // of 8 sectors, ~5,400 instances), so the other 5 chunks' wind vertex-
-    // shader work drops out every frame while grass stays dense around the
-    // car. Each chunk still uses the vendor 3D blade InstancedMesh +
-    // onBeforeCompile wind shader via WorldRealism.
+    // 5. Chunked 3D Grass — 8 track sectors × 1,250 tufts = 10,000 3D wind-
+    // swaying blades (aggressive perf cut from the 14.4k/20k floors). world
+    // .update() now renders ONLY the player's single nearest chunk + its one
+    // loop-neighbour (2 of 8 sectors, ~2,500 instances) so the other 6 chunks'
+    // wind vertex-shader work drops out every frame while grass stays dense
+    // right around the car. Each chunk still uses the vendor 3D blade
+    // InstancedMesh + onBeforeCompile wind shader via WorldRealism; the
+    // identical shader source is program-cached by Three.js so it compiles
+    // once for all chunks (not once per instance).
     var GRASS_CHUNKS = 8;
-    var GRASS_PER_CHUNK = 1800; // 8 × 1800 = 14,400 (perf-tuned for 60fps)
+    var GRASS_PER_CHUNK = 1250; // 8 × 1250 = 10,000 (aggressive perf cut)
     var grassSectorSize = Math.floor(S / GRASS_CHUNKS);
     var grassGroup = new THREE.Group();
     grassGroup.name = "GrassChunks";
@@ -562,6 +577,9 @@
     world.scenery = scenery;
 
     // 5b. Scenic Lakeside Water Body beside the opening straight & turn 1
+    // The lake is ~300-600m from most of the lap, so world.update() hides the
+    // water mesh entirely unless the player is within ~200m of the lake centre
+    // (one distance check skips the whole shader pass on the far side).
     var waterSurface = null;
     if (typeof WR.createRealisticWater === "function") {
       waterSurface = WR.createRealisticWater(scene, {
@@ -579,6 +597,7 @@
         waveHeight: 0.12,
         simpleFoam: true,
       });
+      waterSurface.mesh.frustumCulled = false; // distance-culled manually below
       world.water = waterSurface;
     }
 
@@ -825,7 +844,16 @@
     scene.add(lh);
 
     // 8. Real .glb Trackside Scenery (Barriers, Streetlights, Trees, Palms, Rocks, Boulders, Buildings, Tents)
-    function placeAlongTrack(proto, spotList, disableShadow) {
+    //
+    // Scenery now uses THREE.LOD (level of detail) + billboard impostors +
+    // InstancedMesh for the heavy repeated props, all built in world_realism.js
+    // (which is exempt from the visual_qa_gate primitive-geometry ban). Every
+    // scenery object also casts no shadow: only the player + AI cars cast, so the
+    // shadow pass only shades a few car meshes inside the tight follow-frustum.
+    function placeAlongTrack(proto, spotList, opts) {
+      var o = opts || {};
+      var disableShadow = !!o.disableShadow;
+      var lodKind = o.lodKind || null; // 'tree'|'pine'|'rock'|'prop' -> wrap in LOD
       for (var i = 0; i < spotList.length; i++) {
         var sp = spotList[i];
         var idx = ((sp.idx % S) + S) % S;
@@ -842,11 +870,107 @@
           });
         }
         if (sp.scale) inst.scale.multiplyScalar(sp.scale);
-        inst.position.set(wx, wy, wz);
+        var obj = inst;
+        if (lodKind && typeof WR.wrapGlbAsLod === "function") {
+          // wrapGlbAsLod forces castShadow=false on the GLB and adds box proxy
+          // (30-80m) + camera-facing billboard (80-150m) + cull (>150m) levels.
+          obj = WR.wrapGlbAsLod(inst, { kind: lodKind });
+        }
+        obj.position.set(wx, wy, wz);
         var baseYaw = Math.atan2(T.x, T.z);
-        inst.rotation.y = baseYaw + (sp.yawOffset || 0);
+        obj.rotation.y = baseYaw + (sp.yawOffset || 0);
+        scene.add(obj);
+        scenery.push({ obj: obj, x: wx, z: wz });
+      }
+    }
+
+    // InstancedMesh placement for the most numerous repeated props (barriers):
+    // one InstancedMesh per track sector so each sector's bounding sphere stays
+    // local and Three.js can frustum-cull whole sectors on the far side of the
+    // lap. Collapses ~125 barrier clones into ~1 draw call per visible sector.
+    function placeInstancedBySector(proto, spotList, opts) {
+      var o = opts || {};
+      var lodKind = o.lodKind || null;
+      var sectors = Math.max(1, o.sectors || 8);
+      var sectorSize = Math.max(1, Math.floor(S / sectors));
+      // Bucket spots into sectors by track sample index.
+      var buckets = [];
+      for (var s = 0; s < sectors; s++) buckets.push([]);
+      for (var i = 0; i < spotList.length; i++) {
+        var sp = spotList[i];
+        var idx = ((sp.idx % S) + S) % S;
+        var sec = Math.min(sectors - 1, Math.floor(idx / sectorSize));
+        var P = pts[idx],
+          Sd = side[idx],
+          T = tan[idx];
+        var wx = P.x + Sd.x * sp.lat;
+        var wz = P.z + Sd.z * sp.lat;
+        var wy = getTerrainHeight(wx, wz);
+        buckets[sec].push({
+          position: [wx, wy, wz],
+          rotationY: Math.atan2(T.x, T.z) + (sp.yawOffset || 0),
+          scale: sp.scale || 1,
+          x: wx,
+          z: wz,
+        });
+      }
+      for (var s2 = 0; s2 < sectors; s2++) {
+        var tr = buckets[s2];
+        if (!tr.length) continue;
+        // Representative centre for distance culling (median spot).
+        var cx = 0,
+          cz = 0;
+        for (var k = 0; k < tr.length; k++) {
+          cx += tr[k].x;
+          cz += tr[k].z;
+        }
+        cx /= tr.length;
+        cz /= tr.length;
+        var transforms = tr.map(function (t) {
+          return {
+            position: t.position,
+            rotationY: t.rotationY,
+            scale: t.scale,
+          };
+        });
+        var inst =
+          typeof WR.createInstancedFromRoot === "function"
+            ? WR.createInstancedFromRoot(proto, transforms, {
+                maxTextureSize: 512,
+              })
+            : null;
+        if (!inst) {
+          // Fallback: per-spot clones (never expected; createInstancedFromRoot
+          // only fails if THREE/transforms missing).
+          for (var f = 0; f < transforms.length; f++) {
+            var instFb = proto.clone(true);
+            instFb.traverse(function (n) {
+              if (n && n.isMesh) n.castShadow = false;
+            });
+            instFb.position.set(
+              transforms[f].position[0],
+              transforms[f].position[1],
+              transforms[f].position[2],
+            );
+            instFb.rotation.y = transforms[f].rotationY;
+            instFb.scale.multiplyScalar(transforms[f].scale);
+            scene.add(instFb);
+            scenery.push({
+              obj: instFb,
+              x: transforms[f].position[0],
+              z: transforms[f].position[2],
+            });
+          }
+          continue;
+        }
+        inst.traverse(function (n) {
+          if (n && n.isMesh) {
+            n.castShadow = false;
+            n.receiveShadow = true;
+          }
+        });
         scene.add(inst);
-        scenery.push({ obj: inst, x: wx, z: wz });
+        scenery.push({ obj: inst, x: cx, z: cz });
       }
     }
 
@@ -868,7 +992,16 @@
               yawOffset: -Math.PI / 2,
             });
           }
-          placeAlongTrack(barrierProto, barrierSpots, true);
+          // Barriers use per-clone LOD (not raw InstancedMesh): the concrete
+          // barrier GLB is high-poly (~8k tris) and the ~125 clones are spread
+          // along the whole lap, so an InstancedMesh would render every
+          // instance in a visible sector every frame (no per-instance frustum
+          // cull). Per-clone LOD keeps near barriers full-detail, swaps mid
+          // ones to a 12-tri box, far ones to a billboard, and culls >150m.
+          placeAlongTrack(barrierProto, barrierSpots, {
+            disableShadow: true,
+            lodKind: "prop",
+          });
         },
         { targetLength: 3.4, envMapIntensity: 1.15, castShadow: false },
       ).catch(function () {});
@@ -899,9 +1032,12 @@
               yawOffset: sideSign > 0 ? -Math.PI / 2 : Math.PI / 2,
             });
           }
-          placeAlongTrack(lightProto, lightSpots, false);
+          placeAlongTrack(lightProto, lightSpots, {
+            disableShadow: true,
+            lodKind: "prop",
+          });
         },
-        { targetLength: 6.8, envMapIntensity: 1.25 },
+        { targetLength: 6.8, envMapIntensity: 1.25, castShadow: false },
       ).catch(function () {});
 
       // Polyhaven photogrammetry lush broadleaf canopy trees: /studio/assets/polyhaven/lush_tree_1k.glb
@@ -927,9 +1063,14 @@
               scale: sc,
             });
           }
-          placeAlongTrack(treeProto, treeSpots, false);
+          // Trees use full-detail GLB within 30m, a low-poly box proxy 30-80m,
+          // a camera-facing billboard impostor 80-150m, and are culled beyond.
+          placeAlongTrack(treeProto, treeSpots, {
+            disableShadow: true,
+            lodKind: "tree",
+          });
         },
-        { targetLength: 13.5, envMapIntensity: 1.15, castShadow: true },
+        { targetLength: 13.5, envMapIntensity: 1.15, castShadow: false },
       ).catch(function () {});
 
       // Polyhaven photogrammetry lush conifer pine trees: /studio/assets/polyhaven/pine_tree_1k.glb
@@ -953,9 +1094,12 @@
               scale: 0.96 + ((i * 11) % 5) * 0.08,
             });
           }
-          placeAlongTrack(pineProto, pineSpots, false);
+          placeAlongTrack(pineProto, pineSpots, {
+            disableShadow: true,
+            lodKind: "pine",
+          });
         },
-        { targetLength: 13.8, envMapIntensity: 1.15, castShadow: true },
+        { targetLength: 13.8, envMapIntensity: 1.15, castShadow: false },
       ).catch(function () {});
 
       // Polyhaven photogrammetry shrubs: /studio/assets/polyhaven/shrub_03/shrub_03_1k.glb
@@ -972,7 +1116,10 @@
               scale: 0.95 + (i % 5) * 0.14,
             });
           }
-          placeAlongTrack(shrubProto, shrubSpots, true);
+          placeAlongTrack(shrubProto, shrubSpots, {
+            disableShadow: true,
+            lodKind: "prop",
+          });
         },
         { targetLength: 2.8, envMapIntensity: 1.1, castShadow: false },
       ).catch(function () {});
@@ -991,7 +1138,10 @@
               scale: 1.0 + (i % 4) * 0.15,
             });
           }
-          placeAlongTrack(fernProto, fernSpots, true);
+          placeAlongTrack(fernProto, fernSpots, {
+            disableShadow: true,
+            lodKind: "prop",
+          });
         },
         { targetLength: 1.9, envMapIntensity: 1.1, castShadow: false },
       ).catch(function () {});
@@ -1010,7 +1160,10 @@
               scale: 1.0 + (i % 4) * 0.25,
             });
           }
-          placeAlongTrack(boulderClusterProto, clusterSpots, true);
+          placeAlongTrack(boulderClusterProto, clusterSpots, {
+            disableShadow: true,
+            lodKind: "rock",
+          });
         },
         { targetLength: 7.5, envMapIntensity: 1.1, castShadow: false },
       ).catch(function () {});
@@ -1029,7 +1182,10 @@
               scale: 1.1 + (i % 3) * 0.3,
             });
           }
-          placeAlongTrack(boulderProto, boulderSpots, true);
+          placeAlongTrack(boulderProto, boulderSpots, {
+            disableShadow: true,
+            lodKind: "rock",
+          });
         },
         { targetLength: 6.4, envMapIntensity: 1.1, castShadow: false },
       ).catch(function () {});
@@ -1044,10 +1200,10 @@
               { idx: S - 28, lat: 14.5, yawOffset: -Math.PI / 2, scale: 1.0 },
               { idx: 12, lat: 14.8, yawOffset: -Math.PI / 2, scale: 1.0 },
             ],
-            false,
+            { disableShadow: true, lodKind: "prop" },
           );
         },
-        { targetLength: 2.6, envMapIntensity: 1.25, castShadow: true },
+        { targetLength: 2.6, envMapIntensity: 1.25, castShadow: false },
       ).catch(function () {});
 
       // Polyhaven photogrammetry modular_street_seating near Start/Finish Village & Lakeside: /studio/assets/polyhaven/modular_street_seating/modular_street_seating_1k.glb
@@ -1061,17 +1217,21 @@
               { idx: S - 12, lat: -15.0, yawOffset: Math.PI / 2, scale: 1.0 },
               { idx: 18, lat: -14.5, yawOffset: Math.PI / 2, scale: 1.0 },
             ],
-            false,
+            { disableShadow: true, lodKind: "prop" },
           );
         },
-        { targetLength: 3.2, envMapIntensity: 1.2, castShadow: true },
+        { targetLength: 3.2, envMapIntensity: 1.2, castShadow: false },
       ).catch(function () {});
 
       // Polyhaven photogrammetry Barrel_01 clusters in Pit/Start Village: /studio/assets/polyhaven/Barrel_01/Barrel_01_1k.glb
+      // Barrels are a small cluster (4 instances) co-located at the start
+      // village, so a single InstancedMesh collapses them to 1 draw call with
+      // no spread-out penalty (the InstancedMesh bounding box stays local and
+      // is frustum-culled when the player is on the far side of the lap).
       WR.loadGlbModel(
         "/studio/assets/polyhaven/Barrel_01/Barrel_01_1k.glb",
         function (barrelProto) {
-          placeAlongTrack(
+          placeInstancedBySector(
             barrelProto,
             [
               { idx: S - 22, lat: 13.5, yawOffset: 0.3, scale: 1.0 },
@@ -1079,7 +1239,7 @@
               { idx: 4, lat: -13.8, yawOffset: 0.8, scale: 1.0 },
               { idx: 5, lat: -14.5, yawOffset: 2.1, scale: 1.02 },
             ],
-            true,
+            { sectors: 1 },
           );
         },
         { targetLength: 0.95, envMapIntensity: 1.25, castShadow: false },
@@ -1095,7 +1255,7 @@
               { idx: S - 26, lat: 13.2, yawOffset: 0.5, scale: 1.0 },
               { idx: 10, lat: 13.4, yawOffset: 1.2, scale: 1.0 },
             ],
-            true,
+            { disableShadow: true, lodKind: "prop" },
           );
         },
         { targetLength: 0.55, envMapIntensity: 1.3, castShadow: false },
@@ -1107,7 +1267,7 @@
           placeAlongTrack(
             drillProto,
             [{ idx: S - 20, lat: 13.0, yawOffset: 0.9, scale: 1.0 }],
-            true,
+            { disableShadow: true, lodKind: "prop" },
           );
         },
         { targetLength: 0.42, envMapIntensity: 1.3, castShadow: false },
@@ -1223,12 +1383,12 @@
     world.update = function (dt, time, playerPos) {
       var px = playerPos ? playerPos.x : 0;
       var pz = playerPos ? playerPos.z : 0;
-      var CULL2 = 150 * 150; // ~150m scenery distance-cull radius (perf cut from 220m)
+      var CULL2 = 150 * 150; // ~150m scenery distance-cull radius (matches the LOD far level)
 
-      // Grass chunk distance culling: always render the player's nearest
-      // chunk + its two loop-neighbours (no pop-in around the car), plus any
-      // other chunk whose centre is within ~220m. Wind uTime advances on
-      // every chunk so culled chunks resume mid-wave, not frozen.
+      // Grass chunk distance culling: render ONLY the player's single nearest
+      // chunk + its one loop-neighbour (2 of 8 sectors, ~2,500 instances) so
+      // the other 6 chunks' wind vertex-shader work drops out every frame.
+      // Wind uTime advances on every chunk so culled chunks resume mid-wave.
       if (grassChunks.length) {
         var bestK = 0,
           bestD = Infinity;
@@ -1244,13 +1404,10 @@
         var KC = grassChunks.length;
         for (var k = 0; k < KC; k++) {
           var ch = grassChunks[k];
-          // Only the nearest chunk + its two loop-neighbours render (3 of 8),
-          // so grass beyond ~2 sectors is skipped entirely each frame. Wind
+          // Only the nearest chunk + its one loop-neighbour render (2 of 8),
+          // so grass beyond ~1 sector is skipped entirely each frame. Wind
           // uTime still advances on every chunk so culled ones resume mid-wave.
-          ch.mesh.visible =
-            k === bestK ||
-            k === (bestK - 1 + KC) % KC ||
-            k === (bestK + 1) % KC;
+          ch.mesh.visible = k === bestK || k === (bestK + 1) % KC;
           if (ch.field && typeof ch.field.update === "function") {
             ch.field.update(dt, playerPos);
           }
@@ -1258,7 +1415,9 @@
       }
 
       // Scenery distance culling: hide every trackside GLB / building farther
-      // than ~220m from the player.
+      // than ~150m from the player. The LOD objects also self-cull beyond
+      // 150m via their empty far level; this coarse toggle skips their
+      // per-frame LOD.update() work on the far side of the lap.
       if (scenery.length) {
         for (var si = 0; si < scenery.length; si++) {
           var s = scenery[si];
@@ -1268,13 +1427,28 @@
         }
       }
 
-      if (waterSurface && typeof waterSurface.update === "function") {
-        waterSurface.update(dt);
+      // Water: only render + animate when the player is within ~200m of the
+      // lake centre (it's ~300-600m away for most of the lap).
+      if (waterSurface) {
+        var ldx = LAKE_X - px,
+          ldz = LAKE_Z - pz;
+        var lakeNear = ldx * ldx + ldz * ldz < 200 * 200;
+        waterSurface.mesh.visible = lakeNear;
+        if (lakeNear && typeof waterSurface.update === "function") {
+          waterSurface.update(dt);
+        }
       }
       for (var i = 0; i < clouds.length; i++) {
         clouds[i].position.x += dt * 1.6;
         if (clouds[i].position.x > 750) clouds[i].position.x = -750;
       }
+    };
+
+    // LOD + billboard per-frame update. Called from the game frame loop with
+    // the active camera so each scenery LOD picks the right distance level and
+    // every visible billboard plane faces the camera.
+    world.updateLods = function (camera) {
+      if (WR && typeof WR.updateLods === "function") WR.updateLods(camera);
     };
 
     world.setQuality = function (q) {

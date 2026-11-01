@@ -96,7 +96,14 @@
       fpsN = 0,
       fpsAvg = 60,
       lowT = 0,
-      fpsUiT = 0;
+      fpsUiT = 0,
+      // Aggressive frame-budget emergency: if FPS stays < 30 for 2s we force
+      // pixelRatio 1.0, disable shadows, and halve the rendered grass instance
+      // count (one-time, latched). Quality auto-drop (above) handles the
+      // graceful path; this is the hard floor that catches a sustained stall.
+      emergencyLowT = 0,
+      emergencyApplied = false,
+      grassOrigCounts = null;
 
     function applyQuality(q) {
       save.quality = q;
@@ -680,6 +687,28 @@
             }
           } else lowT = 0;
         }
+
+        // Hard frame-budget floor: FPS < 30 for 2s -> latch emergency cuts.
+        if (fpsAvg < 30 && !emergencyApplied) {
+          emergencyLowT += 0.5;
+          if (emergencyLowT >= 2) {
+            emergencyApplied = true;
+            emergencyLowT = 0;
+            renderer.setPixelRatio(1);
+            if (world.sun) world.sun.castShadow = false;
+            if (world.grassChunks) {
+              grassOrigCounts = [];
+              for (var gi = 0; gi < world.grassChunks.length; gi++) {
+                var gc = world.grassChunks[gi];
+                grassOrigCounts.push(gc.mesh.count);
+                gc.mesh.count = Math.max(0, Math.floor(gc.mesh.count / 2));
+              }
+            }
+            console.log("Frame budget: emergency quality floor applied");
+          }
+        } else {
+          emergencyLowT = 0;
+        }
       }
 
       if (state !== "paused") {
@@ -697,6 +726,9 @@
         world.water.update(raw);
       }
       updateCamera(raw);
+      // Per-frame LOD level selection + camera-facing billboard update for
+      // all scenery LOD objects (built in world_realism.js via wrapGlbAsLod).
+      if (world.updateLods) world.updateLods(camera);
       renderer.render(scene, camera);
     }
 
