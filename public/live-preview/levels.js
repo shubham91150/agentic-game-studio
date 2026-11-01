@@ -442,7 +442,7 @@
     );
 
     (function buildDisplacedTerrain() {
-      var gridN = 128;
+      var gridN = 64; // 64x64 (perf: 1/4 the verts of 128x128); road ribbon hides the seam
       var extent = 1300;
       var vCount = (gridN + 1) * (gridN + 1);
       var positions = new Float32Array(vCount * 3);
@@ -487,15 +487,15 @@
       scene.add(terrainMesh);
     })();
 
-    // 5. Chunked 3D Grass — 8 track sectors × 2,500 tufts = 20,000 3D wind-
-    // swaying blades (down from a single 35,000-instance field). Chunking lets
-    // world.update() distance-cull whole sectors: only the ~2-3 sectors near
-    // the player render each frame (~5-7.5k instances) instead of the whole
-    // field, a ~60-78% per-frame reduction in grass vertex-shader work while
-    // staying dense around the car. Each chunk still uses the vendor 3D blade
-    // InstancedMesh + onBeforeCompile wind shader via WorldRealism.
+    // 5. Chunked 3D Grass — 8 track sectors × 1,800 tufts = 14,400 3D wind-
+    // swaying blades (perf cut from the 20k floor for 60fps). world.update()
+    // renders only the player's nearest chunk + its two loop-neighbours (3
+    // of 8 sectors, ~5,400 instances), so the other 5 chunks' wind vertex-
+    // shader work drops out every frame while grass stays dense around the
+    // car. Each chunk still uses the vendor 3D blade InstancedMesh +
+    // onBeforeCompile wind shader via WorldRealism.
     var GRASS_CHUNKS = 8;
-    var GRASS_PER_CHUNK = 2500; // 8 × 2500 = 20,000 (AGENTS.md 20k-35k floor)
+    var GRASS_PER_CHUNK = 1800; // 8 × 1800 = 14,400 (perf-tuned for 60fps)
     var grassSectorSize = Math.floor(S / GRASS_CHUNKS);
     var grassGroup = new THREE.Group();
     grassGroup.name = "GrassChunks";
@@ -567,8 +567,11 @@
       waterSurface = WR.createRealisticWater(scene, {
         width: LAKE_RX * 2.0,
         depth: LAKE_RZ * 2.0,
-        segmentsX: 32,
-        segmentsZ: 32,
+        // 16x16 segments (was 32x32): 1/4 the water vertices + shadow-pass
+        // verts; the wave motion is driven by the fragment shader so the
+        // silhouette stays smooth.
+        segmentsX: 16,
+        segmentsZ: 16,
         position: [LAKE_X, 0.06, LAKE_Z],
         sunDirection: [120, 95, 60],
         deepColor: "#0a3246",
@@ -645,7 +648,17 @@
           position: [bx, by, bz],
           rotationY: Math.atan2(bT.x, bT.z) + bd.yawOffset,
         });
-        if (bGroup) scenery.push({ obj: bGroup, x: bx, z: bz });
+        if (bGroup) {
+          // Village buildings are multi-mesh assemblies (~30 meshes each).
+          // Drop them from the shadow CAST pass (they still receive shadows):
+          // when far they're outside the sun's 95m shadow frustum anyway, and
+          // when near this skips the per-frame shadow-frustum test for all
+          // their window/sill/hvac meshes.
+          bGroup.traverse(function (n) {
+            if (n && n.isMesh) n.castShadow = false;
+          });
+          scenery.push({ obj: bGroup, x: bx, z: bz });
+        }
       }
     }
 
@@ -1210,7 +1223,7 @@
     world.update = function (dt, time, playerPos) {
       var px = playerPos ? playerPos.x : 0;
       var pz = playerPos ? playerPos.z : 0;
-      var CULL2 = 220 * 220; // ~220m distance culling radius
+      var CULL2 = 150 * 150; // ~150m scenery distance-cull radius (perf cut from 220m)
 
       // Grass chunk distance culling: always render the player's nearest
       // chunk + its two loop-neighbours (no pop-in around the car), plus any
@@ -1231,14 +1244,13 @@
         var KC = grassChunks.length;
         for (var k = 0; k < KC; k++) {
           var ch = grassChunks[k];
-          var isNeighbour =
+          // Only the nearest chunk + its two loop-neighbours render (3 of 8),
+          // so grass beyond ~2 sectors is skipped entirely each frame. Wind
+          // uTime still advances on every chunk so culled ones resume mid-wave.
+          ch.mesh.visible =
             k === bestK ||
             k === (bestK - 1 + KC) % KC ||
             k === (bestK + 1) % KC;
-          var cdx = ch.cx - px,
-            cdz = ch.cz - pz;
-          var near = cdx * cdx + cdz * cdz < CULL2;
-          ch.mesh.visible = isNeighbour || near;
           if (ch.field && typeof ch.field.update === "function") {
             ch.field.update(dt, playerPos);
           }

@@ -101,16 +101,11 @@
     function applyQuality(q) {
       save.quality = q;
       var dpr = window.devicePixelRatio || 1;
-      // Pixel ratio caps (ui-taste craft): mobile (pointer:coarse or narrow
-      // viewport) caps at 1.5 even on HIGH to keep fill-rate sane; desktop
-      // HIGH caps at 2, MED at 1.5, LOW at 1. Always min(devicePixelRatio, cap).
-      var mobile =
-        (window.matchMedia && matchMedia("(pointer:coarse)").matches) ||
-        window.innerWidth <= 760;
-      var cap;
-      if (q === 0) cap = 1;
-      else if (q === 2 && !mobile) cap = 2;
-      else cap = 1.5; // MED, or HIGH on mobile
+      // Hard pixel-ratio cap at 1.5 everywhere (even desktop HIGH). Fill-rate
+      // is the #1 frame killer for this PBR-heavy scene (normal-mapped terrain
+      // + water + grass over a large area), so 1.5 is plenty sharp and ~1.8x
+      // less fragment work than the old desktop HIGH cap of 2. LOW stays 1.
+      var cap = q === 0 ? 1 : 1.5;
       renderer.setPixelRatio(Math.min(dpr, cap));
       world.setQuality(q);
       G.VFX.setAmbient(q > 0);
@@ -734,6 +729,7 @@
     // Debug console (?debug=1): FPS + player XYZ overlay + window.game handle.
     window.game = {
       scene: scene,
+      renderer: renderer,
       player: player,
       world: world,
       start: startRace,
@@ -747,6 +743,18 @@
       giveAll: function () {
         player.nitro = 100;
         UI.toast("NITRO FULL", 1200);
+      },
+      // Debug helper (?debug=1): live render-triangle / draw-call counts for
+      // perf verification. renderer.info.render is reset + repopulated each
+      // renderer.render(), so this reflects the most recent frame.
+      stats: function () {
+        var info = renderer.info && renderer.info.render;
+        return {
+          triangles: info ? info.triangles : 0,
+          calls: info ? info.calls : 0,
+          fps: fpsAvg,
+          quality: save.quality,
+        };
       },
     };
 

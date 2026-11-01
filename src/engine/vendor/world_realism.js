@@ -946,11 +946,161 @@
     return rootObj;
   }
 
+  // -------------------------------------------------------------------------
+  // GLB load concurrency limiter + URL de-dupe cache.
+  //
+  // Each GLTFLoader.load() is one HTTP request + a synchronous main-thread
+  // parse that blocks the render frame. Without a limiter, all ~17 car and
+  // trackside .glb loads fire at boot and stall the main thread for hundreds
+  // of milliseconds at a time — the "graphics won't load / huge lag" symptom.
+  // We cap concurrent loads at 4 and de-dupe identical URLs (the player + two
+  // AI rivals all request supercar_highpoly.glb; only the first issues a
+  // request, the others receive a clone of the cached scene root).
+  // -------------------------------------------------------------------------
+  var _glbCache = Object.create(null);
+  var _glbQueue = [];
+  var _glbActive = 0;
+  var GLB_MAX_CONCURRENT = 4;
+
+  function _applyGlbConsumer(consumer, rootTemplate) {
+    // Clone the shared (un-normalized) template so each caller can tweak its
+    // own materials/nodes, then size+ground it to this consumer's target.
+    var clone = rootTemplate.clone(true);
+    if (consumer.targetLength || consumer.autoGround) {
+      normalizeToSize(clone, consumer.targetLength);
+    }
+    if (typeof consumer.onLoaded === "function") {
+      try {
+        consumer.onLoaded(clone);
+      } catch (cbErr) {
+        // A throwing callback must not break the queue for other consumers.
+      }
+    }
+    consumer.resolve(clone);
+  }
+
+  function _scheduleGlbLoads() {
+    while (_glbActive < GLB_MAX_CONCURRENT && _glbQueue.length > 0) {
+      var job = _glbQueue.shift();
+      _glbActive++;
+      _execGlbLoad(job);
+    }
+  }
+
+  function _execGlbLoad(job) {
+    var THREE = root.THREE;
+    if (!THREE || typeof THREE.GLTFLoader !== "function") {
+      var missErr = new Error(
+        'THREE.GLTFLoader is not loaded. Include <script src="/studio/vendor/GLTFLoader.js" defer></script> after three.min.js.',
+      );
+      _glbActive--;
+      var cons0 = job.consumers || [];
+      for (var i = 0; i < cons0.length; i++) {
+        if (typeof cons0[i].onError === "function") cons0[i].onError(missErr);
+        cons0[i].reject(missErr);
+      }
+      _scheduleGlbLoads();
+      return;
+    }
+    var loader = new THREE.GLTFLoader();
+    loader.load(
+      job.url,
+      function (gltf) {
+        var modelRoot =
+          (gltf && (gltf.scene || (gltf.scenes && gltf.scenes[0]))) || null;
+        if (!modelRoot) {
+          var emptyErr = new Error(
+            "GLB loaded without a valid scene root: " + job.url,
+          );
+          _glbCache[job.url] = null; // allow a later retry
+          _glbActive--;
+          var consE = job.consumers || [];
+          for (var j = 0; j < consE.length; j++) {
+            if (typeof consE[j].onError === "function")
+              consE[j].onError(emptyErr);
+            consE[j].reject(emptyErr);
+          }
+          _scheduleGlbLoads();
+          return;
+        }
+        // One-time shared setup on the template root. Clones inherit object
+        // props (castShadow) + material refs, so this runs once per URL.
+        var envMapIntensity = job.envMapIntensity;
+        var castShadow = job.castShadow;
+        var receiveShadow = job.receiveShadow;
+        modelRoot.traverse(function (node) {
+          if (!node || !node.isMesh) return;
+          node.castShadow = castShadow;
+          node.receiveShadow = receiveShadow;
+          var mats = Array.isArray(node.material)
+            ? node.material
+            : [node.material];
+          for (var mi = 0; mi < mats.length; mi++) {
+            var m = mats[mi];
+            if (!m) continue;
+            m.envMapIntensity = envMapIntensity;
+            if (m.map && THREE.sRGBEncoding !== undefined) {
+              m.map.encoding = THREE.sRGBEncoding;
+            }
+            var matName = String(
+              (m.name || "") + " " + (node.name || ""),
+            ).toLowerCase();
+            var isFoliageOrAlpha =
+              m.transparent === true ||
+              (typeof m.alphaTest === "number" && m.alphaTest > 0) ||
+              /leaf|leaves|foliage|canopy|needle|pine|frond|fern|shrub|crown/.test(
+                matName,
+              );
+            if (isFoliageOrAlpha) {
+              m.side = THREE.DoubleSide;
+              m.alphaTest = 0.35;
+              m.transparent = false;
+              m.depthWrite = true;
+              node.castShadow = true;
+              node.receiveShadow = true;
+            }
+            m.needsUpdate = true;
+          }
+        });
+
+        _glbCache[job.url] = {
+          state: "ready",
+          root: modelRoot,
+          consumers: null,
+        };
+        var consumers = job.consumers || [];
+        job.consumers = null;
+        _glbActive--;
+        for (var k = 0; k < consumers.length; k++) {
+          _applyGlbConsumer(consumers[k], modelRoot);
+        }
+        _scheduleGlbLoads();
+      },
+      undefined,
+      function (loadErr) {
+        _glbCache[job.url] = null; // allow a later retry
+        _glbActive--;
+        var cons = job.consumers || [];
+        for (var i = 0; i < cons.length; i++) {
+          if (typeof cons[i].onError === "function") cons[i].onError(loadErr);
+          cons[i].reject(loadErr);
+        }
+        _scheduleGlbLoads();
+      },
+    );
+  }
+
   /**
    * 4. loadGlbModel(url, onLoaded, options)
    * Wraps THREE.GLTFLoader with automatic shadow casting/receiving,
    * material `envMapIntensity = 1.2`, and bounding-box auto-grounding +
    * target-size normalization (`normalizeToSize(root, targetLength)`).
+   *
+   * Loads are funnelled through a process-wide concurrency limiter (max 4
+   * in flight) and a per-URL cache: identical URLs share one network
+   * request and each caller receives an independent clone of the cached
+   * scene root. This keeps the main thread responsive while the ~17 car +
+   * scenery .glb assets stream in progressively instead of all at once.
    */
   function loadGlbModel(url, onLoaded, options) {
     var THREE = root.THREE;
@@ -979,91 +1129,68 @@
     var receiveShadow = opts.receiveShadow !== false;
     var autoGround = opts.autoGround !== false;
 
+    var consumer = {
+      onLoaded: callback,
+      targetLength: targetLength,
+      autoGround: autoGround,
+      onError: typeof opts.onError === "function" ? opts.onError : null,
+      resolve: null,
+      reject: null,
+    };
+    var promise = new Promise(function (resolve, reject) {
+      consumer.resolve = resolve;
+      consumer.reject = reject;
+    });
+
     if (typeof THREE.GLTFLoader !== "function") {
-      var err = new Error(
+      var loaderErr = new Error(
         'THREE.GLTFLoader is not loaded. Include <script src="/studio/vendor/GLTFLoader.js" defer></script> after three.min.js.',
       );
-      if (typeof opts.onError === "function") opts.onError(err);
-      return Promise.reject(err);
+      if (consumer.onError) consumer.onError(loaderErr);
+      // Defer the rejection so callers' .catch handlers run on a microtask,
+      // matching the async load contract.
+      Promise.resolve().then(function () {
+        consumer.reject(loaderErr);
+      });
+      return promise;
     }
 
-    var loader = new THREE.GLTFLoader();
+    var cached = _glbCache[url];
+    if (cached && cached.state === "ready" && cached.root) {
+      // Cache hit: clone the shared template on a microtask and deliver.
+      var readyTemplate = cached.root;
+      Promise.resolve().then(function () {
+        _applyGlbConsumer(consumer, readyTemplate);
+      });
+    } else if (cached && cached.state === "loading" && cached.consumers) {
+      // Same URL already in flight (the player + 2 AI rivals all share
+      // supercar_highpoly.glb): piggyback instead of re-requesting.
+      cached.consumers.push(consumer);
+    } else {
+      // Cache miss: queue a concurrency-limited load (max 4 in flight).
+      var job = {
+        url: url,
+        envMapIntensity: envMapIntensity,
+        castShadow: castShadow,
+        receiveShadow: receiveShadow,
+        consumers: [consumer],
+      };
+      _glbCache[url] = {
+        state: "loading",
+        root: null,
+        consumers: job.consumers,
+      };
+      _glbQueue.push(job);
+      _scheduleGlbLoads();
+    }
 
-    return new Promise(function (resolve, reject) {
-      loader.load(
-        url,
-        function (gltf) {
-          var modelRoot =
-            (gltf && (gltf.scene || (gltf.scenes && gltf.scenes[0]))) || null;
-          if (!modelRoot) {
-            var emptyErr = new Error(
-              "GLB loaded without a valid scene root: " + url,
-            );
-            if (typeof opts.onError === "function") opts.onError(emptyErr);
-            reject(emptyErr);
-            return;
-          }
-
-          modelRoot.traverse(function (node) {
-            if (node && node.isMesh) {
-              node.castShadow = castShadow;
-              node.receiveShadow = receiveShadow;
-              var mats = Array.isArray(node.material)
-                ? node.material
-                : [node.material];
-              for (var i = 0; i < mats.length; i++) {
-                var m = mats[i];
-                if (!m) continue;
-                m.envMapIntensity = envMapIntensity;
-                if (m.map && THREE.sRGBEncoding !== undefined) {
-                  m.map.encoding = THREE.sRGBEncoding;
-                }
-                var matName = String(
-                  (m.name || "") + " " + (node.name || ""),
-                ).toLowerCase();
-                var isFoliageOrAlpha =
-                  m.transparent === true ||
-                  (typeof m.alphaTest === "number" && m.alphaTest > 0) ||
-                  /leaf|leaves|foliage|canopy|needle|pine|frond|fern|shrub|crown/.test(
-                    matName,
-                  );
-                if (isFoliageOrAlpha) {
-                  m.side = THREE.DoubleSide;
-                  m.alphaTest = 0.35;
-                  m.transparent = false;
-                  m.depthWrite = true;
-                  node.castShadow = true;
-                  node.receiveShadow = true;
-                }
-                m.needsUpdate = true;
-              }
-            }
-          });
-
-          if (targetLength || autoGround) {
-            normalizeToSize(modelRoot, targetLength);
-          }
-
-          if (typeof callback === "function") {
-            callback(modelRoot, gltf);
-          }
-          resolve(modelRoot);
-        },
-        opts.onProgress || undefined,
-        function (err) {
-          if (typeof opts.onError === "function") {
-            opts.onError(err);
-          }
-          reject(err);
-        },
-      );
-    });
+    return promise;
   }
 
   /**
    * 5. createRealisticWater(scene, options)
    * Builds an animated 3D water surface (ShaderMaterial on a subdivided plane/basin) with:
-   * - Dual-scrolling procedural wave normal perturbation (sin/cos multi-directional ripples animated by uTime)
+   * - Single-scroll procedural wave normal perturbation (sin/cos ripples animated by uTime)
    * - Fresnel reflection blending deep water color (#0a3246) at steep angles with sky/horizon reflection (#7ab8d6) at grazing angles
    * - Specular sun glint (pow(max(dot(R, L), 0.0), 96.0))
    * - Subtle shoreline foam edge ring / alpha feathering
@@ -1132,9 +1259,8 @@
       "  vec3 pos = position;",
       "  vec4 worldPosition = modelMatrix * vec4(pos, 1.0);",
       "  float w1 = sin(worldPosition.x * 0.22 + uTime * 1.65) * cos(worldPosition.z * 0.19 + uTime * 1.25);",
-      "  float w2 = sin((worldPosition.x * 0.37 - worldPosition.z * 0.31) - uTime * 2.15) * 0.55;",
       "  float edgeFade = smoothstep(0.0, 0.18, min(min(uv.x, 1.0 - uv.x), min(uv.y, 1.0 - uv.y)));",
-      "  pos.z += (w1 + w2) * uWaveHeight * edgeFade;",
+      "  pos.z += w1 * uWaveHeight * edgeFade;",
       "  worldPosition = modelMatrix * vec4(pos, 1.0);",
       "  vWorldPos = worldPosition.xyz;",
       "  gl_Position = projectionMatrix * viewMatrix * worldPosition;",
@@ -1152,11 +1278,10 @@
       "varying vec2 vUv;",
       "void main() {",
       "  vec2 p = vWorldPos.xz;",
-      "  // Dual-scrolling procedural wave normal perturbation (multi-directional ripples)",
+      "  // Single-scroll procedural wave normal perturbation (ripples)",
       "  vec2 scrollA = p * 0.34 + vec2(uTime * 0.85, uTime * 0.62);",
-      "  vec2 scrollB = p * 0.58 + vec2(-uTime * 0.72, uTime * 0.94);",
-      "  float nx = cos(scrollA.x) * sin(scrollA.y) * 0.16 + cos(scrollB.x + scrollB.y) * 0.11;",
-      "  float nz = sin(scrollA.x) * cos(scrollA.y) * 0.16 + sin(scrollB.x - scrollB.y) * 0.11;",
+      "  float nx = cos(scrollA.x) * sin(scrollA.y) * 0.24;",
+      "  float nz = sin(scrollA.x) * cos(scrollA.y) * 0.24;",
       "  vec3 N = normalize(vec3(nx, 1.0, nz));",
       "  vec3 V = normalize(cameraPosition - vWorldPos);",
       "  vec3 L = normalize(uSunDir);",
