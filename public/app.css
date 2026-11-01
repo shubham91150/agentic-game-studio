@@ -1098,7 +1098,7 @@ button.icon-btn {
   position: relative;
   flex: 1 1 auto;
   min-width: 0;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .model-btn {
@@ -2283,7 +2283,7 @@ button.icon-btn {
   .model-wrap {
     flex: 1 1 auto;
     min-width: 0;
-    overflow: hidden;
+    overflow: visible;
   }
 
   .model-btn {
