@@ -1046,20 +1046,33 @@
               (m.name || "") + " " + (node.name || ""),
             ).toLowerCase();
             var isFoliageOrAlpha =
-              m.transparent === true ||
               (typeof m.alphaTest === "number" && m.alphaTest > 0) ||
-              /leaf|leaves|foliage|canopy|needle|pine|frond|fern|shrub|crown/.test(
+              /leaf|leaves|foliage|canopy|needle|frond|fern|shrub|crown/.test(
                 matName,
               );
             if (isFoliageOrAlpha) {
               m.side = THREE.DoubleSide;
-              m.alphaTest = 0.35;
+              if (typeof m.alphaTest !== "number" || m.alphaTest === 0) {
+                m.alphaTest = 0.35;
+              }
               m.transparent = false;
               m.depthWrite = true;
-              node.castShadow = true;
-              node.receiveShadow = true;
+              // Don't force castShadow — let caller's opts win
+            } else if (m.transparent === true) {
+              // True BLEND materials (glass, water) — keep transparent
+              m.depthWrite = false;
+              m.side = THREE.DoubleSide;
             }
             m.needsUpdate = true;
+            // Fix car glass: if material name is "Glass", make it see-through
+            if (matName === "Glass" || matName === "glass") {
+              m.transparent = true;
+              m.opacity = 0.4;
+              m.depthWrite = false;
+              m.side = THREE.DoubleSide;
+              m.metalness = 1;
+              m.roughness = 0.05;
+            }
           }
         });
 
@@ -1760,9 +1773,9 @@
     var opts = options || {};
     var kind = opts.kind || "prop";
     var d = opts.distances || {};
-    var dNear = typeof d.near === "number" ? d.near : 30;
-    var dMid = typeof d.mid === "number" ? d.mid : 80;
-    var dFar = typeof d.far === "number" ? d.far : 150;
+    var dNear = typeof d.near === "number" ? d.near : 120;
+    var dMid = typeof d.mid === "number" ? d.mid : 0; // 0 = skip box+billboard levels
+    var dFar = typeof d.far === "number" ? d.far : 250;
 
     var sizeInfo = _bboxSize(rootObj);
     var proxyColor = _avgMeshColor(rootObj);
