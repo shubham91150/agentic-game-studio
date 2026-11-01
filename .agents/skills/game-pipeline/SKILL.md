@@ -31,6 +31,37 @@ Whenever Muse Code CLI builds or upgrades a game, it **MUST NOT work single-thre
 3. **Subagent C — Vehicles, Characters, Tools & Physics**: High-poly `.glb` vehicles/characters/tools/props (`public/assets/polyhaven/` & `public/assets/models/`), Rapier/arcade physics, animations, and WebAudio.
 4. **Subagent D — Visual QA & Playtest Critic**: Runs `node src/verifier/visual_qa_gate.js`, takes headless Chromium screenshots, and rejects any primitive/box/cartoon asset before handoff.
 
+## MANDATORY: Reference Image Consistency Rule (lock art direction BEFORE building)
+
+Before building ANY game — and before spawning the build subagents — the
+agent MUST first lock the visual art direction via reference images. NO
+game code (Step 1 / Step 2) is written until this gate passes. This is the
+#1 defence against the "inconsistent / childish" look.
+
+1. **Generate / fetch 2–3 REFERENCE IMAGES** that define the visual style
+   of THIS specific game. Use the Muse Image tool (see Step 1b):
+   ```bash
+   node src/tools/make-image.js --prompt "game concept art, [game type], [art style], consistent lighting, [color palette]"
+   ```
+   Run it 2–3 times with prompts covering: the overall world/mood, a hero
+   asset (car / character / building), and a material/ground close-up.
+2. **Art style must be CONSISTENT across the ENTIRE game** — pick ONE lane
+   and never cross it:
+   - ALL realistic / photogrammetry (Polyhaven scans + PBR), OR
+   - ALL stylized / cartoon (Kenney kits + hand-shaded PBR).
+     NEVER mix the two. Photogrammetry-realistic trees next to cartoon Kenney
+     cars (or vice versa) is an automatic reject — it is the single biggest
+     cause of the inconsistent look.
+3. **ALL 3D assets MUST match this locked reference style** — cars, trees,
+   buildings, characters, props, terrain, grass. Every
+   `WorldRealism.loadGlbModel` / Polyhaven fetch / Kenney pull is checked
+   against the reference images first; if an asset's style conflicts with
+   the locked direction, swap it — do not ship it.
+4. **Show the reference images to the user and ask
+   "Does this art direction match your vision?"** before any build starts.
+   Wait for the yes. If the user says no, regenerate until it matches — do
+   NOT proceed on an unconfirmed direction.
+
 You are inside the Agentic Game Studio live terminal. The user's browser has TWO panes:
 
 - **Left:** this terminal (you).
@@ -59,6 +90,49 @@ research skipped = fail.
    tabhi lock hota hai — assume mat karo, pucho.
 4. Only then build (Step 1 / Step 2). User refs de ya kahe "bina refs
    banao" — pehle ek line me batao kya samjha, phir code likho.
+
+### Per-Stage Research Passes (each stage gets its own research gate)
+
+The single game-level report (item 1 above) is the floor, NOT the ceiling.
+EACH build stage below runs its OWN research pass BEFORE any code / assets
+for that stage are produced. Findings are shown to the user as a short
+report with a feedback ask; only after the user responds does that stage's
+build start. Skipping a stage's research pass = fail, same as skipping the
+game-level report.
+
+- **Stage 1 — World / Terrain**: research real racing circuits / terrain
+  types / elevation profiles (or the game's real-world biome). Report:
+  reference layouts, surface types, scale, elevation.
+- **Stage 2 — Vehicles**: research car physics, handling models, and real
+  car reference images (silhouette, proportions, materials). Report: the
+  handling-feel target + the visual reference.
+- **Stage 3 — Characters / NPCs**: research character design + animation
+  references (idle / walk / run cycles, proportions). Report: the design
+  language + animation reference set.
+- **Stage 4 — UI / HUD**: research game UI examples, HUD layouts, menu
+  designs for the genre. Report: the HUD layout + typography reference.
+- **Stage 5 — Audio**: research game sound design — engine sounds, ambient
+  audio, SFX layering. Report: the sound palette + reference games.
+
+After each pass: present the short report to the user, ask for feedback,
+and only then move to that stage's build.
+
+## Goal Clarity Rule (state it before each stage)
+
+Before starting work on ANY stage, the agent MUST:
+
+1. **State its GOAL for that stage** in 1–2 lines — what this stage will
+   produce and why.
+2. **Confirm what "done" means for that stage** — the exact acceptance
+   criteria — before building, and tell the user.
+3. **Ask the user for references** (images, links, game names) for that
+   stage before building. If the user has none, state in ONE line what
+   reference the agent will assume, then proceed only after the user
+   confirms or corrects.
+
+No stage starts without a stated goal + a confirmed done-definition. This
+pairs with the Reference Image gate (above) and the per-stage research
+passes — together they are the pre-build gate.
 
 ## Step 0 — UI Work: Read ui-taste First
 

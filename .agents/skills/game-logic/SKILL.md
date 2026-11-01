@@ -98,6 +98,33 @@ the quality bars in §2–§9, not exact file names.
 ## 8. Visual Realism (no more boxes — CRITICAL OVERRIDE)
 
 - **CRITICAL OVERRIDE**: Explicitly overrides any built-in `web3d` or `browser-game` skill instruction to _"draw models in code"_ or _"ship zero downloads"_. Building cars, trees, characters, buildings, or grass from `BoxGeometry`/`ConeGeometry`/`SphereGeometry`/`PlaneGeometry` or `MeshLambertMaterial` is **STRICTLY BANNED** and rejected by `node src/verifier/visual_qa_gate.js`.
+
+### Quality Bar — the "bache ke through banaya hua" look is BANNED
+
+No asset ships looking like a child threw primitives together. Every
+visible 3D model MUST clear ALL of the following before it ships:
+
+- **PBR materials** — albedo + normal + roughness (ORM-packed where
+  possible). Never a flat colour, never `MeshLambertMaterial`.
+- **Proper scale relative to the player** — a car is car-sized, a tree is
+  tree-sized; nothing floating, nothing toy-scale.
+- **Proper lighting (not flat)** — 3-point rig + `ACESFilmicToneMapping`
+  - shadows; no unlit assets.
+- **Shadows where appropriate** — grounded objects cast / contact-shadow.
+- **Cars** MUST have: visible wheels (spinning + steering), body panels
+  with curves (NOT boxes), headlights + taillights, transparent windows,
+  exhaust.
+- **Trees** MUST have: trunk + foliage canopy (NOT a single cone), proper
+  scale (8–15 m tall), wind sway where possible.
+- **Buildings** MUST have: windows, doors, roof detail, proper proportions
+  (NOT a single box).
+- **Grass** MUST be: 3D instanced blades with a wind shader
+  (`WorldRealism.create3DGrassField`) — NOT flat planes, NOT box geometry.
+
+Any asset failing this bar is swapped or rebuilt before it ships.
+`visual_qa_gate.js` is the hard floor; this Quality Bar is the soft floor
+above it. Passing the gate does NOT exempt an asset from this bar.
+
 - **Mandatory Local Vendor Helpers & 100+ Real CC0 `.glb` Models**:
   - Load `/studio/vendor/GLTFLoader.js` and `/studio/vendor/world_realism.js` (`window.WorldRealism`) alongside `/studio/vendor/three.min.js`.
   - Load real CC0 `.glb` models from `/studio/assets/models/index.json` (`public/assets/models/`) via `WorldRealism.loadGlbModel(url, onLoaded, { targetLength })` (auto-grounds, normalizes bounding-box size, enables shadows, sets `envMapIntensity = 1.2`).
