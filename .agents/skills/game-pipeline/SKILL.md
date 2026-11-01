@@ -31,6 +31,8 @@ Whenever Muse Code CLI builds or upgrades a game, it **MUST NOT work single-thre
 3. **Subagent C — Vehicles, Characters, Tools & Physics**: High-poly `.glb` vehicles/characters/tools/props (`public/assets/polyhaven/` & `public/assets/models/`), Rapier/arcade physics, animations, and WebAudio.
 4. **Subagent D — Visual QA & Playtest Critic**: Runs `node src/verifier/visual_qa_gate.js`, takes headless Chromium screenshots, and rejects any primitive/box/cartoon asset before handoff.
 
+Orchestration methodology is owned by two skills — load them before spawning subagents: `obra-dispatching-parallel-agents` (one agent per independent problem domain, run concurrently; never investigate independent failures sequentially) and `obra-subagent-driven-development` (fresh subagent per task with crafted isolated context, a task review for spec + quality after each, and a broad whole-branch review at the end).
+
 ## MANDATORY: Reference Image Consistency Rule (lock art direction BEFORE building)
 
 Before building ANY game — and before spawning the build subagents — the
@@ -74,6 +76,18 @@ You are inside the Agentic Game Studio live terminal. The user's browser has TWO
 - User asks to **render / preview an uploaded 3D model** (`.glb` in `storage/.uploads/`) → write a viewer into `public/live-preview/`.
 - User only asks a question or runs `/mcp`, `/usage`, `/help` → do NOT touch `public/live-preview/`.
 
+## Step 0 — Available Skills Inventory (what this workspace has)
+
+All skills live under `.agents/skills/`. Load the matching one before working in
+its area. Existing (e) and newly installed (n) are both listed — 25 skills total.
+
+- **Pipeline & orchestration**: `game-pipeline` (this skill), `obra-dispatching-parallel-agents` (n; one agent per independent problem domain), `obra-subagent-driven-development` (n; fresh subagent per task + task review + final whole-branch review)
+- **Research & planning**: `obra-writing-plans` (n; bite-sized implementation plan, exact files/tests, before touching code)
+- **Gameplay & feel**: `game-logic`, `game-feel` (n; juice — screen shake, hit-stop, squash & stretch, tweened motion), `obra-test-driven-development` (n; tests-first for gameplay/bugfix)
+- **Debugging & verification**: `obra-systematic-debugging` (n; root-cause before fixes), `obra-verification-before-completion` (n; evidence before "done" claims), `webapp-testing` (n; Playwright for the live preview)
+- **UI / visual / preview pane**: `ui-taste`, `frontend-design`, `web-design-guidelines`, `mobile-design`, `better-ui`, `better-interface`, `ui-ux-pro-max`, `ios-design`, `3d-web-experience`, `algorithmic-art` (n; generative p5.js art — flow fields, particles, game VFX / skybox textures), `threejs-scene-setup` (n; scene / camera / renderer / render loop), `threejs-gltf-loading` (n; GLTFLoader + AnimationMixer + DRACO/KTX2), `threejs-materials-lighting` (n; PBR materials, lights, shadows, IBL env maps)
+- **Engines**: `godot-web`, `unity-build`
+
 ## Step 0e — Research First (mandatory)
 
 User ne game manga → PEHLE research, phir code. NO SHORTCUTS —
@@ -90,6 +104,9 @@ research skipped = fail.
    tabhi lock hota hai — assume mat karo, pucho.
 4. Only then build (Step 1 / Step 2). User refs de ya kahe "bina refs
    banao" — pehle ek line me batao kya samjha, phir code likho.
+5. For any multi-step task, lock the plan first via
+   `.agents/skills/obra-writing-plans/SKILL.md` — bite-sized tasks, exact files
+   and tests per task, written for an engineer who has not seen this codebase.
 
 ### Per-Stage Research Passes (each stage gets its own research gate)
 
@@ -155,6 +172,15 @@ UI skill routing (all under `.agents/skills/`):
   the ranked cross-discipline interface review format.
 - `3d-web-experience/SKILL.md` — preview-pane WebGL work: Three.js scene
   setup, GLB→web pipeline, loading states, mobile fallback for heavy scenes.
+- `threejs-scene-setup/SKILL.md` — preview-pane Three.js specifics: import maps,
+  `three/addons` path, Scene/PerspectiveCamera/WebGLRenderer trio,
+  `setAnimationLoop` render loop, responsive resize, OrbitControls (targets r186).
+- `threejs-gltf-loading/SKILL.md` — `.glb` import: `GLTFLoader`, `AnimationMixer`
+  clips, DRACO/Meshopt geometry + KTX2 textures (matches the WorldRealism GLB pipeline).
+- `threejs-materials-lighting/SKILL.md` — PBR look: `MeshStandardMaterial`, light
+  types, shadow maps, IBL environment maps (matches `ACESFilmicToneMapping` + PMREM).
+- `algorithmic-art/SKILL.md` — generative p5.js art for game visuals: flow fields,
+  particle systems, seeded randomness — source textures, skybox art, VFX.
 
 ## Step 0b — Engine Work: Delegate to Engine Skills
 
@@ -220,6 +246,17 @@ performance): read `.agents/skills/game-logic/SKILL.md` and follow ALL of it —
 fixed timestep, pooled objects, perf budgets, settings screens, done-gate.
 Placeholder "box moves" code is a fail. The done-gate playtest is mandatory
 before telling the user the game is ready.
+
+Complementary gameplay skills (load alongside `game-logic`):
+
+- `.agents/skills/game-feel/SKILL.md` — juice/polish on hits, jumps, pickups,
+  deaths: screen shake, hit-stop, squash & stretch, tweened/eased motion, layered
+  audio-visual feedback. Engine-neutral; pairs with the preview pane's APIs.
+- `.agents/skills/obra-test-driven-development/SKILL.md` — tests-first for any
+  gameplay feature or bugfix (watch the test fail, then write minimal code to pass).
+- `.agents/skills/obra-systematic-debugging/SKILL.md` — for any bug, test failure,
+  or unexpected behavior: find root cause before proposing fixes (symptom fixes
+  are a fail); see its `root-cause-tracing.md` and `condition-based-waiting.md`.
 
 ## Step 1 — Fast Path (OPTIONAL): The Deterministic Pipeline Tool
 
@@ -330,8 +367,15 @@ After each stage, say what is done vs what is pending.
 
 ## Before You Say "Done"
 
+Discipline: `.agents/skills/obra-verification-before-completion/SKILL.md` — run
+the verification commands and confirm their output before any "done / fixed /
+passing" claim. Evidence before assertions, always. For UI/interaction checks the
+verifier can't cover, script the live preview with `.agents/skills/webapp-testing/SKILL.md`
+(native Playwright — frontend behavior, browser logs, screenshots).
+
 - [ ] `node --check public/live-preview/game.js` passes (and every other JS file you wrote).
 - [ ] `node src/verifier/visual_qa_gate.js public/live-preview` passes with zero failures (no inline scripts, real `.glb` models loaded via `GLTFLoader`, no primitive box/cone fakes, 3D `InstancedMesh` shader grass blades, `ACESFilmicToneMapping` enabled).
 - [ ] No inline `<script>` blocks in `index.html` (`grep -c '<script>'` excluding `src=` should be 0).
 - [ ] Game shows a recognisable scene, player moves, orbs/enemies behave, win/lose reachable.
+- [ ] (If UI/interaction claims are made) Playwright pass over the live preview via `webapp-testing` confirms them — not a manual eyeball claim.
 - [ ] Tell the user what was built + controls in 2–3 lines. Keep it short.
