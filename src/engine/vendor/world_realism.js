@@ -962,6 +962,20 @@
   var _glbActive = 0;
   var GLB_MAX_CONCURRENT = 4;
 
+  // Some shipped .glb files are byte-identical re-exports of the same mesh
+  // (e.g. ToyCar.glb === supercar_highpoly.glb, same MD5). Canonicalising the
+  // URL before the cache lookup collapses them to a single network request
+  // and a single parsed scene root, so the player + every AI rival share ONE
+  // supercar download via .clone(true) (shared geometry + materials) instead
+  // of re-downloading the 4MB file once per car.
+  var _GLB_URL_ALIASES = {
+    "/studio/assets/polyhaven/ToyCar.glb":
+      "/studio/assets/polyhaven/supercar_highpoly.glb",
+  };
+  function _canonicalGlbUrl(url) {
+    return (_GLB_URL_ALIASES && _GLB_URL_ALIASES[url]) || url;
+  }
+
   function _applyGlbConsumer(consumer, rootTemplate) {
     // Clone the shared (un-normalized) template so each caller can tweak its
     // own materials/nodes, then size+ground it to this consumer's target.
@@ -1120,6 +1134,11 @@
     if (!THREE) {
       throw new Error("WorldRealism.loadGlbModel requires global THREE.");
     }
+
+    // Collapse byte-identical .glb re-exports (ToyCar === supercar) to one
+    // canonical URL so the per-URL cache shares a single download + scene
+    // root across every caller (player + AI rivals).
+    url = _canonicalGlbUrl(url);
 
     var opts = {};
     var callback = onLoaded;
@@ -1768,46 +1787,26 @@
    * opts.distances: { near, mid, far, cull } overrides (metres)
    */
   function wrapGlbAsLod(rootObj, options) {
-    var THREE = root.THREE;
-    if (!THREE || !rootObj) return rootObj;
-    var opts = options || {};
-    var kind = opts.kind || "prop";
-    var d = opts.distances || {};
-    var dNear = typeof d.near === "number" ? d.near : 120;
-    var dMid = typeof d.mid === "number" ? d.mid : 0; // 0 = skip box+billboard levels
-    var dFar = typeof d.far === "number" ? d.far : 250;
-
-    var sizeInfo = _bboxSize(rootObj);
-    var proxyColor = _avgMeshColor(rootObj);
-
-    var lod = new THREE.LOD();
-    lod.name = "WorldRealismLod_" + kind;
-
-    // Level 0 (0m): full-detail GLB. All scenery shadows are off (see opts);
-    // we set castShadow=false here too so a caller that forgets still wins.
-    rootObj.traverse(function (node) {
-      if (node && node.isMesh) {
-        node.castShadow = false;
-        node.receiveShadow = true;
-      }
-    });
-    lod.addLevel(rootObj, 0);
-
-    // Level 1 (near): low-poly box proxy.
-    var proxy = _createBoxProxy(sizeInfo, proxyColor);
-    lod.addLevel(proxy, dNear);
-
-    // Level 2 (mid): camera-facing billboard impostor.
-    var billboard = _createBillboard(kind, sizeInfo);
-    lod.addLevel(billboard, dMid);
-
-    // Level 3 (far): empty Object3D = culled beyond dFar.
-    lod.addLevel(new THREE.Object3D(), dFar);
-
-    lod.frustumCulled = true;
-    lod.autoUpdate = true;
-    _lodRegistry.lods.push(lod);
-    return lod;
+    // LOD system removed. Trackside scenery now uses lightweight Kenney CC0
+    // .glb models (<200KB each) that render full-detail at every distance and
+    // are distance-culled by the caller (visible=false beyond ~120m). The old
+    // box-proxy (30-80m) + camera-facing billboard (80-150m) LOD levels were
+    // overkill for these tiny meshes, and the billboard level was selected
+    // too early (default dMid=0) which caused the "trees not visible"
+    // regression. This passthrough keeps the public API so any legacy caller
+    // still wins: it forces castShadow=false on the GLB (only the player car
+    // casts) and returns the root unwrapped so the caller positions + culls
+    // it directly. No THREE.LOD is built and nothing is pushed into the
+    // lod registry, so updateLods() is a cheap no-op.
+    if (rootObj && typeof rootObj.traverse === "function") {
+      rootObj.traverse(function (node) {
+        if (node && node.isMesh) {
+          node.castShadow = false;
+          node.receiveShadow = true;
+        }
+      });
+    }
+    return rootObj;
   }
 
   /**

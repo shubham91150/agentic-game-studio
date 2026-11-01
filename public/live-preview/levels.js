@@ -4,10 +4,11 @@
  * S-bend, a tight crest hairpin, a descending back-leg, a chicane on the return
  * straight and a sweeping SW loop; WorldRealism shader sky + PMREM IBL, Sobel
  * normal-mapped PBR road/kerbs/terrain, gentle along-track elevation (flat in
- * the south, rising to the hairpin crest), 20,000 3D wind-swaying grass blades
+ * the south, rising to the hairpin crest), 8,000 3D wind-swaying grass blades
  * in 8 distance-cullable track sectors, and real GLTF (.glb) trackside scenery
- * (trees, palms, rocks, boulders, buildings, tents, street lights, and
- * concrete barriers) with per-object distance culling. */
+ * (trees, rocks, plants, buildings, street lights, and concrete barriers)
+ * using lightweight Kenney CC0 .glb models with per-sector InstancedMesh
+ * instancing and per-object distance culling. */
 (function () {
   "use strict";
   window.G = window.G || {};
@@ -425,34 +426,10 @@
       function () {},
     );
 
-    texLoader.load(
-      "/studio/assets/polyhaven/aerial_rocks_02/aerial_rocks_02_diff_1k.jpg",
-      function (diffTex) {
-        diffTex.wrapS = diffTex.wrapT = THREE.RepeatWrapping;
-        diffTex.repeat.set(20, 20);
-        if (THREE.sRGBEncoding !== undefined)
-          diffTex.encoding = THREE.sRGBEncoding;
-        if (typeof WR.capTextureSize === "function")
-          WR.capTextureSize(diffTex, 512);
-        rockMat.map = diffTex;
-        rockMat.needsUpdate = true;
-      },
-      undefined,
-      function () {},
-    );
-    texLoader.load(
-      "/studio/assets/polyhaven/aerial_rocks_02/aerial_rocks_02_nor_gl_1k.jpg",
-      function (norTex) {
-        norTex.wrapS = norTex.wrapT = THREE.RepeatWrapping;
-        norTex.repeat.set(20, 20);
-        if (typeof WR.capTextureSize === "function")
-          WR.capTextureSize(norTex, 512);
-        rockMat.normalMap = norTex;
-        rockMat.needsUpdate = true;
-      },
-      undefined,
-      function () {},
-    );
+    // NOTE: the aerial_rocks_02 Polyhaven PBR texture pair (~2.1MB) was dropped
+    // to stay within the lightweight asset budget — trackside rocks now use the
+    // tiny Kenney rocks-high.glb model (see the scenery loader below). rockMat
+    // keeps its procedural Sobel-normalmapped PBR as a fallback.
 
     (function buildDisplacedTerrain() {
       var gridN = 64; // 64x64 (perf: 1/4 the verts of 128x128); road ribbon hides the seam
@@ -500,17 +477,16 @@
       scene.add(terrainMesh);
     })();
 
-    // 5. Chunked 3D Grass — 8 track sectors × 1,250 tufts = 10,000 3D wind-
-    // swaying blades (aggressive perf cut from the 14.4k/20k floors). world
-    // .update() now renders ONLY the player's single nearest chunk + its one
-    // loop-neighbour (2 of 8 sectors, ~2,500 instances) so the other 6 chunks'
-    // wind vertex-shader work drops out every frame while grass stays dense
-    // right around the car. Each chunk still uses the vendor 3D blade
+    // 5. Chunked 3D Grass — 8 track sectors × 1,000 tufts = 8,000 3D wind-
+    // swaying blades. world.update() renders ONLY the player's single nearest
+    // chunk + its one loop-neighbour (2 of 8 sectors, ~2,000 instances) so the
+    // other 6 chunks' wind vertex-shader work drops out every frame while grass
+    // stays dense right around the car. Each chunk uses the vendor 3D blade
     // InstancedMesh + onBeforeCompile wind shader via WorldRealism; the
     // identical shader source is program-cached by Three.js so it compiles
     // once for all chunks (not once per instance).
     var GRASS_CHUNKS = 8;
-    var GRASS_PER_CHUNK = 1250; // 8 × 1250 = 10,000 (aggressive perf cut)
+    var GRASS_PER_CHUNK = 1000; // 8 × 1000 = 8,000 (lightweight asset budget)
     var grassSectorSize = Math.floor(S / GRASS_CHUNKS);
     var grassGroup = new THREE.Group();
     grassGroup.name = "GrassChunks";
@@ -523,7 +499,7 @@
       var gMidP = pts[gMidIdx];
       var chunk = WR.create3DGrassField(grassGroup, {
         count: GRASS_PER_CHUNK,
-        minCount: 1500, // opt-in: allow a sub-20k chunk (vendor default is 20k)
+        minCount: 700, // opt-in: allow a sub-20k chunk (vendor default is 20k)
         radius: 160,
         spread: 700,
         bladeHeight: 0.72,
@@ -576,110 +552,38 @@
     var scenery = [];
     world.scenery = scenery;
 
-    // 5b. Scenic Lakeside Water Body beside the opening straight & turn 1
-    // The lake is ~300-600m from most of the lap, so world.update() hides the
-    // water mesh entirely unless the player is within ~200m of the lake centre
-    // (one distance check skips the whole shader pass on the far side).
+    // 5b. Scenic Lakeside Water — a single semi-transparent blue plane (no
+    // fragment-shader ripple/Fresnel pass). The old createRealisticWater
+    // ShaderMaterial was a per-frame fragment cost; this cheap PBR plane is
+    // distance-culled the same way (only visible within ~200m of the lake) and
+    // reads as a calm reflective lake surface thanks to the PMREM env map.
     var waterSurface = null;
-    if (typeof WR.createRealisticWater === "function") {
-      waterSurface = WR.createRealisticWater(scene, {
-        width: LAKE_RX * 2.0,
-        depth: LAKE_RZ * 2.0,
-        // 16x16 segments (was 32x32): 1/4 the water vertices + shadow-pass
-        // verts; the wave motion is driven by the fragment shader so the
-        // silhouette stays smooth.
-        segmentsX: 16,
-        segmentsZ: 16,
-        position: [LAKE_X, 0.06, LAKE_Z],
-        sunDirection: [120, 95, 60],
-        deepColor: "#0a3246",
-        skyColor: "#7ab8d6",
-        waveHeight: 0.12,
-        simpleFoam: true,
+    {
+      var waterGeo = new THREE.PlaneGeometry(LAKE_RX * 2.0, LAKE_RZ * 2.0);
+      var waterMat = new THREE.MeshStandardMaterial({
+        color: 0x2a6a8e,
+        transparent: true,
+        opacity: 0.82,
+        roughness: 0.2,
+        metalness: 0.35,
+        envMapIntensity: 0.9,
+        depthWrite: false,
+        side: THREE.DoubleSide,
       });
-      waterSurface.mesh.frustumCulled = false; // distance-culled manually below
+      var waterMesh = new THREE.Mesh(waterGeo, waterMat);
+      waterMesh.rotation.x = -Math.PI / 2;
+      waterMesh.position.set(LAKE_X, 0.06, LAKE_Z);
+      waterMesh.receiveShadow = false;
+      waterMesh.frustumCulled = false; // distance-culled manually below
+      scene.add(waterMesh);
+      waterSurface = { mesh: waterMesh, update: function () {} };
       world.water = waterSurface;
     }
 
-    // 5c. Realistic Multi-Material PBR Buildings along the Start/Finish Village
-    if (typeof WR.createRealisticBuilding === "function") {
-      var buildingDefs = [
-        {
-          idx: S - 38,
-          lat: 23.5,
-          width: 14,
-          depth: 10,
-          floors: 3,
-          style: "brick",
-          yawOffset: -Math.PI / 2,
-        },
-        {
-          idx: S - 18,
-          lat: -23.0,
-          width: 12,
-          depth: 9.5,
-          floors: 2,
-          style: "concrete",
-          yawOffset: Math.PI / 2,
-        },
-        {
-          idx: 6,
-          lat: 24.0,
-          width: 15,
-          depth: 11,
-          floors: 4,
-          style: "concrete",
-          yawOffset: -Math.PI / 2,
-        },
-        {
-          idx: 30,
-          lat: 25.5,
-          width: 13,
-          depth: 10,
-          floors: 3,
-          style: "brick",
-          yawOffset: -Math.PI / 2,
-        },
-        {
-          idx: 72,
-          lat: 27.0,
-          width: 12,
-          depth: 9,
-          floors: 2,
-          style: "brick",
-          yawOffset: -Math.PI / 2,
-        },
-      ];
-      for (var bi = 0; bi < buildingDefs.length; bi++) {
-        var bd = buildingDefs[bi];
-        var bIdx = ((bd.idx % S) + S) % S;
-        var bP = pts[bIdx],
-          bSd = side[bIdx],
-          bT = tan[bIdx];
-        var bx = bP.x + bSd.x * bd.lat;
-        var bz = bP.z + bSd.z * bd.lat;
-        var by = Math.max(0, getTerrainHeight(bx, bz) - 0.15);
-        var bGroup = WR.createRealisticBuilding(scene, {
-          width: bd.width,
-          depth: bd.depth,
-          floors: bd.floors,
-          style: bd.style,
-          position: [bx, by, bz],
-          rotationY: Math.atan2(bT.x, bT.z) + bd.yawOffset,
-        });
-        if (bGroup) {
-          // Village buildings are multi-mesh assemblies (~30 meshes each).
-          // Drop them from the shadow CAST pass (they still receive shadows):
-          // when far they're outside the sun's 95m shadow frustum anyway, and
-          // when near this skips the per-frame shadow-frustum test for all
-          // their window/sill/hvac meshes.
-          bGroup.traverse(function (n) {
-            if (n && n.isMesh) n.castShadow = false;
-          });
-          scenery.push({ obj: bGroup, x: bx, z: bz });
-        }
-      }
-    }
+    // 5c. Start/Finish village buildings: now lightweight Kenney skyscraper
+    // .glb models (~111KB each) loaded + placed in the scenery block below,
+    // replacing the procedural multi-mesh PBR buildings (which were ~30 meshes
+    // x 5 = 150 draw calls). See the setTimeout scenery loader.
 
     // 6. Corner rubber-mark decals on asphalt
     (function rubberDecals() {
@@ -843,17 +747,20 @@
     lh.add(startLine);
     scene.add(lh);
 
-    // 8. Real .glb Trackside Scenery (Barriers, Streetlights, Trees, Palms, Rocks, Boulders, Buildings, Tents)
+    // 8. Real .glb Trackside Scenery (Streetlights, Trees, Rocks, Plants,
+    //    Barriers, Props, Buildings)
     //
-    // Scenery now uses THREE.LOD (level of detail) + billboard impostors +
-    // InstancedMesh for the heavy repeated props, all built in world_realism.js
-    // (which is exempt from the visual_qa_gate primitive-geometry ban). Every
-    // scenery object also casts no shadow: only the player + AI cars cast, so the
-    // shadow pass only shades a few car meshes inside the tight follow-frustum.
+    // Scenery uses lightweight Kenney CC0 .glb models (<200KB each). Repeated
+    // props are bucketed into per-track-sector InstancedMeshes (1 draw call per
+    // visible sector) via WorldRealism.createInstancedFromRoot; everything else
+    // is a per-spot clone. No THREE.LOD / billboard system any more — the models
+    // are small enough to render full-detail at every distance and are hidden
+    // beyond ~120m by world.update(). Every scenery object casts no shadow:
+    // only the player car casts (1024px shadow map), so the shadow pass shades
+    // just a few player meshes inside the tight follow-frustum.
     function placeAlongTrack(proto, spotList, opts) {
       var o = opts || {};
       var disableShadow = !!o.disableShadow;
-      var lodKind = o.lodKind || null; // 'tree'|'pine'|'rock'|'prop' -> wrap in LOD
       for (var i = 0; i < spotList.length; i++) {
         var sp = spotList[i];
         var idx = ((sp.idx % S) + S) % S;
@@ -870,27 +777,20 @@
           });
         }
         if (sp.scale) inst.scale.multiplyScalar(sp.scale);
-        var obj = inst;
-        if (lodKind && typeof WR.wrapGlbAsLod === "function") {
-          // wrapGlbAsLod forces castShadow=false on the GLB and adds box proxy
-          // (30-80m) + camera-facing billboard (80-150m) + cull (>150m) levels.
-          obj = WR.wrapGlbAsLod(inst, { kind: lodKind });
-        }
-        obj.position.set(wx, wy, wz);
-        var baseYaw = Math.atan2(T.x, T.z);
-        obj.rotation.y = baseYaw + (sp.yawOffset || 0);
-        scene.add(obj);
-        scenery.push({ obj: obj, x: wx, z: wz });
+        inst.position.set(wx, wy, wz);
+        inst.rotation.y = Math.atan2(T.x, T.z) + (sp.yawOffset || 0);
+        scene.add(inst);
+        scenery.push({ obj: inst, x: wx, z: wz });
       }
     }
 
-    // InstancedMesh placement for the most numerous repeated props (barriers):
-    // one InstancedMesh per track sector so each sector's bounding sphere stays
-    // local and Three.js can frustum-cull whole sectors on the far side of the
-    // lap. Collapses ~125 barrier clones into ~1 draw call per visible sector.
+    // InstancedMesh placement for the most numerous repeated props (barriers,
+    // trees, rocks, plants): one InstancedMesh per track sector so each sector's
+    // bounding sphere stays local and Three.js can frustum-cull whole sectors on
+    // the far side of the lap. Collapses many clones into ~1 draw call per
+    // visible sector. (The lake-side / village props use placeAlongTrack above.)
     function placeInstancedBySector(proto, spotList, opts) {
       var o = opts || {};
-      var lodKind = o.lodKind || null;
       var sectors = Math.max(1, o.sectors || 8);
       var sectorSize = Math.max(1, Math.floor(S / sectors));
       // Bucket spots into sectors by track sample index.
@@ -975,40 +875,21 @@
     }
 
     setTimeout(function () {
-      // Polyhaven photogrammetry concrete road barriers: /studio/assets/polyhaven/concrete_road_barrier_02/concrete_road_barrier_02_1k.glb
-      WR.loadGlbModel(
-        "/studio/assets/polyhaven/concrete_road_barrier_02/concrete_road_barrier_02_1k.glb",
-        function (barrierProto) {
-          var barrierSpots = [];
-          for (var i = 0; i < S; i += 24) {
-            barrierSpots.push({
-              idx: i,
-              lat: -(ROAD_HALF + 2.4),
-              yawOffset: Math.PI / 2,
-            });
-            barrierSpots.push({
-              idx: i,
-              lat: ROAD_HALF + 2.4,
-              yawOffset: -Math.PI / 2,
-            });
-          }
-          // Barriers use per-clone LOD (not raw InstancedMesh): the concrete
-          // barrier GLB is high-poly (~8k tris) and the ~125 clones are spread
-          // along the whole lap, so an InstancedMesh would render every
-          // instance in a visible sector every frame (no per-instance frustum
-          // cull). Per-clone LOD keeps near barriers full-detail, swaps mid
-          // ones to a 12-tri box, far ones to a billboard, and culls >150m.
-          placeAlongTrack(barrierProto, barrierSpots, {
-            disableShadow: true,
-            lodKind: "prop",
-          });
-        },
-        { targetLength: 3.4, envMapIntensity: 1.15, castShadow: false },
-      ).catch(function () {});
+      // ============================================================
+      // Lightweight Kenney CC0 scenery (<200KB per model). The heavy
+      // Polyhaven photogrammetry .glb set (~47MB: trees, rocks, barriers,
+      // lamps, props) is replaced by tiny Kenney models. Repeated props
+      // (trees / rocks / plants / barriers) are bucketed into per-track-
+      // sector InstancedMeshes (1 draw call per visible sector, frustum +
+      // distance culled). Nothing uses the LOD system any more: the
+      // models are small enough to render full-detail at every distance
+      // and are hidden beyond ~120m by world.update().
+      // ============================================================
 
-      // Polyhaven photogrammetry street lamps: /studio/assets/polyhaven/street_lamp_01/street_lamp_01_1k.glb
+      // ---- Street lamps: Kenney light-curved-double (14KB). Replaces the
+      //      2.4MB Polyhaven street_lamp_01. Placed per-spot, no LOD.
       WR.loadGlbModel(
-        "/studio/assets/polyhaven/street_lamp_01/street_lamp_01_1k.glb",
+        "/studio/assets/models/roads/light-curved-double.glb",
         function (lightProto) {
           var lightSpots = [
             {
@@ -1032,17 +913,42 @@
               yawOffset: sideSign > 0 ? -Math.PI / 2 : Math.PI / 2,
             });
           }
-          placeAlongTrack(lightProto, lightSpots, {
-            disableShadow: true,
-            lodKind: "prop",
-          });
+          placeAlongTrack(lightProto, lightSpots, { disableShadow: true });
         },
-        { targetLength: 6.8, envMapIntensity: 1.25, castShadow: false },
+        { targetLength: 6.5, envMapIntensity: 1.1, castShadow: false },
       ).catch(function () {});
 
-      // Polyhaven photogrammetry lush broadleaf canopy trees: /studio/assets/polyhaven/lush_tree_1k.glb
+      // ---- Barriers: Kenney detail-barrier-strong-type-a (4KB), instanced per
+      //      track sector (1 draw call per visible sector instead of ~125
+      //      per-clone draws). Replaces the 2.9MB Polyhaven concrete_road_barrier.
       WR.loadGlbModel(
-        "/studio/assets/polyhaven/lush_tree_1k.glb",
+        "/studio/assets/models/roads/detail-barrier-strong-type-a.glb",
+        function (barrierProto) {
+          var barrierSpots = [];
+          for (var i = 0; i < S; i += 24) {
+            barrierSpots.push({
+              idx: i,
+              lat: -(ROAD_HALF + 2.4),
+              yawOffset: Math.PI / 2,
+            });
+            barrierSpots.push({
+              idx: i,
+              lat: ROAD_HALF + 2.4,
+              yawOffset: -Math.PI / 2,
+            });
+          }
+          placeInstancedBySector(barrierProto, barrierSpots, { sectors: 8 });
+        },
+        { targetLength: 3.4, envMapIntensity: 1.0, castShadow: false },
+      ).catch(function () {});
+
+      // ---- Trees: Kenney tree-high (31KB). Broadleaf + pine spots are merged
+      //      into one forest and bucketed into per-sector InstancedMeshes so
+      //      only the player's nearest sectors render. Replaces the 4.8MB
+      //      lush_tree + 3.5MB pine_tree (which were also wrapped in the buggy
+      //      LOD system that hid trees near the camera).
+      WR.loadGlbModel(
+        "/studio/assets/models/nature/tree-high.glb",
         function (treeProto) {
           var treeSpots = [
             { idx: S - 36, lat: -15, yawOffset: 0.4, scale: 1.15 },
@@ -1063,173 +969,120 @@
               scale: sc,
             });
           }
-          // Trees use full-detail GLB within 30m, a low-poly box proxy 30-80m,
-          // a camera-facing billboard impostor 80-150m, and are culled beyond.
-          placeAlongTrack(treeProto, treeSpots, {
-            disableShadow: true,
-            lodKind: "tree",
+          // Pine spots merged into the same forest.
+          treeSpots.push({
+            idx: S - 30,
+            lat: 18.5,
+            yawOffset: 0.7,
+            scale: 1.12,
           });
-        },
-        { targetLength: 13.5, envMapIntensity: 1.15, castShadow: false },
-      ).catch(function () {});
-
-      // Polyhaven photogrammetry lush conifer pine trees: /studio/assets/polyhaven/pine_tree_1k.glb
-      WR.loadGlbModel(
-        "/studio/assets/polyhaven/pine_tree_1k.glb",
-        function (pineProto) {
-          var pineSpots = [
-            { idx: S - 30, lat: 18.5, yawOffset: 0.7, scale: 1.12 },
-            { idx: S - 16, lat: 17.5, yawOffset: 2.2, scale: 1.08 },
-            { idx: 2, lat: -17.5, yawOffset: 1.5, scale: 1.15 },
-            { idx: 16, lat: 18.0, yawOffset: 2.9, scale: 1.1 },
-            { idx: 30, lat: -18.0, yawOffset: 0.5, scale: 1.18 },
-          ];
-          for (var i = 12; i < S; i += 38) {
-            var sideSign = i % 76 < 38 ? -1 : 1;
-            var dist = 15 + ((i * 23) % 16);
-            pineSpots.push({
-              idx: i,
-              lat: sideSign * dist,
-              yawOffset: (i * 0.9) % 6.28,
-              scale: 0.96 + ((i * 11) % 5) * 0.08,
+          treeSpots.push({
+            idx: S - 16,
+            lat: 17.5,
+            yawOffset: 2.2,
+            scale: 1.08,
+          });
+          treeSpots.push({ idx: 2, lat: -17.5, yawOffset: 1.5, scale: 1.15 });
+          treeSpots.push({ idx: 16, lat: 18.0, yawOffset: 2.9, scale: 1.1 });
+          treeSpots.push({ idx: 30, lat: -18.0, yawOffset: 0.5, scale: 1.18 });
+          for (var j = 12; j < S; j += 38) {
+            var pSide = j % 76 < 38 ? -1 : 1;
+            var pDist = 15 + ((j * 23) % 16);
+            treeSpots.push({
+              idx: j,
+              lat: pSide * pDist,
+              yawOffset: (j * 0.9) % 6.28,
+              scale: 0.96 + ((j * 11) % 5) * 0.08,
             });
           }
-          placeAlongTrack(pineProto, pineSpots, {
-            disableShadow: true,
-            lodKind: "pine",
-          });
+          placeInstancedBySector(treeProto, treeSpots, { sectors: 8 });
         },
-        { targetLength: 13.8, envMapIntensity: 1.15, castShadow: false },
+        { targetLength: 10.0, envMapIntensity: 1.0, castShadow: false },
       ).catch(function () {});
 
-      // Polyhaven photogrammetry shrubs: /studio/assets/polyhaven/shrub_03/shrub_03_1k.glb
+      // ---- Rocks: Kenney rocks-high (32KB). Boulder + Namaqualand cluster
+      //      spots merged into per-sector InstancedMeshes. Replaces the 5.7MB
+      //      boulder_01 + 3.6MB namaqualand_boulders Polyhaven models.
       WR.loadGlbModel(
-        "/studio/assets/polyhaven/shrub_03/shrub_03_1k.glb",
-        function (shrubProto) {
-          var shrubSpots = [];
-          for (var i = 5; i < S; i += 16) {
-            var sideSign = i % 32 < 16 ? 1 : -1;
-            shrubSpots.push({
-              idx: i,
-              lat: sideSign * (10.5 + (i % 9)),
-              yawOffset: (i * 1.7) % 6.28,
-              scale: 0.95 + (i % 5) * 0.14,
-            });
-          }
-          placeAlongTrack(shrubProto, shrubSpots, {
-            disableShadow: true,
-            lodKind: "prop",
-          });
-        },
-        { targetLength: 2.8, envMapIntensity: 1.1, castShadow: false },
-      ).catch(function () {});
-
-      // Polyhaven photogrammetry ferns: /studio/assets/polyhaven/fern_02/fern_02_1k.glb
-      WR.loadGlbModel(
-        "/studio/assets/polyhaven/fern_02/fern_02_1k.glb",
-        function (fernProto) {
-          var fernSpots = [];
-          for (var i = 9; i < S; i += 18) {
-            var sideSign = i % 36 < 18 ? -1 : 1;
-            fernSpots.push({
-              idx: i,
-              lat: sideSign * (9.5 + (i % 7)),
-              yawOffset: (i * 2.1) % 6.28,
-              scale: 1.0 + (i % 4) * 0.15,
-            });
-          }
-          placeAlongTrack(fernProto, fernSpots, {
-            disableShadow: true,
-            lodKind: "prop",
-          });
-        },
-        { targetLength: 1.9, envMapIntensity: 1.1, castShadow: false },
-      ).catch(function () {});
-
-      // Polyhaven photogrammetry Namaqualand boulder clusters: /studio/assets/polyhaven/namaqualand_boulders_01/namaqualand_boulders_01_1k.glb
-      WR.loadGlbModel(
-        "/studio/assets/polyhaven/namaqualand_boulders_01/namaqualand_boulders_01_1k.glb",
-        function (boulderClusterProto) {
-          var clusterSpots = [];
+        "/studio/assets/models/nature/rocks-high.glb",
+        function (rockProto) {
+          var rockSpots = [];
           for (var i = 15; i < S; i += 36) {
-            var sideSign = i % 72 < 36 ? 1 : -1;
-            clusterSpots.push({
+            var s1 = i % 72 < 36 ? 1 : -1;
+            rockSpots.push({
               idx: i,
-              lat: sideSign * (20 + (i % 16)),
+              lat: s1 * (20 + (i % 16)),
               yawOffset: i * 0.7,
               scale: 1.0 + (i % 4) * 0.25,
             });
           }
-          placeAlongTrack(boulderClusterProto, clusterSpots, {
-            disableShadow: true,
-            lodKind: "rock",
-          });
-        },
-        { targetLength: 7.5, envMapIntensity: 1.1, castShadow: false },
-      ).catch(function () {});
-
-      // Polyhaven photogrammetry boulders: /studio/assets/polyhaven/boulder_01/boulder_01_1k.glb
-      WR.loadGlbModel(
-        "/studio/assets/polyhaven/boulder_01/boulder_01_1k.glb",
-        function (boulderProto) {
-          var boulderSpots = [];
-          for (var i = 28; i < S; i += 45) {
-            var sideSign = i % 90 < 45 ? -1 : 1;
-            boulderSpots.push({
-              idx: i,
-              lat: sideSign * (24 + (i % 14)),
-              yawOffset: i * 1.1,
-              scale: 1.1 + (i % 3) * 0.3,
+          for (var k = 28; k < S; k += 45) {
+            var s2 = k % 90 < 45 ? -1 : 1;
+            rockSpots.push({
+              idx: k,
+              lat: s2 * (24 + (k % 14)),
+              yawOffset: k * 1.1,
+              scale: 1.1 + (k % 3) * 0.3,
             });
           }
-          placeAlongTrack(boulderProto, boulderSpots, {
-            disableShadow: true,
-            lodKind: "rock",
-          });
+          placeInstancedBySector(rockProto, rockSpots, { sectors: 8 });
         },
-        { targetLength: 6.4, envMapIntensity: 1.1, castShadow: false },
+        { targetLength: 6.0, envMapIntensity: 1.0, castShadow: false },
       ).catch(function () {});
 
-      // Polyhaven photogrammetry CoffeeCart_01 near Start/Finish Village: /studio/assets/polyhaven/CoffeeCart_01/CoffeeCart_01_1k.glb
+      // ---- Shrubs + ferns: Kenney plant (22KB), merged into per-sector
+      //      InstancedMeshes. Replaces the 2.4MB shrub_03 + 1.7MB fern_02.
       WR.loadGlbModel(
-        "/studio/assets/polyhaven/CoffeeCart_01/CoffeeCart_01_1k.glb",
-        function (cartProto) {
-          placeAlongTrack(
-            cartProto,
-            [
-              { idx: S - 28, lat: 14.5, yawOffset: -Math.PI / 2, scale: 1.0 },
-              { idx: 12, lat: 14.8, yawOffset: -Math.PI / 2, scale: 1.0 },
-            ],
-            { disableShadow: true, lodKind: "prop" },
-          );
+        "/studio/assets/models/nature/plant.glb",
+        function (plantProto) {
+          var plantSpots = [];
+          for (var i = 5; i < S; i += 16) {
+            var s1 = i % 32 < 16 ? 1 : -1;
+            plantSpots.push({
+              idx: i,
+              lat: s1 * (10.5 + (i % 9)),
+              yawOffset: (i * 1.7) % 6.28,
+              scale: 0.95 + (i % 5) * 0.14,
+            });
+          }
+          for (var k = 9; k < S; k += 18) {
+            var s2 = k % 36 < 18 ? -1 : 1;
+            plantSpots.push({
+              idx: k,
+              lat: s2 * (9.5 + (k % 7)),
+              yawOffset: (k * 2.1) % 6.28,
+              scale: 1.0 + (k % 4) * 0.15,
+            });
+          }
+          placeInstancedBySector(plantProto, plantSpots, { sectors: 8 });
         },
-        { targetLength: 2.6, envMapIntensity: 1.25, castShadow: false },
+        { targetLength: 2.0, envMapIntensity: 1.0, castShadow: false },
       ).catch(function () {});
 
-      // Polyhaven photogrammetry modular_street_seating near Start/Finish Village & Lakeside: /studio/assets/polyhaven/modular_street_seating/modular_street_seating_1k.glb
+      // ---- Village props: Kenney crate (14KB) + barrel (14KB) replace the
+      //      heavy 3.6MB CoffeeCart, 7.6MB modular_street_seating, 1.5MB
+      //      Lantern and 0.5MB Drill Polyhaven photogrammetry models. The
+      //      barrels cluster at the start village, so a single InstancedMesh
+      //      collapses them to 1 draw call.
       WR.loadGlbModel(
-        "/studio/assets/polyhaven/modular_street_seating/modular_street_seating_1k.glb",
-        function (seatProto) {
+        "/studio/assets/models/props/crate.glb",
+        function (crateProto) {
           placeAlongTrack(
-            seatProto,
+            crateProto,
             [
+              { idx: S - 28, lat: 14.5, yawOffset: -Math.PI / 2, scale: 1.1 },
+              { idx: 12, lat: 14.8, yawOffset: -Math.PI / 2, scale: 1.1 },
               { idx: S - 32, lat: 15.2, yawOffset: -Math.PI / 2, scale: 1.0 },
-              { idx: S - 12, lat: -15.0, yawOffset: Math.PI / 2, scale: 1.0 },
               { idx: 18, lat: -14.5, yawOffset: Math.PI / 2, scale: 1.0 },
             ],
-            { disableShadow: true, lodKind: "prop" },
+            { disableShadow: true },
           );
         },
-        { targetLength: 3.2, envMapIntensity: 1.2, castShadow: false },
+        { targetLength: 1.3, envMapIntensity: 1.1, castShadow: false },
       ).catch(function () {});
 
-      // Polyhaven photogrammetry Barrel_01 clusters in Pit/Start Village: /studio/assets/polyhaven/Barrel_01/Barrel_01_1k.glb
-      // Barrels are a small cluster (4 instances) co-located at the start
-      // village, so a single InstancedMesh collapses them to 1 draw call with
-      // no spread-out penalty (the InstancedMesh bounding box stays local and
-      // is frustum-culled when the player is on the far side of the lap).
       WR.loadGlbModel(
-        "/studio/assets/polyhaven/Barrel_01/Barrel_01_1k.glb",
+        "/studio/assets/models/props/barrel.glb",
         function (barrelProto) {
           placeInstancedBySector(
             barrelProto,
@@ -1238,40 +1091,79 @@
               { idx: S - 21, lat: 14.2, yawOffset: 1.4, scale: 0.96 },
               { idx: 4, lat: -13.8, yawOffset: 0.8, scale: 1.0 },
               { idx: 5, lat: -14.5, yawOffset: 2.1, scale: 1.02 },
+              { idx: S - 26, lat: 13.2, yawOffset: 0.5, scale: 1.0 },
+              { idx: 10, lat: 13.4, yawOffset: 1.2, scale: 1.0 },
+              { idx: S - 20, lat: 13.0, yawOffset: 0.9, scale: 1.0 },
             ],
             { sectors: 1 },
           );
         },
-        { targetLength: 0.95, envMapIntensity: 1.25, castShadow: false },
+        { targetLength: 0.95, envMapIntensity: 1.1, castShadow: false },
       ).catch(function () {});
 
-      // Polyhaven photogrammetry Lantern_01 & Drill_01 Pit Details: /studio/assets/polyhaven/Lantern_01/Lantern_01_1k.glb & /studio/assets/polyhaven/Drill_01/Drill_01_1k.glb
-      WR.loadGlbModel(
-        "/studio/assets/polyhaven/Lantern_01/Lantern_01_1k.glb",
-        function (lanternProto) {
-          placeAlongTrack(
-            lanternProto,
-            [
-              { idx: S - 26, lat: 13.2, yawOffset: 0.5, scale: 1.0 },
-              { idx: 10, lat: 13.4, yawOffset: 1.2, scale: 1.0 },
-            ],
-            { disableShadow: true, lodKind: "prop" },
-          );
+      // ---- Start/Finish village buildings: Kenney skyscraper .glb models
+      //      (~111KB each, 3 variants for variety) replace the procedural
+      //      multi-mesh PBR buildings (which were ~30 meshes x 5 = 150 draw
+      //      calls). Each building is a single clone of a cached variant, so
+      //      5 buildings = 5 draw calls (3 unique downloads total). They sit
+      //      beside the track and are distance-culled like the rest of the
+      //      scenery. Only the player car casts a shadow, so buildings set
+      //      castShadow=false.
+      var buildingSpots = [
+        {
+          idx: S - 38,
+          lat: 23.5,
+          yawOffset: -Math.PI / 2,
+          variant: 0,
+          scale: 1.0,
         },
-        { targetLength: 0.55, envMapIntensity: 1.3, castShadow: false },
-      ).catch(function () {});
-
-      WR.loadGlbModel(
-        "/studio/assets/polyhaven/Drill_01/Drill_01_1k.glb",
-        function (drillProto) {
-          placeAlongTrack(
-            drillProto,
-            [{ idx: S - 20, lat: 13.0, yawOffset: 0.9, scale: 1.0 }],
-            { disableShadow: true, lodKind: "prop" },
-          );
+        {
+          idx: S - 18,
+          lat: -23.0,
+          yawOffset: Math.PI / 2,
+          variant: 1,
+          scale: 0.9,
         },
-        { targetLength: 0.42, envMapIntensity: 1.3, castShadow: false },
-      ).catch(function () {});
+        {
+          idx: 6,
+          lat: 24.0,
+          yawOffset: -Math.PI / 2,
+          variant: 2,
+          scale: 1.05,
+        },
+        {
+          idx: 30,
+          lat: 25.5,
+          yawOffset: -Math.PI / 2,
+          variant: 0,
+          scale: 0.95,
+        },
+        {
+          idx: 72,
+          lat: 27.0,
+          yawOffset: -Math.PI / 2,
+          variant: 1,
+          scale: 1.0,
+        },
+      ];
+      var buildingVariants = [
+        "/studio/assets/models/buildings/building-skyscraper-a.glb",
+        "/studio/assets/models/buildings/building-skyscraper-b.glb",
+        "/studio/assets/models/buildings/building-skyscraper-c.glb",
+      ];
+      buildingVariants.forEach(function (url, vIdx) {
+        WR.loadGlbModel(
+          url,
+          function (bProto) {
+            var spots = buildingSpots.filter(function (s) {
+              return s.variant === vIdx;
+            });
+            if (!spots.length) return;
+            placeAlongTrack(bProto, spots, { disableShadow: true });
+          },
+          { targetLength: 14.0, envMapIntensity: 0.9, castShadow: false },
+        ).catch(function () {});
+      });
     }, 50);
 
     // 9. High-altitude clouds (soft canvas sprites)
@@ -1383,7 +1275,8 @@
     world.update = function (dt, time, playerPos) {
       var px = playerPos ? playerPos.x : 0;
       var pz = playerPos ? playerPos.z : 0;
-      var CULL2 = 150 * 150; // ~150m scenery distance-cull radius (matches the LOD far level)
+      var CULL2 = 120 * 120; // ~120m scenery distance-cull radius (lightweight
+      // Kenney models render full-detail to this distance, then are hidden).
 
       // Grass chunk distance culling: render ONLY the player's single nearest
       // chunk + its one loop-neighbour (2 of 8 sectors, ~2,500 instances) so
@@ -1415,9 +1308,10 @@
       }
 
       // Scenery distance culling: hide every trackside GLB / building farther
-      // than ~150m from the player. The LOD objects also self-cull beyond
-      // 150m via their empty far level; this coarse toggle skips their
-      // per-frame LOD.update() work on the far side of the lap.
+      // than ~120m from the player. The lightweight Kenney models render
+      // full-detail up to that distance; this coarse toggle skips their draw
+      // calls + per-frame work on the far side of the lap. (No LOD system
+      // any more — wrapGlbAsLod is a passthrough, so no LOD.update() runs.)
       if (scenery.length) {
         for (var si = 0; si < scenery.length; si++) {
           var s = scenery[si];
@@ -1442,13 +1336,6 @@
         clouds[i].position.x += dt * 1.6;
         if (clouds[i].position.x > 750) clouds[i].position.x = -750;
       }
-    };
-
-    // LOD + billboard per-frame update. Called from the game frame loop with
-    // the active camera so each scenery LOD picks the right distance level and
-    // every visible billboard plane faces the camera.
-    world.updateLods = function (camera) {
-      if (WR && typeof WR.updateLods === "function") WR.updateLods(camera);
     };
 
     world.setQuality = function (q) {

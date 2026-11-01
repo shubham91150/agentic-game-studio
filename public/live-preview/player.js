@@ -6,10 +6,16 @@
   window.G = window.G || {};
   var G = window.G;
 
+  // Player + AI rivals share ONE supercar .glb download: WorldRealism.loadGlbModel
+  // de-dupes identical URLs and aliases ToyCar.glb -> supercar_highpoly.glb (same
+  // file), so all four cars receive .clone(true) copies of a single cached
+  // scene root (shared geometry + materials, one 4MB request). Only the player
+  // casts a shadow; AI rivals and all scenery set castShadow=false to keep the
+  // shadow pass to a handful of player-car meshes inside the follow-frustum.
   var PLAYER_MODEL_URL = "/studio/assets/polyhaven/supercar_highpoly.glb";
   var AI_MODEL_URLS = [
     "/studio/assets/polyhaven/supercar_highpoly.glb",
-    "/studio/assets/polyhaven/ToyCar.glb",
+    "/studio/assets/polyhaven/supercar_highpoly.glb",
     "/studio/assets/polyhaven/supercar_highpoly.glb",
   ];
   var CB_COLORS = ["0,114,178", "230,159,0", "240,228,66"];
@@ -62,7 +68,7 @@
     return t;
   }
 
-  G.createCarMesh = function (rgbStr, num, modelUrl) {
+  G.createCarMesh = function (rgbStr, num, modelUrl, isPlayer) {
     ensureFlameTex();
     var paint = new THREE.MeshStandardMaterial({
       color: "rgb(" + (rgbStr || "210,31,38") + ")",
@@ -112,7 +118,9 @@
             if (!node) return;
             var nm = (node.name || "").toLowerCase();
             if (node.isMesh) {
-              node.castShadow = true;
+              // Only the player car casts a shadow; AI rivals cast none so the
+              // shadow pass only shades the player's meshes (1024px map).
+              node.castShadow = !!isPlayer;
               node.receiveShadow = true;
               if (nm === "body" || nm === "spoiler") {
                 node.material = paint;
@@ -187,7 +195,7 @@
         {
           targetLength: 4.4,
           envMapIntensity: 1.5,
-          castShadow: true,
+          castShadow: !!isPlayer,
           receiveShadow: true,
         },
       ).catch(function () {});
@@ -216,7 +224,7 @@
         aiCreateCount++;
       }
     }
-    var mb = G.createCarMesh(o.color, o.num, modelUrl);
+    var mb = G.createCarMesh(o.color, o.num, modelUrl, o.isPlayer);
     var car = {
       name: o.name || "CAR",
       isPlayer: !!o.isPlayer,
