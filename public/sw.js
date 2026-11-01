@@ -4,13 +4,9 @@
  * on every agent save and the pane's ?t= busting only covers index.html, so
  * cache-first would pin stale game.js/ui.js forever.
  * Same-origin only, GET only. No external URLs (CSP-safe). */
-var CACHE = "ags-studio-v4";
+var CACHE = "ags-studio-v5";
 
 var APP_SHELL = [
-  "/",
-  "/studio/",
-  "/studio/app.css",
-  "/studio/studio.js",
   "/studio/manifest.webmanifest",
   "/studio/icon.svg",
   "/studio/fonts/fonts.css",
@@ -20,6 +16,10 @@ var APP_SHELL = [
   "/studio/fonts/inter-latin-700-normal.woff2",
   "/studio/fonts/jetbrains-mono-latin-400-normal.woff2",
   "/studio/vendor/three.min.js",
+  "/studio/vendor/GLTFLoader.js",
+  "/studio/vendor/world_realism.js",
+  "/studio/vendor/rapier3d-compat.mjs",
+  "/studio/vendor/rapier_wasm3d_bg.wasm",
 ];
 
 var RUNTIME_PREFIXES = [
@@ -87,6 +87,22 @@ self.addEventListener("fetch", function (event) {
   var path = url.pathname;
   var shell = APP_SHELL.indexOf(path) !== -1;
   if (!shell && !isRuntimePath(path)) return;
+  // Network-first for HTML/JS/CSS, cache-first for assets
+  var isHtmlOrJs = path.endsWith(".html") || path.endsWith(".js") || path.endsWith(".css") || path === "/" || path === "/studio/";
+  if (isHtmlOrJs) {
+    event.respondWith(
+      fetch(req).then(function (res) {
+        if (res && res.ok) {
+          var copy = res.clone();
+          caches.open(CACHE).then(function (cache) { cache.put(req, copy); });
+        }
+        return res;
+      }).catch(function () {
+        return caches.match(req);
+      })
+    );
+    return;
+  }
   event.respondWith(
     caches.match(req, { ignoreSearch: false }).then(function (hit) {
       if (hit) return hit;
