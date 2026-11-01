@@ -1,7 +1,7 @@
 /* Agentic Game Studio — offline service worker (no build step).
  * App shell precache + runtime cache-first for games/uploads.
  * Same-origin only, GET only. No external URLs (CSP-safe). */
-var CACHE = "ags-studio-v1";
+var CACHE = "ags-studio-v2";
 
 var APP_SHELL = [
   "/",
