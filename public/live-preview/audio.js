@@ -4,6 +4,23 @@
   window.G = window.G || {};
   var G = window.G;
 
+  // Stage 2: 5-gear RPM ladder. In-gear ramp 60Hz; each upshift drops the
+  // target ~25%: base[g+1] = 0.75 * (base[g] + 60), base[1] = 62.
+  var GEAR_LO = [0, 0.18, 0.36, 0.55, 0.75];
+  var GEAR_HI = [0.18, 0.36, 0.55, 0.75, 1.0];
+  var GEAR_BASE = (function () {
+    var b = [62];
+    for (var g = 1; g < 5; g++) b.push(0.75 * (b[g - 1] + 60));
+    return b;
+  })();
+  function gearFromSpeed(s) {
+    if (s > 0.75) return 5;
+    if (s > 0.55) return 4;
+    if (s > 0.36) return 3;
+    if (s > 0.18) return 2;
+    return 1;
+  }
+
   G.AudioSys = {
     ctx: null,
     master: null,
@@ -12,6 +29,14 @@
     engFilter: null,
     engGain: null,
     skidGain: null,
+    skidBp: null,
+    rumGain: null,
+    whooshGain: null,
+    vibLfo: null,
+    vibDepth: null,
+    thudOsc: null,
+    thudGain: null,
+    thudNoiseGain: null,
     windGain: null,
     started: false,
     muted: false,
@@ -62,7 +87,7 @@
         s.loop = true;
         return s;
       };
-      var skidBp = ctx.createBiquadFilter();
+      var skidBp = (this.skidBp = ctx.createBiquadFilter());
       skidBp.type = "bandpass";
       skidBp.frequency.value = 1500;
       skidBp.Q.value = 0.8;
@@ -84,6 +109,61 @@
       this.windGain.connect(master);
       nw.start();
 
+      // Stage 2: offroad rumble — second lowpass tap off shared noise.
+      var rumLp = ctx.createBiquadFilter();
+      rumLp.type = "lowpass";
+      rumLp.frequency.value = 160;
+      this.rumGain = ctx.createGain();
+      this.rumGain.gain.value = 0;
+      var nr = mkNoise();
+      nr.connect(rumLp);
+      rumLp.connect(this.rumGain);
+      this.rumGain.connect(master);
+      nr.start();
+
+      // Stage 2: nitro whoosh — sine overtone, gain-gated in setEngine.
+      var whoosh = ctx.createOscillator();
+      whoosh.type = "sine";
+      whoosh.frequency.value = 2400;
+      this.whooshGain = ctx.createGain();
+      this.whooshGain.gain.value = 0;
+      whoosh.connect(this.whooshGain);
+      this.whooshGain.connect(master);
+      whoosh.start();
+
+      // Stage 2: engine vibrato — one shared LFO → depth gain → both
+      // engine osc freq params. Depth retargeted per frame (±3% of f).
+      this.vibLfo = ctx.createOscillator();
+      this.vibLfo.type = "sine";
+      this.vibLfo.frequency.value = 5.5;
+      this.vibDepth = ctx.createGain();
+      this.vibDepth.gain.value = 0;
+      this.vibLfo.connect(this.vibDepth);
+      this.vibDepth.connect(this.eng1.frequency);
+      this.vibDepth.connect(this.eng2.frequency);
+      this.vibLfo.start();
+
+      // Stage 2: impact thud — pre-built osc + noise-burst taps, fired by
+      // param envelopes only (zero node creation in thud()).
+      this.thudOsc = ctx.createOscillator();
+      this.thudOsc.type = "sine";
+      this.thudOsc.frequency.value = 90;
+      this.thudGain = ctx.createGain();
+      this.thudGain.gain.value = 0.0001;
+      this.thudOsc.connect(this.thudGain);
+      this.thudGain.connect(master);
+      this.thudOsc.start();
+      var thudLp = ctx.createBiquadFilter();
+      thudLp.type = "lowpass";
+      thudLp.frequency.value = 700;
+      this.thudNoiseGain = ctx.createGain();
+      this.thudNoiseGain.gain.value = 0.0001;
+      var nt = mkNoise();
+      nt.connect(thudLp);
+      thudLp.connect(this.thudNoiseGain);
+      this.thudNoiseGain.connect(master);
+      nt.start();
+
       this.started = true;
       this.resume();
     },
@@ -93,32 +173,67 @@
     },
 
     // Called every frame while driving. All args 0..1-ish, racing bool.
-    setEngine: function (speed01, throttle, drifting, offroad, nitro, racing) {
+    // Stage 2: slip01 + gear are optional trailing args (backward-compat).
+    setEngine: function (
+      speed01,
+      throttle,
+      drifting,
+      offroad,
+      nitro,
+      racing,
+      slip01,
+      gear,
+    ) {
       if (!this.started) return;
       var t = this.ctx.currentTime;
+      if (typeof slip01 !== "number") slip01 = drifting ? 0.7 : 0;
+      slip01 = Math.max(0, Math.min(1, slip01));
+      gear = gear >= 1 && gear <= 5 ? gear | 0 : gearFromSpeed(speed01);
+      // Gear-stepped RPM: ramp with in-gear progress; upshift drops ~25%.
+      var glo = GEAR_LO[gear - 1],
+        ghi = GEAR_HI[gear - 1];
+      var prog = (speed01 - glo) / (ghi - glo);
+      prog = Math.max(0, Math.min(1, prog));
       var rev = throttle * 0.25;
-      var f = 62 + speed01 * 215 + rev * 60 + (nitro ? 55 : 0);
+      var f =
+        GEAR_BASE[gear - 1] + prog * 60 + rev * 60 + (nitro ? 55 : 0);
       this.eng1.frequency.setTargetAtTime(f, t, 0.06);
       this.eng2.frequency.setTargetAtTime(f * 0.5, t, 0.06);
+      this.vibDepth.gain.setTargetAtTime(f * 0.03, t, 0.1);
       this.engFilter.frequency.setTargetAtTime(
         500 + speed01 * 2600 + (nitro ? 1200 : 0),
         t,
         0.08,
       );
+      // Load growl: filter Q 0.7→2.5 with throttle (subtle).
+      this.engFilter.Q.setTargetAtTime(0.7 + throttle * 1.8, t, 0.08);
       this.engGain.gain.setTargetAtTime(
         racing ? 0.1 + throttle * 0.06 + speed01 * 0.05 : 0,
         t,
         0.09,
       );
-      var skid =
-        (drifting && speed01 > 0.25 ? 0.2 : 0) +
-        (offroad && speed01 > 0.3 ? 0.1 : 0);
-      this.skidGain.gain.setTargetAtTime(racing ? skid : 0, t, 0.05);
+      // Slip-pitched screech, gated on drift + speed; offroad never here.
+      var screechOn = drifting && speed01 > 0.2;
+      this.skidBp.frequency.setTargetAtTime(900 + slip01 * 1800, t, 0.05);
+      this.skidGain.gain.setTargetAtTime(
+        racing && screechOn ? slip01 * 0.25 : 0,
+        t,
+        0.05,
+      );
+      // Offroad rumble (own tap) + wind + nitro whoosh.
+      this.rumGain.gain.setTargetAtTime(
+        racing && offroad && speed01 > 0.15
+          ? Math.min(0.12, 0.04 + speed01 * 0.1)
+          : 0,
+        t,
+        0.08,
+      );
       this.windGain.gain.setTargetAtTime(
         racing ? speed01 * speed01 * 0.16 : 0,
         t,
         0.15,
       );
+      this.whooshGain.gain.setTargetAtTime(racing && nitro ? 0.05 : 0, t, 0.1);
     },
 
     silence: function () {
@@ -127,6 +242,30 @@
       this.engGain.gain.setTargetAtTime(0, t, 0.05);
       this.skidGain.gain.setTargetAtTime(0, t, 0.05);
       this.windGain.gain.setTargetAtTime(0, t, 0.05);
+      this.rumGain.gain.setTargetAtTime(0, t, 0.05);
+      this.whooshGain.gain.setTargetAtTime(0, t, 0.05);
+      this.thudGain.gain.cancelScheduledValues(t);
+      this.thudGain.gain.setTargetAtTime(0.0001, t, 0.03);
+      this.thudNoiseGain.gain.cancelScheduledValues(t);
+      this.thudNoiseGain.gain.setTargetAtTime(0.0001, t, 0.03);
+    },
+
+    // Stage 2: impact thud — low osc + filtered noise burst, params-only.
+    thud: function (sev01) {
+      if (!this.started || this.muted) return;
+      var sev = Math.max(0, Math.min(1, +sev01 || 0));
+      var t = this.ctx.currentTime;
+      var heavy = sev >= 0.5;
+      this.thudOsc.frequency.setValueAtTime(heavy ? 140 : 90, t);
+      this.thudGain.gain.cancelScheduledValues(t);
+      this.thudGain.gain.setValueAtTime(0.18 + sev * 0.2, t);
+      this.thudGain.gain.exponentialRampToValueAtTime(
+        0.0001,
+        t + (heavy ? 0.25 : 0.16),
+      );
+      this.thudNoiseGain.gain.cancelScheduledValues(t);
+      this.thudNoiseGain.gain.setValueAtTime(0.1 + sev * 0.12, t);
+      this.thudNoiseGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.1);
     },
 
     beep: function (freq, dur, type, vol, delay) {

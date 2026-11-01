@@ -261,6 +261,14 @@
       input: { throttle: 0, steer: 0, hand: false, nitro: false },
       sens: 1,
     };
+    // Stage 1: stable node handles for later stages (anim/VFX hooks).
+    car.userData = {
+      group: car.group,
+      mesh: mb,
+      steers: mb.steers,
+      spinners: mb.spinners,
+      flames: mb.flames,
+    };
     if (world && world.scene) {
       world.scene.add(car.group);
     }

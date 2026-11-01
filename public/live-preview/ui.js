@@ -41,6 +41,16 @@
     _mm: null,
     _mmStatic: null,
     _mmMap: null,
+    // Stage 3: needle spring state, gear/best edge state, reduced-motion flag.
+    _ang: -120,
+    _angV: 0,
+    _wroteAng: -999,
+    _needleT: 0,
+    _lastGear: null,
+    _lastBest: null,
+    _edgeLap: 0,
+    _bestT: 0,
+    _rm: false,
 
     init: function (cb) {
       var E = this._els,
@@ -52,7 +62,9 @@
         "hud-time-cur",
         "hud-time-last",
         "hud-time-best",
-        "hud-speed",
+        "dial-needle",
+        "dial-digital",
+        "dial-gear",
         "nitro-fill",
         "minimap",
         "countdown",
@@ -201,6 +213,12 @@
         E.touch.classList.remove("hidden");
       }
       this._mm = E.minimap.getContext("2d");
+      // Stage 3: NEW-BEST flash is decorative — kill it under reduced motion.
+      // (Needle stays: it is functional, like the old digital number.)
+      this._rm = !!(
+        window.matchMedia &&
+        window.matchMedia("(prefers-reduced-motion: reduce)").matches
+      );
     },
 
     set: function (id, txt) {
@@ -297,14 +315,66 @@
       this.set("btn-cam", ["CAM1", "CAM2", "HOOD"][i] || "CAM");
     },
 
-    updateHud: function (player, posStr, raceTime, sessionBest) {
+    // Stage 3: gear is the Stage-2 audioGear (1..5) threaded through from
+    // game.js. Analog needle dial replaces the old digital #hud-speed number.
+    updateHud: function (player, posStr, raceTime, sessionBest, gear) {
       this.set("hud-pos", posStr);
       this.set("hud-lap", "LAP " + Math.min(3, player.lap) + "/3");
       this.set("hud-time-cur", fmt(raceTime));
       this.set("hud-time-last", "LAST " + fmt(player.lastLap));
+      // Restart re-arms the new-best + gear edges (lap drops back to 1).
+      if (player.lap !== this._edgeLap) {
+        if (player.lap < this._edgeLap) {
+          this._lastBest = null;
+          this._lastGear = null;
+        }
+        this._edgeLap = player.lap;
+      }
       var b = player.bestLap !== null ? player.bestLap : sessionBest;
       this.set("hud-time-best", "BEST " + fmt(b));
-      this.set("hud-speed", String(Math.round(Math.abs(player.speed) * 3.6)));
+      if (typeof b === "number" && isFinite(b)) {
+        if (
+          this._lastBest !== null &&
+          b < this._lastBest - 1e-9 &&
+          !this._rm
+        ) {
+          var be = this._els["hud-time-best"];
+          be.classList.remove("best-flash");
+          void be.offsetWidth;
+          be.classList.add("best-flash");
+          clearTimeout(this._bestT);
+          this._bestT = setTimeout(function () {
+            be.classList.remove("best-flash");
+          }, 1250);
+        }
+        this._lastBest = b;
+      }
+      var g = gear >= 1 && gear <= 5 ? gear | 0 : 1;
+      this.set("dial-gear", String(g));
+      if (this._lastGear !== null && g !== this._lastGear) {
+        this._angV += 34; // small overshoot kick on shift (BACK-out flavour)
+      }
+      this._lastGear = g;
+      var kmh = Math.abs(player.speed) * 3.6;
+      var now = performance.now();
+      var dt = this._needleT ? (now - this._needleT) / 1000 : 0.016;
+      if (dt > 0.05) dt = 0.05;
+      if (dt < 0) dt = 0;
+      this._needleT = now;
+      // Needle spring: ~12/s response, slightly underdamped for a subtle
+      // Forza-style settle. Target clamps at 260 (needle parks at max);
+      // the digital readout below shows the true value.
+      var target = -120 + (Math.min(kmh, 260) / 260) * 240;
+      this._angV += ((target - this._ang) * 150 - this._angV * 16.5) * dt;
+      this._ang += this._angV * dt;
+      if (Math.abs(this._ang - this._wroteAng) >= 0.2) {
+        this._wroteAng = this._ang;
+        this._els["dial-needle"].setAttribute(
+          "transform",
+          "rotate(" + this._ang.toFixed(1) + " 100 100)",
+        );
+      }
+      this.set("dial-digital", String(Math.round(kmh)));
       this._els["nitro-fill"].style.width = Math.round(player.nitro) + "%";
     },
 

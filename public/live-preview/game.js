@@ -82,6 +82,19 @@
     var camMode =
         CAMQ === "0" || CAMQ === "1" || CAMQ === "2" ? parseInt(CAMQ, 10) : 0,
       trauma = 0;
+    // Stage 1: hit-stop (real-time restore, newest trigger owns restore) +
+    // smoothed shake targets (two random targets refreshed ~30Hz, lerped —
+    // never raw per-frame Math.random). Preallocated, no per-frame new.
+    var timeScale = 1,
+      hitStopEnd = 0,
+      hitStopCool = 0;
+    var shakeT = 0,
+      shakeCur = [0, 0, 0, 0],
+      shakeNxt = [0, 0, 0, 0];
+    var scrapePrev = false;
+    // Stage 2: 5-gear RPM state for audio (upshift thresholds + hysteresis).
+    var audioGear = 1;
+    var GEAR_UPS = [0.18, 0.36, 0.55, 0.75];
     var camPos = new THREE.Vector3(),
       camLook = new THREE.Vector3();
     var camInit = false;
@@ -290,10 +303,22 @@
       cars.forEach(function (c) {
         c.lapStart = 0;
         c.finishScore = 0;
+        // Stage 1: reset juice state (drift edge, suspension spring).
+        c._wasDrifting = false;
+        c._susp = 0;
+        c._suspV = 0;
+        c._prevY = c.y || 0;
+        c._prevVy = 0;
+        c._prevSpd = 0;
       });
       G.VFX.reset();
       camInit = false;
       trauma = 0;
+      timeScale = 1;
+      hitStopEnd = 0;
+      hitStopCool = 0;
+      scrapePrev = false;
+      audioGear = 1;
     }
 
     function startRace() {
@@ -388,6 +413,19 @@
     }
 
     // ---------- collisions ----------
+    // Stage 1: hit-stop — impacts set global timeScale 0.05 for 60-100ms by
+    // severity, restored on REAL time (newest trigger owns restore). Once per
+    // impact (150ms cooldown). Skipped under reducedMotion. Input buffers
+    // through because playerInput() reads live key state every fixed step.
+    function triggerHitStop(sev) {
+      if (reducedMotion) return;
+      var now = performance.now();
+      if (now < hitStopCool) return;
+      hitStopCool = now + 150;
+      hitStopEnd = now + 60 + 40 * Math.max(0, Math.min(1, sev));
+      timeScale = 0.05;
+    }
+
     function carCollisions() {
       for (var i = 0; i < cars.length; i++) {
         for (var j = i + 1; j < cars.length; j++) {
@@ -415,8 +453,11 @@
             a.speed *= 0.97;
             b.speed *= 0.97;
             if ((a.isPlayer || b.isPlayer) && -rel > 6) {
-              trauma = Math.min(1, trauma + 0.4);
-              G.AudioSys.beep(140, 0.15, "sawtooth", 0.2);
+              // Stage 1 tiers: car tap +0.35 → hard crash +0.65 by impact.
+              var sev = Math.max(0, Math.min(1, (-rel - 6) / 14));
+              trauma = Math.min(1, trauma + 0.35 + 0.3 * sev);
+              triggerHitStop(sev);
+              G.AudioSys.thud(sev);
             }
           }
         }
@@ -470,22 +511,45 @@
         ev = G.updateCar(player, dt, world, raceTime, fx);
       }
       handleEv(player, ev);
+      carAnim(player, dt);
 
       for (var i = 0; i < ais.length; i++) {
         var aev = G.updateAI(ais[i], dt, world, raceTime, player, cars, fx);
         handleEv(ais[i], aev);
+        carAnim(ais[i], dt);
       }
       carCollisions();
       if (fx.trauma) {
-        trauma = Math.min(1, trauma + fx.trauma);
+        // Stage 1: barrier hits arrive here from physics; map into the tier
+        // band (scrape +0.2 … hard crash +0.65) + severity hit-stop.
+        var bsev = Math.max(0, Math.min(1, fx.trauma / 0.65));
+        trauma = Math.min(1, trauma + Math.min(0.65, 0.2 + fx.trauma));
+        triggerHitStop(bsev);
+        G.AudioSys.thud(bsev);
         fx.trauma = 0;
       }
+      // Stage 1: wall-scrape rising edge → +0.2 trauma.
+      if (player.scraping && !scrapePrev) {
+        trauma = Math.min(1, trauma + 0.2);
+      }
+      scrapePrev = !!player.scraping;
 
       // vfx emission
       emitVfx(dt);
 
       // audio + hud
       var spd01 = Math.min(1, Math.abs(player.speed) / 62);
+      // Stage 2: slip from lateral velocity + 5-gear hysteresis for RPM.
+      var paFx = Math.sin(player.angle),
+        paFz = Math.cos(player.angle);
+      var paLat = -player.vx * paFz + player.vz * paFx;
+      var slip01 = Math.max(
+        0,
+        Math.min(1, Math.abs(paLat) / Math.max(Math.abs(player.speed), 1)),
+      );
+      if (audioGear < 5 && spd01 > GEAR_UPS[audioGear - 1]) audioGear++;
+      else if (audioGear > 1 && spd01 < GEAR_UPS[audioGear - 2] - 0.02)
+        audioGear--;
       G.AudioSys.setEngine(
         spd01,
         Math.max(0, player.input.throttle),
@@ -493,9 +557,11 @@
         player.offroad,
         player.nitroActive,
         true,
+        slip01,
+        audioGear,
       );
       UI.setWrongWay(player.wrongWay && !player.finished);
-      UI.updateHud(player, POS_STR[playerRank()], raceTime, sessionBest);
+      UI.updateHud(player, POS_STR[playerRank()], raceTime, sessionBest, audioGear);
       UI.minimapDraw(cars);
 
       // sun + rim follow player
@@ -535,6 +601,49 @@
       }
     }
 
+    // Stage 1: procedural car animation (subtle, realistic lane). Wheel spin
+    // (v*dt/r, r=0.36), front-steer pivots, and base body roll already live in
+    // updateCar; this hook runs after physics each fixed step to clamp body
+    // roll to ±3° and add a suspension spring (dip on accel/landing) with
+    // ≤2% scale ease. No cartoon deform.
+    function carAnim(car, dt) {
+      if (car._susp === undefined) {
+        car._susp = 0;
+        car._suspV = 0;
+        car._prevY = car.y || 0;
+        car._prevVy = 0;
+        car._prevSpd = car.speed || 0;
+      }
+      var vy = dt > 0 ? (car.y - car._prevY) / dt : 0;
+      car._prevY = car.y;
+      var dvy = vy - car._prevVy;
+      car._prevVy = vy;
+      var acc = dt > 0 ? (car.speed - car._prevSpd) / dt : 0;
+      car._prevSpd = car.speed;
+      // Clamp body roll to ±3° (0.052 rad).
+      var rz = car.group.rotation.z;
+      if (rz > 0.052) car.group.rotation.z = 0.052;
+      else if (rz < -0.052) car.group.rotation.z = -0.052;
+      if (reducedMotion) {
+        car._susp = 0;
+        car._suspV = 0;
+        car.group.scale.set(1, 1, 1);
+        return;
+      }
+      // Suspension spring (stiff 140, damp 14): excited by vertical-velocity
+      // jumps (landings) and longitudinal accel (squat under throttle).
+      car._suspV += (-140 * car._susp - 14 * car._suspV) * dt;
+      car._suspV += -dvy * 0.08 - acc * dt * 0.12;
+      if (car._suspV > 1.5) car._suspV = 1.5;
+      else if (car._suspV < -1.5) car._suspV = -1.5;
+      car._susp += car._suspV * dt;
+      if (car._susp > 0.12) car._susp = 0.12;
+      else if (car._susp < -0.12) car._susp = -0.12;
+      car.group.position.y += car._susp;
+      var sq = 1 + Math.max(-0.02, Math.min(0.02, car._susp * 0.15));
+      car.group.scale.set(1, sq, 1);
+    }
+
     function emitVfx(dt) {
       skidT += dt;
       dustT += dt;
@@ -544,6 +653,17 @@
         var fx0 = Math.sin(c.angle),
           fz0 = Math.cos(c.angle);
         var cy = c.y || 0;
+        // Stage 1: drift INITIATION burst — 6-8 near-white sprites on the
+        // rising edge of c.drifting (per car).
+        if (c.drifting && !c._wasDrifting && G.VFX.smokeBurst) {
+          G.VFX.smokeBurst(
+            c.x - fx0 * 2,
+            cy + 0.4,
+            c.z - fz0 * 2,
+            6 + Math.floor(Math.random() * 3),
+          );
+        }
+        c._wasDrifting = !!c.drifting;
         if (c.drifting && !c.offroad && skidT > 0.11) {
           for (var s = -1; s <= 1; s += 2) {
             var wx = c.x - fx0 * 1.45 - fz0 * s * 0.95;
@@ -559,6 +679,10 @@
             2,
             1.5,
           );
+          // Stage 1: denser smoke trail while drifting && speed01 > 0.25.
+          if (Math.min(1, spd / 62) > 0.25 && G.VFX.smokeBurst) {
+            G.VFX.smokeBurst(c.x - fx0 * 2, cy + 0.4, c.z - fz0 * 2, 2);
+          }
         }
         if (c.offroad && spd > 10 && dustT > 0.07) {
           G.VFX.puff(
@@ -614,14 +738,19 @@
         pz = player.z;
       var fx0 = Math.sin(player.angle),
         fz0 = Math.cos(player.angle);
+      var spd01c = Math.min(1, Math.abs(player.speed) / 62);
       if (camMode === 2) {
         _des.set(px + fx0 * 0.4, (player.y || 0) + cfg.h, pz + fz0 * 0.4);
         _look.set(px + fx0 * 30, (player.y || 0) + 1.0, pz + fz0 * 30);
       } else {
-        _des.set(px - fx0 * cfg.d, (player.y || 0) + cfg.h, pz - fz0 * cfg.d);
+        // Stage 1 lag: desired pos shifts slightly back with speed.
+        var lagD = cfg.d + spd01c * 1.2;
+        _des.set(px - fx0 * lagD, (player.y || 0) + cfg.h, pz - fz0 * lagD);
         _look.set(px + fx0 * 6, (player.y || 0) + 1.2, pz + fz0 * 6);
       }
-      var k = 1 - Math.exp(-dt * (camMode === 2 ? 30 : 6.5));
+      // Stage 1 lag: chase lerp rate 6.5 → 4.5 as speed rises.
+      var lagRate = camMode === 2 ? 30 : 6.5 - 2.0 * spd01c;
+      var k = 1 - Math.exp(-dt * lagRate);
       if (!camInit) {
         camPos.copy(_des);
         camLook.copy(_look);
@@ -632,17 +761,55 @@
       }
 
       trauma = Math.max(0, trauma - dt * 1.6);
-      var sh = reducedMotion ? 0 : trauma * trauma * 0.7;
+      // Stage 1: SMOOTHED trauma shake — two random targets refreshed ~30Hz
+      // and lerped between (never raw per-frame Math.random). trauma 0..1,
+      // offset = trauma² × max (pos 0.7 with y ×0.6, roll 0.06 rad).
+      // Camera ONLY, never the car body.
+      shakeT += dt;
+      if (shakeT >= 1 / 30) {
+        shakeT = 0;
+        for (var shi = 0; shi < 4; shi++) {
+          shakeCur[shi] = shakeNxt[shi];
+          shakeNxt[shi] = Math.random() * 2 - 1;
+        }
+      }
+      var shf = shakeT * 30;
+      var shx = shakeCur[0] + (shakeNxt[0] - shakeCur[0]) * shf;
+      var shy = shakeCur[1] + (shakeNxt[1] - shakeCur[1]) * shf;
+      var shz = shakeCur[2] + (shakeNxt[2] - shakeCur[2]) * shf;
+      var shr = shakeCur[3] + (shakeNxt[3] - shakeCur[3]) * shf;
+      // Stage 1: hood cam gets a micro-rumble trauma floor at speed.
+      var effT = trauma;
+      if (camMode === 2) effT = Math.max(effT, 0.06 * spd01c);
+      if (reducedMotion) effT = 0;
+      var sh = effT * effT * 0.7;
       camera.position.set(
-        camPos.x + (Math.random() - 0.5) * sh,
-        camPos.y + (Math.random() - 0.5) * sh * 0.6,
-        camPos.z + (Math.random() - 0.5) * sh,
+        camPos.x + shx * sh,
+        camPos.y + shy * sh * 0.6,
+        camPos.z + shz * sh,
       );
       camera.lookAt(camLook);
+      // Stage 1 lean: roll = -latVel × k, clamped ±0.07 rad (~4°).
+      // Right vector is (-cos a, +sin a) in (x, z), so right-positive
+      // lateral velocity = -vx×cos a + vz×sin a.
+      var latVel = -player.vx * fz0 + player.vz * fx0;
+      var lean = Math.max(-0.07, Math.min(0.07, -latVel * 0.008));
+      if (reducedMotion) lean = 0;
+      camera.rotateZ(shr * effT * effT * 0.06 + lean);
       var spd01 = Math.min(1, Math.abs(player.speed) / 62);
       var wantFov = 66 + spd01 * 10 + (player.nitroActive ? 6 : 0);
       camera.fov += (wantFov - camera.fov) * Math.min(1, dt * 5);
       camera.updateProjectionMatrix();
+      // Stage 1: speed lines fade in at spd01 > 0.7, full at nitro.
+      if (G.VFX.setSpeedLines) {
+        G.VFX.setSpeedLines(
+          reducedMotion
+            ? 0
+            : player.nitroActive
+              ? 1
+              : Math.max(0, Math.min(1, (spd01 - 0.7) / 0.3)),
+        );
+      }
     }
 
     // ---------- main loop ----------
@@ -710,8 +877,11 @@
         }
       }
 
+      // Stage 1: hit-stop restores on REAL time; rendering continues at full
+      // rate while the fixed-update accumulator runs scaled by timeScale.
+      if (timeScale !== 1 && performance.now() >= hitStopEnd) timeScale = 1;
       if (state !== "paused") {
-        acc += raw;
+        acc += raw * timeScale;
         var steps = 0;
         while (acc >= STEP && steps < 3) {
           fixedUpdate(STEP);

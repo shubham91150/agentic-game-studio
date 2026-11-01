@@ -6,6 +6,7 @@
 
   var SKIDS = 160;
   var DUST = 36;
+  var SMOKE = 48;
 
   G.VFX = {
     skidMesh: null,
@@ -13,7 +14,10 @@
     skidN: 0,
     dust: [],
     dustTex: null,
+    smoke: [],
     _dummy: null,
+    _slEl: null,
+    _slV: -1,
 
     init: function (scene) {
       this._dummy = new THREE.Object3D();
@@ -59,6 +63,29 @@
         this.dust.push({ s: s, life: 0, max: 1, vx: 0, vy: 0, vz: 0, grow: 3 });
       }
       this._di = 0;
+      // Stage 1: dedicated near-white drift-smoke pool (separate from dust so
+      // drift bursts never starve offroad/nitro puffs). 48 pooled sprites.
+      for (var si = 0; si < SMOKE; si++) {
+        var sm = new THREE.SpriteMaterial({
+          map: this.dustTex,
+          transparent: true,
+          opacity: 0,
+          depthWrite: false,
+        });
+        var ss = new THREE.Sprite(sm);
+        ss.visible = false;
+        scene.add(ss);
+        this.smoke.push({
+          s: ss,
+          life: 0,
+          max: 1,
+          vx: 0,
+          vy: 0,
+          vz: 0,
+          grow: 5,
+        });
+      }
+      this._smi = 0;
       this.initAmbient(scene);
     },
 
@@ -145,6 +172,43 @@
       }
     },
 
+    // Stage 1: near-white drift smoke burst. Zero per-frame allocation —
+    // round-robin over the SMOKE pool. Outward velocity + grow + fade.
+    smokeBurst: function (x, y, z, n) {
+      for (var k = 0; k < n; k++) {
+        var p = this.smoke[this._smi];
+        this._smi = (this._smi + 1) % SMOKE;
+        p.s.visible = true;
+        p.s.position.set(
+          x + (Math.random() - 0.5) * 1.6,
+          y,
+          z + (Math.random() - 0.5) * 1.6,
+        );
+        p.s.material.color.setHex(0xeeeeee);
+        p.s.material.opacity = 0.6;
+        p.s.scale.set(1.2, 1.2, 1);
+        p.max = 0.6 + Math.random() * 0.4;
+        p.life = p.max;
+        var a = Math.random() * Math.PI * 2;
+        var sp = 2 + Math.random() * 3;
+        p.vx = Math.cos(a) * sp;
+        p.vy = 1 + Math.random() * 2;
+        p.vz = Math.sin(a) * sp;
+        p.grow = 5 + Math.random() * 3;
+      }
+    },
+
+    // Stage 1: CSS speed-line overlay driver (0..1). Caches element + last
+    // value; only touches the DOM when the quantized value changes.
+    setSpeedLines: function (v) {
+      v = Math.max(0, Math.min(1, v));
+      var q = Math.round(v * 100);
+      if (q === this._slV) return;
+      this._slV = q;
+      if (!this._slEl) this._slEl = document.getElementById("speedlines");
+      if (this._slEl) this._slEl.style.opacity = (q / 100).toFixed(2);
+    },
+
     update: function (dt, time, px, pz) {
       this.updateAmbient(time || 0, px || 0, pz || 0);
       for (var i = 0; i < DUST; i++) {
@@ -163,6 +227,22 @@
         p.s.scale.set(sc, sc, 1);
         p.s.material.opacity = 0.5 * f;
       }
+      for (var j = 0; j < SMOKE; j++) {
+        var q = this.smoke[j];
+        if (!q.s.visible) continue;
+        q.life -= dt;
+        if (q.life <= 0) {
+          q.s.visible = false;
+          continue;
+        }
+        var qf = q.life / q.max;
+        q.s.position.x += q.vx * dt;
+        q.s.position.y += q.vy * dt;
+        q.s.position.z += q.vz * dt;
+        var qsc = q.s.scale.x + q.grow * dt;
+        q.s.scale.set(qsc, qsc, 1);
+        q.s.material.opacity = 0.6 * qf;
+      }
     },
 
     reset: function () {
@@ -170,6 +250,9 @@
       this.skidN = 0;
       if (this.skidMesh) this.skidMesh.count = 0;
       for (var i = 0; i < this.dust.length; i++) this.dust[i].s.visible = false;
+      for (var j = 0; j < this.smoke.length; j++)
+        this.smoke[j].s.visible = false;
+      this.setSpeedLines(0);
     },
   };
 })();

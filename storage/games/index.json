@@ -1,1 +1,20 @@
-[]
+[
+  {
+    "id": "game_1793459815775_afba76",
+    "title": "Horizon Sprint — 3D Sports Car Racing",
+    "prompt": "",
+    "biome": "live-preview",
+    "metaModel": "hand-made",
+    "enrichmentModel": null,
+    "objective": "",
+    "createdAt": "2026-10-31T15:16:55.784Z",
+    "playUrl": "/studio/games/game_1793459815775_afba76/index.html",
+    "imageUrl": null,
+    "files": {
+      "html": "index.html",
+      "manifest": "manifest.json",
+      "unity": [],
+      "js": "game.js"
+    }
+  }
+]

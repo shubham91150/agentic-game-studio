@@ -7,6 +7,7 @@
       content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"
     />
     <title>Horizon Sprint — 3D Sports Car Racing</title>
+    <link rel="icon" href="data:," />
     <style>
       :root {
         --bg: #0b0e13;
@@ -65,6 +66,27 @@
         pointer-events: none;
         background: #fff;
         opacity: 0;
+      }
+      #speedlines {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        opacity: 0;
+        background: repeating-conic-gradient(
+          from 0deg at 50% 50%,
+          transparent 0deg 5deg,
+          rgba(255, 255, 255, 0.12) 5deg 6.5deg
+        );
+        -webkit-mask-image: radial-gradient(
+          ellipse at center,
+          transparent 52%,
+          #000 100%
+        );
+        mask-image: radial-gradient(
+          ellipse at center,
+          transparent 52%,
+          #000 100%
+        );
       }
 
       /* ---------- HUD ---------- */
@@ -158,18 +180,81 @@
         text-align: right;
         text-shadow: 0 2px 10px rgba(0, 0, 0, 0.75);
       }
-      #hud-speed {
-        font-size: 84px;
-        font-weight: 900;
-        font-style: italic;
-        line-height: 0.95;
+      /* Stage 3: analog needle speedometer (0-260 km/h, sweep -120..+120deg) */
+      #dial {
+        width: 208px;
+        height: 208px;
+        display: block;
+        margin-left: auto;
+        margin-bottom: 6px;
+        filter: drop-shadow(0 2px 10px rgba(0, 0, 0, 0.75));
+      }
+      .dtrk {
+        fill: none;
+        stroke: rgba(255, 255, 255, 0.22);
+        stroke-width: 3;
+      }
+      .dred {
+        fill: none;
+        stroke: var(--bad);
+        stroke-width: 7;
+      }
+      .dtk {
+        stroke: #aeb8c4;
+        stroke-width: 2.5;
+      }
+      .dnum {
+        fill: #cfd6de;
+        font-size: 14px;
+        font-weight: 700;
+        text-anchor: middle;
+        dominant-baseline: central;
         font-variant-numeric: tabular-nums;
       }
-      #hud-speedunit {
-        font-size: 15px;
-        letter-spacing: 5px;
-        color: var(--dim);
-        margin-bottom: 6px;
+      #dial-needle polygon {
+        fill: var(--bad);
+      }
+      .dhub {
+        fill: #141a23;
+        stroke: #e8edf3;
+        stroke-width: 2.5;
+      }
+      #dial-digital {
+        fill: var(--txt);
+        font-size: 30px;
+        font-weight: 900;
+        font-style: italic;
+        text-anchor: middle;
+        font-variant-numeric: tabular-nums;
+      }
+      #dial-gear {
+        fill: var(--txt);
+        font-size: 20px;
+        font-weight: 900;
+        text-anchor: middle;
+        dominant-baseline: central;
+        font-variant-numeric: tabular-nums;
+      }
+      .dunit {
+        fill: var(--dim);
+        font-size: 11px;
+        letter-spacing: 3px;
+        text-anchor: middle;
+      }
+      /* Stage 3: NEW-BEST gold pulse (1.2s, once per improvement) */
+      #hud-time-best.best-flash {
+        animation: bestflash 1.2s ease-out 1;
+      }
+      @keyframes bestflash {
+        0% {
+          color: #ffd75e;
+        }
+        30% {
+          color: var(--gold);
+        }
+        100% {
+          color: var(--dim);
+        }
       }
       #nitro-wrap {
         position: relative;
@@ -565,8 +650,9 @@
         #hud-time-cur {
           font-size: 20px;
         }
-        #hud-speed {
-          font-size: 56px;
+        #dial {
+          width: 150px;
+          height: 150px;
         }
         #nitro-wrap {
           width: 150px;
@@ -593,6 +679,7 @@
       <div id="canvas-container"></div>
       <div id="vignette"></div>
       <div id="flash"></div>
+      <div id="speedlines"></div>
 
       <div id="hud" class="hidden">
         <div id="hud-topleft">
@@ -619,8 +706,42 @@
           </div>
         </div>
         <div id="hud-speedbox">
-          <div id="hud-speed">0</div>
-          <div id="hud-speedunit">km/h</div>
+          <svg id="dial" viewBox="0 0 200 200" role="img" aria-label="Speedometer">
+            <path class="dtrk" d="M 29.0 141.0 A 82 82 0 1 1 171.0 141.0" />
+            <path class="dred" d="M 181.4 90.1 A 82 82 0 0 1 171.0 141.0" />
+            <g>
+              <line class="dtk" x1="34.2" y1="138.0" x2="23.8" y2="144.0" />
+              <line class="dtk" x1="25.5" y1="115.2" x2="13.8" y2="117.6" />
+              <line class="dtk" x1="24.6" y1="90.8" x2="12.6" y2="89.4" />
+              <line class="dtk" x1="31.3" y1="67.4" x2="20.5" y2="62.3" />
+              <line class="dtk" x1="45.2" y1="47.4" x2="36.5" y2="39.0" />
+              <line class="dtk" x1="64.7" y1="32.7" x2="59.1" y2="22.1" />
+              <line class="dtk" x1="87.8" y1="25.0" x2="85.9" y2="13.1" />
+              <line class="dtk" x1="112.2" y1="25.0" x2="114.1" y2="13.1" />
+              <line class="dtk" x1="135.3" y1="32.7" x2="140.9" y2="22.1" />
+              <line class="dtk" x1="154.8" y1="47.4" x2="163.5" y2="39.0" />
+              <line class="dtk" x1="168.7" y1="67.4" x2="179.5" y2="62.3" />
+              <line class="dtk" x1="175.4" y1="90.8" x2="187.4" y2="89.4" />
+              <line class="dtk" x1="174.5" y1="115.2" x2="186.2" y2="117.6" />
+              <line class="dtk" x1="165.8" y1="138.0" x2="176.2" y2="144.0" />
+            </g>
+            <g>
+              <text class="dnum" x="49.8" y="129.0">0</text>
+              <text class="dnum" x="42.4" y="93.0">40</text>
+              <text class="dnum" x="58.2" y="59.8">80</text>
+              <text class="dnum" x="90.7" y="42.8">120</text>
+              <text class="dnum" x="127.0" y="48.6">160</text>
+              <text class="dnum" x="152.4" y="75.1">200</text>
+              <text class="dnum" x="156.8" y="111.6">240</text>
+            </g>
+            <text id="dial-gear" x="100" y="70">N</text>
+            <g id="dial-needle" transform="rotate(-120 100 100)">
+              <polygon points="100,36 103.6,100 100,109 96.4,100" />
+            </g>
+            <circle class="dhub" cx="100" cy="100" r="7" />
+            <text id="dial-digital" x="100" y="144">0</text>
+            <text class="dunit" x="102" y="162">km/h</text>
+          </svg>
           <div id="nitro-wrap">
             <div id="nitro-fill"></div>
             <span id="nitro-label">NITRO</span>
