@@ -123,6 +123,12 @@ def run_inside_blender():
         "ant_landscape",
         "add_mesh_extra_objects",
         "add_mesh_BoltFactory",
+        "mesh_looptools",
+        "mesh_f2",
+        "mesh_tiny_cad",
+        "object_boolean_tools",
+        "measureit",
+        "node_wrangler",
     ):
         try:
             bpy.ops.preferences.addon_enable(module=mod_name)

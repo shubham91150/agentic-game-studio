@@ -80,3 +80,17 @@ with the design skills read and applied FIRST:
 Code review rule: UI code produced WITHOUT the relevant skill read is
 REJECTED — no matter who wrote it (agent, subagent, or orchestrator).
 The commit message for UI work must name the skill(s) applied.
+
+## Native 3D/World MCP Server (`studio-3d-tools`) & Auto-Injected Memory (`.agents/memory/`)
+
+1. **First-Class MCP Tools (`studio-3d-tools`)**:
+   - `partnet_shapenet_build` (`src/tools/partnet_shapenet_blueprint.py` — PartNet anatomical part-hierarchies + ShapeNet metric dimensions + `--generate-bpy` multi-part `.glb` builder)
+   - `blender_pro_generate` (`src/tools/blender_pro_builder.py` — Blender 3.4 Sapling Tree Gen, Archimesh multi-floor buildings, A.N.T. Landscape terrain, plus 11 auto-enabled CAD/BoolTool/BoltFactory addons)
+   - `osm_real_world_city_3d` (`src/tools/osm_city_3d.py` — OpenStreetMap Overpass API real-world 3D city/bazaar extruder: `lucknow_hazratganj`, `monaco_harbor`, `tokyo_shibuya`, `nyc_times_square`)
+   - `objaverse_inspect_3d` (`src/tools/search_objaverse.py` — Objaverse-XL / LVIS 10M+ 3D structure inspector)
+   - `blenderkit_search_free` (`src/tools/fetch_blenderkit.py` — BlenderKit free 3D models/materials/HDRIs search & blueprint fetcher)
+   - `fetch_cc0_pbr_or_model` (`src/tools/fetch_polyhaven.py` & `src/tools/fetch_ambientcg.py` — CC0 photogrammetry models & 1K PBR texture sets)
+   - `run_visual_qa_gate` (`node src/verifier/visual_qa_gate.js`)
+
+2. **Game Development System Design Corpus (`docs/game-system-design/` & `.agents/skills/game-system-design/SKILL.md`)**:
+   - Read `.agents/skills/game-system-design/SKILL.md` and `docs/game-system-design/01..05.md` before architecting any game loop, ECS, vehicle/character physics, procedural world, camera rig, or genre state machine.
