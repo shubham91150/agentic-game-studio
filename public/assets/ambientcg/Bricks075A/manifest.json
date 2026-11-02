@@ -1,0 +1,49 @@
+{
+  "query": "Bricks075",
+  "assetId": "Bricks075A",
+  "attribute": "1K-JPG",
+  "license": "CC0 1.0 Universal (ambientCG)",
+  "matchingCandidates": [
+    "Bricks075A",
+    "Bricks075B"
+  ],
+  "maps": {
+    "AmbientOcclusion": "/studio/assets/ambientcg/Bricks075A/Bricks075A_1K-JPG_AmbientOcclusion.jpg",
+    "Color": "/studio/assets/ambientcg/Bricks075A/Bricks075A_1K-JPG_Color.jpg",
+    "Displacement": "/studio/assets/ambientcg/Bricks075A/Bricks075A_1K-JPG_Displacement.jpg",
+    "NormalGL": "/studio/assets/ambientcg/Bricks075A/Bricks075A_1K-JPG_NormalGL.jpg",
+    "Roughness": "/studio/assets/ambientcg/Bricks075A/Bricks075A_1K-JPG_Roughness.jpg"
+  },
+  "files": [
+    {
+      "map": "AmbientOcclusion",
+      "file": "Bricks075A_1K-JPG_AmbientOcclusion.jpg",
+      "url": "/studio/assets/ambientcg/Bricks075A/Bricks075A_1K-JPG_AmbientOcclusion.jpg",
+      "bytes": 362237
+    },
+    {
+      "map": "Color",
+      "file": "Bricks075A_1K-JPG_Color.jpg",
+      "url": "/studio/assets/ambientcg/Bricks075A/Bricks075A_1K-JPG_Color.jpg",
+      "bytes": 846181
+    },
+    {
+      "map": "Displacement",
+      "file": "Bricks075A_1K-JPG_Displacement.jpg",
+      "url": "/studio/assets/ambientcg/Bricks075A/Bricks075A_1K-JPG_Displacement.jpg",
+      "bytes": 225005
+    },
+    {
+      "map": "NormalGL",
+      "file": "Bricks075A_1K-JPG_NormalGL.jpg",
+      "url": "/studio/assets/ambientcg/Bricks075A/Bricks075A_1K-JPG_NormalGL.jpg",
+      "bytes": 1124816
+    },
+    {
+      "map": "Roughness",
+      "file": "Bricks075A_1K-JPG_Roughness.jpg",
+      "url": "/studio/assets/ambientcg/Bricks075A/Bricks075A_1K-JPG_Roughness.jpg",
+      "bytes": 315755
+    }
+  ]
+}

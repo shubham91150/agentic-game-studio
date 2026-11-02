@@ -125,6 +125,22 @@ Any asset failing this bar is swapped or rebuilt before it ships.
 `visual_qa_gate.js` is the hard floor; this Quality Bar is the soft floor
 above it. Passing the gate does NOT exempt an asset from this bar.
 
+### PartNet Part-by-Part Modeling Blueprint & Blender Built-in Generators
+
+**NEVER model an object as a single blob/box.** Decompose every asset into anatomical parts (PartNet method):
+
+- **Vehicle**: `chassis_lower`, `body_shell` (SubSurf + Bevel), `cabin_glass` (transparent), `wheel_fl/fr/rl/rr` (tire + rim + brake_disc), `headlight_l/r` (emissive), `taillight_l/r`, `grille`, `wing_spoiler`, `side_mirror_l/r`, `exhaust_twin`.
+- **Building**: `foundation_plinth`, `wall_facade` (brick/concrete PBR), `window_frames` + `glass_panes` (reflective), `door_entrance` + `canopy`, `balcony_railings`, `cornice_ledge`, `roof_slates`, `rooftop_hvac`.
+- **Tree**: `root_flare`, `trunk_main` (bark PBR), `boughs_primary`, `branches_secondary`, `twigs`, `leaf_canopy_clusters` (alpha-tested cards).
+- **Street/Bazaar Stall**: `frame_poles`, `counter_base`, `canopy_awning`, `cooking_pan_kadhai` (metallic), `containers_props`, `hanging_lantern` (emissive + point light).
+
+Use the precision CLI tools whenever generating or sourcing 3D assets and PBR materials:
+
+- `python3 src/tools/blender_pro_builder.py` (Sapling Tree Gen `--type sapling_tree --preset <oak|pine|willow>`, Archimesh buildings `--type arch_building --floors 3 --width 10 --depth 8`, A.N.T. Landscape `--type landscape --preset <canyon|mountain|hills>`)
+- `python3 src/tools/fetch_ambientcg.py` (2000+ CC0 PBR materials — `Color`, `NormalGL`, `Roughness`, `Metalness`, `AmbientOcclusion` into `public/assets/ambientcg/<id>/`)
+- `python3 src/tools/fetch_polyhaven.py` (521+ CC0 photogrammetry models & HDRIs into `public/assets/polyhaven/<id>/`)
+- `python3 src/tools/search_objaverse.py` (Objaverse 3D structure inspector — `--query "sports car" --limit 5`, inspects node names, vertex counts, bounding boxes, material slots in `storage/cache/objaverse/`)
+
 - **Mandatory Local Vendor Helpers & 100+ Real CC0 `.glb` Models**:
   - Load `/studio/vendor/GLTFLoader.js` and `/studio/vendor/world_realism.js` (`window.WorldRealism`) alongside `/studio/vendor/three.min.js`.
   - Load real CC0 `.glb` models from `/studio/assets/models/index.json` (`public/assets/models/`) via `WorldRealism.loadGlbModel(url, onLoaded, { targetLength })` (auto-grounds, normalizes bounding-box size, enables shadows, sets `envMapIntensity = 1.2`).

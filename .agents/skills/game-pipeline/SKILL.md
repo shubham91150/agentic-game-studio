@@ -21,6 +21,28 @@ metadata:
    - Use real Polyhaven photogrammetry `.glb` props/tools/nature in `public/assets/polyhaven/` (served at `/studio/assets/polyhaven/<id>/<id>_1k.glb`, e.g. `Barrel_01`, `Lantern_01`, `CoffeeCart_01`, `Drill_01`, `modular_street_seating`, `jacaranda_tree`, `quiver_tree_02`, `boulder_01`, `concrete_road_barrier_02`, `street_lamp_01`) or fetch more via `python3 src/tools/fetch_polyhaven.py <id> --type model --res 1k`.
 3. **MANDATORY VISUAL QA GATE**: Every 3D preview build MUST pass `node src/verifier/visual_qa_gate.js public/live-preview`.
 
+## PartNet Part-by-Part Modeling Blueprint & Blender Built-in Generators
+
+**NEVER model an object as a single blob/box.** Decompose every asset into anatomical parts (PartNet method):
+
+- **Vehicle**: `chassis_lower`, `body_shell` (SubSurf + Bevel), `cabin_glass` (transparent), `wheel_fl/fr/rl/rr` (tire + rim + brake_disc), `headlight_l/r` (emissive), `taillight_l/r`, `grille`, `wing_spoiler`, `side_mirror_l/r`, `exhaust_twin`.
+- **Building**: `foundation_plinth`, `wall_facade` (brick/concrete PBR), `window_frames` + `glass_panes` (reflective), `door_entrance` + `canopy`, `balcony_railings`, `cornice_ledge`, `roof_slates`, `rooftop_hvac`.
+- **Tree**: `root_flare`, `trunk_main` (bark PBR), `boughs_primary`, `branches_secondary`, `twigs`, `leaf_canopy_clusters` (alpha-tested cards).
+- **Street/Bazaar Stall**: `frame_poles`, `counter_base`, `canopy_awning`, `cooking_pan_kadhai` (metallic), `containers_props`, `hanging_lantern` (emissive + point light).
+
+### Precision 3D Modeling & CC0 Asset Tools
+
+- **`python3 src/tools/blender_pro_builder.py`** (Sapling Tree Gen, Archimesh buildings, A.N.T. Landscape):
+  - Trees (`add_curve_sapling`): `python3 src/tools/blender_pro_builder.py --type sapling_tree --preset <oak|pine|willow> --out tree.glb`
+  - Architectural Buildings (`archimesh` + PartNet bays): `python3 src/tools/blender_pro_builder.py --type arch_building --floors 3 --width 10 --depth 8 --out building.glb`
+  - Procedural Terrain (`ant_landscape`): `python3 src/tools/blender_pro_builder.py --type landscape --preset <canyon|mountain|hills> --out terrain.glb`
+- **`python3 src/tools/fetch_ambientcg.py`** (2000+ CC0 PBR materials):
+  - Fetches 1K JPG PBR maps (`Color`, `NormalGL`, `Roughness`, `Metalness`, `AmbientOcclusion`) into `public/assets/ambientcg/<id>/`: `python3 src/tools/fetch_ambientcg.py <Bricks075|Asphalt012|Metal032>`
+- **`python3 src/tools/fetch_polyhaven.py`** (521+ CC0 photogrammetry models & HDRIs):
+  - Fetches 1K `.glb` models, `.hdr` skies, or PBR textures into `public/assets/polyhaven/<id>/`: `python3 src/tools/fetch_polyhaven.py <id> --type <model|hdr|textures> --res 1k`
+- **`python3 src/tools/search_objaverse.py`** (Objaverse 3D structure inspector):
+  - Searches Objaverse LVIS categories and inspects a downloaded reference `.glb` in `storage/cache/objaverse/` (node names, vertex counts, bounding boxes, material slots, PartNet hierarchy): `python3 src/tools/search_objaverse.py --query "sports car" --limit 5`
+
 ## MANDATORY MULTI-SUBAGENT ORCHESTRATION RULE (`subagent_spawn` + `subagent_wait`)
 
 Muse Code CLI has built-in subagent tools: `subagent_spawn`, `subagent_wait`, `subagent_send_message`, and `subagent_cancel`.
