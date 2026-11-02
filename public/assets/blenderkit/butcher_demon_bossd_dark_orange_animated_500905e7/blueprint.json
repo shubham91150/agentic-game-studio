@@ -1,0 +1,150 @@
+{
+  "id": "2e53a979-ea29-48fe-968d-b9db21cc7d27",
+  "assetBaseId": "500905e7-3b2b-4eff-ab7c-1108a59c179a",
+  "slug": "butcher_demon_bossd_dark_orange_animated_500905e7",
+  "name": "Butcher Demon Bossd dark orange animated",
+  "assetType": "model",
+  "category": "monster-creature",
+  "author": "Dr toxic ",
+  "license": "royalty_free",
+  "isFree": true,
+  "score": 10000.0,
+  "ratingsAverage": {
+    "bookmarks": 0.9473684210526315,
+    "workingHours": 100.0,
+    "quality": 10.0,
+    "virtualPrice": null
+  },
+  "description": "Terrify your players with this grotesque Butcher Demon Boss. This game-ready 3D character combines the ferocity of a winged demon with the gruesome aesthetic of a dungeon butcher.",
+  "tags": [
+    "Demon",
+    "Butcher",
+    "Horror",
+    "Boss",
+    "Monster",
+    "Creature",
+    "Gore",
+    "Fantasy",
+    "GameReady",
+    "Winged"
+  ],
+  "parameters": {
+    "dimensionX": 3.6093,
+    "dimensionY": 2.4849,
+    "dimensionZ": 2.3689,
+    "dimensionsMeters": {
+      "width": 3.6093,
+      "depth": 2.4849,
+      "height": 2.3689
+    },
+    "boundingBox": {
+      "min": [
+        -1.7557,
+        -0.8857,
+        -0.0132
+      ],
+      "max": [
+        1.8535,
+        1.5992,
+        2.3557
+      ]
+    },
+    "faceCount": 40775,
+    "faceCountRender": 40775,
+    "objectCount": 14,
+    "nodeCount": 49,
+    "meshPolyType": "quad_dominant",
+    "materials": [
+      "[Butchlord lambert1 lambert1.002 weapon ARMOR]"
+    ],
+    "shaders": [
+      "[principled]"
+    ],
+    "modifiers": [
+      "[armature]"
+    ],
+    "pbrType": "metallic",
+    "purePbr": true,
+    "procedural": false,
+    "uv": true,
+    "animated": true,
+    "rig": true,
+    "modelStyle": "realistic",
+    "condition": "used",
+    "designVariant": null,
+    "textureResolutionMax": 4096,
+    "engines": [
+      "[cycles]"
+    ]
+  },
+  "availableFiles": [
+    {
+      "fileType": "blend",
+      "uuid": "597bfe72-a489-414b-a671-b73f1bf93587",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/597bfe72-a489-414b-a671-b73f1bf93587/",
+      "fileUploadSize": 262822350
+    },
+    {
+      "fileType": "gltf",
+      "uuid": "27ed6409-2871-4d6f-b297-a325387540b0",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/27ed6409-2871-4d6f-b297-a325387540b0/",
+      "fileUploadSize": 6596496
+    },
+    {
+      "fileType": "gltf_godot",
+      "uuid": "02be2eff-8dfe-4496-b4c4-05749660ab74",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/02be2eff-8dfe-4496-b4c4-05749660ab74/",
+      "fileUploadSize": 9489684
+    },
+    {
+      "fileType": "resolution_0_5K",
+      "uuid": "7a850199-db4c-4da0-a778-a04c32e7057e",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/7a850199-db4c-4da0-a778-a04c32e7057e/",
+      "fileUploadSize": 3970329
+    },
+    {
+      "fileType": "resolution_1K",
+      "uuid": "9a5b6212-50a2-41ad-bc3e-aa571ea6da8b",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/9a5b6212-50a2-41ad-bc3e-aa571ea6da8b/",
+      "fileUploadSize": 6078439
+    },
+    {
+      "fileType": "resolution_2K",
+      "uuid": "04d0ec2e-040a-4b72-91ef-967acaedf5d3",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/04d0ec2e-040a-4b72-91ef-967acaedf5d3/",
+      "fileUploadSize": 12793768
+    },
+    {
+      "fileType": "resolution_4K",
+      "uuid": "f8d65663-cd63-4a69-830a-524aa64ace13",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/f8d65663-cd63-4a69-830a-524aa64ace13/",
+      "fileUploadSize": 37267884
+    },
+    {
+      "fileType": "thumbnail",
+      "uuid": "195f8960-fc83-494c-a4ed-e0b0550abeb0",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/195f8960-fc83-494c-a4ed-e0b0550abeb0/",
+      "fileUploadSize": 6174183
+    }
+  ],
+  "downloaded": {
+    "thumbnail": {
+      "file": "public/assets/blenderkit/butcher_demon_bossd_dark_orange_animated_500905e7/thumbnail.png",
+      "url": "/studio/assets/blenderkit/butcher_demon_bossd_dark_orange_animated_500905e7/thumbnail.png",
+      "bytes": 1621996,
+      "sourceUrl": "https://public.blenderkit.com/thumbnails/assets/2e53a979ea2948fe968db9db21cc7d27/files/thumbnail_a75ef3ba-0d03-47ba-b41d-ac2dedf7ef69.PNG.1024x1024_q85_crop-%2C.png"
+    },
+    "glb": {
+      "file": "public/assets/blenderkit/butcher_demon_bossd_dark_orange_animated_500905e7/butcher_demon_bossd_dark_orange_animated_500905e7.glb",
+      "url": "/studio/assets/blenderkit/butcher_demon_bossd_dark_orange_animated_500905e7/butcher_demon_bossd_dark_orange_animated_500905e7.glb",
+      "bytes": 6596496,
+      "fileType": "gltf"
+    },
+    "blend": {
+      "file": "public/assets/blenderkit/butcher_demon_bossd_dark_orange_animated_500905e7/butcher_demon_bossd_dark_orange_animated_500905e7_resolution_0_5K.blend",
+      "url": "/studio/assets/blenderkit/butcher_demon_bossd_dark_orange_animated_500905e7/butcher_demon_bossd_dark_orange_animated_500905e7_resolution_0_5K.blend",
+      "bytes": 3970329,
+      "fileType": "resolution_0_5K"
+    }
+  }
+}

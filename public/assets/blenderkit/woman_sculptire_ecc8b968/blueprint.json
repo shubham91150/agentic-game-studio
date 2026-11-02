@@ -1,0 +1,157 @@
+{
+  "id": "2214d31e-7354-4a4e-9049-ec111953c2c8",
+  "assetBaseId": "ecc8b968-db81-498e-b36e-ccbcfc3c41dd",
+  "slug": "woman_sculptire_ecc8b968",
+  "name": "Woman Sculptire",
+  "assetType": "model",
+  "category": "sculpture",
+  "author": "Seatla Morake",
+  "license": "cc_zero",
+  "isFree": true,
+  "score": 210.0,
+  "ratingsAverage": {
+    "bookmarks": 0.9447852760736196,
+    "workingHours": 4.0,
+    "quality": 5.25,
+    "virtualPrice": null
+  },
+  "description": "A miniature sculpture of the torso of a woman, nude, rusted bronze. The Rusted Bronze material is from Blenderkit. Please Rate! Enjoy!",
+  "tags": [
+    "sculpture",
+    "model",
+    "nude",
+    "naked",
+    "woman",
+    "lady",
+    "girl",
+    "decoration",
+    "office",
+    "desk",
+    "interior",
+    "design",
+    "metal",
+    "bronze",
+    "rusted",
+    "old"
+  ],
+  "parameters": {
+    "dimensionX": 0.1241,
+    "dimensionY": 0.1241,
+    "dimensionZ": 0.1857,
+    "dimensionsMeters": {
+      "width": 0.1241,
+      "depth": 0.1241,
+      "height": 0.1857
+    },
+    "boundingBox": {
+      "min": [
+        -0.0631,
+        -0.0608,
+        -0.0001
+      ],
+      "max": [
+        0.061,
+        0.0633,
+        0.1856
+      ]
+    },
+    "faceCount": 3001,
+    "faceCountRender": 48016,
+    "objectCount": 3,
+    "nodeCount": 21,
+    "meshPolyType": "quad_dominant",
+    "materials": [
+      "Rusted Bronze"
+    ],
+    "shaders": [
+      "principled"
+    ],
+    "modifiers": [
+      "subsurf",
+      "bevel"
+    ],
+    "pbrType": null,
+    "purePbr": null,
+    "procedural": false,
+    "uv": true,
+    "animated": null,
+    "rig": false,
+    "modelStyle": "realistic",
+    "condition": "old",
+    "designVariant": null,
+    "textureResolutionMax": 4096,
+    "engines": [
+      "cycles"
+    ]
+  },
+  "availableFiles": [
+    {
+      "fileType": "blend",
+      "uuid": "2fc2e658-6b90-40f7-b311-363858e7dd31",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/2fc2e658-6b90-40f7-b311-363858e7dd31/",
+      "fileUploadSize": 10138543
+    },
+    {
+      "fileType": "gltf",
+      "uuid": "15520b03-2cef-41a0-b915-a143b0d261c4",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/15520b03-2cef-41a0-b915-a143b0d261c4/",
+      "fileUploadSize": 452572
+    },
+    {
+      "fileType": "gltf_godot",
+      "uuid": "eec8faff-2813-412e-b180-f9aa8d07c9cd",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/eec8faff-2813-412e-b180-f9aa8d07c9cd/",
+      "fileUploadSize": 697700
+    },
+    {
+      "fileType": "resolution_0_5K",
+      "uuid": "7d37156c-0a6a-44c1-b661-dd24fe8a0a60",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/7d37156c-0a6a-44c1-b661-dd24fe8a0a60/",
+      "fileUploadSize": 372945
+    },
+    {
+      "fileType": "resolution_1K",
+      "uuid": "76b68af8-31b8-4673-8222-43211589fbf3",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/76b68af8-31b8-4673-8222-43211589fbf3/",
+      "fileUploadSize": 514459
+    },
+    {
+      "fileType": "resolution_2K",
+      "uuid": "347877c9-7695-4c14-9e84-0cc0027cd4b4",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/347877c9-7695-4c14-9e84-0cc0027cd4b4/",
+      "fileUploadSize": 1271760
+    },
+    {
+      "fileType": "resolution_4K",
+      "uuid": "23486e34-65fe-4bed-97d8-5d39c29e17b6",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/23486e34-65fe-4bed-97d8-5d39c29e17b6/",
+      "fileUploadSize": 4714891
+    },
+    {
+      "fileType": "thumbnail",
+      "uuid": "4ddb4283-373a-4d30-9a50-2ae0e1f45945",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/4ddb4283-373a-4d30-9a50-2ae0e1f45945/",
+      "fileUploadSize": 2693450
+    }
+  ],
+  "downloaded": {
+    "thumbnail": {
+      "file": "public/assets/blenderkit/woman_sculptire_ecc8b968/thumbnail.png",
+      "url": "/studio/assets/blenderkit/woman_sculptire_ecc8b968/thumbnail.png",
+      "bytes": 870242,
+      "sourceUrl": "https://public.blenderkit.com/thumbnails/assets/2214d31e73544a4e9049ec111953c2c8/files/thumbnail_63a23c50-b7c4-4fc3-90a8-29d5d4e91bcc.png.1024x1024_q85_crop-%2C.png"
+    },
+    "glb": {
+      "file": "public/assets/blenderkit/woman_sculptire_ecc8b968/woman_sculptire_ecc8b968.glb",
+      "url": "/studio/assets/blenderkit/woman_sculptire_ecc8b968/woman_sculptire_ecc8b968.glb",
+      "bytes": 452572,
+      "fileType": "gltf"
+    },
+    "blend": {
+      "file": "public/assets/blenderkit/woman_sculptire_ecc8b968/woman_sculptire_ecc8b968_resolution_0_5K.blend",
+      "url": "/studio/assets/blenderkit/woman_sculptire_ecc8b968/woman_sculptire_ecc8b968_resolution_0_5K.blend",
+      "bytes": 372945,
+      "fileType": "resolution_0_5K"
+    }
+  }
+}

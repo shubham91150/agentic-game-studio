@@ -1,0 +1,144 @@
+{
+  "id": "81449619-cf80-4290-9492-cbfd15de3ffa",
+  "assetBaseId": "a05c8ff8-74d8-4924-8919-d7f5f05f6982",
+  "slug": "old_human_skull_photoscan_a05c8ff8",
+  "name": "Old Human Skull Photoscan",
+  "assetType": "model",
+  "category": "skeleton",
+  "author": "Lucas Vasseur",
+  "license": "royalty_free",
+  "isFree": true,
+  "score": 600.0,
+  "ratingsAverage": {
+    "bookmarks": 0.9660194174757282,
+    "workingHours": 7.5,
+    "quality": 8.0,
+    "virtualPrice": null
+  },
+  "description": "Old Human Skull Photoscan:\r\n\r\nHigh-quality 3D scan of an ancient human skull, exceptionally preserved through time with remarkable detail and authenticity.\r\n\r\nCaptured using advanced photogrammetry technology to ensure the highest fidelity reproduction of this archaeological specimen.\r\n\r\nPerfect for educational, medical, archaeological, or historical-themed projects, as well as scientific visualization and anthropological studies.\r\n\r\nThis well-preserved cranium, likely belonging to a female individual, showcases authentic bone texture and natural aging characteristics that add realism to any scene.\r\n\r\nComplete 4K PBR texture set with ambient occlusion included for photorealistic rendering.\r\n\r\nSupport the creators by rating this model.",
+  "tags": [
+    "skull",
+    "human",
+    "body",
+    "bone",
+    "head",
+    "anatomy",
+    "photoscan",
+    "photogrammetry",
+    "realistic",
+    "skeleton"
+  ],
+  "parameters": {
+    "dimensionX": 0.149,
+    "dimensionY": 0.2067,
+    "dimensionZ": 0.1693,
+    "dimensionsMeters": {
+      "width": 0.149,
+      "depth": 0.2067,
+      "height": 0.1693
+    },
+    "boundingBox": {
+      "min": [
+        -0.0685,
+        -0.1071,
+        0.0001
+      ],
+      "max": [
+        0.0806,
+        0.0996,
+        0.1694
+      ]
+    },
+    "faceCount": 24603,
+    "faceCountRender": 24603,
+    "objectCount": 1,
+    "nodeCount": 8,
+    "meshPolyType": "quad_dominant",
+    "materials": [
+      "[Human Skull 4K]"
+    ],
+    "shaders": [
+      "[principled]"
+    ],
+    "modifiers": [
+      "[]"
+    ],
+    "pbrType": "metallic",
+    "purePbr": true,
+    "procedural": false,
+    "uv": true,
+    "animated": null,
+    "rig": false,
+    "modelStyle": "realistic",
+    "condition": "old",
+    "designVariant": null,
+    "textureResolutionMax": 4096,
+    "engines": [
+      "[cycles]"
+    ]
+  },
+  "availableFiles": [
+    {
+      "fileType": "blend",
+      "uuid": "af1c44a4-c26b-48c5-a616-3b51ac66e8d1",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/af1c44a4-c26b-48c5-a616-3b51ac66e8d1/",
+      "fileUploadSize": 197858372
+    },
+    {
+      "fileType": "gltf",
+      "uuid": "45ed1967-0cb7-4944-8d6f-8955afa00076",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/45ed1967-0cb7-4944-8d6f-8955afa00076/",
+      "fileUploadSize": 2036584
+    },
+    {
+      "fileType": "resolution_0_5K",
+      "uuid": "f004eae2-446a-4f7a-b25c-0be48939d424",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/f004eae2-446a-4f7a-b25c-0be48939d424/",
+      "fileUploadSize": 1627193
+    },
+    {
+      "fileType": "resolution_1K",
+      "uuid": "b8d0559b-a769-49e3-89c3-59fe164b0105",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/b8d0559b-a769-49e3-89c3-59fe164b0105/",
+      "fileUploadSize": 2269728
+    },
+    {
+      "fileType": "resolution_2K",
+      "uuid": "521ae5f8-2556-42e4-a2df-1f0f202acbbb",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/521ae5f8-2556-42e4-a2df-1f0f202acbbb/",
+      "fileUploadSize": 4158997
+    },
+    {
+      "fileType": "resolution_4K",
+      "uuid": "40e2f37e-ecdb-4cfe-b960-fb74b17abec0",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/40e2f37e-ecdb-4cfe-b960-fb74b17abec0/",
+      "fileUploadSize": 9425220
+    },
+    {
+      "fileType": "thumbnail",
+      "uuid": "f3dbe699-80cb-4154-bfd1-05e527e28f33",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/f3dbe699-80cb-4154-bfd1-05e527e28f33/",
+      "fileUploadSize": 239846
+    }
+  ],
+  "downloaded": {
+    "thumbnail": {
+      "file": "public/assets/blenderkit/old_human_skull_photoscan_a05c8ff8/thumbnail.jpg",
+      "url": "/studio/assets/blenderkit/old_human_skull_photoscan_a05c8ff8/thumbnail.jpg",
+      "bytes": 58400,
+      "sourceUrl": "https://public.blenderkit.com/thumbnails/assets/81449619cf8042909492cbfd15de3ffa/files/thumbnail_3147620d-a3a5-4892-9944-cc892d5b9aaa.jpg.1024x1024_q85_crop-%2C.jpg"
+    },
+    "glb": {
+      "file": "public/assets/blenderkit/old_human_skull_photoscan_a05c8ff8/old_human_skull_photoscan_a05c8ff8.glb",
+      "url": "/studio/assets/blenderkit/old_human_skull_photoscan_a05c8ff8/old_human_skull_photoscan_a05c8ff8.glb",
+      "bytes": 2036584,
+      "fileType": "gltf"
+    },
+    "blend": {
+      "file": "public/assets/blenderkit/old_human_skull_photoscan_a05c8ff8/old_human_skull_photoscan_a05c8ff8_resolution_0_5K.blend",
+      "url": "/studio/assets/blenderkit/old_human_skull_photoscan_a05c8ff8/old_human_skull_photoscan_a05c8ff8_resolution_0_5K.blend",
+      "bytes": 1627193,
+      "fileType": "resolution_0_5K"
+    }
+  }
+}

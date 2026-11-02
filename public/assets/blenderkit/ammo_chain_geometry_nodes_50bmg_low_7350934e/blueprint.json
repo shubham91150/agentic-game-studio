@@ -1,0 +1,121 @@
+{
+  "id": "cb1cca00-8c71-46c6-80f9-6589ce75c5d9",
+  "assetBaseId": "7350934e-898c-4772-9e11-dfef76a68183",
+  "slug": "ammo_chain_geometry_nodes_50bmg_low_7350934e",
+  "name": "Ammo chain, geometry nodes, 50bmg low",
+  "assetType": "model",
+  "category": "equipment",
+  "author": "Aidan Sanderson",
+  "license": "royalty_free",
+  "isFree": true,
+  "score": 458.33333333333326,
+  "ratingsAverage": {
+    "bookmarks": 0.9804560260586319,
+    "workingHours": 5.0,
+    "quality": 9.166666666666666,
+    "virtualPrice": null
+  },
+  "description": "linked chain ammo made with geometry nodes, gun go brrrr",
+  "tags": [
+    "gun",
+    "ammo",
+    "military",
+    "chain",
+    "bullet"
+  ],
+  "parameters": {
+    "dimensionX": -20000000.0,
+    "dimensionY": -20000000.0,
+    "dimensionZ": -20000000.0,
+    "dimensionsMeters": {
+      "width": -20000000.0,
+      "depth": -20000000.0,
+      "height": -20000000.0
+    },
+    "boundingBox": {
+      "min": [
+        10000000.0,
+        10000000.0,
+        10000000.0
+      ],
+      "max": [
+        -10000000.0,
+        -10000000.0,
+        -10000000.0
+      ]
+    },
+    "faceCount": 0,
+    "faceCountRender": 0,
+    "objectCount": 1,
+    "nodeCount": 0,
+    "meshPolyType": null,
+    "materials": [
+      ""
+    ],
+    "shaders": [
+      ""
+    ],
+    "modifiers": [
+      "nodes"
+    ],
+    "pbrType": null,
+    "purePbr": false,
+    "procedural": true,
+    "uv": false,
+    "animated": false,
+    "rig": false,
+    "modelStyle": "realistic",
+    "condition": null,
+    "designVariant": null,
+    "textureResolutionMax": null,
+    "engines": [
+      "cycles"
+    ]
+  },
+  "availableFiles": [
+    {
+      "fileType": "blend",
+      "uuid": "b655d23d-725a-4108-9cf7-57d4e8ddd5f8",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/b655d23d-725a-4108-9cf7-57d4e8ddd5f8/",
+      "fileUploadSize": 468358
+    },
+    {
+      "fileType": "gltf",
+      "uuid": "a5cd727a-6bcb-4641-b24e-0035a7e49a52",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/a5cd727a-6bcb-4641-b24e-0035a7e49a52/",
+      "fileUploadSize": 204
+    },
+    {
+      "fileType": "gltf_godot",
+      "uuid": "d6f7ee3a-e0b5-469d-ad55-002e5b8f0823",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/d6f7ee3a-e0b5-469d-ad55-002e5b8f0823/",
+      "fileUploadSize": 204
+    },
+    {
+      "fileType": "thumbnail",
+      "uuid": "8714b6da-d550-4935-8cb1-a5f1bed08ca0",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/8714b6da-d550-4935-8cb1-a5f1bed08ca0/",
+      "fileUploadSize": 1109447
+    }
+  ],
+  "downloaded": {
+    "thumbnail": {
+      "file": "public/assets/blenderkit/ammo_chain_geometry_nodes_50bmg_low_7350934e/thumbnail.png",
+      "url": "/studio/assets/blenderkit/ammo_chain_geometry_nodes_50bmg_low_7350934e/thumbnail.png",
+      "bytes": 872448,
+      "sourceUrl": "https://public.blenderkit.com/thumbnails/assets/cb1cca008c7146c680f96589ce75c5d9/files/thumbnail_72665351-350d-4eca-bb55-53a6958579a5.png.1024x1024_q85_crop-%2C.png"
+    },
+    "glb": {
+      "file": "public/assets/blenderkit/ammo_chain_geometry_nodes_50bmg_low_7350934e/ammo_chain_geometry_nodes_50bmg_low_7350934e.glb",
+      "url": "/studio/assets/blenderkit/ammo_chain_geometry_nodes_50bmg_low_7350934e/ammo_chain_geometry_nodes_50bmg_low_7350934e.glb",
+      "bytes": 204,
+      "fileType": "gltf"
+    },
+    "blend": {
+      "file": "public/assets/blenderkit/ammo_chain_geometry_nodes_50bmg_low_7350934e/ammo_chain_geometry_nodes_50bmg_low_7350934e_blend.blend",
+      "url": "/studio/assets/blenderkit/ammo_chain_geometry_nodes_50bmg_low_7350934e/ammo_chain_geometry_nodes_50bmg_low_7350934e_blend.blend",
+      "bytes": 468358,
+      "fileType": "blend"
+    }
+  }
+}

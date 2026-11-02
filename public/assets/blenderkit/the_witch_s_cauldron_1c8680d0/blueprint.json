@@ -1,0 +1,145 @@
+{
+  "id": "dca47492-de28-46db-994d-e4a47e1835dc",
+  "assetBaseId": "1c8680d0-425c-4722-a743-fc3db15f2bd5",
+  "slug": "the_witch_s_cauldron_1c8680d0",
+  "name": "The witch's cauldron",
+  "assetType": "model",
+  "category": "supplies",
+  "author": "Yuki Madness",
+  "license": "royalty_free",
+  "isFree": true,
+  "score": 270.0,
+  "ratingsAverage": {
+    "bookmarks": 0.9863013698630136,
+    "workingHours": 3.0,
+    "quality": 9.0,
+    "virtualPrice": null
+  },
+  "description": "Handpainted witch's cauldron on magic coals with green slime inside. Suitable as an independent prop, and can be part of a set for Halloween",
+  "tags": [
+    "cauldron",
+    "witches",
+    "magic",
+    "halloween",
+    "mysticism",
+    "enchantment",
+    "green",
+    "slime",
+    "horror",
+    "scary",
+    "handpaint"
+  ],
+  "parameters": {
+    "dimensionX": 0.8303,
+    "dimensionY": 0.5973,
+    "dimensionZ": 0.5941,
+    "dimensionsMeters": {
+      "width": 0.8303,
+      "depth": 0.5973,
+      "height": 0.5941
+    },
+    "boundingBox": {
+      "min": [
+        -0.4225,
+        -0.2992,
+        -0.0105
+      ],
+      "max": [
+        0.4078,
+        0.2981,
+        0.5836
+      ]
+    },
+    "faceCount": 1051,
+    "faceCountRender": 1051,
+    "objectCount": 1,
+    "nodeCount": 7,
+    "meshPolyType": "quad_dominant",
+    "materials": [
+      "Bowl"
+    ],
+    "shaders": [
+      "principled"
+    ],
+    "modifiers": [
+      ""
+    ],
+    "pbrType": null,
+    "purePbr": null,
+    "procedural": false,
+    "uv": true,
+    "animated": null,
+    "rig": false,
+    "modelStyle": "lowpoly",
+    "condition": "used",
+    "designVariant": null,
+    "textureResolutionMax": 2048,
+    "engines": [
+      "cycles"
+    ]
+  },
+  "availableFiles": [
+    {
+      "fileType": "blend",
+      "uuid": "eb3a5dd3-9646-4d63-88e8-4b71431fe50a",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/eb3a5dd3-9646-4d63-88e8-4b71431fe50a/",
+      "fileUploadSize": 8988376
+    },
+    {
+      "fileType": "gltf",
+      "uuid": "63c65e11-41ee-4121-a284-8de008141ef6",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/63c65e11-41ee-4121-a284-8de008141ef6/",
+      "fileUploadSize": 247148
+    },
+    {
+      "fileType": "gltf_godot",
+      "uuid": "f3366071-1278-480d-8718-c485048babdf",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/f3366071-1278-480d-8718-c485048babdf/",
+      "fileUploadSize": 326768
+    },
+    {
+      "fileType": "resolution_0_5K",
+      "uuid": "beda44fa-d991-4b6e-b38f-e12eb32b9bdf",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/beda44fa-d991-4b6e-b38f-e12eb32b9bdf/",
+      "fileUploadSize": 309515
+    },
+    {
+      "fileType": "resolution_1K",
+      "uuid": "85c23e02-957c-4a1e-9dd9-3d7238b51b06",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/85c23e02-957c-4a1e-9dd9-3d7238b51b06/",
+      "fileUploadSize": 571265
+    },
+    {
+      "fileType": "resolution_2K",
+      "uuid": "d558f2cf-698b-4b6d-9bf2-07b77f2ad57c",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/d558f2cf-698b-4b6d-9bf2-07b77f2ad57c/",
+      "fileUploadSize": 1298094
+    },
+    {
+      "fileType": "thumbnail",
+      "uuid": "da2c7964-1337-490f-ab0d-fac74a526d63",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/da2c7964-1337-490f-ab0d-fac74a526d63/",
+      "fileUploadSize": 2983684
+    }
+  ],
+  "downloaded": {
+    "thumbnail": {
+      "file": "public/assets/blenderkit/the_witch_s_cauldron_1c8680d0/thumbnail.jpg",
+      "url": "/studio/assets/blenderkit/the_witch_s_cauldron_1c8680d0/thumbnail.jpg",
+      "bytes": 55951,
+      "sourceUrl": "https://public.blenderkit.com/thumbnails/assets/dca47492de2846db994de4a47e1835dc/files/thumbnail_da2c7964-1337-490f-ab0d-fac74a526d63.png.1024x1024_q85_crop-%2C.jpg"
+    },
+    "glb": {
+      "file": "public/assets/blenderkit/the_witch_s_cauldron_1c8680d0/the_witch_s_cauldron_1c8680d0.glb",
+      "url": "/studio/assets/blenderkit/the_witch_s_cauldron_1c8680d0/the_witch_s_cauldron_1c8680d0.glb",
+      "bytes": 247148,
+      "fileType": "gltf"
+    },
+    "blend": {
+      "file": "public/assets/blenderkit/the_witch_s_cauldron_1c8680d0/the_witch_s_cauldron_1c8680d0_resolution_0_5K.blend",
+      "url": "/studio/assets/blenderkit/the_witch_s_cauldron_1c8680d0/the_witch_s_cauldron_1c8680d0_resolution_0_5K.blend",
+      "bytes": 309515,
+      "fileType": "resolution_0_5K"
+    }
+  }
+}

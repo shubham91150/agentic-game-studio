@@ -1,0 +1,154 @@
+{
+  "id": "46e5050f-18ff-40f9-a265-b69afe8eba3a",
+  "assetBaseId": "f6b7d52b-203d-4d8f-b644-7c4f48b23e7c",
+  "slug": "ghost_halloween_decoration_f6b7d52b",
+  "name": "Ghost Halloween decoration",
+  "assetType": "model",
+  "category": "supplies",
+  "author": "Flareworks Studio",
+  "license": "cc_zero",
+  "isFree": true,
+  "score": 400.0,
+  "ratingsAverage": {
+    "bookmarks": 0.9867172675521821,
+    "workingHours": 4.0,
+    "quality": 10.0,
+    "virtualPrice": null
+  },
+  "description": "A spooky ghost to spook your guests, ideal for Halloween decoration.",
+  "tags": [
+    "ghost",
+    "spooky",
+    "scary",
+    "halloween",
+    "holiday",
+    "decor",
+    "decoration",
+    "fall",
+    "autumn",
+    "october"
+  ],
+  "parameters": {
+    "dimensionX": 1.212,
+    "dimensionY": 1.2138,
+    "dimensionZ": 1.2816,
+    "dimensionsMeters": {
+      "width": 1.212,
+      "depth": 1.2138,
+      "height": 1.2816
+    },
+    "boundingBox": {
+      "min": [
+        -0.6259,
+        -0.564,
+        0.0
+      ],
+      "max": [
+        0.5861,
+        0.6499,
+        1.2817
+      ]
+    },
+    "faceCount": 18646,
+    "faceCountRender": 1892424,
+    "objectCount": 7,
+    "nodeCount": 78,
+    "meshPolyType": "quad_dominant",
+    "materials": [
+      "tecido preto",
+      "Cama tecido branco",
+      "metal riscado bump",
+      "Polystyrene Foam"
+    ],
+    "shaders": [
+      "principled",
+      "translucent",
+      "mix shader",
+      "add shader",
+      "glossy",
+      "diffuse",
+      "subsurface scattering"
+    ],
+    "modifiers": [
+      "subsurf",
+      "solidify"
+    ],
+    "pbrType": null,
+    "purePbr": false,
+    "procedural": false,
+    "uv": true,
+    "animated": false,
+    "rig": false,
+    "modelStyle": "realistic",
+    "condition": "new",
+    "designVariant": null,
+    "textureResolutionMax": 2048,
+    "engines": [
+      "cycles"
+    ]
+  },
+  "availableFiles": [
+    {
+      "fileType": "blend",
+      "uuid": "870369c8-4fc4-487f-b825-c5f1bed99269",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/870369c8-4fc4-487f-b825-c5f1bed99269/",
+      "fileUploadSize": 4755527
+    },
+    {
+      "fileType": "gltf",
+      "uuid": "ae417b83-15f0-4546-ba16-ce5d7a9ec9e2",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/ae417b83-15f0-4546-ba16-ce5d7a9ec9e2/",
+      "fileUploadSize": 568968
+    },
+    {
+      "fileType": "gltf_godot",
+      "uuid": "0ef1410d-9409-4ac5-80cf-8e29c11ad4bf",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/0ef1410d-9409-4ac5-80cf-8e29c11ad4bf/",
+      "fileUploadSize": 2536684
+    },
+    {
+      "fileType": "resolution_0_5K",
+      "uuid": "8268e6cb-6b1b-4b97-b50d-d6e42edc4a2f",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/8268e6cb-6b1b-4b97-b50d-d6e42edc4a2f/",
+      "fileUploadSize": 1343319
+    },
+    {
+      "fileType": "resolution_1K",
+      "uuid": "42f3b3bf-aeba-4d2e-b02e-519d7d52b7bd",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/42f3b3bf-aeba-4d2e-b02e-519d7d52b7bd/",
+      "fileUploadSize": 1765436
+    },
+    {
+      "fileType": "resolution_2K",
+      "uuid": "4a062e7f-f465-4ae6-8f72-a954c935cb62",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/4a062e7f-f465-4ae6-8f72-a954c935cb62/",
+      "fileUploadSize": 3342985
+    },
+    {
+      "fileType": "thumbnail",
+      "uuid": "b685583f-8547-466f-a4ec-9ccb12841a91",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/b685583f-8547-466f-a4ec-9ccb12841a91/",
+      "fileUploadSize": 206721
+    }
+  ],
+  "downloaded": {
+    "thumbnail": {
+      "file": "public/assets/blenderkit/ghost_halloween_decoration_f6b7d52b/thumbnail.jpg",
+      "url": "/studio/assets/blenderkit/ghost_halloween_decoration_f6b7d52b/thumbnail.jpg",
+      "bytes": 40376,
+      "sourceUrl": "https://public.blenderkit.com/thumbnails/assets/46e5050f18ff40f9a265b69afe8eba3a/files/thumbnail_8c3fcd4e-7a0a-47a1-9dce-c5e8162b2be7.jpg.1024x1024_q85_crop-%2C.jpg"
+    },
+    "glb": {
+      "file": "public/assets/blenderkit/ghost_halloween_decoration_f6b7d52b/ghost_halloween_decoration_f6b7d52b.glb",
+      "url": "/studio/assets/blenderkit/ghost_halloween_decoration_f6b7d52b/ghost_halloween_decoration_f6b7d52b.glb",
+      "bytes": 568968,
+      "fileType": "gltf"
+    },
+    "blend": {
+      "file": "public/assets/blenderkit/ghost_halloween_decoration_f6b7d52b/ghost_halloween_decoration_f6b7d52b_resolution_0_5K.blend",
+      "url": "/studio/assets/blenderkit/ghost_halloween_decoration_f6b7d52b/ghost_halloween_decoration_f6b7d52b_resolution_0_5K.blend",
+      "bytes": 1343319,
+      "fileType": "resolution_0_5K"
+    }
+  }
+}

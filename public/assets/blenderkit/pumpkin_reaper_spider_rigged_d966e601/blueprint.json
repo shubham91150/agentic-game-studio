@@ -1,0 +1,154 @@
+{
+  "id": "dd228a05-84bd-4e16-af46-1eb5885f2269",
+  "assetBaseId": "d966e601-9a1f-4348-945a-56715e5faeba",
+  "slug": "pumpkin_reaper_spider_rigged_d966e601",
+  "name": "Pumpkin Reaper Spider Rigged",
+  "assetType": "model",
+  "category": "monster-creature",
+  "author": "mossi mahmoudi",
+  "license": "royalty_free",
+  "isFree": true,
+  "score": 7000.0,
+  "ratingsAverage": {
+    "bookmarks": 1.0,
+    "workingHours": 70.0,
+    "quality": 10.0,
+    "virtualPrice": null
+  },
+  "description": "Meet Pumpkin Reaper, a creepy fantasy creature combining a carved pumpkin-inspired body with the menacing features of a spider-like monster. Its glowing green eyes, twisted limbs, and dark fantasy design make it a perfect addition to Halloween scenes, horror environments, fantasy games, and stylized creature collections.",
+  "tags": [
+    "Pumpkin",
+    "Spider",
+    "Monster",
+    "Halloween",
+    "Dark",
+    "Fantasy",
+    "Horror",
+    "Stylized"
+  ],
+  "parameters": {
+    "dimensionX": 1.8151,
+    "dimensionY": 1.4377,
+    "dimensionZ": 1.1024,
+    "dimensionsMeters": {
+      "width": 1.8151,
+      "depth": 1.4377,
+      "height": 1.1024
+    },
+    "boundingBox": {
+      "min": [
+        -0.9075,
+        -0.5966,
+        -0.0002
+      ],
+      "max": [
+        0.9075,
+        0.8411,
+        1.1022
+      ]
+    },
+    "faceCount": 51202,
+    "faceCountRender": 51202,
+    "objectCount": 4,
+    "nodeCount": 707,
+    "meshPolyType": "quad_dominant",
+    "materials": [
+      "[PumpkinSpider Leg PumpkinSpider Eye PumpkinSpider Eye 2 PumpkinSpider Body]"
+    ],
+    "shaders": [
+      "[principled reroute diffuse emission mix shader]"
+    ],
+    "modifiers": [
+      "[armature]"
+    ],
+    "pbrType": "metallic",
+    "purePbr": true,
+    "procedural": false,
+    "uv": true,
+    "animated": null,
+    "rig": true,
+    "modelStyle": "realistic",
+    "condition": "new",
+    "designVariant": null,
+    "textureResolutionMax": 4096,
+    "engines": [
+      "[cycles]"
+    ]
+  },
+  "availableFiles": [
+    {
+      "fileType": "blend",
+      "uuid": "d62ae14f-f41c-41fc-a8e5-cc2585ed1094",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/d62ae14f-f41c-41fc-a8e5-cc2585ed1094/",
+      "fileUploadSize": 24142488
+    },
+    {
+      "fileType": "gltf",
+      "uuid": "1b1e0345-7f48-4d72-a060-4cc9626521f7",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/1b1e0345-7f48-4d72-a060-4cc9626521f7/",
+      "fileUploadSize": 3095352
+    },
+    {
+      "fileType": "gltf_godot",
+      "uuid": "5723952b-27b2-4243-a088-dac5a6d5b12b",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/5723952b-27b2-4243-a088-dac5a6d5b12b/",
+      "fileUploadSize": 17202880
+    },
+    {
+      "fileType": "resolution_0_5K",
+      "uuid": "3806fb07-660b-433c-8a09-9b985b1542a0",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/3806fb07-660b-433c-8a09-9b985b1542a0/",
+      "fileUploadSize": 3165769
+    },
+    {
+      "fileType": "resolution_1K",
+      "uuid": "254cb6d7-462e-4f1d-b2ed-88f3626bfc1c",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/254cb6d7-462e-4f1d-b2ed-88f3626bfc1c/",
+      "fileUploadSize": 4271218
+    },
+    {
+      "fileType": "resolution_2K",
+      "uuid": "f40a2854-5801-4402-a3e5-cf7d64d8ae16",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/f40a2854-5801-4402-a3e5-cf7d64d8ae16/",
+      "fileUploadSize": 8281733
+    },
+    {
+      "fileType": "resolution_4K",
+      "uuid": "ae725a2a-bb73-4df7-9c64-f6391014e0c5",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/ae725a2a-bb73-4df7-9c64-f6391014e0c5/",
+      "fileUploadSize": 23916356
+    },
+    {
+      "fileType": "thumbnail",
+      "uuid": "5f72a65e-22dd-4686-a265-21818a03d773",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/5f72a65e-22dd-4686-a265-21818a03d773/",
+      "fileUploadSize": 1475901
+    },
+    {
+      "fileType": "prxc",
+      "uuid": "3eeb2505-3302-4076-8586-6ed613b10d74",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/3eeb2505-3302-4076-8586-6ed613b10d74/",
+      "fileUploadSize": 20214
+    }
+  ],
+  "downloaded": {
+    "thumbnail": {
+      "file": "public/assets/blenderkit/pumpkin_reaper_spider_rigged_d966e601/thumbnail.png",
+      "url": "/studio/assets/blenderkit/pumpkin_reaper_spider_rigged_d966e601/thumbnail.png",
+      "bytes": 779758,
+      "sourceUrl": "https://public.blenderkit.com/thumbnails/assets/dd228a0584bd4e16af461eb5885f2269/files/thumbnail_25097dbe-0a2e-4d58-8d30-267c1db31102.png.1024x1024_q85_crop-%2C.png"
+    },
+    "glb": {
+      "file": "public/assets/blenderkit/pumpkin_reaper_spider_rigged_d966e601/pumpkin_reaper_spider_rigged_d966e601.glb",
+      "url": "/studio/assets/blenderkit/pumpkin_reaper_spider_rigged_d966e601/pumpkin_reaper_spider_rigged_d966e601.glb",
+      "bytes": 3095352,
+      "fileType": "gltf"
+    },
+    "blend": {
+      "file": "public/assets/blenderkit/pumpkin_reaper_spider_rigged_d966e601/pumpkin_reaper_spider_rigged_d966e601_resolution_0_5K.blend",
+      "url": "/studio/assets/blenderkit/pumpkin_reaper_spider_rigged_d966e601/pumpkin_reaper_spider_rigged_d966e601_resolution_0_5K.blend",
+      "bytes": 3165769,
+      "fileType": "resolution_0_5K"
+    }
+  }
+}

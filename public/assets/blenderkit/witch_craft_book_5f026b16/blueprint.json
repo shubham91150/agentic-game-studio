@@ -1,0 +1,143 @@
+{
+  "id": "fe76dc26-e315-4d5e-8700-560bf83d03df",
+  "assetBaseId": "5f026b16-09c6-42bb-8f3c-a6dd95e7fb6f",
+  "slug": "witch_craft_book_5f026b16",
+  "name": "Witch Craft Book",
+  "assetType": "model",
+  "category": "literature",
+  "author": "Achin B M",
+  "license": "royalty_free",
+  "isFree": true,
+  "score": 640.0,
+  "ratingsAverage": {
+    "bookmarks": 0.9836065573770492,
+    "workingHours": 8.0,
+    "quality": 8.0,
+    "virtualPrice": null
+  },
+  "description": "witch craft with pbr textures, render quality asset for movies and highquality renders.",
+  "tags": [
+    "book",
+    "witch",
+    "craft",
+    "europe",
+    "snake",
+    "culture",
+    "gothic",
+    "grimoire",
+    "magic"
+  ],
+  "parameters": {
+    "dimensionX": 0.1804,
+    "dimensionY": 0.2555,
+    "dimensionZ": 0.0475,
+    "dimensionsMeters": {
+      "width": 0.1804,
+      "depth": 0.2555,
+      "height": 0.0475
+    },
+    "boundingBox": {
+      "min": [
+        -0.0877,
+        -0.127,
+        -0.0004
+      ],
+      "max": [
+        0.0927,
+        0.1285,
+        0.0471
+      ]
+    },
+    "faceCount": 31672,
+    "faceCountRender": 31672,
+    "objectCount": 1,
+    "nodeCount": 24,
+    "meshPolyType": "quad_dominant",
+    "materials": [
+      "[Book.001 Snake and design.001]"
+    ],
+    "shaders": [
+      "[principled]"
+    ],
+    "modifiers": [
+      "[]"
+    ],
+    "pbrType": "metallic",
+    "purePbr": true,
+    "procedural": false,
+    "uv": true,
+    "animated": false,
+    "rig": false,
+    "modelStyle": "realistic",
+    "condition": "used",
+    "designVariant": null,
+    "textureResolutionMax": 2048,
+    "engines": [
+      "[cycles]"
+    ]
+  },
+  "availableFiles": [
+    {
+      "fileType": "blend",
+      "uuid": "23ef9beb-f945-480c-b21a-ebe9796d8284",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/23ef9beb-f945-480c-b21a-ebe9796d8284/",
+      "fileUploadSize": 24992369
+    },
+    {
+      "fileType": "gltf",
+      "uuid": "7faadde3-b4b6-4f8f-8692-53c42e4b65c3",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/7faadde3-b4b6-4f8f-8692-53c42e4b65c3/",
+      "fileUploadSize": 1816212
+    },
+    {
+      "fileType": "gltf_godot",
+      "uuid": "d241d958-ccb4-401b-8456-57ea6094b6bc",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/d241d958-ccb4-401b-8456-57ea6094b6bc/",
+      "fileUploadSize": 6524064
+    },
+    {
+      "fileType": "resolution_0_5K",
+      "uuid": "da6d5d4e-c19c-40fe-8c46-97bd7ca26a02",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/da6d5d4e-c19c-40fe-8c46-97bd7ca26a02/",
+      "fileUploadSize": 1469464
+    },
+    {
+      "fileType": "resolution_1K",
+      "uuid": "e7009c83-046f-4842-a3bc-9e2875c4e937",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/e7009c83-046f-4842-a3bc-9e2875c4e937/",
+      "fileUploadSize": 2148764
+    },
+    {
+      "fileType": "resolution_2K",
+      "uuid": "632e76e2-c295-4911-869c-69dd9744b17a",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/632e76e2-c295-4911-869c-69dd9744b17a/",
+      "fileUploadSize": 4919805
+    },
+    {
+      "fileType": "thumbnail",
+      "uuid": "68d91e85-aa67-4cab-959d-b037c9687213",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/68d91e85-aa67-4cab-959d-b037c9687213/",
+      "fileUploadSize": 1709145
+    }
+  ],
+  "downloaded": {
+    "thumbnail": {
+      "file": "public/assets/blenderkit/witch_craft_book_5f026b16/thumbnail.jpg",
+      "url": "/studio/assets/blenderkit/witch_craft_book_5f026b16/thumbnail.jpg",
+      "bytes": 226810,
+      "sourceUrl": "https://public.blenderkit.com/thumbnails/assets/fe76dc26e3154d5e8700560bf83d03df/files/thumbnail_a3b088a1-702f-42ce-872c-4a730df1db89.png.1024x1024_q85_crop-%2C.jpg"
+    },
+    "glb": {
+      "file": "public/assets/blenderkit/witch_craft_book_5f026b16/witch_craft_book_5f026b16.glb",
+      "url": "/studio/assets/blenderkit/witch_craft_book_5f026b16/witch_craft_book_5f026b16.glb",
+      "bytes": 1816212,
+      "fileType": "gltf"
+    },
+    "blend": {
+      "file": "public/assets/blenderkit/witch_craft_book_5f026b16/witch_craft_book_5f026b16_resolution_0_5K.blend",
+      "url": "/studio/assets/blenderkit/witch_craft_book_5f026b16/witch_craft_book_5f026b16_resolution_0_5K.blend",
+      "bytes": 1469464,
+      "fileType": "resolution_0_5K"
+    }
+  }
+}

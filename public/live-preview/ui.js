@@ -1,6 +1,7 @@
-/* Ashes of St. Vermilion — screens, HUD, menus, touch (Stage 1).
+/* Ashes of St. Vermilion — screens, HUD, menus, touch (Stage 1+2 ext).
  * window.StV_UI = {show, setObjective, toast, + additive: bind, setNoise,
- *   setKey, banner, setClearStats, syncSettings}
+ *   setKey, banner, setClearStats, syncSettings, setEnemy, setGameOverStats}
+ * show() gains 'gameover'; new DOM: #gameover, #hud-enemy, #opt-difficulty.
  * Dark horror look is owned by index.html CSS; this file only toggles
  * visibility, text, and widths, and wires every control defensively:
  * each button is found by candidate id list, then by container query,
@@ -114,19 +115,54 @@
     } catch (err) { /* x */ }
   }
 
+  /* Stage 2 additive: delayed arming handle for the gameover buttons. */
+  var goArmTimer = 0;
+
+  function setGoButtonsDisabled(disabled) {
+    var ids = ['btn-go-retry', 'btn-go-menu'];
+    var i;
+    for (i = 0; i < ids.length; i++) {
+      var b = $(ids[i]);
+      if (b) {
+        try { b.disabled = !!disabled; } catch (err) { /* x */ }
+      }
+    }
+  }
+
   var api = {
     show: function (name) {
       var menu = $('menu');
       var pause = $('pause');
       var clear = $('clear');
+      var gameover = $('gameover');
       var hud = $('hud');
-      hide(menu); hide(pause); hide(clear);
+      hide(menu); hide(pause); hide(clear); hide(gameover);
       if (name === 'menu') unhide(menu);
       else if (name === 'paused') unhide(pause);
       else if (name === 'stageclear') unhide(clear);
+      else if (name === 'gameover') {
+        unhide(gameover);
+        /* Input arms 2.0s after the jumpscare beat lands. */
+        setGoButtonsDisabled(true);
+        if (goArmTimer) { try { clearTimeout(goArmTimer); } catch (e) { /* x */ } }
+        goArmTimer = setTimeout(function () {
+          goArmTimer = 0;
+          setGoButtonsDisabled(false);
+        }, 2000);
+      } else if (goArmTimer) {
+        try { clearTimeout(goArmTimer); } catch (e) { /* x */ }
+        goArmTimer = 0;
+        setGoButtonsDisabled(false);
+      }
       if (hud) {
         if (name === 'playing' || name === 'paused') unhide(hud);
         else hide(hud);
+      }
+      /* Agatha indicator lives only inside live play. */
+      var he = $('hud-enemy');
+      if (he) {
+        if (name === 'playing') unhide(he);
+        else hide(he);
       }
       /* HUD bits may live outside #hud in Task 2 shell: keep them synced. */
       var vis = (name === 'playing' || name === 'paused');
@@ -219,6 +255,41 @@
       }
     },
 
+    /* Stage 2 additive: Agatha alert indicator (state + distance). */
+    setEnemy: function (state, distM) {
+      var el = $('hud-enemy');
+      if (!el) return;
+      var s = String(state || 'PATROL').toLowerCase();
+      if (s !== 'patrol' && s !== 'suspicious' && s !== 'chase' &&
+          s !== 'search' && s !== 'caught') {
+        s = 'patrol';
+      }
+      try { el.setAttribute('data-state', s); } catch (err) { /* x */ }
+      var lbl = query('.lbl', el);
+      if (lbl) {
+        var names = {
+          patrol: 'AGATHA · CALM', suspicious: 'AGATHA · SUSPICIOUS',
+          chase: 'AGATHA · CHASE', search: 'AGATHA · SEARCHING',
+          caught: 'PAKDA GAYA'
+        };
+        lbl.textContent = names[s] || names.patrol;
+      }
+      var dist = query('.dist', el);
+      if (dist) {
+        var d = +distM;
+        dist.textContent = (isFinite(d) && d < 99) ?
+          Math.round(d) + 'm' : '--m';
+      }
+    },
+
+    /* Stage 2 additive: gameover survival line + flavor line. */
+    setGameOverStats: function (sub, line) {
+      var s = first(['go-sub', 'gameover-sub']);
+      if (s) s.textContent = sub || '';
+      var l = first(['go-line', 'gameover-line']);
+      if (l) l.textContent = line || '';
+    },
+
     syncSettings: function (s) {
       if (!s) return;
       var vol = first(['volume', 'opt-volume', 'volume-slider']);
@@ -233,6 +304,14 @@
           if (m.type === 'checkbox') m.checked = !!s.mute;
           else if (m.id === 'btn-mute') m.textContent = s.mute ? 'MUTE: ON' : 'MUTE: OFF';
           else m.textContent = s.mute ? 'UNMUTE' : 'MUTE';
+        } catch (err) { /* x */ }
+      }
+      /* Stage 2 additive: difficulty selector sync. */
+      var df = first(['opt-difficulty', 'difficulty', 'difficulty-select']);
+      if (df && s.difficulty) {
+        try {
+          df.value = s.difficulty;
+          if (df.selectedIndex < 0) df.value = 'Normal';
         } catch (err) { /* x */ }
       }
     },
@@ -273,6 +352,30 @@
 
     var menuC = first(['btn-menu-clear', 'clear-menu', 'clear-quit']);
     on(menuC, 'click', function () { if (H.onQuit) H.onQuit(); });
+
+    /* Stage 2 additive: gameover retry/menu + difficulty selector. */
+    var gameover = $('gameover');
+    var retryG = first(['btn-go-retry', 'gameover-retry', 'go-restart']) ||
+      (gameover ? query('[data-act="retry"]', gameover) : null);
+    on(retryG, 'click', function () { if (H.onRestart) H.onRestart(); });
+
+    var menuG = first(['btn-go-menu', 'gameover-menu', 'go-quit']) ||
+      (gameover ? query('[data-act="quit"]', gameover) : null);
+    on(menuG, 'click', function () { if (H.onQuit) H.onQuit(); });
+
+    var diff = first(['opt-difficulty', 'difficulty', 'difficulty-select']);
+    if (diff) {
+      on(diff, 'change', function () {
+        if (H.onDifficulty) H.onDifficulty(diff.value);
+      });
+    }
+
+    /* Concept-art portrait hides itself when the file is missing
+     * (listener, never an inline handler). */
+    var face = query('#gameover .go-face img') || $('go-face-img');
+    on(face, 'error', function () {
+      try { face.style.display = 'none'; } catch (err) { /* x */ }
+    });
 
     var vol = first(['volume', 'opt-volume', 'volume-slider']);
     on(vol, 'input', function () {

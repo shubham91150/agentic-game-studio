@@ -1,0 +1,156 @@
+{
+  "id": "a0cd573d-fe0d-48c4-a47f-fd07261fa5ee",
+  "assetBaseId": "596000c8-977d-436c-9bf5-e3f1972872dc",
+  "slug": "witch_hat_596000c8",
+  "name": "Witch Hat",
+  "assetType": "model",
+  "category": "headwear",
+  "author": "SubVis Creative",
+  "license": "royalty_free",
+  "isFree": true,
+  "score": 330.0,
+  "ratingsAverage": {
+    "bookmarks": 1.0,
+    "workingHours": 6.0,
+    "quality": 5.5,
+    "virtualPrice": null
+  },
+  "description": "This cloth witch hat is a great addition to many different magical and fantasy scenes. The model features a classic wide brim and a tall conical crown with a drooping, curved tip. The dark grey fabric looks heavily wrinkled, giving the whole object a realistic and mysterious appearance. Around the base of the cone, there is a distinct decorative band featuring raised metallic filigree-style details in a warm bronze color.\r\n\r\nThis object fits perfectly into spooky, magical, or historical environments. You can easily place it in a dark wizard tower, an abandoned wooden cabin, or a misty autumn forest. It is also an excellent choice for Halloween scenes, mystery games, or festive holiday projects. The deep organic folds add strong character, making it ideal for creating a moody and dark atmosphere in your 3D world.",
+  "tags": [
+    "Cloth",
+    "Pointy",
+    "Witch",
+    "Fantasy",
+    "Halloween",
+    "Magic",
+    "Dark",
+    "Grey",
+    "Wrinkled",
+    "Props"
+  ],
+  "parameters": {
+    "dimensionX": 0.6546,
+    "dimensionY": 0.5368,
+    "dimensionZ": 0.4455,
+    "dimensionsMeters": {
+      "width": 0.6546,
+      "depth": 0.5368,
+      "height": 0.4455
+    },
+    "boundingBox": {
+      "min": [
+        -0.3223,
+        -0.2698,
+        0.0011
+      ],
+      "max": [
+        0.3323,
+        0.2671,
+        0.4466
+      ]
+    },
+    "faceCount": 1890,
+    "faceCountRender": 1890,
+    "objectCount": 1,
+    "nodeCount": 53,
+    "meshPolyType": "quad_dominant",
+    "materials": [
+      "[Witch Hat Worn Leather - Umber Band (BlendKit) Metal Old Bronze]"
+    ],
+    "shaders": [
+      "[principled]"
+    ],
+    "modifiers": [
+      "[]"
+    ],
+    "pbrType": "metallic",
+    "purePbr": true,
+    "procedural": false,
+    "uv": true,
+    "animated": null,
+    "rig": false,
+    "modelStyle": "lowpoly",
+    "condition": "old",
+    "designVariant": null,
+    "textureResolutionMax": 4096,
+    "engines": [
+      "[cycles]"
+    ]
+  },
+  "availableFiles": [
+    {
+      "fileType": "blend",
+      "uuid": "a7285382-9101-448e-856a-28d85b3cd2ff",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/a7285382-9101-448e-856a-28d85b3cd2ff/",
+      "fileUploadSize": 19386891
+    },
+    {
+      "fileType": "gltf",
+      "uuid": "c2107200-5468-44a0-be53-6cf2bc7fab0e",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/c2107200-5468-44a0-be53-6cf2bc7fab0e/",
+      "fileUploadSize": 187880
+    },
+    {
+      "fileType": "gltf_godot",
+      "uuid": "7325dc35-c47f-43ff-8b19-b43ec200c293",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/7325dc35-c47f-43ff-8b19-b43ec200c293/",
+      "fileUploadSize": 508164
+    },
+    {
+      "fileType": "resolution_0_5K",
+      "uuid": "e4108a55-fd1e-46a9-8bc2-15545abd9309",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/e4108a55-fd1e-46a9-8bc2-15545abd9309/",
+      "fileUploadSize": 587966
+    },
+    {
+      "fileType": "resolution_1K",
+      "uuid": "17194a8a-d558-4ac7-a083-00a7149f5069",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/17194a8a-d558-4ac7-a083-00a7149f5069/",
+      "fileUploadSize": 1493662
+    },
+    {
+      "fileType": "resolution_2K",
+      "uuid": "bf46f123-502d-4105-a791-2244d86093bc",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/bf46f123-502d-4105-a791-2244d86093bc/",
+      "fileUploadSize": 4591742
+    },
+    {
+      "fileType": "resolution_4K",
+      "uuid": "5baf28a8-5d48-4ea9-886b-98abf15a3ca9",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/5baf28a8-5d48-4ea9-886b-98abf15a3ca9/",
+      "fileUploadSize": 15010347
+    },
+    {
+      "fileType": "thumbnail",
+      "uuid": "5e229b9b-baa6-4e5c-b9b6-a3ea4d142eb3",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/5e229b9b-baa6-4e5c-b9b6-a3ea4d142eb3/",
+      "fileUploadSize": 3957208
+    },
+    {
+      "fileType": "prxc",
+      "uuid": "ec0bb719-81fa-419d-8125-83359acae2fe",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/ec0bb719-81fa-419d-8125-83359acae2fe/",
+      "fileUploadSize": 32678
+    }
+  ],
+  "downloaded": {
+    "thumbnail": {
+      "file": "public/assets/blenderkit/witch_hat_596000c8/thumbnail.jpg",
+      "url": "/studio/assets/blenderkit/witch_hat_596000c8/thumbnail.jpg",
+      "bytes": 60080,
+      "sourceUrl": "https://public.blenderkit.com/thumbnails/assets/a0cd573dfe0d48c4a47ffd07261fa5ee/files/thumbnail_5e229b9b-baa6-4e5c-b9b6-a3ea4d142eb3.png.1024x1024_q85_crop-%2C.jpg"
+    },
+    "glb": {
+      "file": "public/assets/blenderkit/witch_hat_596000c8/witch_hat_596000c8.glb",
+      "url": "/studio/assets/blenderkit/witch_hat_596000c8/witch_hat_596000c8.glb",
+      "bytes": 187880,
+      "fileType": "gltf"
+    },
+    "blend": {
+      "file": "public/assets/blenderkit/witch_hat_596000c8/witch_hat_596000c8_resolution_0_5K.blend",
+      "url": "/studio/assets/blenderkit/witch_hat_596000c8/witch_hat_596000c8_resolution_0_5K.blend",
+      "bytes": 587966,
+      "fileType": "resolution_0_5K"
+    }
+  }
+}

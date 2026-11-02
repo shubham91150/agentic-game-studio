@@ -1,6 +1,7 @@
-/* Ashes of St. Vermilion — camera feel + lightning flash (Stage 1).
+/* Ashes of St. Vermilion — camera feel + lightning flash (Stage 1+2 ext).
  * window.StV_VFX.create(scene, renderer?) ->
- *   {addTrauma, flashLightning, update(dt,camera), + additive: reset}
+ *   {addTrauma, flashLightning, update(dt,camera), + additive: reset,
+ *    chaseRumble, silhouetteReveal}
  * Trauma shake: offset = trauma^2, decay 1.5/s, smoothed layered sines
  * (never per-frame white buzz). Honors prefers-reduced-motion: no shake.
  * Lightning: levels drive the sky light and publish the strike envelope
@@ -22,6 +23,8 @@
       var baseExposure = 1.0;
       var exposure = 1.0;
       var reduced = false;
+      /* Stage 2 additive: silhouette-reveal pulse (0..1), self-decaying. */
+      var reveal = 0;
 
       try {
         reduced = window.matchMedia &&
@@ -71,8 +74,26 @@
           if (!reduced) trauma = Math.min(1, trauma + 0.12);
         },
 
+        /* Stage 2 additive: chase proximity rumble (called ~4Hz while
+         * Agatha chases; prox01 scales with closeness). */
+        chaseRumble: function (prox01) {
+          if (reduced) return;
+          var p = +prox01 || 0;
+          if (p < 0) p = 0;
+          if (p > 1) p = 1;
+          trauma = Math.min(1, trauma + p * 0.12);
+        },
+
+        /* Stage 2 additive: lightning-style silhouette reveal beat. */
+        silhouetteReveal: function () {
+          exposure = FLASH_EXPOSURE;
+          reveal = 1;
+          if (!reduced) trauma = Math.min(1, trauma + 0.15);
+        },
+
         reset: function () {
           trauma = 0;
+          reveal = 0;
           exposure = baseExposure;
           if (renderer) {
             try { renderer.toneMappingExposure = baseExposure; }
@@ -86,6 +107,12 @@
           /* Primary sync: levels publish the strike envelope at
            * scene.userData.stvFlash (0..1); mirror it to exposure. */
           var sky = readSkyFlash();
+          /* Stage 2 additive: fold the reveal pulse into the same mirror. */
+          if (reveal > 0) {
+            reveal -= EXPOSURE_DECAY * dt * 0.5;
+            if (reveal < 0) reveal = 0;
+            if (reveal > sky) sky = reveal;
+          }
           var skyExposure = baseExposure + sky * 1.6;
           if (skyExposure > exposure) exposure = skyExposure;
           paintFlashDiv(sky);

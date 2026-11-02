@@ -1,0 +1,146 @@
+{
+  "id": "06a80c67-2cf5-40a0-8c08-a9936fe673f6",
+  "assetBaseId": "1d8c2ed1-3555-4e96-91c2-d434a40fafde",
+  "slug": "stone_chain_barrier_1d8c2ed1",
+  "name": "Stone Chain Barrier",
+  "assetType": "model",
+  "category": "cityspace",
+  "author": "Dennis Hafemann",
+  "license": "royalty_free",
+  "isFree": true,
+  "score": 320.0,
+  "ratingsAverage": {
+    "bookmarks": 1.0,
+    "workingHours": 4.0,
+    "quality": 8.0,
+    "virtualPrice": null
+  },
+  "description": "A barrier made with two blockings stones connected with a metallic chain.",
+  "tags": [
+    "nature",
+    "barrier",
+    "stone",
+    "rock",
+    "chain",
+    "blocking"
+  ],
+  "parameters": {
+    "dimensionX": 2.3388,
+    "dimensionY": 0.7008,
+    "dimensionZ": 0.6428,
+    "dimensionsMeters": {
+      "width": 2.3388,
+      "depth": 0.7008,
+      "height": 0.6428
+    },
+    "boundingBox": {
+      "min": [
+        -1.2098,
+        -0.3272,
+        -0.0014
+      ],
+      "max": [
+        1.129,
+        0.3736,
+        0.6414
+      ]
+    },
+    "faceCount": 33088,
+    "faceCountRender": 33088,
+    "objectCount": 6,
+    "nodeCount": 53,
+    "meshPolyType": "quad",
+    "materials": [
+      "[Stone Proc Metal Stones PBR]"
+    ],
+    "shaders": [
+      "[principled mix shader]"
+    ],
+    "modifiers": [
+      "[]"
+    ],
+    "pbrType": null,
+    "purePbr": true,
+    "procedural": false,
+    "uv": true,
+    "animated": null,
+    "rig": false,
+    "modelStyle": "realistic",
+    "condition": "new",
+    "designVariant": null,
+    "textureResolutionMax": 4096,
+    "engines": [
+      "[cycles]"
+    ]
+  },
+  "availableFiles": [
+    {
+      "fileType": "blend",
+      "uuid": "f9261b4f-9f42-43e5-bf8c-d916ad6d1551",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/f9261b4f-9f42-43e5-bf8c-d916ad6d1551/",
+      "fileUploadSize": 59859399
+    },
+    {
+      "fileType": "gltf",
+      "uuid": "84136af8-0795-477a-83a4-df1468ae3c2c",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/84136af8-0795-477a-83a4-df1468ae3c2c/",
+      "fileUploadSize": 3753088
+    },
+    {
+      "fileType": "gltf_godot",
+      "uuid": "6777c0d3-7c5d-421d-bcf1-5905615db563",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/6777c0d3-7c5d-421d-bcf1-5905615db563/",
+      "fileUploadSize": 5352284
+    },
+    {
+      "fileType": "resolution_0_5K",
+      "uuid": "fdc1e036-1f6d-4b4b-a7cb-04f2b99c6f53",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/fdc1e036-1f6d-4b4b-a7cb-04f2b99c6f53/",
+      "fileUploadSize": 2160749
+    },
+    {
+      "fileType": "resolution_1K",
+      "uuid": "b4725436-717e-4231-86b0-63c4f6385d28",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/b4725436-717e-4231-86b0-63c4f6385d28/",
+      "fileUploadSize": 3729906
+    },
+    {
+      "fileType": "resolution_2K",
+      "uuid": "4176944c-0663-45b8-83a1-6fee68117ce0",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/4176944c-0663-45b8-83a1-6fee68117ce0/",
+      "fileUploadSize": 9096168
+    },
+    {
+      "fileType": "resolution_4K",
+      "uuid": "2e2de88f-fcbc-4d3a-b983-1db56dd12cb2",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/2e2de88f-fcbc-4d3a-b983-1db56dd12cb2/",
+      "fileUploadSize": 27290457
+    },
+    {
+      "fileType": "thumbnail",
+      "uuid": "1bfbd24c-c345-4982-8c9b-ff6a26595b90",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/1bfbd24c-c345-4982-8c9b-ff6a26595b90/",
+      "fileUploadSize": 225685
+    }
+  ],
+  "downloaded": {
+    "thumbnail": {
+      "file": "public/assets/blenderkit/stone_chain_barrier_1d8c2ed1/thumbnail.jpg",
+      "url": "/studio/assets/blenderkit/stone_chain_barrier_1d8c2ed1/thumbnail.jpg",
+      "bytes": 43014,
+      "sourceUrl": "https://public.blenderkit.com/thumbnails/assets/06a80c672cf540a08c08a9936fe673f6/files/thumbnail_a648fd4f-ff01-4b49-9ca7-ed6956a647f0.jpg.1024x1024_q85_crop-%2C.jpg"
+    },
+    "glb": {
+      "file": "public/assets/blenderkit/stone_chain_barrier_1d8c2ed1/stone_chain_barrier_1d8c2ed1.glb",
+      "url": "/studio/assets/blenderkit/stone_chain_barrier_1d8c2ed1/stone_chain_barrier_1d8c2ed1.glb",
+      "bytes": 3753088,
+      "fileType": "gltf"
+    },
+    "blend": {
+      "file": "public/assets/blenderkit/stone_chain_barrier_1d8c2ed1/stone_chain_barrier_1d8c2ed1_resolution_0_5K.blend",
+      "url": "/studio/assets/blenderkit/stone_chain_barrier_1d8c2ed1/stone_chain_barrier_1d8c2ed1_resolution_0_5K.blend",
+      "bytes": 2160749,
+      "fileType": "resolution_0_5K"
+    }
+  }
+}

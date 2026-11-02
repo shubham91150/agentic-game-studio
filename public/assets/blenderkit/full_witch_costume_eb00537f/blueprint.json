@@ -1,0 +1,149 @@
+{
+  "id": "1a1720fd-4bfa-4181-a729-051bd9e5af0e",
+  "assetBaseId": "eb00537f-721a-44e8-abdb-c04d223830cc",
+  "slug": "full_witch_costume_eb00537f",
+  "name": "Full witch costume",
+  "assetType": "model",
+  "category": "woman-clothing",
+  "author": "Silent Wolf",
+  "license": "royalty_free",
+  "isFree": true,
+  "score": 1525.0,
+  "ratingsAverage": {
+    "bookmarks": 0.963855421686747,
+    "workingHours": 15.25,
+    "quality": 10.0,
+    "virtualPrice": null
+  },
+  "description": "Full witch costume\r\nTextures: 4k PBR (Base Color, Normal, Roughness, Metallic, Alpha,)",
+  "tags": [
+    "Witch",
+    "cloth",
+    "Clothes",
+    "Wizard",
+    "Female",
+    "pbr",
+    "lowpoly",
+    "character",
+    "fantasy"
+  ],
+  "parameters": {
+    "dimensionX": 1.4374,
+    "dimensionY": 0.4545,
+    "dimensionZ": 1.9754,
+    "dimensionsMeters": {
+      "width": 1.4374,
+      "depth": 0.4545,
+      "height": 1.9754
+    },
+    "boundingBox": {
+      "min": [
+        -0.7186,
+        -0.239,
+        -0.0039
+      ],
+      "max": [
+        0.7188,
+        0.2155,
+        1.9715
+      ]
+    },
+    "faceCount": 6327,
+    "faceCountRender": 16710,
+    "objectCount": 8,
+    "nodeCount": 14,
+    "meshPolyType": "quad_dominant",
+    "materials": [
+      "[Clothes]"
+    ],
+    "shaders": [
+      "[principled]"
+    ],
+    "modifiers": [
+      "[armature mirror subsurf]"
+    ],
+    "pbrType": "metallic",
+    "purePbr": true,
+    "procedural": false,
+    "uv": true,
+    "animated": null,
+    "rig": false,
+    "modelStyle": "realistic",
+    "condition": "new",
+    "designVariant": null,
+    "textureResolutionMax": 4096,
+    "engines": [
+      "[cycles]"
+    ]
+  },
+  "availableFiles": [
+    {
+      "fileType": "blend",
+      "uuid": "fcf4044f-024a-42f8-b657-28758a4c4c95",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/fcf4044f-024a-42f8-b657-28758a4c4c95/",
+      "fileUploadSize": 20167490
+    },
+    {
+      "fileType": "gltf",
+      "uuid": "2da88cac-1dd4-4093-8cf1-0b0fd32cb0dd",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/2da88cac-1dd4-4093-8cf1-0b0fd32cb0dd/",
+      "fileUploadSize": 341096
+    },
+    {
+      "fileType": "gltf_godot",
+      "uuid": "06d5daca-5db2-45a2-8ded-71aba1c1984c",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/06d5daca-5db2-45a2-8ded-71aba1c1984c/",
+      "fileUploadSize": 713560
+    },
+    {
+      "fileType": "resolution_0_5K",
+      "uuid": "949bd6ab-1986-41b7-90ae-56dd7c5593cb",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/949bd6ab-1986-41b7-90ae-56dd7c5593cb/",
+      "fileUploadSize": 773584
+    },
+    {
+      "fileType": "resolution_1K",
+      "uuid": "cae24b3c-ee25-4fc9-a9af-167694d4c4d9",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/cae24b3c-ee25-4fc9-a9af-167694d4c4d9/",
+      "fileUploadSize": 1227495
+    },
+    {
+      "fileType": "resolution_2K",
+      "uuid": "9074e86f-5a61-4612-8326-306caa735e93",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/9074e86f-5a61-4612-8326-306caa735e93/",
+      "fileUploadSize": 3132843
+    },
+    {
+      "fileType": "resolution_4K",
+      "uuid": "611496c7-32b7-425f-b902-78da9d46ba65",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/611496c7-32b7-425f-b902-78da9d46ba65/",
+      "fileUploadSize": 12411228
+    },
+    {
+      "fileType": "thumbnail",
+      "uuid": "c2ae4a4d-d935-4a76-aecf-432db13fb917",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/c2ae4a4d-d935-4a76-aecf-432db13fb917/",
+      "fileUploadSize": 1085609
+    }
+  ],
+  "downloaded": {
+    "thumbnail": {
+      "file": "public/assets/blenderkit/full_witch_costume_eb00537f/thumbnail.jpg",
+      "url": "/studio/assets/blenderkit/full_witch_costume_eb00537f/thumbnail.jpg",
+      "bytes": 140954,
+      "sourceUrl": "https://public.blenderkit.com/thumbnails/assets/1a1720fd4bfa4181a729051bd9e5af0e/files/thumbnail_c2ae4a4d-d935-4a76-aecf-432db13fb917.jpg.1024x1024_q85_crop-%2C.jpg"
+    },
+    "glb": {
+      "file": "public/assets/blenderkit/full_witch_costume_eb00537f/full_witch_costume_eb00537f.glb",
+      "url": "/studio/assets/blenderkit/full_witch_costume_eb00537f/full_witch_costume_eb00537f.glb",
+      "bytes": 341096,
+      "fileType": "gltf"
+    },
+    "blend": {
+      "file": "public/assets/blenderkit/full_witch_costume_eb00537f/full_witch_costume_eb00537f_resolution_0_5K.blend",
+      "url": "/studio/assets/blenderkit/full_witch_costume_eb00537f/full_witch_costume_eb00537f_resolution_0_5K.blend",
+      "bytes": 773584,
+      "fileType": "resolution_0_5K"
+    }
+  }
+}

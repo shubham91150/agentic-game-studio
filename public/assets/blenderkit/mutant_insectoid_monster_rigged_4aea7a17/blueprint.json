@@ -1,0 +1,153 @@
+{
+  "id": "e400eae2-d2be-4084-afc0-c06d00058268",
+  "assetBaseId": "4aea7a17-629f-4e52-b08a-8c27ce844632",
+  "slug": "mutant_insectoid_monster_rigged_4aea7a17",
+  "name": "Mutant Insectoid Monster Rigged",
+  "assetType": "model",
+  "category": "monster-creature",
+  "author": "Silent Wolf",
+  "license": "royalty_free",
+  "isFree": true,
+  "score": 10000.0,
+  "ratingsAverage": {
+    "bookmarks": 1.0,
+    "workingHours": 100.0,
+    "quality": 10.0,
+    "virtualPrice": null
+  },
+  "description": "\ud83e\udde9 Asset Mutant Insectoid Monster Rigged  Game Ready | Pure PBR | Optimized \ud83d\udcbe |\r\n\u200b\r\n\u26a1 Type: Realistic \u2013 Low-poly\r\n\ud83c\udfa8 Style: Realistic\r\n\ud83d\udcdd Description:\r\nThis is a low-poly .\r\nIt is optimized for real-time use in games, VR, and animation projects.\r\nThe design is stylized but with enough detail to work well in both cinematic and gameplay contexts.\r\nReady to import into Unity, Unreal Engine, and Blender.\r\n\u200b\r\n\ud83d\udcd0 Technical Details:\r\n- Polycount:19.486\r\n- Rig: Yes (basic humanoid rig) Auto -Rig Pro 3.77.38\r\n+ Retargeting capability in Unreal\r\n- UVs: Unwrapped /  No overlapping\r\n- Textures: 4k PBR (Base Color, Normal, Roughness, Metallic, Alpha, SSS, )\r\n- Materials: 1main material\r\n4k\r\n\u200b\r\n\r\n\r\n\r\nIn this link you can tell me what additional characters you need so that I can produce more characters of your desired theme:\r\nhttps://docs.google.com/forms/d/e/1FAIpQLSfMTH7iTdVrcTAfTNs_xmU4vVlDsObfBPWtqI-XuAWDcsMRZQ/viewform?usp=header",
+  "tags": [
+    "Monster",
+    "Creature",
+    "Alien",
+    "Unreal",
+    "Rigged",
+    "Horror",
+    "Character"
+  ],
+  "parameters": {
+    "dimensionX": 2.2305,
+    "dimensionY": 1.0706,
+    "dimensionZ": 1.9353,
+    "dimensionsMeters": {
+      "width": 2.2305,
+      "depth": 1.0706,
+      "height": 1.9353
+    },
+    "boundingBox": {
+      "min": [
+        -1.1152,
+        -0.4736,
+        0.0031
+      ],
+      "max": [
+        1.1152,
+        0.597,
+        1.9384
+      ]
+    },
+    "faceCount": 19486,
+    "faceCountRender": 19486,
+    "objectCount": 3,
+    "nodeCount": 0,
+    "meshPolyType": "quad_dominant",
+    "materials": [
+      "[Body]"
+    ],
+    "shaders": [
+      "[]"
+    ],
+    "modifiers": [
+      "[armature]"
+    ],
+    "pbrType": "metallic",
+    "purePbr": true,
+    "procedural": true,
+    "uv": true,
+    "animated": null,
+    "rig": true,
+    "modelStyle": "realistic",
+    "condition": "new",
+    "designVariant": null,
+    "textureResolutionMax": null,
+    "engines": [
+      "[cycles]"
+    ]
+  },
+  "availableFiles": [
+    {
+      "fileType": "blend",
+      "uuid": "751528ac-794c-494f-a7f6-b374eaa8ff95",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/751528ac-794c-494f-a7f6-b374eaa8ff95/",
+      "fileUploadSize": 54156293
+    },
+    {
+      "fileType": "gltf",
+      "uuid": "c0de3ec7-4ad4-46c1-aaa3-cfcf41dd18f6",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/c0de3ec7-4ad4-46c1-aaa3-cfcf41dd18f6/",
+      "fileUploadSize": 3272388
+    },
+    {
+      "fileType": "gltf_godot",
+      "uuid": "dd47edc6-e954-4c27-9ce0-5155d4635b8c",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/dd47edc6-e954-4c27-9ce0-5155d4635b8c/",
+      "fileUploadSize": 4598176
+    },
+    {
+      "fileType": "resolution_0_5K",
+      "uuid": "9f256c10-51c3-419f-ad1c-7b80aa6d7133",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/9f256c10-51c3-419f-ad1c-7b80aa6d7133/",
+      "fileUploadSize": 1769722
+    },
+    {
+      "fileType": "resolution_1K",
+      "uuid": "7050de9b-be97-4fb0-884c-a75cf706eaa5",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/7050de9b-be97-4fb0-884c-a75cf706eaa5/",
+      "fileUploadSize": 2257983
+    },
+    {
+      "fileType": "resolution_2K",
+      "uuid": "5ee359fc-c012-470f-b59c-de2ab562bc1e",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/5ee359fc-c012-470f-b59c-de2ab562bc1e/",
+      "fileUploadSize": 4244574
+    },
+    {
+      "fileType": "resolution_4K",
+      "uuid": "484d4f86-aa96-4825-81a3-70acd9114f0e",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/484d4f86-aa96-4825-81a3-70acd9114f0e/",
+      "fileUploadSize": 13191623
+    },
+    {
+      "fileType": "thumbnail",
+      "uuid": "9fa2e577-863e-46e1-ad0c-75ea32ebafb2",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/9fa2e577-863e-46e1-ad0c-75ea32ebafb2/",
+      "fileUploadSize": 1073168
+    },
+    {
+      "fileType": "prxc",
+      "uuid": "588a021d-0503-4935-888d-110f51c01a30",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/588a021d-0503-4935-888d-110f51c01a30/",
+      "fileUploadSize": 33957
+    }
+  ],
+  "downloaded": {
+    "thumbnail": {
+      "file": "public/assets/blenderkit/mutant_insectoid_monster_rigged_4aea7a17/thumbnail.jpg",
+      "url": "/studio/assets/blenderkit/mutant_insectoid_monster_rigged_4aea7a17/thumbnail.jpg",
+      "bytes": 134619,
+      "sourceUrl": "https://public.blenderkit.com/thumbnails/assets/e400eae2d2be4084afc0c06d00058268/files/thumbnail_9fa2e577-863e-46e1-ad0c-75ea32ebafb2.jpg.1024x1024_q85_crop-%2C.jpg"
+    },
+    "glb": {
+      "file": "public/assets/blenderkit/mutant_insectoid_monster_rigged_4aea7a17/mutant_insectoid_monster_rigged_4aea7a17.glb",
+      "url": "/studio/assets/blenderkit/mutant_insectoid_monster_rigged_4aea7a17/mutant_insectoid_monster_rigged_4aea7a17.glb",
+      "bytes": 3272388,
+      "fileType": "gltf"
+    },
+    "blend": {
+      "file": "public/assets/blenderkit/mutant_insectoid_monster_rigged_4aea7a17/mutant_insectoid_monster_rigged_4aea7a17_resolution_0_5K.blend",
+      "url": "/studio/assets/blenderkit/mutant_insectoid_monster_rigged_4aea7a17/mutant_insectoid_monster_rigged_4aea7a17_resolution_0_5K.blend",
+      "bytes": 1769722,
+      "fileType": "resolution_0_5K"
+    }
+  }
+}

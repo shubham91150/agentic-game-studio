@@ -1,0 +1,159 @@
+{
+  "id": "59aff695-93d4-45f9-a14d-1fa7a16de47b",
+  "assetBaseId": "813b5a5e-9598-4f81-994f-8a71754925a2",
+  "slug": "lerato_stylized_female_character_813b5a5e",
+  "name": "Lerato (stylized female character)",
+  "assetType": "model",
+  "category": "woman",
+  "author": "Introspective Mnisi",
+  "license": "royalty_free",
+  "isFree": true,
+  "score": 4050.0,
+  "ratingsAverage": {
+    "bookmarks": 0.9733333333333334,
+    "workingHours": 45.0,
+    "quality": 9.0,
+    "virtualPrice": null
+  },
+  "description": "A rigged, stylized character ready to be used in any scene",
+  "tags": [
+    "African",
+    "Character",
+    "female",
+    "Rigged"
+  ],
+  "parameters": {
+    "dimensionX": 0.5812,
+    "dimensionY": 0.3179,
+    "dimensionZ": 1.3426,
+    "dimensionsMeters": {
+      "width": 0.5812,
+      "depth": 0.3179,
+      "height": 1.3426
+    },
+    "boundingBox": {
+      "min": [
+        -0.2906,
+        -0.183,
+        -0.0172
+      ],
+      "max": [
+        0.2906,
+        0.135,
+        1.3254
+      ]
+    },
+    "faceCount": 56227,
+    "faceCountRender": 56411,
+    "objectCount": 17,
+    "nodeCount": 43,
+    "meshPolyType": "quad_dominant",
+    "materials": [
+      "Top",
+      "Skirt",
+      "Material.003",
+      "Sole.002",
+      "Text.002",
+      "Shoe.002",
+      "Laces.002",
+      "Eye",
+      "Material",
+      "Gold",
+      "Necklace",
+      "Panties",
+      "Skin",
+      "Mouth",
+      "Gums",
+      "Tongue",
+      "HairClip",
+      "Hair",
+      "Bracelet"
+    ],
+    "shaders": [
+      "principled",
+      "glass"
+    ],
+    "modifiers": [
+      "armature",
+      "nodes",
+      "mirror"
+    ],
+    "pbrType": null,
+    "purePbr": null,
+    "procedural": false,
+    "uv": true,
+    "animated": null,
+    "rig": true,
+    "modelStyle": "anime",
+    "condition": "new",
+    "designVariant": null,
+    "textureResolutionMax": 2048,
+    "engines": [
+      "cycles"
+    ]
+  },
+  "availableFiles": [
+    {
+      "fileType": "blend",
+      "uuid": "1eeff425-538b-43f2-992b-31d76b3f8f0c",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/1eeff425-538b-43f2-992b-31d76b3f8f0c/",
+      "fileUploadSize": 3329131
+    },
+    {
+      "fileType": "gltf",
+      "uuid": "92047114-5e8f-4a2a-80bd-efbc25b98f68",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/92047114-5e8f-4a2a-80bd-efbc25b98f68/",
+      "fileUploadSize": 1271564
+    },
+    {
+      "fileType": "gltf_godot",
+      "uuid": "23a6d467-0fa3-4afa-b4ff-e8e3e01528a0",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/23a6d467-0fa3-4afa-b4ff-e8e3e01528a0/",
+      "fileUploadSize": 6173988
+    },
+    {
+      "fileType": "resolution_0_5K",
+      "uuid": "bc9c37a2-36a0-4918-a911-0e888acb5de1",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/bc9c37a2-36a0-4918-a911-0e888acb5de1/",
+      "fileUploadSize": 3295451
+    },
+    {
+      "fileType": "resolution_1K",
+      "uuid": "dcc9f91c-ac7f-4aaa-a31a-316c7f1559e6",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/dcc9f91c-ac7f-4aaa-a31a-316c7f1559e6/",
+      "fileUploadSize": 3312657
+    },
+    {
+      "fileType": "resolution_2K",
+      "uuid": "9bb33852-b182-4066-b0f9-e37b206d164c",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/9bb33852-b182-4066-b0f9-e37b206d164c/",
+      "fileUploadSize": 3350113
+    },
+    {
+      "fileType": "thumbnail",
+      "uuid": "4ce353ae-ca1f-47cc-91d9-77583b49b0f8",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/4ce353ae-ca1f-47cc-91d9-77583b49b0f8/",
+      "fileUploadSize": 869626
+    }
+  ],
+  "downloaded": {
+    "thumbnail": {
+      "file": "public/assets/blenderkit/lerato_stylized_female_character_813b5a5e/thumbnail.png",
+      "url": "/studio/assets/blenderkit/lerato_stylized_female_character_813b5a5e/thumbnail.png",
+      "bytes": 628020,
+      "sourceUrl": "https://public.blenderkit.com/thumbnails/assets/59aff69593d445f9a14d1fa7a16de47b/files/thumbnail_4ce353ae-ca1f-47cc-91d9-77583b49b0f8.png.1024x1024_q85_crop-%2C.png"
+    },
+    "glb": {
+      "file": "public/assets/blenderkit/lerato_stylized_female_character_813b5a5e/lerato_stylized_female_character_813b5a5e.glb",
+      "url": "/studio/assets/blenderkit/lerato_stylized_female_character_813b5a5e/lerato_stylized_female_character_813b5a5e.glb",
+      "bytes": 1271564,
+      "fileType": "gltf"
+    },
+    "blend": {
+      "file": "public/assets/blenderkit/lerato_stylized_female_character_813b5a5e/lerato_stylized_female_character_813b5a5e_resolution_0_5K.blend",
+      "url": "/studio/assets/blenderkit/lerato_stylized_female_character_813b5a5e/lerato_stylized_female_character_813b5a5e_resolution_0_5K.blend",
+      "bytes": 3295451,
+      "fileType": "resolution_0_5K"
+    }
+  }
+}

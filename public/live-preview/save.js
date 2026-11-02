@@ -1,5 +1,6 @@
-/* Ashes of St. Vermilion — persistence (Stage 1).
- * Key: ags_stv_v1 -> {volume, quality, sensitivity, mute, bestMs}.
+/* Ashes of St. Vermilion — persistence (Stage 1+2 ext).
+ * Key: ags_stv_v1 -> {volume, quality, sensitivity, mute, bestMs,
+ *                     + Stage 2+3: difficulty, bestSurvivalMs}.
  * r128 global style: exposes window.StV_Save. No module syntax.
  * localStorage may be blocked (private iframe) — every access is guarded.
  */
@@ -13,7 +14,9 @@
     quality: 'High',
     sensitivity: 1.0,
     mute: false,
-    bestMs: null
+    bestMs: null,
+    difficulty: 'Normal',
+    bestSurvivalMs: null
   };
 
   function clone(o) {
@@ -22,7 +25,9 @@
       quality: o.quality,
       sensitivity: o.sensitivity,
       mute: o.mute,
-      bestMs: o.bestMs
+      bestMs: o.bestMs,
+      difficulty: o.difficulty,
+      bestSurvivalMs: o.bestSurvivalMs
     };
   }
 
@@ -42,6 +47,15 @@
     out.mute = !!raw.mute;
     if (typeof raw.bestMs === 'number' && isFinite(raw.bestMs) && raw.bestMs > 0) {
       out.bestMs = Math.round(raw.bestMs);
+    }
+    /* Stage 2+3 additive keys (defaults Normal/null). */
+    if (raw.difficulty === 'Easy' || raw.difficulty === 'Normal' ||
+        raw.difficulty === 'Hard') {
+      out.difficulty = raw.difficulty;
+    }
+    if (typeof raw.bestSurvivalMs === 'number' && isFinite(raw.bestSurvivalMs) &&
+        raw.bestSurvivalMs > 0) {
+      out.bestSurvivalMs = Math.round(raw.bestSurvivalMs);
     }
     return out;
   }

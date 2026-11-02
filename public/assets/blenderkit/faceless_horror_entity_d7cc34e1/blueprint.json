@@ -1,0 +1,150 @@
+{
+  "id": "61682468-6e7a-4b4e-b242-73cf4675f6d3",
+  "assetBaseId": "d7cc34e1-4772-48b3-86dc-5eff93213e2c",
+  "slug": "faceless_horror_entity_d7cc34e1",
+  "name": "Faceless Horror Entity",
+  "assetType": "model",
+  "category": "monster-creature",
+  "author": "Dr toxic ",
+  "license": "royalty_free",
+  "isFree": true,
+  "score": 6000.0,
+  "ratingsAverage": {
+    "bookmarks": 0.9682539682539683,
+    "workingHours": 60.0,
+    "quality": 10.0,
+    "virtualPrice": null
+  },
+  "description": "Enhance your horror and dark fantasy projects with this unsettling Faceless Entity. Draped in tattered robes, this monstrous character features a terrifying, fleshy, featureless face and creepy hands, making it ideal for nightmares, cultist encounters, or atmospheric horror games.",
+  "tags": [
+    "horror",
+    "monster",
+    "faceless",
+    "entity",
+    "creepy",
+    "creature",
+    "darkfantasy",
+    "mutant",
+    "rigged",
+    "character"
+  ],
+  "parameters": {
+    "dimensionX": 1.8084,
+    "dimensionY": 0.9153,
+    "dimensionZ": 2.224,
+    "dimensionsMeters": {
+      "width": 1.8084,
+      "depth": 0.9153,
+      "height": 2.224
+    },
+    "boundingBox": {
+      "min": [
+        -0.9042,
+        -0.5581,
+        0.1188
+      ],
+      "max": [
+        0.9042,
+        0.3571,
+        2.3428
+      ]
+    },
+    "faceCount": 15166,
+    "faceCountRender": 15166,
+    "objectCount": 10,
+    "nodeCount": 0,
+    "meshPolyType": "quad_dominant",
+    "materials": [
+      "[wraith and cloth.001]"
+    ],
+    "shaders": [
+      "[]"
+    ],
+    "modifiers": [
+      "[armature]"
+    ],
+    "pbrType": "metallic",
+    "purePbr": true,
+    "procedural": true,
+    "uv": true,
+    "animated": null,
+    "rig": true,
+    "modelStyle": "realistic",
+    "condition": "new",
+    "designVariant": null,
+    "textureResolutionMax": null,
+    "engines": [
+      "[cycles]"
+    ]
+  },
+  "availableFiles": [
+    {
+      "fileType": "blend",
+      "uuid": "3e6c152e-332b-439c-8fa8-375ce3bfe86b",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/3e6c152e-332b-439c-8fa8-375ce3bfe86b/",
+      "fileUploadSize": 30052609
+    },
+    {
+      "fileType": "gltf",
+      "uuid": "d8982ca1-79c8-4a58-986b-d9f6994654ea",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/d8982ca1-79c8-4a58-986b-d9f6994654ea/",
+      "fileUploadSize": 6206752
+    },
+    {
+      "fileType": "gltf_godot",
+      "uuid": "7ce4f4ae-a071-49fe-8560-145f2eb4a13f",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/7ce4f4ae-a071-49fe-8560-145f2eb4a13f/",
+      "fileUploadSize": 7341380
+    },
+    {
+      "fileType": "resolution_0_5K",
+      "uuid": "321f7cf0-6103-436a-b221-9b7b11427f63",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/321f7cf0-6103-436a-b221-9b7b11427f63/",
+      "fileUploadSize": 1535460
+    },
+    {
+      "fileType": "resolution_1K",
+      "uuid": "e6b1c928-5c5b-4c2f-b84c-503add4c7b79",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/e6b1c928-5c5b-4c2f-b84c-503add4c7b79/",
+      "fileUploadSize": 2322659
+    },
+    {
+      "fileType": "resolution_2K",
+      "uuid": "3c7e9c14-58b6-4f84-baf7-ca0131ed750b",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/3c7e9c14-58b6-4f84-baf7-ca0131ed750b/",
+      "fileUploadSize": 5545665
+    },
+    {
+      "fileType": "resolution_4K",
+      "uuid": "e016e3f2-2b8e-4947-ab8b-532257f31fde",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/e016e3f2-2b8e-4947-ab8b-532257f31fde/",
+      "fileUploadSize": 20071045
+    },
+    {
+      "fileType": "thumbnail",
+      "uuid": "76ec1080-3168-462b-8a6d-22e2083ff909",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/76ec1080-3168-462b-8a6d-22e2083ff909/",
+      "fileUploadSize": 5203136
+    }
+  ],
+  "downloaded": {
+    "thumbnail": {
+      "file": "public/assets/blenderkit/faceless_horror_entity_d7cc34e1/thumbnail.jpg",
+      "url": "/studio/assets/blenderkit/faceless_horror_entity_d7cc34e1/thumbnail.jpg",
+      "bytes": 83116,
+      "sourceUrl": "https://public.blenderkit.com/thumbnails/assets/616824686e7a4b4eb24273cf4675f6d3/files/thumbnail_fef96121-a571-4d78-9379-690b1f2cb321.png.1024x1024_q85_crop-%2C.jpg"
+    },
+    "glb": {
+      "file": "public/assets/blenderkit/faceless_horror_entity_d7cc34e1/faceless_horror_entity_d7cc34e1.glb",
+      "url": "/studio/assets/blenderkit/faceless_horror_entity_d7cc34e1/faceless_horror_entity_d7cc34e1.glb",
+      "bytes": 6206752,
+      "fileType": "gltf"
+    },
+    "blend": {
+      "file": "public/assets/blenderkit/faceless_horror_entity_d7cc34e1/faceless_horror_entity_d7cc34e1_resolution_0_5K.blend",
+      "url": "/studio/assets/blenderkit/faceless_horror_entity_d7cc34e1/faceless_horror_entity_d7cc34e1_resolution_0_5K.blend",
+      "bytes": 1535460,
+      "fileType": "resolution_0_5K"
+    }
+  }
+}

@@ -1,0 +1,132 @@
+{
+  "id": "834846c2-2d2f-49bc-9ae6-06a7606a5b84",
+  "assetBaseId": "22c40ba0-1232-4516-89b7-a561c32188ef",
+  "slug": "ghost_22c40ba0",
+  "name": "Ghost",
+  "assetType": "model",
+  "category": "robot",
+  "author": "foehn N",
+  "license": "cc_zero",
+  "isFree": true,
+  "score": 2000.0,
+  "ratingsAverage": {
+    "bookmarks": 0.9523809523809523,
+    "workingHours": 20.0,
+    "quality": 10.0,
+    "virtualPrice": null
+  },
+  "description": "This is the \"Ghost\" in the game series \"Destiny\". It is an artificial intelligence companion that accompanies the player. Its appearance is a geometric polyhedron, with a white body, orange edges, and blue light and logo at the center, which are its distinctive features. It is responsible for resurrecting the player and decrypting, and is a crucial and iconic presence in the game.",
+  "tags": [
+    "Robot",
+    "machinery",
+    "sciencefiction",
+    "destiny"
+  ],
+  "parameters": {
+    "dimensionX": 1.077,
+    "dimensionY": 0.7428,
+    "dimensionZ": 1.2241,
+    "dimensionsMeters": {
+      "width": 1.077,
+      "depth": 0.7428,
+      "height": 1.2241
+    },
+    "boundingBox": {
+      "min": [
+        -0.5385,
+        -0.3714,
+        0.0
+      ],
+      "max": [
+        0.5385,
+        0.3714,
+        1.2241
+      ]
+    },
+    "faceCount": 2252,
+    "faceCountRender": 2252,
+    "objectCount": 3,
+    "nodeCount": 24,
+    "meshPolyType": "quad_dominant",
+    "materials": [
+      "[Material.003 Material]"
+    ],
+    "shaders": [
+      "[principled]"
+    ],
+    "modifiers": [
+      "[]"
+    ],
+    "pbrType": "metallic",
+    "purePbr": true,
+    "procedural": false,
+    "uv": true,
+    "animated": false,
+    "rig": false,
+    "modelStyle": "realistic",
+    "condition": null,
+    "designVariant": null,
+    "textureResolutionMax": 1024,
+    "engines": [
+      "[cycles]"
+    ]
+  },
+  "availableFiles": [
+    {
+      "fileType": "blend",
+      "uuid": "8fa3f733-e77d-4b2b-be83-3d8ab35eed5d",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/8fa3f733-e77d-4b2b-be83-3d8ab35eed5d/",
+      "fileUploadSize": 2102934
+    },
+    {
+      "fileType": "gltf",
+      "uuid": "7981275f-8125-4297-b7c6-393fe57ff081",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/7981275f-8125-4297-b7c6-393fe57ff081/",
+      "fileUploadSize": 296188
+    },
+    {
+      "fileType": "gltf_godot",
+      "uuid": "9878226e-9159-4ec3-bc11-b3bd61c10ff9",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/9878226e-9159-4ec3-bc11-b3bd61c10ff9/",
+      "fileUploadSize": 467432
+    },
+    {
+      "fileType": "resolution_0_5K",
+      "uuid": "34ceafb5-de39-4176-8b47-bb7e39dddc59",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/34ceafb5-de39-4176-8b47-bb7e39dddc59/",
+      "fileUploadSize": 348350
+    },
+    {
+      "fileType": "resolution_1K",
+      "uuid": "60fc1a08-c56a-47c0-8f89-acad4c84dcfe",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/60fc1a08-c56a-47c0-8f89-acad4c84dcfe/",
+      "fileUploadSize": 927976
+    },
+    {
+      "fileType": "thumbnail",
+      "uuid": "7527687e-a45a-4a4c-908a-efffc7c669a1",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/7527687e-a45a-4a4c-908a-efffc7c669a1/",
+      "fileUploadSize": 931197
+    }
+  ],
+  "downloaded": {
+    "thumbnail": {
+      "file": "public/assets/blenderkit/ghost_22c40ba0/thumbnail.jpg",
+      "url": "/studio/assets/blenderkit/ghost_22c40ba0/thumbnail.jpg",
+      "bytes": 47350,
+      "sourceUrl": "https://public.blenderkit.com/thumbnails/assets/834846c22d2f49bc9ae606a7606a5b84/files/thumbnail_c9522dea-d8a3-401e-91cc-b0ed8f127b23.png.1024x1024_q85_crop-%2C.jpg"
+    },
+    "glb": {
+      "file": "public/assets/blenderkit/ghost_22c40ba0/ghost_22c40ba0.glb",
+      "url": "/studio/assets/blenderkit/ghost_22c40ba0/ghost_22c40ba0.glb",
+      "bytes": 296188,
+      "fileType": "gltf"
+    },
+    "blend": {
+      "file": "public/assets/blenderkit/ghost_22c40ba0/ghost_22c40ba0_resolution_0_5K.blend",
+      "url": "/studio/assets/blenderkit/ghost_22c40ba0/ghost_22c40ba0_resolution_0_5K.blend",
+      "bytes": 348350,
+      "fileType": "resolution_0_5K"
+    }
+  }
+}

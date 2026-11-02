@@ -1,0 +1,120 @@
+{
+  "id": "8254b1a0-a006-4acd-b53d-20b7409ad2e7",
+  "assetBaseId": "06557202-ebaa-4eb7-9a8e-97f29543ec74",
+  "slug": "chains_generator_geometrynodes_06557202",
+  "name": "Chains Generator (GeometryNodes)",
+  "assetType": "model",
+  "category": "industrial",
+  "author": "Abdelrahman Mohamed",
+  "license": "royalty_free",
+  "isFree": true,
+  "score": 2040.0,
+  "ratingsAverage": {
+    "bookmarks": 0.9908256880733946,
+    "workingHours": 25.5,
+    "quality": 8.0,
+    "virtualPrice": null
+  },
+  "description": "Geometry Node that can be applied to  a curve to create chains with a lot of controls to get the desired results.\r\nIt comes with a simple Procedural material that can be controlled easily.\r\nNote : if the Material performs slowly consider lowering the \"Details\" Slider in the shader.\r\nNote : The shader isn't tested in EEVEE.",
+  "tags": [
+    "chain",
+    "geometrynode",
+    "procedural",
+    "rust"
+  ],
+  "parameters": {
+    "dimensionX": -20000000.0,
+    "dimensionY": -20000000.0,
+    "dimensionZ": -20000000.0,
+    "dimensionsMeters": {
+      "width": -20000000.0,
+      "depth": -20000000.0,
+      "height": -20000000.0
+    },
+    "boundingBox": {
+      "min": [
+        10000000.0,
+        10000000.0,
+        10000000.0
+      ],
+      "max": [
+        -10000000.0,
+        -10000000.0,
+        -10000000.0
+      ]
+    },
+    "faceCount": 0,
+    "faceCountRender": 0,
+    "objectCount": 1,
+    "nodeCount": 52,
+    "meshPolyType": null,
+    "materials": [
+      "RustMetal"
+    ],
+    "shaders": [
+      "principled"
+    ],
+    "modifiers": [
+      "nodes"
+    ],
+    "pbrType": null,
+    "purePbr": null,
+    "procedural": true,
+    "uv": false,
+    "animated": null,
+    "rig": false,
+    "modelStyle": "realistic",
+    "condition": "old",
+    "designVariant": null,
+    "textureResolutionMax": null,
+    "engines": [
+      "cycles"
+    ]
+  },
+  "availableFiles": [
+    {
+      "fileType": "blend",
+      "uuid": "babd2bcb-22d1-48bf-9002-6a92638327c9",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/babd2bcb-22d1-48bf-9002-6a92638327c9/",
+      "fileUploadSize": 107334
+    },
+    {
+      "fileType": "gltf",
+      "uuid": "69142099-1145-4446-8229-15c9a72040b6",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/69142099-1145-4446-8229-15c9a72040b6/",
+      "fileUploadSize": 200
+    },
+    {
+      "fileType": "gltf_godot",
+      "uuid": "ee635b08-5f75-414f-b77d-37f97ea1e91d",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/ee635b08-5f75-414f-b77d-37f97ea1e91d/",
+      "fileUploadSize": 200
+    },
+    {
+      "fileType": "thumbnail",
+      "uuid": "6602b773-96eb-404c-a39d-9c0817179db3",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/6602b773-96eb-404c-a39d-9c0817179db3/",
+      "fileUploadSize": 4826388
+    }
+  ],
+  "downloaded": {
+    "thumbnail": {
+      "file": "public/assets/blenderkit/chains_generator_geometrynodes_06557202/thumbnail.png",
+      "url": "/studio/assets/blenderkit/chains_generator_geometrynodes_06557202/thumbnail.png",
+      "bytes": 1154098,
+      "sourceUrl": "https://public.blenderkit.com/thumbnails/assets/8254b1a0a0064acdb53d20b7409ad2e7/files/thumbnail_ee29d9a9-580e-478a-83f8-1770606c3c07.png.1024x1024_q85_crop-%2C.png"
+    },
+    "glb": {
+      "file": "public/assets/blenderkit/chains_generator_geometrynodes_06557202/chains_generator_geometrynodes_06557202.glb",
+      "url": "/studio/assets/blenderkit/chains_generator_geometrynodes_06557202/chains_generator_geometrynodes_06557202.glb",
+      "bytes": 200,
+      "fileType": "gltf"
+    },
+    "blend": {
+      "file": "public/assets/blenderkit/chains_generator_geometrynodes_06557202/chains_generator_geometrynodes_06557202_blend.blend",
+      "url": "/studio/assets/blenderkit/chains_generator_geometrynodes_06557202/chains_generator_geometrynodes_06557202_blend.blend",
+      "bytes": 107334,
+      "fileType": "blend"
+    }
+  }
+}

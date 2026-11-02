@@ -1,0 +1,148 @@
+{
+  "id": "baa444fc-c6a0-4ae2-92e3-bcc82e2e71ad",
+  "assetBaseId": "26c4e5a8-4ba5-44e9-96bf-028bddfdffd6",
+  "slug": "horror_monster_bloodfang-rigged-animated_26c4e5a8",
+  "name": "Horror monster Bloodfang-Rigged-Animated",
+  "assetType": "model",
+  "category": "monster-creature",
+  "author": "Silent Wolf",
+  "license": "royalty_free",
+  "isFree": true,
+  "score": 25000.0,
+  "ratingsAverage": {
+    "bookmarks": 0.9767441860465116,
+    "workingHours": 250.0,
+    "quality": 10.0,
+    "virtualPrice": null
+  },
+  "description": "\ud83e\udde9 Asset Name: Horror monster Bloodfang-Rigged-Animated | Game Ready  | Pure PBR | Optimized \ud83d\udcbe | Animated\r\n\r\n\u26a1 Type: Realistic \u2013 Low-poly\r\n\r\nAnimation :\r\nDead \ud83d\udc80 (1\u201318)\r\nDead Front \ud83d\udc80 (1\u201320)\r\nHit \ud83e\udd15 (1\u201322)\r\nHit Left \ud83e\udd15\u2b05\ufe0f (1\u201322)\r\nHit Right \ud83e\udd15\u27a1\ufe0f (1\u201322)\r\nIdle 1 \ud83d\ude10 (1\u2013120)\r\nIdle 2 \ud83d\ude10 (1\u2013120)\r\nIdle 3 \ud83d\ude10 (1\u2013240)\r\nRun \ud83c\udfc3\u200d\u2642\ufe0f (1\u201322)\r\nWalk \ud83d\udeb6\u200d\u2642\ufe0f (1\u201332)\r\n\r\nPose : \r\nA Pose \r\nT Pose\r\n\r\n\ud83c\udfa8 Style: Realistic\r\n\ud83d\udcdd Description:\r\nThis is a low-poly .\r\nThe animations are done in NLA Editor\r\nIt is optimized for real-time use in games, VR, and animation projects.\r\nThe design is stylized but with enough detail to work well in both cinematic and gameplay contexts.\r\nReady to import into Unity, Unreal Engine, and Blender.\r\n\r\n\ud83d\udcd0 Technical Details:\r\n- Polycount: 10.350\r\n- Rig: Yes (basic humanoid rig)\r\n- UVs: Unwrapped / Non-overlapping\r\n- Textures: 4K PBR (Base Color, Normal, Roughness, Metallic, Hight, Ambient Occlusion )\r\n- Materials: 1 main material\r\n\r\nIn this link you can tell me what additional characters you need so that I can produce more characters of your desired theme:\r\nhttps://docs.google.com/forms/d/e/1FAIpQLSfMTH7iTdVrcTAfTNs_xmU4vVlDsObfBPWtqI-XuAWDcsMRZQ/viewform?usp=header",
+  "tags": [
+    "Monster",
+    "Creature",
+    "fantasy",
+    "Rigged",
+    "Animated",
+    "gameready",
+    "horror",
+    "character"
+  ],
+  "parameters": {
+    "dimensionX": 2.4534,
+    "dimensionY": 0.9219,
+    "dimensionZ": 2.1272,
+    "dimensionsMeters": {
+      "width": 2.4534,
+      "depth": 0.9219,
+      "height": 2.1272
+    },
+    "boundingBox": {
+      "min": [
+        -1.2081,
+        -0.3365,
+        -0.0065
+      ],
+      "max": [
+        1.2453,
+        0.5854,
+        2.1208
+      ]
+    },
+    "faceCount": 10350,
+    "faceCountRender": 10350,
+    "objectCount": 6,
+    "nodeCount": 0,
+    "meshPolyType": "quad_dominant",
+    "materials": [
+      "[Body]"
+    ],
+    "shaders": [
+      "[]"
+    ],
+    "modifiers": [
+      "[armature]"
+    ],
+    "pbrType": "metallic",
+    "purePbr": true,
+    "procedural": true,
+    "uv": true,
+    "animated": true,
+    "rig": true,
+    "modelStyle": "realistic",
+    "condition": "new",
+    "designVariant": null,
+    "textureResolutionMax": null,
+    "engines": [
+      "[cycles]"
+    ]
+  },
+  "availableFiles": [
+    {
+      "fileType": "blend",
+      "uuid": "5ee1004f-a965-4fde-9fc6-5d067326cf1f",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/5ee1004f-a965-4fde-9fc6-5d067326cf1f/",
+      "fileUploadSize": 80760643
+    },
+    {
+      "fileType": "gltf",
+      "uuid": "df274403-61c4-480f-bf43-8ed765b87fae",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/df274403-61c4-480f-bf43-8ed765b87fae/",
+      "fileUploadSize": 12078116
+    },
+    {
+      "fileType": "gltf_godot",
+      "uuid": "9d6a1a45-6cab-4808-a8a4-020283d9ba78",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/9d6a1a45-6cab-4808-a8a4-020283d9ba78/",
+      "fileUploadSize": 12914248
+    },
+    {
+      "fileType": "resolution_0_5K",
+      "uuid": "e22b2c3f-9e2c-4871-b1a6-1ca0323443fa",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/e22b2c3f-9e2c-4871-b1a6-1ca0323443fa/",
+      "fileUploadSize": 2964252
+    },
+    {
+      "fileType": "resolution_1K",
+      "uuid": "4fb89d36-f88e-435b-b957-f009cf05b90c",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/4fb89d36-f88e-435b-b957-f009cf05b90c/",
+      "fileUploadSize": 4997309
+    },
+    {
+      "fileType": "resolution_2K",
+      "uuid": "046c8b49-02ab-472e-9602-ae3bc3ef8c2a",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/046c8b49-02ab-472e-9602-ae3bc3ef8c2a/",
+      "fileUploadSize": 12724898
+    },
+    {
+      "fileType": "resolution_4K",
+      "uuid": "8ea1aeb9-754d-4248-8ef9-c92a1ab276bb",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/8ea1aeb9-754d-4248-8ef9-c92a1ab276bb/",
+      "fileUploadSize": 43262414
+    },
+    {
+      "fileType": "thumbnail",
+      "uuid": "bfa71baa-d2ea-4c08-8b2f-5b35e99cbd80",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/bfa71baa-d2ea-4c08-8b2f-5b35e99cbd80/",
+      "fileUploadSize": 2035348
+    }
+  ],
+  "downloaded": {
+    "thumbnail": {
+      "file": "public/assets/blenderkit/horror_monster_bloodfang-rigged-animated_26c4e5a8/thumbnail.jpg",
+      "url": "/studio/assets/blenderkit/horror_monster_bloodfang-rigged-animated_26c4e5a8/thumbnail.jpg",
+      "bytes": 192922,
+      "sourceUrl": "https://public.blenderkit.com/thumbnails/assets/baa444fcc6a04ae292e3bcc82e2e71ad/files/thumbnail_c33666b4-9b64-4cf6-866c-8e1ec4352330.jpg.1024x1024_q85_crop-%2C.jpg"
+    },
+    "glb": {
+      "file": "public/assets/blenderkit/horror_monster_bloodfang-rigged-animated_26c4e5a8/horror_monster_bloodfang-rigged-animated_26c4e5a8.glb",
+      "url": "/studio/assets/blenderkit/horror_monster_bloodfang-rigged-animated_26c4e5a8/horror_monster_bloodfang-rigged-animated_26c4e5a8.glb",
+      "bytes": 12078116,
+      "fileType": "gltf"
+    },
+    "blend": {
+      "file": "public/assets/blenderkit/horror_monster_bloodfang-rigged-animated_26c4e5a8/horror_monster_bloodfang-rigged-animated_26c4e5a8_resolution_0_5K.blend",
+      "url": "/studio/assets/blenderkit/horror_monster_bloodfang-rigged-animated_26c4e5a8/horror_monster_bloodfang-rigged-animated_26c4e5a8_resolution_0_5K.blend",
+      "bytes": 2964252,
+      "fileType": "resolution_0_5K"
+    }
+  }
+}

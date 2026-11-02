@@ -1,0 +1,150 @@
+{
+  "id": "3cc1ef46-89bb-4406-8561-35b841206f4c",
+  "assetBaseId": "220840fe-bb47-4617-b0b7-48372acb5661",
+  "slug": "stylized_female_character_220840fe",
+  "name": "Stylized Female Character",
+  "assetType": "model",
+  "category": "woman",
+  "author": "ali alipour",
+  "license": "royalty_free",
+  "isFree": true,
+  "score": 1600.0,
+  "ratingsAverage": {
+    "bookmarks": 0.9642857142857143,
+    "workingHours": 20.0,
+    "quality": 8.0,
+    "virtualPrice": null
+  },
+  "description": "A stylized female character with clean topology, cartoon-inspired proportions, and a friendly appearance. lowpoly, gameready,PBR,rigify. Suitable for games, animations, renders, and character design projects.",
+  "tags": [
+    "stylized",
+    "female",
+    "character",
+    "cartoon",
+    "girl",
+    "rig",
+    "gameready",
+    "cute",
+    "lowpoly",
+    "PBR"
+  ],
+  "parameters": {
+    "dimensionX": 1.3675,
+    "dimensionY": 0.3618,
+    "dimensionZ": 1.6738,
+    "dimensionsMeters": {
+      "width": 1.3675,
+      "depth": 0.3618,
+      "height": 1.6738
+    },
+    "boundingBox": {
+      "min": [
+        -0.6837,
+        -0.1651,
+        -0.0005
+      ],
+      "max": [
+        0.6837,
+        0.1968,
+        1.6733
+      ]
+    },
+    "faceCount": 22055,
+    "faceCountRender": 22055,
+    "objectCount": 12,
+    "nodeCount": 79,
+    "meshPolyType": "quad_dominant",
+    "materials": [
+      "[Mouth base hair sweater pants shoe eyes eyes2]"
+    ],
+    "shaders": [
+      "[principled]"
+    ],
+    "modifiers": [
+      "[armature]"
+    ],
+    "pbrType": "metallic",
+    "purePbr": true,
+    "procedural": false,
+    "uv": true,
+    "animated": null,
+    "rig": true,
+    "modelStyle": "lowpoly",
+    "condition": "new",
+    "designVariant": null,
+    "textureResolutionMax": 4096,
+    "engines": [
+      "[cycles]"
+    ]
+  },
+  "availableFiles": [
+    {
+      "fileType": "blend",
+      "uuid": "36ba6878-9eee-4664-9714-ff07854a9b52",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/36ba6878-9eee-4664-9714-ff07854a9b52/",
+      "fileUploadSize": 150718007
+    },
+    {
+      "fileType": "gltf",
+      "uuid": "3a6dae02-9681-49f4-ba0f-f629687f3e57",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/3a6dae02-9681-49f4-ba0f-f629687f3e57/",
+      "fileUploadSize": 8860128
+    },
+    {
+      "fileType": "gltf_godot",
+      "uuid": "0d7d6c84-1c36-463d-a31f-8142ab97ee85",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/0d7d6c84-1c36-463d-a31f-8142ab97ee85/",
+      "fileUploadSize": 10833300
+    },
+    {
+      "fileType": "resolution_0_5K",
+      "uuid": "80148fbf-8a29-463a-b2eb-45464944892b",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/80148fbf-8a29-463a-b2eb-45464944892b/",
+      "fileUploadSize": 2576205
+    },
+    {
+      "fileType": "resolution_1K",
+      "uuid": "5b8dc2a1-27a8-4b47-a1e6-7d54a71c362f",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/5b8dc2a1-27a8-4b47-a1e6-7d54a71c362f/",
+      "fileUploadSize": 4016452
+    },
+    {
+      "fileType": "resolution_2K",
+      "uuid": "d8b8d163-f2d8-4847-b91e-2384492e2dcf",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/d8b8d163-f2d8-4847-b91e-2384492e2dcf/",
+      "fileUploadSize": 10665475
+    },
+    {
+      "fileType": "resolution_4K",
+      "uuid": "85a68b6f-ead4-4b54-a2d8-9a35473a174a",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/85a68b6f-ead4-4b54-a2d8-9a35473a174a/",
+      "fileUploadSize": 39481755
+    },
+    {
+      "fileType": "thumbnail",
+      "uuid": "f8db442f-88ce-4ac0-b52f-d2a8a734b0f3",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/f8db442f-88ce-4ac0-b52f-d2a8a734b0f3/",
+      "fileUploadSize": 17509082
+    }
+  ],
+  "downloaded": {
+    "thumbnail": {
+      "file": "public/assets/blenderkit/stylized_female_character_220840fe/thumbnail.png",
+      "url": "/studio/assets/blenderkit/stylized_female_character_220840fe/thumbnail.png",
+      "bytes": 848876,
+      "sourceUrl": "https://public.blenderkit.com/thumbnails/assets/3cc1ef4689bb4406856135b841206f4c/files/thumbnail_c998c6bd-752e-4a1c-8388-57827003e798.png.1024x1024_q85_crop-%2C.png"
+    },
+    "glb": {
+      "file": "public/assets/blenderkit/stylized_female_character_220840fe/stylized_female_character_220840fe.glb",
+      "url": "/studio/assets/blenderkit/stylized_female_character_220840fe/stylized_female_character_220840fe.glb",
+      "bytes": 8860128,
+      "fileType": "gltf"
+    },
+    "blend": {
+      "file": "public/assets/blenderkit/stylized_female_character_220840fe/stylized_female_character_220840fe_resolution_0_5K.blend",
+      "url": "/studio/assets/blenderkit/stylized_female_character_220840fe/stylized_female_character_220840fe_resolution_0_5K.blend",
+      "bytes": 2576205,
+      "fileType": "resolution_0_5K"
+    }
+  }
+}

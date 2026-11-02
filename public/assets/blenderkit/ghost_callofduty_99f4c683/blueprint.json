@@ -1,0 +1,144 @@
+{
+  "id": "9a4aaef3-c4b1-4184-9af4-4513986be2a1",
+  "assetBaseId": "99f4c683-9572-4153-86b5-5aaec359c05c",
+  "slug": "ghost_callofduty_99f4c683",
+  "name": "Ghost(CallOfDuty)",
+  "assetType": "model",
+  "category": "humanoids-military",
+  "author": "AmirHossein felekori",
+  "license": "royalty_free",
+  "isFree": true,
+  "score": 20000.0,
+  "ratingsAverage": {
+    "bookmarks": 0.9839357429718876,
+    "workingHours": 200.0,
+    "quality": 10.0,
+    "virtualPrice": null
+  },
+  "description": "Ghost from CallOfDuty Game Serise\r\nGuns : \r\nKrissVector (Rigged & Full Attachment )\r\nDesert Eagle (Rigged)\r\n\r\n2 different heads Mask\r\n\r\nHigh Quality Topology\r\nPBR Textures \r\nOptimized \r\nAnimation & Game Ready\r\nI hope Enjoy :) \r\nPlease Rate and Comment",
+  "tags": [
+    "GameReady",
+    "MilitaryCharacter",
+    "War",
+    "Military",
+    "Soldire",
+    "Army",
+    "UsArmy",
+    "Ghost",
+    "callofduty",
+    "Male"
+  ],
+  "parameters": {
+    "dimensionX": 3.132,
+    "dimensionY": 0.5758,
+    "dimensionZ": 1.8286,
+    "dimensionsMeters": {
+      "width": 3.132,
+      "depth": 0.5758,
+      "height": 1.8286
+    },
+    "boundingBox": {
+      "min": [
+        -2.2584,
+        -0.2466,
+        -0.0077
+      ],
+      "max": [
+        0.8736,
+        0.3292,
+        1.8208
+      ]
+    },
+    "faceCount": 59856,
+    "faceCountRender": 59856,
+    "objectCount": 31,
+    "nodeCount": 275,
+    "meshPolyType": "quad_dominant",
+    "materials": [
+      "[Tactical_Attachment Ks_body Stock.002 Stock CrossHair Glass.001 Combat_Kit_CT_1 default1 default2 Body_CT_1 BackPack_Kit_CT_1 Head_CT_1 Glove_CT_1 Mag Laser HeadMask_2 headset Skull_Mask Helmet eye HeadMask_1 Glass Glass_Frame Material.007 deagle MAT]"
+    ],
+    "shaders": [
+      "[principled emission]"
+    ],
+    "modifiers": [
+      "[armature]"
+    ],
+    "pbrType": "metallic",
+    "purePbr": true,
+    "procedural": false,
+    "uv": true,
+    "animated": null,
+    "rig": true,
+    "modelStyle": "realistic",
+    "condition": "new",
+    "designVariant": null,
+    "textureResolutionMax": 2500,
+    "engines": [
+      "[cycles]"
+    ]
+  },
+  "availableFiles": [
+    {
+      "fileType": "blend",
+      "uuid": "bf815b68-9164-4b98-a650-23bb72a66438",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/bf815b68-9164-4b98-a650-23bb72a66438/",
+      "fileUploadSize": 109735238
+    },
+    {
+      "fileType": "gltf",
+      "uuid": "f3f6c986-d836-4740-a836-efeda9868fde",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/f3f6c986-d836-4740-a836-efeda9868fde/",
+      "fileUploadSize": 7992348
+    },
+    {
+      "fileType": "gltf_godot",
+      "uuid": "67cf1638-c3c0-43d6-bf97-ccb4b5cf72a5",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/67cf1638-c3c0-43d6-bf97-ccb4b5cf72a5/",
+      "fileUploadSize": 18699640
+    },
+    {
+      "fileType": "resolution_0_5K",
+      "uuid": "f008a669-24a5-4302-86c8-dbfde27adb45",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/f008a669-24a5-4302-86c8-dbfde27adb45/",
+      "fileUploadSize": 7257260
+    },
+    {
+      "fileType": "resolution_1K",
+      "uuid": "cadcc794-cc08-412a-ac9f-f36f328b041a",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/cadcc794-cc08-412a-ac9f-f36f328b041a/",
+      "fileUploadSize": 16787431
+    },
+    {
+      "fileType": "resolution_2K",
+      "uuid": "7e1130b8-883b-4e43-945e-015968540a22",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/7e1130b8-883b-4e43-945e-015968540a22/",
+      "fileUploadSize": 54081943
+    },
+    {
+      "fileType": "thumbnail",
+      "uuid": "fc0a1f5a-ea90-4396-b018-e2dbf3cfb2a6",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/fc0a1f5a-ea90-4396-b018-e2dbf3cfb2a6/",
+      "fileUploadSize": 3230387
+    }
+  ],
+  "downloaded": {
+    "thumbnail": {
+      "file": "public/assets/blenderkit/ghost_callofduty_99f4c683/thumbnail.png",
+      "url": "/studio/assets/blenderkit/ghost_callofduty_99f4c683/thumbnail.png",
+      "bytes": 905590,
+      "sourceUrl": "https://public.blenderkit.com/thumbnails/assets/9a4aaef3c4b141849af44513986be2a1/files/thumbnail_fc0a1f5a-ea90-4396-b018-e2dbf3cfb2a6.png.1024x1024_q85_crop-%2C.png"
+    },
+    "glb": {
+      "file": "public/assets/blenderkit/ghost_callofduty_99f4c683/ghost_callofduty_99f4c683.glb",
+      "url": "/studio/assets/blenderkit/ghost_callofduty_99f4c683/ghost_callofduty_99f4c683.glb",
+      "bytes": 7992348,
+      "fileType": "gltf"
+    },
+    "blend": {
+      "file": "public/assets/blenderkit/ghost_callofduty_99f4c683/ghost_callofduty_99f4c683_resolution_0_5K.blend",
+      "url": "/studio/assets/blenderkit/ghost_callofduty_99f4c683/ghost_callofduty_99f4c683_resolution_0_5K.blend",
+      "bytes": 7257260,
+      "fileType": "resolution_0_5K"
+    }
+  }
+}

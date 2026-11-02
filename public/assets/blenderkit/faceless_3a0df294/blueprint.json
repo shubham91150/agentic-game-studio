@@ -1,0 +1,144 @@
+{
+  "id": "02aecc2e-d171-4a98-9120-72c94033589f",
+  "assetBaseId": "3a0df294-4ccb-4b0d-8f3c-46be18d491ff",
+  "slug": "faceless_3a0df294",
+  "name": "FaceLess",
+  "assetType": "model",
+  "category": "sculpture",
+  "author": "Yahku le Roux",
+  "license": "royalty_free",
+  "isFree": true,
+  "score": 400.0,
+  "ratingsAverage": {
+    "bookmarks": 1.0,
+    "workingHours": 4.0,
+    "quality": 10.0,
+    "virtualPrice": null
+  },
+  "description": "Garden Statue without a face",
+  "tags": [
+    "Statue",
+    "Garden",
+    "Lady",
+    "Decor"
+  ],
+  "parameters": {
+    "dimensionX": 0.1003,
+    "dimensionY": 0.0847,
+    "dimensionZ": 0.2768,
+    "dimensionsMeters": {
+      "width": 0.1003,
+      "depth": 0.0847,
+      "height": 0.2768
+    },
+    "boundingBox": {
+      "min": [
+        -0.0517,
+        -0.0407,
+        0.0034
+      ],
+      "max": [
+        0.0486,
+        0.044,
+        0.2802
+      ]
+    },
+    "faceCount": 14608,
+    "faceCountRender": 14608,
+    "objectCount": 2,
+    "nodeCount": 6,
+    "meshPolyType": "quad",
+    "materials": [
+      "[Material]"
+    ],
+    "shaders": [
+      "[principled]"
+    ],
+    "modifiers": [
+      "[]"
+    ],
+    "pbrType": "metallic",
+    "purePbr": true,
+    "procedural": false,
+    "uv": true,
+    "animated": null,
+    "rig": false,
+    "modelStyle": "realistic",
+    "condition": "old",
+    "designVariant": null,
+    "textureResolutionMax": 4096,
+    "engines": [
+      "[cycles]"
+    ]
+  },
+  "availableFiles": [
+    {
+      "fileType": "blend",
+      "uuid": "f4b66d57-c9c9-43a4-882e-c3be9bf6746f",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/f4b66d57-c9c9-43a4-882e-c3be9bf6746f/",
+      "fileUploadSize": 60944026
+    },
+    {
+      "fileType": "gltf",
+      "uuid": "66344054-9f5f-4b29-aa96-9142a5add041",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/66344054-9f5f-4b29-aa96-9142a5add041/",
+      "fileUploadSize": 59979784
+    },
+    {
+      "fileType": "gltf_godot",
+      "uuid": "ae9f53e3-ae23-45b4-a56b-e6f5b5053202",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/ae9f53e3-ae23-45b4-a56b-e6f5b5053202/",
+      "fileUploadSize": 60554568
+    },
+    {
+      "fileType": "resolution_0_5K",
+      "uuid": "db683bf8-3dcd-4221-9108-bf63dd3d8b84",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/db683bf8-3dcd-4221-9108-bf63dd3d8b84/",
+      "fileUploadSize": 1092411
+    },
+    {
+      "fileType": "resolution_1K",
+      "uuid": "5105c7f0-7fc6-4ec0-8bb0-bc08514de6ab",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/5105c7f0-7fc6-4ec0-8bb0-bc08514de6ab/",
+      "fileUploadSize": 1370043
+    },
+    {
+      "fileType": "resolution_2K",
+      "uuid": "b4ef4c1c-0d63-42cb-ad85-c033b1432ef7",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/b4ef4c1c-0d63-42cb-ad85-c033b1432ef7/",
+      "fileUploadSize": 2140934
+    },
+    {
+      "fileType": "resolution_4K",
+      "uuid": "17fa5cb7-1c87-491f-a4c3-dc2cd52c9270",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/17fa5cb7-1c87-491f-a4c3-dc2cd52c9270/",
+      "fileUploadSize": 4179549
+    },
+    {
+      "fileType": "thumbnail",
+      "uuid": "63d39958-b5a3-4194-9ed0-50320362ddf7",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/63d39958-b5a3-4194-9ed0-50320362ddf7/",
+      "fileUploadSize": 65799
+    }
+  ],
+  "downloaded": {
+    "thumbnail": {
+      "file": "public/assets/blenderkit/faceless_3a0df294/thumbnail.jpg",
+      "url": "/studio/assets/blenderkit/faceless_3a0df294/thumbnail.jpg",
+      "bytes": 51960,
+      "sourceUrl": "https://public.blenderkit.com/thumbnails/assets/02aecc2ed1714a98912072c94033589f/files/thumbnail_ce68f50c-94ca-46b8-8e25-b6305ab6f95a.jpg.1024x1024_q85_crop-%2C.jpg"
+    },
+    "glb": {
+      "file": "public/assets/blenderkit/faceless_3a0df294/faceless_3a0df294.glb",
+      "url": "/studio/assets/blenderkit/faceless_3a0df294/faceless_3a0df294.glb",
+      "bytes": 59979784,
+      "fileType": "gltf"
+    },
+    "blend": {
+      "file": "public/assets/blenderkit/faceless_3a0df294/faceless_3a0df294_resolution_0_5K.blend",
+      "url": "/studio/assets/blenderkit/faceless_3a0df294/faceless_3a0df294_resolution_0_5K.blend",
+      "bytes": 1092411,
+      "fileType": "resolution_0_5K"
+    }
+  }
+}

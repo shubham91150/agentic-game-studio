@@ -1,0 +1,148 @@
+{
+  "id": "31375d3e-c3ca-4d23-95fa-1bfee79173fe",
+  "assetBaseId": "8beef17b-9fe0-47cf-bda4-de136d7d2356",
+  "slug": "pumpkin_head_character_8beef17b",
+  "name": "Pumpkin Head Character",
+  "assetType": "model",
+  "category": "monster-creature",
+  "author": "Dr toxic ",
+  "license": "royalty_free",
+  "isFree": true,
+  "score": 12000.0,
+  "ratingsAverage": {
+    "bookmarks": 1.0,
+    "workingHours": 120.0,
+    "quality": 10.0,
+    "virtualPrice": null
+  },
+  "description": "Game-Ready Pumpkin Head Character (2 Color Variations)\r\n\r\nA creepy yet stylized pumpkin-headed scarecrow, perfect for Halloween projects, horror games, and cinematic scenes. Features a glowing carved pumpkin head, worn burlap-style shirt, ragged tunic with rope belt, patched pants, and detailed boots.\r\n\r\nFeatures:\r\n\r\n2 color variations (Classic Orange and Toxic Green)\r\nGame-ready topology (clean, optimized quad-based mesh)\r\n1 material with 4K PBR textures\r\nRigged with Auto-Rig Pro\r\nGlowing emissive pumpkin face\r\nSuitable for games, animation, and rendering\r\n\r\n\u26a0\ufe0f Important Notice:\r\nThis character is currently available exclusively on BlendKit. Selling or distributing it on any other marketplace is strictly prohibited. My bot actively scans other markets, and any violation will be detected and the offending account reported and banned within 48 hours.\r\n\r\n\ud83d\udcac Share Your Work:\r\nIf you use this character in your project, I\u2019d love to see it! Please share it on my ArtStation. I\u2019d be happy to check it out.",
+  "tags": [
+    "scarecrow",
+    "pumpkinhead",
+    "halloween",
+    "horror",
+    "gameready",
+    "lowpoly",
+    "character",
+    "jackolantern"
+  ],
+  "parameters": {
+    "dimensionX": 1.7353,
+    "dimensionY": 0.5384,
+    "dimensionZ": 2.1575,
+    "dimensionsMeters": {
+      "width": 1.7353,
+      "depth": 0.5384,
+      "height": 2.1575
+    },
+    "boundingBox": {
+      "min": [
+        -0.8631,
+        -0.2764,
+        0.0006
+      ],
+      "max": [
+        0.8722,
+        0.262,
+        2.1581
+      ]
+    },
+    "faceCount": 23152,
+    "faceCountRender": 23152,
+    "objectCount": 12,
+    "nodeCount": 17,
+    "meshPolyType": "quad_dominant",
+    "materials": [
+      "[pumkin head .001]"
+    ],
+    "shaders": [
+      "[principled]"
+    ],
+    "modifiers": [
+      "[armature]"
+    ],
+    "pbrType": "metallic",
+    "purePbr": true,
+    "procedural": false,
+    "uv": true,
+    "animated": null,
+    "rig": true,
+    "modelStyle": "realistic",
+    "condition": "new",
+    "designVariant": null,
+    "textureResolutionMax": 4096,
+    "engines": [
+      "[cycles]"
+    ]
+  },
+  "availableFiles": [
+    {
+      "fileType": "blend",
+      "uuid": "88ff99f4-2fca-4301-9e59-04febdf2bc60",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/88ff99f4-2fca-4301-9e59-04febdf2bc60/",
+      "fileUploadSize": 34911355
+    },
+    {
+      "fileType": "gltf",
+      "uuid": "e7fe4080-4e3c-4753-862d-6c8ea8290302",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/e7fe4080-4e3c-4753-862d-6c8ea8290302/",
+      "fileUploadSize": 7639928
+    },
+    {
+      "fileType": "gltf_godot",
+      "uuid": "405f682c-d0d8-4493-b7ac-c68f942bf270",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/405f682c-d0d8-4493-b7ac-c68f942bf270/",
+      "fileUploadSize": 9300904
+    },
+    {
+      "fileType": "resolution_0_5K",
+      "uuid": "1422e551-8304-447e-bfaf-64d17d759238",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/1422e551-8304-447e-bfaf-64d17d759238/",
+      "fileUploadSize": 2211944
+    },
+    {
+      "fileType": "resolution_1K",
+      "uuid": "37c6b793-08b4-49d7-a987-a31df0b1f5a1",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/37c6b793-08b4-49d7-a987-a31df0b1f5a1/",
+      "fileUploadSize": 3219179
+    },
+    {
+      "fileType": "resolution_2K",
+      "uuid": "7d1a1f66-9995-4258-848b-61d9236611a6",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/7d1a1f66-9995-4258-848b-61d9236611a6/",
+      "fileUploadSize": 7567545
+    },
+    {
+      "fileType": "resolution_4K",
+      "uuid": "b7446958-491d-4f16-9b5e-0947e9d8487a",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/b7446958-491d-4f16-9b5e-0947e9d8487a/",
+      "fileUploadSize": 26092725
+    },
+    {
+      "fileType": "thumbnail",
+      "uuid": "f391f9e9-751a-4313-98ea-2ae5b7279dc4",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/f391f9e9-751a-4313-98ea-2ae5b7279dc4/",
+      "fileUploadSize": 6716034
+    }
+  ],
+  "downloaded": {
+    "thumbnail": {
+      "file": "public/assets/blenderkit/pumpkin_head_character_8beef17b/thumbnail.jpg",
+      "url": "/studio/assets/blenderkit/pumpkin_head_character_8beef17b/thumbnail.jpg",
+      "bytes": 128276,
+      "sourceUrl": "https://public.blenderkit.com/thumbnails/assets/31375d3ec3ca4d2395fa1bfee79173fe/files/thumbnail_cc10bbcb-b738-4be6-b08d-09de978473ac.png.1024x1024_q85_crop-%2C.jpg"
+    },
+    "glb": {
+      "file": "public/assets/blenderkit/pumpkin_head_character_8beef17b/pumpkin_head_character_8beef17b.glb",
+      "url": "/studio/assets/blenderkit/pumpkin_head_character_8beef17b/pumpkin_head_character_8beef17b.glb",
+      "bytes": 7639928,
+      "fileType": "gltf"
+    },
+    "blend": {
+      "file": "public/assets/blenderkit/pumpkin_head_character_8beef17b/pumpkin_head_character_8beef17b_resolution_0_5K.blend",
+      "url": "/studio/assets/blenderkit/pumpkin_head_character_8beef17b/pumpkin_head_character_8beef17b_resolution_0_5K.blend",
+      "bytes": 2211944,
+      "fileType": "resolution_0_5K"
+    }
+  }
+}

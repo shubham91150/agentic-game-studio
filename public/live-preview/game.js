@@ -1,8 +1,10 @@
-/* Ashes of St. Vermilion — boot, fixed-step loop, states (Stage 1).
- * States: menu -> playing <-> paused -> stageclear. ESC/P pause toggle.
- * Restart resets run state (pos, torch, crouch, key, timer, HUD, trauma)
- * and never reloads the page. E / INTERACT near the key (<=1.6m) clears
- * the stage; E at the chapel door shows a teaser toast (Stage 2).
+/* Ashes of St. Vermilion — boot, fixed-step loop, states (Stage 1+2+3).
+ * States: menu -> playing <-> paused -> stageclear | gameover. ESC/P pause.
+ * Restart resets run state (pos, torch, crouch, key, door, timer, HUD,
+ * trauma, enemy, beats) and never reloads the page. E near the key
+ * (<=1.6m, Classroom B) unlocks the chapel door; E at the door (<=2.2m)
+ * with the key clears the stage; Agatha catching the player (<=0.8m)
+ * plays a 2s jumpscare beat, then the gameover screen.
  * Renderer: ACES tone mapping + sRGB + PCFSoft shadows.
  * Quality: Low (shadows off, pixelRatio<=1) / Med (<=1.5) / High (<=2),
  * with auto step-down when fps<45 for 3s. ?debug=1 overlay + window.game.
@@ -38,6 +40,8 @@
     sensitivity: 1.0,
     mute: false,
     bestMs: null,
+    difficulty: "Normal",
+    bestSurvivalMs: null,
   };
   if (Save) {
     try {
@@ -45,6 +49,17 @@
     } catch (err) {
       /* defaults stand */
     }
+  }
+  /* Stage 2+3: older saves predate these keys. */
+  if (
+    settings.difficulty !== "Easy" &&
+    settings.difficulty !== "Normal" &&
+    settings.difficulty !== "Hard"
+  ) {
+    settings.difficulty = "Normal";
+  }
+  if (typeof settings.bestSurvivalMs !== "number") {
+    settings.bestSurvivalMs = null;
   }
 
   function persist() {
@@ -62,9 +77,33 @@
   var camera = null;
   var world = null;
   var player = null;
+  var enemy = null;
   var vfx = null;
   var UI = window.StV_UI || null;
   var Audio8 = window.StV_Audio || null;
+
+  /* Stage 2+3 run state: door lock, jumpscare, horror-beat flags. */
+  var doorLocked = true;
+  var jumpscare = false;
+  var jumpscareT = 0;
+  var b1fired = false;
+  var b2fired = false;
+  var b3fired = false;
+  var b4fired = false;
+  var wasInB = false;
+  var alertTick = 0;
+  /* Stage 2+3: single 4Hz enemy sample shared by HUD + debug overlay,
+   * so both always show the same state/dist from one timestamp. */
+  var esCache = { state: "PATROL", suspicion: 0, dist: 99, alert01: 0.15 };
+  var psState = {
+    x: 0,
+    z: 8.5,
+    noise: 0,
+    torchOn: true,
+    crouch: false,
+    keyHeld: false,
+    inClassB: false,
+  };
 
   var colliders = [];
   var bounds = { x0: -12, z0: -9, x1: 12, z1: 9 };
@@ -213,15 +252,108 @@
     }
   }
 
+  /* Stage 2+3 helper: jumpscare red-vignette overlay on/off. */
+  function setJumpscare(on) {
+    try {
+      var el = $("jumpscare");
+      if (!el) return;
+      if (on) el.classList.add("on");
+      else el.classList.remove("on");
+    } catch (err) {
+      /* x */
+    }
+  }
+
+  /* Stage 2+3 helper: chapel-door lock tint (slit glows amber unlocked).
+   * levels.js untouched: the slit is found by material, game-side. */
+  function tintDoor(unlocked) {
+    doorLocked = !unlocked;
+    if (!world || !world.chapelDoor) return;
+    try {
+      world.chapelDoor.userData.locked = !unlocked;
+      world.chapelDoor.traverse(function (o) {
+        if (o && o.material && o.material.isMeshBasicMaterial) {
+          o.material.color.setHex(unlocked ? 0xffc06a : 0x7a9fc0);
+        }
+      });
+    } catch (err) {
+      /* x */
+    }
+  }
+
+  /* Stage 2+3 helper: Classroom B footprint (east room). */
+  function inClassB(x, z) {
+    return x > 1 && x < 9 && z > -6 && z < 2;
+  }
+
+  function fmtClock(ms) {
+    var s = Math.max(0, Math.floor(ms / 1000));
+    var mins = Math.floor(s / 60);
+    var secs = s % 60;
+    return (
+      (mins < 10 ? "0" : "") + mins + ":" + (secs < 10 ? "0" : "") + secs
+    );
+  }
+
+  /* Stage 2+3 helper: best survival persists on clear AND gameover. */
+  function persistSurvival() {
+    if (
+      settings.bestSurvivalMs === null ||
+      timerMs > settings.bestSurvivalMs
+    ) {
+      settings.bestSurvivalMs = Math.round(timerMs);
+      persist();
+    }
+  }
+
+  function pickGameOverLine() {
+    try {
+      var lines = Story.GAMEOVER;
+      if (lines && lines.length) {
+        return lines[Math.floor(timerMs / 1000) % lines.length];
+      }
+    } catch (err) {
+      /* x */
+    }
+    return "";
+  }
+
   function resetRun() {
     timerMs = 0;
     keyFound = false;
     lowTime = 0;
     keys = {};
+    alertTick = 0;
+    jumpscare = false;
+    jumpscareT = 0;
+    esCache.state = "PATROL";
+    esCache.suspicion = 0;
+    esCache.dist = 99;
+    esCache.alert01 = 0.15;
+    b1fired = false;
+    b2fired = false;
+    b3fired = false;
+    b4fired = false;
+    wasInB = false;
+    setJumpscare(false);
+    try {
+      if (window.speechSynthesis && window.speechSynthesis.cancel) {
+        window.speechSynthesis.cancel();
+      }
+    } catch (err) {
+      /* x */
+    }
     if (player) {
       player.reset(spawn.x, spawn.z, spawn.ry || 0);
       player.setTorch(true);
       player.setCrouch(false);
+    }
+    if (enemy) {
+      try {
+        enemy.reset();
+      } catch (err) {
+        /* x */
+      }
     }
     if (vfx && vfx.reset) {
       try {
@@ -237,11 +369,27 @@
         /* x */
       }
     }
+    if (world && world.chapelDoor) {
+      try {
+        world.chapelDoor.rotation.y = 0;
+      } catch (err) {
+        /* x */
+      }
+    }
+    tintDoor(false);
+    if (Audio8 && Audio8.setAlert01) {
+      try {
+        Audio8.setAlert01(0.15);
+      } catch (err) {
+        /* x */
+      }
+    }
     if (UI) {
       try {
         if (UI.setKey) UI.setKey(false);
         if (UI.setObjective) UI.setObjective(Story.OBJECTIVES[0] || "");
         if (UI.setNoise) UI.setNoise(0);
+        if (UI.setEnemy) UI.setEnemy("PATROL", 99);
         if (UI.banner) UI.banner(null);
       } catch (err) {
         /* x */
@@ -324,7 +472,8 @@
   }
 
   function restartGame() {
-    if (state !== "paused" && state !== "stageclear") return;
+    if (state !== "paused" && state !== "stageclear" && state !== "gameover")
+      return;
     loopPaused = false;
     pausedRendered = false;
     if (Audio8) {
@@ -377,7 +526,10 @@
       } else {
         var dp = doorPos(tmpV);
         if (dp && distXZ(pp.x, pp.z, dp.x, dp.z) <= DOOR_RADIUS) {
-          txt = "E \u2014 Chapel Door";
+          txt =
+            keyFound && !doorLocked
+              ? "E \u2014 Chapel Door (khol do!)"
+              : "E \u2014 Chapel Door (locked)";
         }
       }
     }
@@ -394,7 +546,8 @@
   }
 
   function quitToMenu() {
-    if (state !== "paused" && state !== "stageclear") return;
+    if (state !== "paused" && state !== "stageclear" && state !== "gameover")
+      return;
     state = "menu";
     setAudioDim(true);
     if (Audio8 && Audio8.suspendAll) {
@@ -408,6 +561,17 @@
       player.setEnabled(false);
       player.reset(spawn.x, spawn.z, spawn.ry || 0);
     }
+    /* Stage 2+3: Agatha parks at spawn, jumpscare overlay clears. */
+    jumpscare = false;
+    jumpscareT = 0;
+    setJumpscare(false);
+    if (enemy) {
+      try {
+        enemy.reset();
+      } catch (err) {
+        /* x */
+      }
+    }
     show("menu");
     exitLock();
   }
@@ -419,6 +583,65 @@
     var secs = s % 60;
     var mins = Math.floor(s / 60);
     return mins + ":" + (secs < 10 ? "0" : "") + secs + "." + tenths;
+  }
+
+  /* Stage 2+3: Agatha's onCaught lands here — 2s jumpscare beat,
+   * then the gameover screen. */
+  function handleCaught() {
+    if (state !== "playing" || jumpscare) return;
+    jumpscare = true;
+    jumpscareT = 0;
+    if (player) player.setEnabled(false);
+    if (vfx) {
+      try {
+        vfx.addTrauma(1);
+      } catch (err) {
+        /* x */
+      }
+    }
+    if (Audio8 && Audio8.queueWhisper) {
+      try {
+        Audio8.queueWhisper("chase");
+      } catch (err) {
+        /* x */
+      }
+    }
+    setJumpscare(true);
+    if (UI && UI.setEnemy) {
+      try {
+        UI.setEnemy("CAUGHT", 0);
+      } catch (err) {
+        /* x */
+      }
+    }
+  }
+
+  function enterGameOver() {
+    if (state !== "playing") return;
+    state = "gameover";
+    jumpscare = false;
+    setJumpscare(false);
+    /* Dim only (no suspend): the caught-whisper finishes over the screen. */
+    setAudioDim(true);
+    if (player) player.setEnabled(false);
+    exitLock();
+    persistSurvival();
+    if (UI) {
+      try {
+        if (UI.setGameOverStats) {
+          UI.setGameOverStats(
+            "Survived " +
+              fmtClock(timerMs) +
+              " · " +
+              (settings.difficulty || "Normal"),
+            pickGameOverLine(),
+          );
+        }
+      } catch (err) {
+        /* x */
+      }
+    }
+    show("gameover");
   }
 
   function clearStage() {
@@ -434,6 +657,7 @@
     }
     if (player) player.setEnabled(false);
     exitLock();
+    persistSurvival();
     var isBest = false;
     if (settings.bestMs === null || timerMs < settings.bestMs) {
       settings.bestMs = Math.round(timerMs);
@@ -483,9 +707,11 @@
   }
 
   function doInteract() {
-    if (state !== "playing" || !player || !tmpV) return;
+    if (state !== "playing" || jumpscare || !player || !tmpV) return;
     var pp = player.pos();
     var kp = keyPos(tmpV);
+    /* Stage 2+3 win edge: key pickup unlocks the door, it no longer
+     * clears the stage on its own. */
     if (!keyFound && kp && distXZ(pp.x, pp.z, kp.x, kp.z) <= KEY_RADIUS) {
       keyFound = true;
       try {
@@ -496,6 +722,21 @@
       if (UI && UI.setKey) {
         try {
           UI.setKey(true);
+        } catch (err) {
+          /* x */
+        }
+      }
+      tintDoor(true);
+      if (UI && UI.setObjective) {
+        try {
+          UI.setObjective(Story.OBJECTIVES[1] || "");
+        } catch (err) {
+          /* x */
+        }
+      }
+      if (UI && UI.banner) {
+        try {
+          UI.banner(Story.OBJECTIVES[1] || "", 5000);
         } catch (err) {
           /* x */
         }
@@ -514,22 +755,43 @@
           /* x */
         }
       }
-      clearStage();
+      toast("Chapel Key mila! Darwaza kholo — jaldi!");
+      lastPrompt = "force-refresh";
+      updatePrompt();
       return;
     }
     var dp = doorPos(tmpV);
     if (dp && distXZ(pp.x, pp.z, dp.x, dp.z) <= DOOR_RADIUS) {
-      toast("Chapel ka darwaza band hai... Jaldi... (Stage 2)");
+      if (keyFound && !doorLocked) {
+        try {
+          if (world && world.chapelDoor) {
+            world.chapelDoor.rotation.y = -1.9;
+          }
+        } catch (err) {
+          /* x */
+        }
+        if (Audio8 && Audio8.pickup) {
+          try {
+            Audio8.pickup();
+          } catch (err) {
+            /* x */
+          }
+        }
+        clearStage();
+      } else {
+        toast("Chapel ka darwaza band hai — pehle Chapel Key dhoondo.");
+      }
     }
   }
 
   function togglePause() {
+    if (jumpscare) return;
     if (state === "playing") pauseGame();
     else if (state === "paused") resumeGame();
   }
 
   function toggleTorch() {
-    if (state !== "playing" || !player) return;
+    if (state !== "playing" || jumpscare || !player) return;
     var now = true;
     try {
       now = player.isTorchOn ? !player.isTorchOn() : true;
@@ -542,7 +804,7 @@
   }
 
   function toggleCrouch() {
-    if (state !== "playing" || !player) return;
+    if (state !== "playing" || jumpscare || !player) return;
     try {
       var now = player.isCrouch ? !player.isCrouch() : true;
       player.setCrouch(now);
@@ -557,6 +819,16 @@
     if (Audio8 && Audio8.setMuted) {
       try {
         Audio8.setMuted(settings.mute);
+      } catch (err) {
+        /* x */
+      }
+    }
+    /* Mute silences in-flight whispers too (speech bypasses WebAudio). */
+    if (settings.mute) {
+      try {
+        if (window.speechSynthesis && window.speechSynthesis.cancel) {
+          window.speechSynthesis.cancel();
+        }
       } catch (err) {
         /* x */
       }
@@ -592,9 +864,163 @@
         /* x */
       }
     }
+    /* Stage 2+3: Agatha advances on the same fixed step. */
+    if (enemy) {
+      try {
+        var pp = player ? player.pos() : null;
+        psState.x = pp ? pp.x : 0;
+        psState.z = pp ? pp.z : 8.5;
+        psState.noise = player ? player.noiseLevel() : 0;
+        psState.torchOn = player ? player.isTorchOn() : true;
+        psState.crouch = player ? player.isCrouch() : false;
+        psState.keyHeld = keyFound;
+        psState.inClassB = inClassB(psState.x, psState.z);
+        enemy.update(dt, timerMs / 1000, psState);
+      } catch (err) {
+        /* x */
+      }
+    }
     if (vfx && camera) {
       try {
         vfx.update(dt, camera);
+      } catch (err) {
+        /* x */
+      }
+    }
+  }
+
+  /* Stage 2+3: 4Hz director tick — alert fades, HUD, beats, rumble. */
+  function directorTick() {
+    var es = null;
+    if (enemy) {
+      try {
+        es = enemy.getState();
+      } catch (err) {
+        es = null;
+      }
+    }
+    /* Publish the single shared sample (HUD + debug read this). */
+    try {
+      if (es) {
+        esCache.state = es.state;
+        esCache.suspicion = es.suspicion;
+        esCache.dist = es.dist;
+        esCache.alert01 = es.alert01;
+      }
+    } catch (err) {
+      /* x */
+    }
+    var runT = timerMs / 1000;
+    var inB = inClassB(psState.x, psState.z);
+    var entered = inB && !wasInB;
+    wasInB = inB;
+    if (!b1fired) {
+      if (runT >= 35 && es && es.dist > 8) {
+        b1fired = true;
+        if (Audio8 && Audio8.thunder) {
+          try {
+            Audio8.thunder();
+          } catch (err) {
+            /* x */
+          }
+        }
+        if (vfx && vfx.silhouetteReveal) {
+          try {
+            vfx.silhouetteReveal();
+          } catch (err) {
+            /* x */
+          }
+        }
+      } else if (runT >= 60) {
+        b1fired = true;
+      }
+    }
+    if (!b2fired && (entered || (runT >= 80 && inB))) {
+      b2fired = true;
+      if (enemy) {
+        try {
+          enemy.setAlert(1);
+        } catch (err) {
+          /* x */
+        }
+      }
+      if (Audio8 && Audio8.queueWhisper) {
+        try {
+          Audio8.queueWhisper("near");
+        } catch (err) {
+          /* x */
+        }
+      }
+    }
+    if (!b4fired && keyFound) {
+      b4fired = true;
+      if (enemy) {
+        try {
+          enemy.setAlert(2);
+        } catch (err) {
+          /* x */
+        }
+      }
+      if (Audio8 && Audio8.queueWhisper) {
+        try {
+          Audio8.queueWhisper("chase");
+        } catch (err) {
+          /* x */
+        }
+      }
+      if (UI && UI.banner) {
+        try {
+          UI.banner(Story.OBJECTIVES[2] || "", 5000);
+        } catch (err) {
+          /* x */
+        }
+      }
+    }
+    var floor = 0.15;
+    if (b4fired) floor = 1.0;
+    else if (b2fired) floor = 0.6;
+    var crouchNow = false;
+    try {
+      crouchNow = player ? player.isCrouch() : false;
+    } catch (err) {
+      /* x */
+    }
+    if (runT >= 125 && es && es.state === "SEARCH" && es.dist < 8) {
+      if (crouchNow) {
+        floor = Math.max(floor, 0.85);
+        if (!b3fired) {
+          b3fired = true;
+          if (Audio8 && Audio8.queueWhisper) {
+            try {
+              Audio8.queueWhisper("near");
+            } catch (err) {
+              /* x */
+            }
+          }
+        }
+      }
+    }
+    var alert = Math.max(floor, es ? es.alert01 : 0.15);
+    if (Audio8 && Audio8.setAlert01) {
+      try {
+        Audio8.setAlert01(alert);
+      } catch (err) {
+        /* x */
+      }
+    }
+    if (UI && UI.setEnemy) {
+      try {
+        UI.setEnemy(es ? es.state : "PATROL", es ? es.dist : 99);
+      } catch (err) {
+        /* x */
+      }
+    }
+    if (es && es.state === "CHASE" && vfx && vfx.chaseRumble) {
+      try {
+        var prox = 1 - es.dist / 14;
+        if (prox < 0) prox = 0;
+        if (prox > 1) prox = 1;
+        vfx.chaseRumble(prox);
       } catch (err) {
         /* x */
       }
@@ -611,6 +1037,8 @@
     var raw = (now - lastT) / 1000;
     lastT = now;
     if (!(raw > 0)) raw = 0;
+    /* Stage 2+3: unclamped wall-clock for the jumpscare beat (2s real). */
+    var rawReal = raw > 1 ? 1 : raw;
     if (raw > CLAMP_DT) raw = CLAMP_DT;
     if (state === "paused" || loopPaused) {
       if (!pausedRendered) {
@@ -652,6 +1080,27 @@
         }
       }
       updatePrompt();
+      /* Stage 2+3: director at 4Hz, jumpscare beat at 2s. */
+      alertTick += raw;
+      if (alertTick >= 0.25) {
+        alertTick = 0;
+        try {
+          directorTick();
+        } catch (err) {
+          /* x */
+        }
+      }
+      if (jumpscare) {
+        jumpscareT += rawReal;
+        if (vfx) {
+          try {
+            vfx.addTrauma(0.06);
+          } catch (err) {
+            /* x */
+          }
+        }
+        if (jumpscareT >= 2) enterGameOver();
+      }
     } else if (state === "menu" && camera) {
       /* Slow menu drift over the spawn vista (frozen when reduced motion). */
       var sway = 0;
@@ -702,6 +1151,21 @@
       if (DEBUG && dbgEl && player) {
         try {
           var p = player.pos();
+          var ag = "";
+          try {
+            /* Shared 4Hz sample: always identical to the HUD readout. */
+            ag =
+              "  AG " +
+              esCache.state +
+              " S" +
+              esCache.suspicion +
+              " " +
+              esCache.dist +
+              "m";
+            ag += " " + (window.__stvAgathaTier || "?");
+          } catch (e2) {
+            /* x */
+          }
           dbgEl.textContent =
             "FPS " +
             fpsShown +
@@ -710,7 +1174,8 @@
             " / " +
             p.y.toFixed(1) +
             " / " +
-            p.z.toFixed(1);
+            p.z.toFixed(1) +
+            ag;
         } catch (err) {
           /* x */
         }
@@ -1035,6 +1500,25 @@
       }
     }
 
+    /* Stage 2+3: Mother Agatha. The game boots without her rather than
+     * crashing when the enemy module is missing. */
+    if (window.StV_Enemy) {
+      try {
+        enemy = window.StV_Enemy.create(scene, colliders, bounds, player);
+        if (enemy) {
+          if (enemy.reset) enemy.reset();
+          if (enemy.onCaught) enemy.onCaught(handleCaught);
+        }
+      } catch (err) {
+        try {
+          console.error("[stv] enemy failed", err);
+        } catch (e) {
+          /* x */
+        }
+        enemy = null;
+      }
+    }
+
     if (Audio8) {
       try {
         Audio8.setVolume(settings.volume);
@@ -1114,6 +1598,15 @@
                 /* x */
               }
             }
+            if (settings.mute) {
+              try {
+                if (window.speechSynthesis && window.speechSynthesis.cancel) {
+                  window.speechSynthesis.cancel();
+                }
+              } catch (err) {
+                /* x */
+              }
+            }
             persist();
             if (UI && UI.syncSettings) {
               try {
@@ -1121,6 +1614,20 @@
               } catch (err) {
                 /* x */
               }
+            }
+          },
+          onDifficulty: function (d) {
+            if (d === "Easy" || d === "Normal" || d === "Hard") {
+              settings.difficulty = d;
+              persist();
+              if (UI && UI.syncSettings) {
+                try {
+                  UI.syncSettings(settings);
+                } catch (err) {
+                  /* x */
+                }
+              }
+              toast("Agatha: " + d);
             }
           },
         });
@@ -1166,6 +1673,7 @@
     window.game = {
       scene: scene,
       player: player,
+      enemy: enemy,
       getState: function () {
         return state;
       },
@@ -1177,28 +1685,51 @@
         var cz = Math.min(bounds.z1 - 0.5, Math.max(bounds.z0 + 0.5, +z || 0));
         player.reset(cx, cz);
       },
+      /* Stage 2+3: debug win grants the key, warps to the chapel
+       * door-front, and presses E — one call still clears. */
       win: function () {
         if (state !== "playing") return;
-        keyFound = true;
-        if (world && world.keyMesh) {
+        if (!keyFound) {
+          keyFound = true;
+          if (world && world.keyMesh) {
+            try {
+              world.keyMesh.visible = false;
+            } catch (err) {
+              /* x */
+            }
+          }
+          if (UI && UI.setKey) {
+            try {
+              UI.setKey(true);
+            } catch (err) {
+              /* x */
+            }
+          }
+          tintDoor(true);
+          if (UI && UI.setObjective) {
+            try {
+              UI.setObjective(Story.OBJECTIVES[1] || "");
+            } catch (err) {
+              /* x */
+            }
+          }
+        }
+        if (player) {
           try {
-            world.keyMesh.visible = false;
+            player.reset(0, -7.0);
           } catch (err) {
             /* x */
           }
         }
-        if (UI && UI.setKey) {
-          try {
-            UI.setKey(true);
-          } catch (err) {
-            /* x */
-          }
-        }
-        clearStage();
+        doInteract();
       },
       giveAll: function () {
         if (state === "playing" && window.game && window.game.win)
           window.game.win();
+      },
+      /* Stage 2+3 debug: force the onCaught path. */
+      die: function () {
+        handleCaught();
       },
     };
 

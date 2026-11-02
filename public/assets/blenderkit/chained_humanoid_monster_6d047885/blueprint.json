@@ -1,0 +1,149 @@
+{
+  "id": "1f8e4194-4b14-4a03-8795-05918f199a9a",
+  "assetBaseId": "6d047885-21ff-4828-a779-54e8016bf876",
+  "slug": "chained_humanoid_monster_6d047885",
+  "name": "Chained Humanoid Monster",
+  "assetType": "model",
+  "category": "monster-creature",
+  "author": "Dr toxic ",
+  "license": "royalty_free",
+  "isFree": true,
+  "score": 15000.0,
+  "ratingsAverage": {
+    "bookmarks": 1.0,
+    "workingHours": 150.0,
+    "quality": 10.0,
+    "virtualPrice": null
+  },
+  "description": "A highly detailed realistic chained humanoid monster 3D character designed for horror games, dark fantasy worlds, cinematic scenes, and creature-based projects.\r\n\r\nThis unique creature features a gaunt muscular body, highly detailed skin textures, a ragged cloth garment, metal shackles, heavy chains, iron balls, and a wooden restraint frame.\r\n\r\nThe model features **2 materials, high-quality 4K textures, optimized topology, and an Auto-Rig Pro rig**, providing a solid foundation for animation and character posing in Blender.\r\n\r\n**Features:**\r\n- Realistic humanoid horror creature\r\n- Detailed chains, shackles, and restraint equipment\r\n- 2 materials\r\n- High-quality 4K textures\r\n- Optimized topology\r\n- Rigged with Auto-Rig Pro\r\n- Suitable for animation and posing\r\n- Ideal for horror games, dark fantasy, and cinematic productions",
+  "tags": [
+    "3DCharacter",
+    "Monster",
+    "Creature",
+    "Horror",
+    "Humanoid",
+    "Realistic",
+    "Fantasy",
+    "GameReady",
+    "HighDetail"
+  ],
+  "parameters": {
+    "dimensionX": 1.0321,
+    "dimensionY": 0.725,
+    "dimensionZ": 1.9497,
+    "dimensionsMeters": {
+      "width": 1.0321,
+      "depth": 0.725,
+      "height": 1.9497
+    },
+    "boundingBox": {
+      "min": [
+        -0.5125,
+        -0.2715,
+        -0.0111
+      ],
+      "max": [
+        0.5196,
+        0.4535,
+        1.9386
+      ]
+    },
+    "faceCount": 25312,
+    "faceCountRender": 25312,
+    "objectCount": 17,
+    "nodeCount": 0,
+    "meshPolyType": "quad_dominant",
+    "materials": [
+      "[undead body.001 unead attachment]"
+    ],
+    "shaders": [
+      "[]"
+    ],
+    "modifiers": [
+      "[armature]"
+    ],
+    "pbrType": "metallic",
+    "purePbr": true,
+    "procedural": true,
+    "uv": true,
+    "animated": null,
+    "rig": true,
+    "modelStyle": "realistic",
+    "condition": "new",
+    "designVariant": null,
+    "textureResolutionMax": null,
+    "engines": [
+      "[cycles]"
+    ]
+  },
+  "availableFiles": [
+    {
+      "fileType": "blend",
+      "uuid": "790a1485-db98-4053-ae1f-8e476ee115b6",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/790a1485-db98-4053-ae1f-8e476ee115b6/",
+      "fileUploadSize": 38071940
+    },
+    {
+      "fileType": "gltf",
+      "uuid": "373dc692-793d-4bb6-8548-35742a5f9391",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/373dc692-793d-4bb6-8548-35742a5f9391/",
+      "fileUploadSize": 6304992
+    },
+    {
+      "fileType": "gltf_godot",
+      "uuid": "7b165f88-5ae7-4cde-affa-b40fe31f7b1f",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/7b165f88-5ae7-4cde-affa-b40fe31f7b1f/",
+      "fileUploadSize": 8236800
+    },
+    {
+      "fileType": "resolution_0_5K",
+      "uuid": "10575955-1bc4-4e3d-a70c-9f045938f649",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/10575955-1bc4-4e3d-a70c-9f045938f649/",
+      "fileUploadSize": 2733227
+    },
+    {
+      "fileType": "resolution_1K",
+      "uuid": "3805e77a-d8ff-4cee-9846-188ee764f3a1",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/3805e77a-d8ff-4cee-9846-188ee764f3a1/",
+      "fileUploadSize": 4217676
+    },
+    {
+      "fileType": "resolution_2K",
+      "uuid": "4f5ed4a9-1e19-448b-b0f3-88f052c7cf4f",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/4f5ed4a9-1e19-448b-b0f3-88f052c7cf4f/",
+      "fileUploadSize": 9658204
+    },
+    {
+      "fileType": "resolution_4K",
+      "uuid": "7315ab6c-ffbb-4fb8-8a94-ee28404b8774",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/7315ab6c-ffbb-4fb8-8a94-ee28404b8774/",
+      "fileUploadSize": 29800618
+    },
+    {
+      "fileType": "thumbnail",
+      "uuid": "7741002c-0920-48e6-a17b-269250d8e40a",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/7741002c-0920-48e6-a17b-269250d8e40a/",
+      "fileUploadSize": 6490706
+    }
+  ],
+  "downloaded": {
+    "thumbnail": {
+      "file": "public/assets/blenderkit/chained_humanoid_monster_6d047885/thumbnail.png",
+      "url": "/studio/assets/blenderkit/chained_humanoid_monster_6d047885/thumbnail.png",
+      "bytes": 1680055,
+      "sourceUrl": "https://public.blenderkit.com/thumbnails/assets/1f8e41944b144a03879505918f199a9a/files/thumbnail_7741002c-0920-48e6-a17b-269250d8e40a.PNG.1024x1024_q85_crop-%2C.png"
+    },
+    "glb": {
+      "file": "public/assets/blenderkit/chained_humanoid_monster_6d047885/chained_humanoid_monster_6d047885.glb",
+      "url": "/studio/assets/blenderkit/chained_humanoid_monster_6d047885/chained_humanoid_monster_6d047885.glb",
+      "bytes": 6304992,
+      "fileType": "gltf"
+    },
+    "blend": {
+      "file": "public/assets/blenderkit/chained_humanoid_monster_6d047885/chained_humanoid_monster_6d047885_resolution_0_5K.blend",
+      "url": "/studio/assets/blenderkit/chained_humanoid_monster_6d047885/chained_humanoid_monster_6d047885_resolution_0_5K.blend",
+      "bytes": 2733227,
+      "fileType": "resolution_0_5K"
+    }
+  }
+}

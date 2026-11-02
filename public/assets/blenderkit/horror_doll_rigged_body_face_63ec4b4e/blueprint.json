@@ -1,0 +1,155 @@
+{
+  "id": "89a30d28-1696-47f5-8270-ca7e29d40e0f",
+  "assetBaseId": "63ec4b4e-5c67-4046-8816-3c0a18f02c2a",
+  "slug": "horror_doll_rigged_body_face_63ec4b4e",
+  "name": "Horror Doll Rigged Body + Face",
+  "assetType": "model",
+  "category": "fantasy",
+  "author": "Silent Wolf",
+  "license": "royalty_free",
+  "isFree": true,
+  "score": 8000.0,
+  "ratingsAverage": {
+    "bookmarks": 0.6666666666666666,
+    "workingHours": 80.0,
+    "quality": 10.0,
+    "virtualPrice": null
+  },
+  "description": "\ud83e\udde9 Asset  Horror Doll Rigged Game Ready | Pure PBR | Optimized \ud83d\udcbe |\r\n\u200b\r\n\u26a1 Type: Realistic \u2013 Low-poly\r\n\ud83c\udfa8 Style: Realistic\r\n\ud83d\udcdd Description:\r\nThis is a low-poly .\r\nIt is optimized for real-time use in games, VR, and animation projects.\r\nThe design is stylized but with enough detail to work well in both cinematic and gameplay contexts.\r\nReady to import into Unity, Unreal Engine, and Blender.\r\n\u200b\r\n\ud83d\udcd0 Technical Details:\r\n- Polycount: 20.263\r\n- Rig: Yes Auto Rig\r\n- UVs: Unwrapped / No  overlapping\r\n- Textures:  PBR (Base Color, Normal, Roughness, Metallic, Alpha, SSS, )\r\n- Materials: 7 main material\r\n4k+2k+1k\r\n\u200b\r\n\r\n\r\n\r\nIn this link you can tell me what additional characters you need so that I can produce more characters of your desired theme:\r\nhttps://docs.google.com/forms/d/e/1FAIpQLSfMTH7iTdVrcTAfTNs_xmU4vVlDsObfBPWtqI-XuAWDcsMRZQ/viewform?usp=header",
+  "tags": [
+    "Chucky",
+    "female",
+    "human",
+    "doll",
+    "horror",
+    "rigged",
+    "unreal",
+    "character",
+    "Halloween"
+  ],
+  "parameters": {
+    "dimensionX": 0.5304,
+    "dimensionY": 0.2855,
+    "dimensionZ": 0.9985,
+    "dimensionsMeters": {
+      "width": 0.5304,
+      "depth": 0.2855,
+      "height": 0.9985
+    },
+    "boundingBox": {
+      "min": [
+        -0.2652,
+        -0.113,
+        -0.0006
+      ],
+      "max": [
+        0.2652,
+        0.1725,
+        0.998
+      ]
+    },
+    "faceCount": 20263,
+    "faceCountRender": 20263,
+    "objectCount": 11,
+    "nodeCount": 0,
+    "meshPolyType": "quad_dominant",
+    "materials": [
+      "[Upper Teeth Eyelashes Tongue Body Lower Teeth Hair Eye]"
+    ],
+    "shaders": [
+      "[]"
+    ],
+    "modifiers": [
+      "[armature]"
+    ],
+    "pbrType": "metallic",
+    "purePbr": true,
+    "procedural": true,
+    "uv": true,
+    "animated": null,
+    "rig": true,
+    "modelStyle": "realistic",
+    "condition": "new",
+    "designVariant": null,
+    "textureResolutionMax": null,
+    "engines": [
+      "[cycles]"
+    ]
+  },
+  "availableFiles": [
+    {
+      "fileType": "blend",
+      "uuid": "273de7da-a5f7-49f4-b67b-50becfb62d77",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/273de7da-a5f7-49f4-b67b-50becfb62d77/",
+      "fileUploadSize": 14515124
+    },
+    {
+      "fileType": "gltf",
+      "uuid": "6435b0ee-6b9b-4898-a046-b2a5254e52a4",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/6435b0ee-6b9b-4898-a046-b2a5254e52a4/",
+      "fileUploadSize": 2617472
+    },
+    {
+      "fileType": "gltf_godot",
+      "uuid": "03810122-ae94-422d-a39f-ee8ffe49bbd5",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/03810122-ae94-422d-a39f-ee8ffe49bbd5/",
+      "fileUploadSize": 6008724
+    },
+    {
+      "fileType": "resolution_0_5K",
+      "uuid": "94d62117-7c8c-4174-935c-f33f0d625b8d",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/94d62117-7c8c-4174-935c-f33f0d625b8d/",
+      "fileUploadSize": 2153356
+    },
+    {
+      "fileType": "resolution_1K",
+      "uuid": "a7a1d13f-89e3-4b99-8406-208fb19b0912",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/a7a1d13f-89e3-4b99-8406-208fb19b0912/",
+      "fileUploadSize": 2500233
+    },
+    {
+      "fileType": "resolution_2K",
+      "uuid": "79107a06-295e-4100-becf-3da7862e641c",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/79107a06-295e-4100-becf-3da7862e641c/",
+      "fileUploadSize": 4067715
+    },
+    {
+      "fileType": "resolution_4K",
+      "uuid": "0b476dce-e7ee-499c-8190-f77445244db6",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/0b476dce-e7ee-499c-8190-f77445244db6/",
+      "fileUploadSize": 9872601
+    },
+    {
+      "fileType": "thumbnail",
+      "uuid": "b58d3dba-7c13-4e39-a9f8-a54a9e2887b0",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/b58d3dba-7c13-4e39-a9f8-a54a9e2887b0/",
+      "fileUploadSize": 510792
+    },
+    {
+      "fileType": "prxc",
+      "uuid": "05516176-9cda-4007-bc38-a40ef1785f1b",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/05516176-9cda-4007-bc38-a40ef1785f1b/",
+      "fileUploadSize": 17453
+    }
+  ],
+  "downloaded": {
+    "thumbnail": {
+      "file": "public/assets/blenderkit/horror_doll_rigged_body_face_63ec4b4e/thumbnail.jpg",
+      "url": "/studio/assets/blenderkit/horror_doll_rigged_body_face_63ec4b4e/thumbnail.jpg",
+      "bytes": 69916,
+      "sourceUrl": "https://public.blenderkit.com/thumbnails/assets/89a30d28169647f58270ca7e29d40e0f/files/thumbnail_47bd819f-6e03-459c-8a4b-51e0de4eca37.jpg.1024x1024_q85_crop-%2C.jpg"
+    },
+    "glb": {
+      "file": "public/assets/blenderkit/horror_doll_rigged_body_face_63ec4b4e/horror_doll_rigged_body_face_63ec4b4e.glb",
+      "url": "/studio/assets/blenderkit/horror_doll_rigged_body_face_63ec4b4e/horror_doll_rigged_body_face_63ec4b4e.glb",
+      "bytes": 2617472,
+      "fileType": "gltf"
+    },
+    "blend": {
+      "file": "public/assets/blenderkit/horror_doll_rigged_body_face_63ec4b4e/horror_doll_rigged_body_face_63ec4b4e_resolution_0_5K.blend",
+      "url": "/studio/assets/blenderkit/horror_doll_rigged_body_face_63ec4b4e/horror_doll_rigged_body_face_63ec4b4e_resolution_0_5K.blend",
+      "bytes": 2153356,
+      "fileType": "resolution_0_5K"
+    }
+  }
+}

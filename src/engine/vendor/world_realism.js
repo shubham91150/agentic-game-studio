@@ -1017,6 +1017,16 @@
       return;
     }
     var loader = new THREE.GLTFLoader();
+    // Draco support: caller may pass opts.dracoLoader (a THREE.DRACOLoader
+    // already configured with setDecoderPath). Wire it so KHR_draco_mesh
+    // compressed models (BlenderKit/Objaverse/artist-made .glb) load too.
+    if (opts && opts.dracoLoader) {
+      try {
+        loader.setDRACOLoader(opts.dracoLoader);
+      } catch (e) {
+        /* draco optional; load may still fail later if model needs it */
+      }
+    }
     loader.load(
       job.url,
       function (gltf) {

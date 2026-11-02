@@ -1,0 +1,125 @@
+{
+  "id": "468a5509-d112-40f9-82a2-bef807c05a55",
+  "assetBaseId": "549acee6-8f2d-4e21-90d1-b4d6be7358e3",
+  "slug": "assassin_s_dagger_549acee6",
+  "name": "Assassin's dagger",
+  "assetType": "model",
+  "category": "historic-military",
+  "author": "Silent Wolf",
+  "license": "royalty_free",
+  "isFree": true,
+  "score": 800.0,
+  "ratingsAverage": {
+    "bookmarks": 0.9866666666666667,
+    "workingHours": 8.0,
+    "quality": 10.0,
+    "virtualPrice": null
+  },
+  "description": "\ud83e\udde9 Asset Name: Assassin's dagger\r\n\ud83c\udfa8 Style: Realistic\r\n\ud83d\udcdd Description:\r\nThis is a low-poly\r\n- Textures: 4K PBR (Base Color, Normal, Roughness, Metallic, Hight)\r\n- Polycount: 01.519\r\n\r\nIn this link you can tell me what additional characters you need so that I can produce more characters of your desired theme:\r\nhttps://docs.google.com/forms/d/e/1FAIpQLSfMTH7iTdVrcTAfTNs_xmU4vVlDsObfBPWtqI-XuAWDcsMRZQ/viewform?usp=header",
+  "tags": [
+    "Animted",
+    "GameReady",
+    "Nun",
+    "Sword",
+    "Dagger",
+    "Unity",
+    "LowPoly",
+    "Unreal"
+  ],
+  "parameters": {
+    "dimensionX": null,
+    "dimensionY": null,
+    "dimensionZ": null,
+    "dimensionsMeters": null,
+    "boundingBox": null,
+    "faceCount": null,
+    "faceCountRender": null,
+    "objectCount": null,
+    "nodeCount": null,
+    "meshPolyType": null,
+    "materials": [],
+    "shaders": [],
+    "modifiers": [],
+    "pbrType": null,
+    "purePbr": null,
+    "procedural": null,
+    "uv": null,
+    "animated": null,
+    "rig": null,
+    "modelStyle": null,
+    "condition": null,
+    "designVariant": null,
+    "textureResolutionMax": null,
+    "engines": []
+  },
+  "availableFiles": [
+    {
+      "fileType": "blend",
+      "uuid": "ed2470f9-f710-4dc7-b824-9306a29d3e9b",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/ed2470f9-f710-4dc7-b824-9306a29d3e9b/",
+      "fileUploadSize": 47685758
+    },
+    {
+      "fileType": "gltf",
+      "uuid": "87875484-7da3-4c64-b452-743aa74abef4",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/87875484-7da3-4c64-b452-743aa74abef4/",
+      "fileUploadSize": 2487228
+    },
+    {
+      "fileType": "gltf_godot",
+      "uuid": "2b6910a4-3076-4234-8c2e-4cb28edc5ded",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/2b6910a4-3076-4234-8c2e-4cb28edc5ded/",
+      "fileUploadSize": 2545796
+    },
+    {
+      "fileType": "resolution_0_5K",
+      "uuid": "936e6179-4ac4-4a30-b198-5c4df7f34a69",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/936e6179-4ac4-4a30-b198-5c4df7f34a69/",
+      "fileUploadSize": 904185
+    },
+    {
+      "fileType": "resolution_1K",
+      "uuid": "9c07316e-dec0-4f53-9a18-0b6f5a04674c",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/9c07316e-dec0-4f53-9a18-0b6f5a04674c/",
+      "fileUploadSize": 2438661
+    },
+    {
+      "fileType": "resolution_2K",
+      "uuid": "46763489-ed50-4301-b29c-387cb0affe07",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/46763489-ed50-4301-b29c-387cb0affe07/",
+      "fileUploadSize": 7399970
+    },
+    {
+      "fileType": "resolution_4K",
+      "uuid": "05a1c780-965f-41c8-9ef7-6e9bc5184e61",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/05a1c780-965f-41c8-9ef7-6e9bc5184e61/",
+      "fileUploadSize": 26890420
+    },
+    {
+      "fileType": "thumbnail",
+      "uuid": "499d4058-6cd9-48c1-9a13-230ee162a7df",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/499d4058-6cd9-48c1-9a13-230ee162a7df/",
+      "fileUploadSize": 342720
+    }
+  ],
+  "downloaded": {
+    "thumbnail": {
+      "file": "public/assets/blenderkit/assassin_s_dagger_549acee6/thumbnail.jpg",
+      "url": "/studio/assets/blenderkit/assassin_s_dagger_549acee6/thumbnail.jpg",
+      "bytes": 75728,
+      "sourceUrl": "https://public.blenderkit.com/thumbnails/assets/468a5509d11240f982a2bef807c05a55/files/thumbnail_ced488ac-af85-466c-910d-89b72fdc30ed.jpg.1024x1024_q85_crop-%2C.jpg"
+    },
+    "glb": {
+      "file": "public/assets/blenderkit/assassin_s_dagger_549acee6/assassin_s_dagger_549acee6.glb",
+      "url": "/studio/assets/blenderkit/assassin_s_dagger_549acee6/assassin_s_dagger_549acee6.glb",
+      "bytes": 2487228,
+      "fileType": "gltf"
+    },
+    "blend": {
+      "file": "public/assets/blenderkit/assassin_s_dagger_549acee6/assassin_s_dagger_549acee6_resolution_0_5K.blend",
+      "url": "/studio/assets/blenderkit/assassin_s_dagger_549acee6/assassin_s_dagger_549acee6_resolution_0_5K.blend",
+      "bytes": 904185,
+      "fileType": "resolution_0_5K"
+    }
+  }
+}

@@ -1,0 +1,152 @@
+{
+  "id": "55c11dbc-2eed-44e2-a196-a5217c4b0203",
+  "assetBaseId": "87c595b7-970b-4682-baa3-00e26ada9ba0",
+  "slug": "witches_broom_87c595b7",
+  "name": "Witches Broom",
+  "assetType": "model",
+  "category": "supplies",
+  "author": "3D FLICK",
+  "license": "royalty_free",
+  "isFree": true,
+  "score": 800.0,
+  "ratingsAverage": {
+    "bookmarks": 1.0,
+    "workingHours": 8.0,
+    "quality": 10.0,
+    "virtualPrice": null
+  },
+  "description": "Witch Broom, perfect for you halloween setup.",
+  "tags": [
+    "Witch",
+    "broom",
+    "halloween",
+    "horror",
+    "fantasy",
+    "lowpoly"
+  ],
+  "parameters": {
+    "dimensionX": 0.1502,
+    "dimensionY": 0.1502,
+    "dimensionZ": 1.1966,
+    "dimensionsMeters": {
+      "width": 0.1502,
+      "depth": 0.1502,
+      "height": 1.1966
+    },
+    "boundingBox": {
+      "min": [
+        -0.0789,
+        -0.0751,
+        0.0001
+      ],
+      "max": [
+        0.0713,
+        0.0751,
+        1.1967
+      ]
+    },
+    "faceCount": 232,
+    "faceCountRender": 232,
+    "objectCount": 2,
+    "nodeCount": 0,
+    "meshPolyType": "quad_dominant",
+    "materials": [
+      "[Material.002]"
+    ],
+    "shaders": [
+      "[]"
+    ],
+    "modifiers": [
+      "[]"
+    ],
+    "pbrType": "metallic",
+    "purePbr": true,
+    "procedural": true,
+    "uv": true,
+    "animated": null,
+    "rig": false,
+    "modelStyle": "painterly",
+    "condition": "used",
+    "designVariant": null,
+    "textureResolutionMax": null,
+    "engines": [
+      "[cycles]"
+    ]
+  },
+  "availableFiles": [
+    {
+      "fileType": "blend",
+      "uuid": "1698d9c7-a9f4-4bcd-a367-b87df4b42990",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/1698d9c7-a9f4-4bcd-a367-b87df4b42990/",
+      "fileUploadSize": 52704858
+    },
+    {
+      "fileType": "gltf",
+      "uuid": "97db1c44-c6c6-44ca-aa16-b6b6ae3e7ef4",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/97db1c44-c6c6-44ca-aa16-b6b6ae3e7ef4/",
+      "fileUploadSize": 669860
+    },
+    {
+      "fileType": "gltf_godot",
+      "uuid": "bbbdab53-0ebe-4cf2-8612-9fb6811f685b",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/bbbdab53-0ebe-4cf2-8612-9fb6811f685b/",
+      "fileUploadSize": 682272
+    },
+    {
+      "fileType": "resolution_0_5K",
+      "uuid": "d7936532-cf9e-4514-9673-65d997141489",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/d7936532-cf9e-4514-9673-65d997141489/",
+      "fileUploadSize": 231042
+    },
+    {
+      "fileType": "resolution_1K",
+      "uuid": "2de20c99-189f-497b-ac60-61e53883b3e2",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/2de20c99-189f-497b-ac60-61e53883b3e2/",
+      "fileUploadSize": 401233
+    },
+    {
+      "fileType": "resolution_2K",
+      "uuid": "366943b6-2b05-468c-8e74-5369495f9795",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/366943b6-2b05-468c-8e74-5369495f9795/",
+      "fileUploadSize": 951470
+    },
+    {
+      "fileType": "resolution_4K",
+      "uuid": "8613b096-a9f5-479c-b55f-81d568879f1a",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/8613b096-a9f5-479c-b55f-81d568879f1a/",
+      "fileUploadSize": 3018703
+    },
+    {
+      "fileType": "thumbnail",
+      "uuid": "27e33fc3-f2a5-42eb-9c04-db7bfebf59cb",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/27e33fc3-f2a5-42eb-9c04-db7bfebf59cb/",
+      "fileUploadSize": 1051340
+    },
+    {
+      "fileType": "prxc",
+      "uuid": "4c207c5d-6860-49dd-b68c-b6766543ca33",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/4c207c5d-6860-49dd-b68c-b6766543ca33/",
+      "fileUploadSize": 5206
+    }
+  ],
+  "downloaded": {
+    "thumbnail": {
+      "file": "public/assets/blenderkit/witches_broom_87c595b7/thumbnail.png",
+      "url": "/studio/assets/blenderkit/witches_broom_87c595b7/thumbnail.png",
+      "bytes": 425219,
+      "sourceUrl": "https://public.blenderkit.com/thumbnails/assets/55c11dbc2eed44e2a196a5217c4b0203/files/thumbnail_4a106e9c-7496-4f49-8100-ea653a712324.png.1024x1024_q85_crop-%2C.png"
+    },
+    "glb": {
+      "file": "public/assets/blenderkit/witches_broom_87c595b7/witches_broom_87c595b7.glb",
+      "url": "/studio/assets/blenderkit/witches_broom_87c595b7/witches_broom_87c595b7.glb",
+      "bytes": 669860,
+      "fileType": "gltf"
+    },
+    "blend": {
+      "file": "public/assets/blenderkit/witches_broom_87c595b7/witches_broom_87c595b7_resolution_0_5K.blend",
+      "url": "/studio/assets/blenderkit/witches_broom_87c595b7/witches_broom_87c595b7_resolution_0_5K.blend",
+      "bytes": 231042,
+      "fileType": "resolution_0_5K"
+    }
+  }
+}
