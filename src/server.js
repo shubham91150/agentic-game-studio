@@ -85,9 +85,47 @@ async function sendLineToTmux(line) {
     .replace(/\r?\n+/g, " ")
     .trim();
   if (!clean) return;
+  try {
+    execFileSync("tmux", ["send-keys", "-t", TMUX_SESSION, "-X", "cancel"], {
+      stdio: "ignore",
+    });
+  } catch {
+    /* ignore if not in copy-mode */
+  }
   execFileSync("tmux", ["send-keys", "-t", TMUX_SESSION, "-l", clean]);
   await sleep(300);
   execFileSync("tmux", ["send-keys", "-t", TMUX_SESSION, "C-m"]);
+}
+
+function getTmuxScrollState() {
+  try {
+    const out = execFileSync(
+      "tmux",
+      [
+        "display-message",
+        "-t",
+        TMUX_SESSION,
+        "-p",
+        "#{pane_in_mode}|#{scroll_position}|#{history_size}|#{pane_height}",
+      ],
+      {
+        encoding: "utf8",
+        stdio: ["ignore", "pipe", "ignore"],
+        timeout: 1500,
+      },
+    );
+    const p = String(out || "")
+      .trim()
+      .split("|");
+    return {
+      inMode: Number(p[0]) === 1,
+      pos: Number(p[1] || 0),
+      history: Number(p[2] || 0),
+      height: Number(p[3] || 32),
+    };
+  } catch {
+    return { inMode: false, pos: 0, history: 0, height: 32 };
+  }
 }
 
 function isTmuxCliBusy() {
@@ -508,9 +546,15 @@ const server = http.createServer(async (req, res) => {
   const livePreviewDir = path.join(PUBLIC_DIR, "live-preview");
   if (pathname === "/api/studio/preview-state" && req.method === "GET") {
     const cliBusy = Boolean(isTmuxCliBusy());
+    const terminalScroll = getTmuxScrollState();
     const indexPath = path.join(livePreviewDir, "index.html");
     if (!fs.existsSync(indexPath)) {
-      return json(res, 200, { ready: false, updatedAt: 0, cliBusy });
+      return json(res, 200, {
+        ready: false,
+        updatedAt: 0,
+        cliBusy,
+        terminalScroll,
+      });
     }
     let updatedAt = 0;
     let title = "Game Preview";
@@ -531,6 +575,7 @@ const server = http.createServer(async (req, res) => {
       title,
       url: "/studio/live-preview/index.html",
       cliBusy,
+      terminalScroll,
     });
   }
 
@@ -886,7 +931,136 @@ const server = http.createServer(async (req, res) => {
   }
 
   if (pathname === "/api/studio/terminal/status" && req.method === "GET") {
-    return json(res, 200, { ok: true, cliBusy: Boolean(isTmuxCliBusy()) });
+    return json(res, 200, {
+      ok: true,
+      cliBusy: Boolean(isTmuxCliBusy()),
+      terminalScroll: getTmuxScrollState(),
+    });
+  }
+
+  // ---------- Scroll live Muse Code CLI tmux pane ----------
+  if (pathname === "/api/studio/terminal/scroll" && req.method === "POST") {
+    let body = "";
+    req.on("data", (chunk) => (body += chunk));
+    req.on("end", () => {
+      let payload = {};
+      try {
+        payload = JSON.parse(body || "{}");
+      } catch {
+        payload = {};
+      }
+      const action = String(payload.action || "bottom");
+      const lines = Math.max(
+        1,
+        Math.min(200, Math.round(Number(payload.lines) || 5)),
+      );
+      try {
+        ensureTmuxSession();
+        if (action === "up") {
+          execFileSync("tmux", ["copy-mode", "-t", TMUX_SESSION], {
+            stdio: "ignore",
+          });
+          execFileSync(
+            "tmux",
+            [
+              "send-keys",
+              "-t",
+              TMUX_SESSION,
+              "-X",
+              "-N",
+              String(lines),
+              "scroll-up",
+            ],
+            { stdio: "ignore" },
+          );
+        } else if (action === "down") {
+          try {
+            execFileSync(
+              "tmux",
+              [
+                "send-keys",
+                "-t",
+                TMUX_SESSION,
+                "-X",
+                "-N",
+                String(lines),
+                "scroll-down",
+              ],
+              { stdio: "ignore" },
+            );
+          } catch {
+            /* ignore if not in copy-mode */
+          }
+          const st = getTmuxScrollState();
+          if (st.inMode && st.pos <= 0) {
+            try {
+              execFileSync(
+                "tmux",
+                ["send-keys", "-t", TMUX_SESSION, "-X", "cancel"],
+                { stdio: "ignore" },
+              );
+            } catch {
+              /* ignore */
+            }
+          }
+        } else if (action === "ratio") {
+          const r = Math.max(0, Math.min(1, Number(payload.ratio)));
+          if (!Number.isFinite(r) || r >= 0.97) {
+            try {
+              execFileSync(
+                "tmux",
+                ["send-keys", "-t", TMUX_SESSION, "-X", "cancel"],
+                { stdio: "ignore" },
+              );
+            } catch {
+              /* ignore */
+            }
+          } else {
+            const st = getTmuxScrollState();
+            const hist = Math.max(1, st.history || 40);
+            const offset = Math.max(1, Math.round((1 - r) * hist));
+            execFileSync("tmux", ["copy-mode", "-t", TMUX_SESSION], {
+              stdio: "ignore",
+            });
+            execFileSync(
+              "tmux",
+              ["send-keys", "-t", TMUX_SESSION, "-X", "history-bottom"],
+              { stdio: "ignore" },
+            );
+            execFileSync(
+              "tmux",
+              [
+                "send-keys",
+                "-t",
+                TMUX_SESSION,
+                "-X",
+                "-N",
+                String(offset),
+                "scroll-up",
+              ],
+              { stdio: "ignore" },
+            );
+          }
+        } else if (action === "bottom") {
+          try {
+            execFileSync(
+              "tmux",
+              ["send-keys", "-t", TMUX_SESSION, "-X", "cancel"],
+              { stdio: "ignore" },
+            );
+          } catch {
+            /* ignore */
+          }
+        }
+      } catch {
+        /* ignore tmux errors */
+      }
+      return json(res, 200, {
+        ok: true,
+        terminalScroll: getTmuxScrollState(),
+      });
+    });
+    return;
   }
 
   // ---------- Fresh terminal session (new chat) ----------

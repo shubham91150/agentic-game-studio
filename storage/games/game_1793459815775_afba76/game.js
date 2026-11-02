@@ -252,10 +252,26 @@
     });
     window.addEventListener("blur", function () {
       keys = {};
+      if (state === "racing" || state === "countdown") togglePause(true);
+      G.AudioSys.suspendAll();
+    });
+    window.addEventListener("pagehide", function () {
+      keys = {};
+      if (state === "racing" || state === "countdown") togglePause(true);
+      G.AudioSys.suspendAll();
+    });
+    window.addEventListener("message", function (ev) {
+      if (ev && ev.data && ev.data.type === "ags-pause") {
+        keys = {};
+        if (state === "racing" || state === "countdown") togglePause(true);
+        G.AudioSys.suspendAll();
+      }
     });
     document.addEventListener("visibilitychange", function () {
-      if (document.hidden && (state === "racing" || state === "countdown"))
-        togglePause(true);
+      if (document.hidden || document.visibilityState === "hidden") {
+        if (state === "racing" || state === "countdown") togglePause(true);
+        G.AudioSys.suspendAll();
+      }
     });
 
     function playerInput() {
@@ -291,6 +307,7 @@
 
     function startRace() {
       G.AudioSys.init();
+      if (!save.muted && G.AudioSys.resumeAll) G.AudioSys.resumeAll();
       G.AudioSys.click();
       resetGrid();
       raceTime = 0;
@@ -308,6 +325,7 @@
 
     function resumeGame() {
       if (state !== "paused") return;
+      if (!save.muted && G.AudioSys.resumeAll) G.AudioSys.resumeAll();
       G.AudioSys.click();
       state = pausedPrev;
       UI.showPause(false);
@@ -318,12 +336,16 @@
         resumeGame();
         return;
       }
-      if (state !== "racing" && state !== "countdown") return;
+      if (state !== "racing" && state !== "countdown") {
+        G.AudioSys.suspendAll();
+        return;
+      }
       pausedPrev = state;
       state = "paused";
       UI.syncPauseOptions(save);
       UI.showPause(true);
       G.AudioSys.silence();
+      G.AudioSys.suspendAll();
     }
 
     function quitToMenu() {
@@ -337,6 +359,7 @@
       UI.setCountdown(null);
       UI.setWrongWay(false);
       G.AudioSys.silence();
+      G.AudioSys.suspendAll();
     }
 
     function playerRank() {
@@ -669,11 +692,9 @@
         if (steps === 3) acc = 0;
         world.update(raw, now / 1000, player.mesh.position);
         G.VFX.update(raw, now / 1000, player.x, player.z);
-      } else if (world.water && typeof world.water.update === "function") {
-        world.water.update(raw);
+        updateCamera(raw);
+        renderer.render(scene, camera);
       }
-      updateCamera(raw);
-      renderer.render(scene, camera);
     }
 
     function onResize() {

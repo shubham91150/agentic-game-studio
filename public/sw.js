@@ -4,7 +4,7 @@
  * on every agent save and the pane's ?t= busting only covers index.html, so
  * cache-first would pin stale game.js/ui.js forever.
  * Same-origin only, GET only. No external URLs (CSP-safe). */
-var CACHE = "ags-studio-v6";
+var CACHE = "ags-studio-v7";
 
 var APP_SHELL = [
   "/studio/manifest.webmanifest",
@@ -88,18 +88,27 @@ self.addEventListener("fetch", function (event) {
   var shell = APP_SHELL.indexOf(path) !== -1;
   if (!shell && !isRuntimePath(path)) return;
   // Network-first for HTML/JS/CSS, cache-first for assets
-  var isHtmlOrJs = path.endsWith(".html") || path.endsWith(".js") || path.endsWith(".css") || path === "/" || path === "/studio/";
+  var isHtmlOrJs =
+    path.endsWith(".html") ||
+    path.endsWith(".js") ||
+    path.endsWith(".css") ||
+    path === "/" ||
+    path === "/studio/";
   if (isHtmlOrJs) {
     event.respondWith(
-      fetch(req).then(function (res) {
-        if (res && res.ok) {
-          var copy = res.clone();
-          caches.open(CACHE).then(function (cache) { cache.put(req, copy); });
-        }
-        return res;
-      }).catch(function () {
-        return caches.match(req);
-      })
+      fetch(req)
+        .then(function (res) {
+          if (res && res.ok) {
+            var copy = res.clone();
+            caches.open(CACHE).then(function (cache) {
+              cache.put(req, copy);
+            });
+          }
+          return res;
+        })
+        .catch(function () {
+          return caches.match(req);
+        }),
     );
     return;
   }

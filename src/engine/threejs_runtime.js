@@ -445,10 +445,48 @@ export function generateThreeJsGameFiles(gameSpec, worldData, layout) {
 
   let score = 0;
   let won = false;
+  let paused = false;
   let velocityY = 0;
   let isGrounded = true;
   const banner = document.getElementById('banner');
   document.getElementById('btn-again').addEventListener('click', () => window.location.reload());
+
+  function pauseGame() {
+    paused = true;
+    for (const k in keys) keys[k] = false;
+    joystick.active = false;
+    joystick.x = 0;
+    joystick.y = 0;
+    if (AudioEngine && typeof AudioEngine.suspendAll === 'function') {
+      AudioEngine.suspendAll();
+    }
+  }
+
+  function resumeGame() {
+    if (won) return;
+    paused = false;
+    if (AudioEngine && typeof AudioEngine.resumeAll === 'function') {
+      AudioEngine.resumeAll();
+    }
+  }
+
+  window.addEventListener('message', function (ev) {
+    if (ev && ev.data && ev.data.type === 'ags-pause') pauseGame();
+  });
+  document.addEventListener('visibilitychange', function () {
+    if (document.hidden || document.visibilityState === 'hidden') pauseGame();
+  });
+  window.addEventListener('pagehide', pauseGame);
+  window.addEventListener('blur', pauseGame);
+  window.addEventListener('focus', function () {
+    if (!document.hidden && !won) resumeGame();
+  });
+  window.addEventListener('keydown', function (e) {
+    if (!e.repeat && (e.code === 'Escape' || e.code === 'KeyP')) {
+      if (paused) resumeGame();
+      else pauseGame();
+    }
+  });
 
   const clock = new THREE.Clock();
 
@@ -545,6 +583,9 @@ export function generateThreeJsGameFiles(gameSpec, worldData, layout) {
   function animate() {
     requestAnimationFrame(animate);
     const dt = Math.min(clock.getDelta(), 0.05);
+    if (paused) {
+      return;
+    }
 
     let moveX = 0;
     let moveZ = 0;
@@ -617,6 +658,9 @@ export function generateThreeJsGameFiles(gameSpec, worldData, layout) {
         AudioEngine.playCollect();
         if (score >= TARGET_ORBS) {
           won = true;
+          if (AudioEngine && typeof AudioEngine.suspendAll === 'function') {
+            setTimeout(function () { AudioEngine.suspendAll(); }, 450);
+          }
           document.getElementById('banner-text').textContent =
             'All ' + TARGET_ORBS + ' orbs collected. ' + '${objective}';
           if (window.speak) window.speak(document.getElementById('banner-text').textContent);

@@ -129,6 +129,64 @@
       this.windGain.gain.setTargetAtTime(0, t, 0.05);
     },
 
+    suspendAll: function () {
+      if (this.ctx) {
+        try {
+          var t = this.ctx.currentTime || 0;
+          if (this.master && this.master.gain) {
+            if (this.master.gain.cancelScheduledValues)
+              this.master.gain.cancelScheduledValues(t);
+            this.master.gain.setTargetAtTime(0.0001, t, 0.015);
+            this.master.gain.value = 0.0001;
+          }
+          if (this.engGain && this.engGain.gain)
+            this.engGain.gain.setTargetAtTime(0.0001, t, 0.015);
+          if (this.skidGain && this.skidGain.gain)
+            this.skidGain.gain.setTargetAtTime(0.0001, t, 0.015);
+          if (this.windGain && this.windGain.gain)
+            this.windGain.gain.setTargetAtTime(0.0001, t, 0.015);
+          if (
+            this.ctx.state === "running" &&
+            typeof this.ctx.suspend === "function"
+          ) {
+            this.ctx.suspend();
+          }
+        } catch (e) {}
+      }
+      try {
+        var audios = document.querySelectorAll("audio");
+        for (var i = 0; i < audios.length; i++) {
+          if (audios[i] && typeof audios[i].pause === "function")
+            audios[i].pause();
+        }
+      } catch (e) {}
+      try {
+        if (
+          window.speechSynthesis &&
+          typeof window.speechSynthesis.cancel === "function"
+        ) {
+          window.speechSynthesis.cancel();
+        }
+      } catch (e) {}
+    },
+
+    resumeAll: function () {
+      if (this.muted || !this.ctx) return;
+      try {
+        if (
+          this.ctx.state === "suspended" &&
+          typeof this.ctx.resume === "function"
+        ) {
+          this.ctx.resume();
+        }
+        if (this.master && this.master.gain) {
+          var t = this.ctx.currentTime || 0;
+          this.master.gain.setTargetAtTime(this.volume, t, 0.03);
+          this.master.gain.value = this.volume;
+        }
+      } catch (e) {}
+    },
+
     beep: function (freq, dur, type, vol, delay) {
       if (!this.started || this.muted) return;
       var ctx = this.ctx;

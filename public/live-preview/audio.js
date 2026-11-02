@@ -8,22 +8,36 @@
  * Mute silences ALL output, present and future. No-op without AudioContext.
  */
 (function () {
-  'use strict';
+  "use strict";
 
   var ctx = null;
   var master = null;
+  var rainG = null;
+  var washG = null;
+  var droneG = null;
   var noiseBuf = null;
   var ambientOn = false;
   var volume = 0.8;
   var muted = false;
   var dimmed = false;
+  var suspended = false;
 
   function applyGain() {
     if (!ctx || !master) return;
+    if (suspended) {
+      try {
+        master.gain.setTargetAtTime(0.0001, ctx.currentTime, 0.015);
+      } catch (err) {
+        /* older backends */
+      }
+      return;
+    }
     var g = muted ? 0 : volume * (dimmed ? 0.25 : 1);
     try {
       master.gain.setTargetAtTime(g, ctx.currentTime, 0.05);
-    } catch (err) { /* older backends */ }
+    } catch (err) {
+      /* older backends */
+    }
   }
 
   function makeNoise(seconds) {
@@ -37,11 +51,17 @@
   }
 
   var api = {
+    ctx: null,
+    master: null,
     init: function () {
       if (ctx) {
+        api.ctx = ctx;
+        api.master = master;
         try {
-          if (ctx.state === 'suspended') ctx.resume();
-        } catch (err) { /* ignore */ }
+          if (!suspended && ctx.state === "suspended") ctx.resume();
+        } catch (err) {
+          /* ignore */
+        }
         return true;
       }
       var AC = window.AudioContext || window.webkitAudioContext;
@@ -50,12 +70,16 @@
         ctx = new AC();
         master = ctx.createGain();
         master.connect(ctx.destination);
+        api.ctx = ctx;
+        api.master = master;
         noiseBuf = makeNoise(2);
         applyGain();
-        if (ctx.state === 'suspended') ctx.resume();
+        if (!suspended && ctx.state === "suspended") ctx.resume();
       } catch (err) {
         ctx = null;
         master = null;
+        api.ctx = null;
+        api.master = null;
         return false;
       }
       return true;
@@ -70,10 +94,10 @@
         rain.buffer = noiseBuf;
         rain.loop = true;
         var bp = ctx.createBiquadFilter();
-        bp.type = 'bandpass';
+        bp.type = "bandpass";
         bp.frequency.value = 1700;
         bp.Q.value = 0.55;
-        var rainG = ctx.createGain();
+        rainG = ctx.createGain();
         rainG.gain.value = 0.09;
         rain.connect(bp);
         bp.connect(rainG);
@@ -85,9 +109,9 @@
         wash.loop = true;
         wash.playbackRate.value = 0.4;
         var lp = ctx.createBiquadFilter();
-        lp.type = 'lowpass';
+        lp.type = "lowpass";
         lp.frequency.value = 420;
-        var washG = ctx.createGain();
+        washG = ctx.createGain();
         washG.gain.value = 0.07;
         wash.connect(lp);
         lp.connect(washG);
@@ -95,35 +119,37 @@
         wash.start();
 
         /* Drone: two detuned sines near 55 Hz. */
-        var droneG = ctx.createGain();
+        droneG = ctx.createGain();
         droneG.gain.value = 0.05;
         var droneLP = ctx.createBiquadFilter();
-        droneLP.type = 'lowpass';
+        droneLP.type = "lowpass";
         droneLP.frequency.value = 130;
         droneG.connect(droneLP);
         droneLP.connect(master);
         var o1 = ctx.createOscillator();
-        o1.type = 'sine';
+        o1.type = "sine";
         o1.frequency.value = 55;
         var o2 = ctx.createOscillator();
-        o2.type = 'sine';
+        o2.type = "sine";
         o2.frequency.value = 55.8;
         o1.connect(droneG);
         o2.connect(droneG);
         o1.start();
         o2.start();
-      } catch (err) { /* keep game silent, never crash */ }
+      } catch (err) {
+        /* keep game silent, never crash */
+      }
     },
 
     thunder: function () {
-      if (!ctx || !noiseBuf) return;
+      if (!ctx || !noiseBuf || muted || dimmed || suspended) return;
       try {
         var t = ctx.currentTime;
         var src = ctx.createBufferSource();
         src.buffer = noiseBuf;
         src.playbackRate.value = 0.5;
         var lp = ctx.createBiquadFilter();
-        lp.type = 'lowpass';
+        lp.type = "lowpass";
         lp.frequency.setValueAtTime(520, t);
         lp.frequency.exponentialRampToValueAtTime(48, t + 1.9);
         var g = ctx.createGain();
@@ -137,7 +163,7 @@
         src.stop(t + 2.4);
 
         var sub = ctx.createOscillator();
-        sub.type = 'sine';
+        sub.type = "sine";
         sub.frequency.setValueAtTime(58, t);
         sub.frequency.exponentialRampToValueAtTime(27, t + 1.4);
         var sg = ctx.createGain();
@@ -148,20 +174,22 @@
         sg.connect(master);
         sub.start(t);
         sub.stop(t + 1.7);
-      } catch (err) { /* ignore */ }
+      } catch (err) {
+        /* ignore */
+      }
       /* No VFX call here by design: thunder arrives 300-1200ms after the
        * strike starts, while VFX polls scene.userData.stvFlash every frame
        * for exact envelope sync (Task 2 concern #2). */
     },
 
     footstep: function (run) {
-      if (!ctx || !noiseBuf) return;
+      if (!ctx || !noiseBuf || muted || dimmed || suspended) return;
       try {
         var t = ctx.currentTime;
         var src = ctx.createBufferSource();
         src.buffer = noiseBuf;
         var bp = ctx.createBiquadFilter();
-        bp.type = 'bandpass';
+        bp.type = "bandpass";
         bp.Q.value = 1.1;
         if (run) {
           bp.frequency.value = 210 + Math.random() * 160;
@@ -179,7 +207,9 @@
         g.connect(master);
         src.start(t, Math.random() * 1.4);
         src.stop(t + dur + 0.05);
-      } catch (err) { /* ignore */ }
+      } catch (err) {
+        /* ignore */
+      }
     },
 
     pickup: function () {
@@ -190,7 +220,7 @@
         var i;
         for (i = 0; i < notes.length; i++) {
           var o = ctx.createOscillator();
-          o.type = 'sine';
+          o.type = "sine";
           o.frequency.value = notes[i];
           var g = ctx.createGain();
           var at = t + i * 0.11;
@@ -202,11 +232,13 @@
           o.start(at);
           o.stop(at + 0.55);
         }
-      } catch (err) { /* ignore */ }
+      } catch (err) {
+        /* ignore */
+      }
     },
 
     setVolume: function (v) {
-      if (typeof v === 'number' && isFinite(v)) {
+      if (typeof v === "number" && isFinite(v)) {
         volume = Math.min(1, Math.max(0, v));
       }
       applyGain();
@@ -222,10 +254,94 @@
       applyGain();
     },
 
-    isMuted: function () { return muted; }
+    suspendAll: function () {
+      suspended = true;
+      dimmed = true;
+      if (ctx && master) {
+        try {
+          var t = ctx.currentTime || 0;
+          if (master.gain.cancelScheduledValues) {
+            master.gain.cancelScheduledValues(t);
+          }
+          master.gain.setTargetAtTime(0.0001, t, 0.015);
+          master.gain.value = 0.0001;
+          if (rainG && rainG.gain) rainG.gain.setTargetAtTime(0.0001, t, 0.015);
+          if (washG && washG.gain) washG.gain.setTargetAtTime(0.0001, t, 0.015);
+          if (droneG && droneG.gain)
+            droneG.gain.setTargetAtTime(0.0001, t, 0.015);
+        } catch (err) {
+          /* ignore */
+        }
+      }
+      if (ctx && ctx.state === "running" && typeof ctx.suspend === "function") {
+        try {
+          ctx.suspend();
+        } catch (err) {
+          /* ignore */
+        }
+      }
+      try {
+        var audios = document.querySelectorAll("audio");
+        for (var i = 0; i < audios.length; i++) {
+          if (audios[i] && typeof audios[i].pause === "function") {
+            audios[i].pause();
+          }
+        }
+      } catch (err) {
+        /* ignore */
+      }
+      try {
+        if (
+          window.speechSynthesis &&
+          typeof window.speechSynthesis.cancel === "function"
+        ) {
+          window.speechSynthesis.cancel();
+        }
+      } catch (err) {
+        /* ignore */
+      }
+    },
+
+    resumeAll: function () {
+      suspended = false;
+      dimmed = false;
+      if (muted) return;
+      if (
+        ctx &&
+        ctx.state === "suspended" &&
+        typeof ctx.resume === "function"
+      ) {
+        try {
+          ctx.resume();
+        } catch (err) {
+          /* ignore */
+        }
+      }
+      if (ctx) {
+        try {
+          var t = ctx.currentTime || 0;
+          if (rainG && rainG.gain) rainG.gain.setTargetAtTime(0.09, t, 0.04);
+          if (washG && washG.gain) washG.gain.setTargetAtTime(0.07, t, 0.04);
+          if (droneG && droneG.gain) droneG.gain.setTargetAtTime(0.05, t, 0.04);
+        } catch (err) {
+          /* ignore */
+        }
+      }
+      applyGain();
+    },
+
+    isSuspended: function () {
+      return suspended;
+    },
+
+    isMuted: function () {
+      return muted;
+    },
   };
 
   window.StV_Audio = api;
   /* Level lightning rig calls thunder() through this hook. */
   window.StV_AudioHook = api;
+  window.G = window.G || {};
+  window.G.AudioSys = api;
 })();

@@ -32,6 +32,7 @@
   var statusEl = document.getElementById("status");
   var liveDot = document.getElementById("live-dot");
   var liveText = document.getElementById("live-text");
+  var headerTitleEl = document.getElementById("header-game-title");
   var titleEl = document.getElementById("game-title");
   var frameEl = document.getElementById("game-frame");
   var emptyEl = document.getElementById("preview-empty");
@@ -39,6 +40,8 @@
   var tabCli = document.getElementById("tab-cli");
   var tabPreview = document.getElementById("tab-preview");
   var previewReadyDot = document.getElementById("preview-ready-dot");
+  var termScrollbar = document.getElementById("term-scrollbar");
+  var termScrollThumb = document.getElementById("term-scroll-thumb");
   var libraryBtn = document.getElementById("library-btn");
   var libraryCount = document.getElementById("library-count");
   var libraryDrawer = document.getElementById("library-drawer");
@@ -118,9 +121,26 @@
     image: "Generate a game image for the following description: ",
   };
 
+  function pausePreviewGame() {
+    if (frameEl && frameEl.contentWindow) {
+      try {
+        frameEl.contentWindow.postMessage({ type: "ags-pause" }, "*");
+      } catch (e) {
+        /* ignore */
+      }
+    }
+  }
+
+  document.addEventListener("visibilitychange", function () {
+    if (document.visibilityState === "hidden" || document.hidden) {
+      pausePreviewGame();
+    }
+  });
+
   function playPreview(url, title) {
     if (!url) return;
     if (titleEl) titleEl.textContent = title || "Game Preview";
+    if (headerTitleEl) headerTitleEl.textContent = title || "Game Preview";
     if (emptyEl) emptyEl.classList.add("hidden");
     if (frameEl) {
       frameEl.classList.remove("hidden");
@@ -202,6 +222,15 @@
   // Mobile segmented tab switcher (CLI vs Game Preview)
   function setActivePane(pane) {
     if (!splitEl) return;
+    if (pane !== "preview") {
+      pausePreviewGame();
+    } else if (frameEl && frameEl.contentWindow) {
+      try {
+        frameEl.contentWindow.postMessage({ type: "ags-resume-loop" }, "*");
+      } catch (e) {
+        /* ignore */
+      }
+    }
     splitEl.setAttribute("data-active-pane", pane);
     if (tabCli) tabCli.classList.toggle("active", pane === "cli");
     if (tabPreview) tabPreview.classList.toggle("active", pane === "preview");
@@ -209,6 +238,17 @@
       if (previewReadyDot) previewReadyDot.classList.add("hidden");
       if (previewBox) previewBox.classList.add("mobile-landscape");
     }
+  }
+  if (frameEl) {
+    frameEl.addEventListener("load", function () {
+      if (
+        window.innerWidth <= 960 &&
+        splitEl &&
+        splitEl.getAttribute("data-active-pane") !== "preview"
+      ) {
+        pausePreviewGame();
+      }
+    });
   }
   if (tabCli) {
     tabCli.addEventListener("click", function () {
@@ -295,6 +335,7 @@
   }
 
   function openLibrary() {
+    pausePreviewGame();
     if (libraryDrawer) {
       libraryDrawer.classList.add("open");
       libraryDrawer.setAttribute("aria-hidden", "false");
@@ -620,6 +661,7 @@
   }
 
   function openSidebar() {
+    pausePreviewGame();
     if (sidebar) {
       sidebar.classList.add("open");
       sidebar.setAttribute("aria-hidden", "false");
@@ -702,34 +744,212 @@
         });
     });
 
-  // VM backend health check
-  fetch("/api/studio/health")
-    .then(function (res) {
-      if (!res.ok) throw new Error("offline");
-      return res.json();
+  // VM backend health check (Cloud icon + Green/Grey status dot)
+  function setLiveHealth(online) {
+    if (liveDot) {
+      liveDot.className = online ? "live-dot on" : "live-dot off";
+    }
+    if (liveText) {
+      liveText.textContent = online ? "vm live" : "vm offline";
+    }
+  }
+
+  function checkBackendHealth() {
+    if (typeof navigator !== "undefined" && navigator.onLine === false) {
+      setLiveHealth(false);
+      return;
+    }
+    var t0 = Date.now();
+    var ctrl =
+      typeof AbortController !== "undefined" ? new AbortController() : null;
+    var timer = ctrl
+      ? setTimeout(function () {
+          try {
+            ctrl.abort();
+          } catch (e) {
+            /* ignore */
+          }
+        }, 2500)
+      : null;
+    fetch("/api/studio/health", {
+      cache: "no-store",
+      signal: ctrl ? ctrl.signal : undefined,
     })
-    .then(function (data) {
-      if (data && data.ok) {
-        liveDot.className = "live-dot on";
-        liveText.textContent = "vm live";
-      } else {
-        throw new Error("offline");
+      .then(function (res) {
+        if (timer) clearTimeout(timer);
+        if (!res.ok) throw new Error("offline");
+        return res.json();
+      })
+      .then(function (data) {
+        var rtt = Date.now() - t0;
+        if (data && data.ok && rtt <= 2200) {
+          setLiveHealth(true);
+        } else {
+          setLiveHealth(false);
+        }
+      })
+      .catch(function () {
+        if (timer) clearTimeout(timer);
+        setLiveHealth(false);
+      });
+  }
+  checkBackendHealth();
+  setInterval(checkBackendHealth, 4000);
+  window.addEventListener("online", checkBackendHealth);
+  window.addEventListener("offline", function () {
+    setLiveHealth(false);
+  });
+
+  // Terminal scrollbar handle (invisible track, visible thumb handle) + touch scroll
+  var termDragging = false;
+  var termLastRatioSentAt = 0;
+  var termPendingTimer = null;
+
+  function renderTermThumbAtRatio(ratio, history, paneHeight) {
+    if (!termScrollbar || !termScrollThumb) return;
+    var trackH = termScrollbar.clientHeight || 240;
+    var h = Math.max(16, Number(paneHeight) || 32);
+    var hist = Math.max(0, Number(history) || 0);
+    var total = h + hist;
+    var frac = total > h ? h / total : 0.25;
+    var thumbH = Math.max(
+      36,
+      Math.min(Math.round(trackH * 0.45), Math.round(trackH * frac)),
+    );
+    var r = Math.max(0, Math.min(1, Number(ratio)));
+    if (!isFinite(r)) r = 1;
+    var maxTop = Math.max(0, trackH - thumbH);
+    var top = Math.round(r * maxTop);
+    termScrollThumb.style.height = thumbH + "px";
+    termScrollThumb.style.top = top + "px";
+  }
+
+  function updateTermScrollThumb(scrollState) {
+    if (!scrollState || termDragging) return;
+    var ratio = 1;
+    if (scrollState.inMode && scrollState.history > 0) {
+      ratio =
+        1 - Math.min(1, Math.max(0, scrollState.pos / scrollState.history));
+    }
+    renderTermThumbAtRatio(ratio, scrollState.history, scrollState.height);
+  }
+
+  function sendTermScroll(payload) {
+    fetch("/api/studio/terminal/scroll", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    })
+      .then(function (res) {
+        return res.ok ? res.json() : null;
+      })
+      .then(function (data) {
+        if (data && data.terminalScroll && !termDragging) {
+          updateTermScrollThumb(data.terminalScroll);
+        }
+      })
+      .catch(function () {
+        /* ignore */
+      });
+  }
+
+  function sendTermRatioThrottled(ratio, force) {
+    var now = Date.now();
+    if (force || now - termLastRatioSentAt >= 65) {
+      termLastRatioSentAt = now;
+      if (termPendingTimer) {
+        clearTimeout(termPendingTimer);
+        termPendingTimer = null;
       }
-    })
-    .catch(function () {
-      liveDot.className = "live-dot off";
-      liveText.textContent = "vm offline";
+      sendTermScroll({ action: "ratio", ratio: ratio });
+    } else if (!termPendingTimer) {
+      termPendingTimer = setTimeout(function () {
+        termPendingTimer = null;
+        termLastRatioSentAt = Date.now();
+        sendTermScroll({ action: "ratio", ratio: ratio });
+      }, 65);
+    }
+  }
+
+  function ratioFromClientY(clientY) {
+    if (!termScrollbar) return 1;
+    var rect = termScrollbar.getBoundingClientRect();
+    if (!rect || rect.height <= 0) return 1;
+    var y = clientY - rect.top;
+    return Math.max(0, Math.min(1, y / rect.height));
+  }
+
+  if (termScrollbar && termScrollThumb) {
+    renderTermThumbAtRatio(1, 0, 32);
+
+    termScrollbar.addEventListener("pointerdown", function (event) {
+      event.preventDefault();
+      event.stopPropagation();
+      termDragging = true;
+      termScrollThumb.classList.add("dragging");
+      if (termScrollbar.setPointerCapture && event.pointerId !== undefined) {
+        try {
+          termScrollbar.setPointerCapture(event.pointerId);
+        } catch (e) {
+          /* ignore */
+        }
+      }
+      var r = ratioFromClientY(event.clientY);
+      renderTermThumbAtRatio(r, 0, 32);
+      sendTermRatioThrottled(r, true);
     });
+
+    termScrollbar.addEventListener("pointermove", function (event) {
+      if (!termDragging) return;
+      event.preventDefault();
+      var r = ratioFromClientY(event.clientY);
+      renderTermThumbAtRatio(r, 0, 32);
+      sendTermRatioThrottled(r, false);
+    });
+
+    function endTermDrag(event) {
+      if (!termDragging) return;
+      termDragging = false;
+      termScrollThumb.classList.remove("dragging");
+      if (event && typeof event.clientY === "number") {
+        var r = ratioFromClientY(event.clientY);
+        renderTermThumbAtRatio(r, 0, 32);
+        sendTermRatioThrottled(r, true);
+      }
+    }
+
+    termScrollbar.addEventListener("pointerup", endTermDrag);
+    termScrollbar.addEventListener("pointercancel", endTermDrag);
+
+    termScrollbar.addEventListener(
+      "wheel",
+      function (event) {
+        event.preventDefault();
+        sendTermScroll({
+          action: event.deltaY < 0 ? "up" : "down",
+          lines: 5,
+        });
+      },
+      { passive: false },
+    );
+  }
 
   // Watch public/live-preview/ so whenever Muse Code CLI writes or updates
   // a game or 3D model preview, the right-side iframe updates automatically.
   function pollPreviewState() {
     fetch("/api/studio/preview-state")
       .then(function (res) {
-        return res.ok ? res.json() : null;
+        if (!res.ok) {
+          setLiveHealth(false);
+          return null;
+        }
+        return res.json();
       })
       .then(function (data) {
         if (!data) return;
+        if (data.terminalScroll) {
+          updateTermScrollThumb(data.terminalScroll);
+        }
         // Save-to-library + Refresh-preview button visibility follow the
         // preview-state ready flag: only show header actions when a live game
         // is staged in public/live-preview/. Hidden otherwise.
@@ -753,10 +973,25 @@
             setStatus("Ready.", "ok");
           }
         }
-        if (!data.ready || !data.updatedAt) return;
+        if (!data.ready || !data.updatedAt) {
+          if (!currentPreviewUrl && headerTitleEl) {
+            headerTitleEl.textContent = "Agentic Game Studio";
+          }
+          return;
+        }
+        if (
+          data.title &&
+          headerTitleEl &&
+          (!currentPreviewUrl || currentPreviewUrl === data.url)
+        ) {
+          headerTitleEl.textContent = data.title;
+        }
         if (data.updatedAt > lastPreviewUpdatedAt) {
           lastPreviewUpdatedAt = data.updatedAt;
           if (titleEl) titleEl.textContent = data.title || "Game Preview";
+          if (headerTitleEl) {
+            headerTitleEl.textContent = data.title || "Game Preview";
+          }
           if (emptyEl) emptyEl.classList.add("hidden");
           if (frameEl) {
             frameEl.classList.remove("hidden");
@@ -838,8 +1073,13 @@
 
   function setModelOpen(open) {
     if (!modelMenu || !modelBtn) return;
+    if (open) closePlusMenu();
     modelMenu.classList.toggle("hidden", !open);
     modelBtn.setAttribute("aria-expanded", open ? "true" : "false");
+  }
+
+  function closeModelMenu() {
+    setModelOpen(false);
   }
 
   function isModelOpen() {
@@ -910,6 +1150,7 @@
 
     modelBtn.addEventListener("click", function (event) {
       event.stopPropagation();
+      closePlusMenu();
       var open = !isModelOpen();
       setModelOpen(open);
       if (open) {
@@ -985,7 +1226,28 @@
   if (attachBtn) {
     attachBtn.addEventListener("click", function (event) {
       event.stopPropagation();
+      closeModelMenu();
       if (plusMenu) plusMenu.classList.toggle("hidden");
+    });
+  }
+  if (scopeEl) {
+    scopeEl.addEventListener("mousedown", function () {
+      closePlusMenu();
+      closeModelMenu();
+    });
+    scopeEl.addEventListener("focus", function () {
+      closePlusMenu();
+      closeModelMenu();
+    });
+  }
+  if (promptEl) {
+    promptEl.addEventListener("mousedown", function () {
+      closePlusMenu();
+      closeModelMenu();
+    });
+    promptEl.addEventListener("focus", function () {
+      closePlusMenu();
+      closeModelMenu();
     });
   }
   document.addEventListener("click", function (event) {
@@ -1562,6 +1824,7 @@
   }
 
   function newChat() {
+    pausePreviewGame();
     if (sendAbortController) {
       try {
         sendAbortController.abort();
@@ -1582,6 +1845,7 @@
     renderSkillChips();
     renderInstructionChips();
     closePlusMenu();
+    closeModelMenu();
     setSubOpen(plusSkillsToggle, plusSkills, false);
     setSubOpen(plusInstructionsToggle, plusInstructions, false);
     setSubOpen(plusMcpsToggle, plusMcps, false);
@@ -1592,7 +1856,9 @@
         if (extra) extra.classList.add("hidden");
       },
     );
+    currentPreviewUrl = null;
     if (titleEl) titleEl.textContent = "Game Preview";
+    if (headerTitleEl) headerTitleEl.textContent = "Agentic Game Studio";
     if (frameEl) {
       frameEl.classList.add("hidden");
       frameEl.removeAttribute("src");
