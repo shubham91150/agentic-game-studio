@@ -42,13 +42,13 @@ Godot reference (copy mat karo, sirf dekho): `/home/opencode/project-data/worksp
 ## 4. Rules reminder (Meta hackathon compliance)
 
 - **Meta-models-only (shipped path):** exact IDs — `muse-wonder-1.0` (Meta Model API Responses), `muse-image-1.0` (Meta Model API images), `meta-models/muse-spark-open-1026` (Baseten open-weights). SAM 3.1 / SAM 3D Objects Meta Model API / Modal backends se.
-- **Shipped path me FORBIDDEN:** Trellis/TRIPOSR — `src/tools/modal_call_3d.py` me `trellis` backend sirf dev/testing ke liye hai, comment me khud likha hai "NOT hackathon-compliant". Submission hamesha `--backend sam3d`. Trellis **dev-only hai, submission se pehle Nov 3 ko remove hoga**. SAM 3D: integrated + trial-verified (2 green runs, `docs/evidence-sam3d/`) — hero assets ke liye GPU availability subject; shipped game path Blender/kit assets use karta hai.
+- **100% Meta 3D Stack:** `src/tools/modal_call_3d.py` supports `--backend sam3d` (Meta SAM 3D Objects) and `--backend vggt` (Meta VGGT-1B). SAM 3D is integrated + trial-verified (2 green runs, `docs/evidence-sam3d/`), alongside Blender Pro/PartNet/CC0 assets.
 - **No trademarked IP:** prompt/spec me koi trademarked character, brand, film/game IP mat daalo — Wonder director biome + original assets banata hai, existing IP nahi.
 - Blender / Godot / Unity **tools** hain (model nahi) — allowed; judges line: "Meta models for reasoning/assets/understanding, open tooling for render."
 
 ## 5. Submission pitch
 
-> "Agentic Game Studio staged pipeline se playable 3D prototype banata hai — Meta Muse Wonder world reasoning, Muse Spark Open asset planning, Muse Image concept art, aur SAM-family (3.1 segmentation + 3D Objects) image-to-3D ke liye — deterministic layout aur physics QA gate ke saath. Koi third-party end-to-end world model shipped path me nahi hai (Trellis dev-only hai)."
+> "Agentic Game Studio staged pipeline se playable 3D prototype banata hai — Meta Muse Wonder world reasoning, Muse Spark Open asset planning, Muse Image concept art, aur SAM-family (3.1 segmentation + 3D Objects) image-to-3D ke liye — deterministic layout aur physics QA gate ke saath. Koi third-party end-to-end world model shipped path me nahi hai."
 
 ## 6. World-expansion tools (LIVE — tools only, never the shipped path)
 

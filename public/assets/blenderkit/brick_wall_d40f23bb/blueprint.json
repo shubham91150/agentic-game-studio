@@ -1,0 +1,106 @@
+{
+  "id": "655dfb53-73b1-4b99-a979-46a063137370",
+  "assetBaseId": "d40f23bb-32c5-454f-b80b-e28fed82eee2",
+  "slug": "brick_wall_d40f23bb",
+  "name": "Brick Wall",
+  "assetType": "material",
+  "category": "bricks",
+  "author": "James Middleton",
+  "license": "royalty_free",
+  "isFree": true,
+  "score": 315.0,
+  "ratingsAverage": {
+    "bookmarks": 0.9838709677419355,
+    "workingHours": 3.5,
+    "quality": 9.0,
+    "virtualPrice": null
+  },
+  "description": "Brick Wall distressed bricks in 4k PBR with displacement for walls",
+  "tags": [
+    "brick",
+    "wall",
+    "distressed",
+    "bricks",
+    "walls"
+  ],
+  "parameters": {
+    "dimensionX": null,
+    "dimensionY": null,
+    "dimensionZ": null,
+    "dimensionsMeters": null,
+    "boundingBox": null,
+    "faceCount": null,
+    "faceCountRender": null,
+    "objectCount": null,
+    "nodeCount": 14,
+    "meshPolyType": null,
+    "materials": [],
+    "shaders": [
+      "[principled]"
+    ],
+    "modifiers": [],
+    "pbrType": "metallic",
+    "purePbr": true,
+    "procedural": false,
+    "uv": false,
+    "animated": false,
+    "rig": null,
+    "modelStyle": null,
+    "condition": null,
+    "designVariant": null,
+    "textureResolutionMax": 4096,
+    "engines": []
+  },
+  "availableFiles": [
+    {
+      "fileType": "blend",
+      "uuid": "77362d96-26ee-40d5-8c52-5c8da0fd76b5",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/77362d96-26ee-40d5-8c52-5c8da0fd76b5/",
+      "fileUploadSize": 62933221
+    },
+    {
+      "fileType": "resolution_0_5K",
+      "uuid": "d3d9777d-dde0-4e5c-aa87-4af8fcac5222",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/d3d9777d-dde0-4e5c-aa87-4af8fcac5222/",
+      "fileUploadSize": 416435
+    },
+    {
+      "fileType": "resolution_1K",
+      "uuid": "dc27c170-9cde-4ad9-ae78-fb69b62daee1",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/dc27c170-9cde-4ad9-ae78-fb69b62daee1/",
+      "fileUploadSize": 1064811
+    },
+    {
+      "fileType": "resolution_2K",
+      "uuid": "fe3a8893-54ff-474b-af37-efe2537038a5",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/fe3a8893-54ff-474b-af37-efe2537038a5/",
+      "fileUploadSize": 3601227
+    },
+    {
+      "fileType": "resolution_4K",
+      "uuid": "68299c07-2a99-47cd-872f-e59ab85aab25",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/68299c07-2a99-47cd-872f-e59ab85aab25/",
+      "fileUploadSize": 12741808
+    },
+    {
+      "fileType": "thumbnail",
+      "uuid": "b699d2b2-aa5e-4893-80cc-dbcc32402fb5",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/b699d2b2-aa5e-4893-80cc-dbcc32402fb5/",
+      "fileUploadSize": 1230972
+    }
+  ],
+  "downloaded": {
+    "thumbnail": {
+      "file": "public/assets/blenderkit/brick_wall_d40f23bb/thumbnail.png",
+      "url": "/studio/assets/blenderkit/brick_wall_d40f23bb/thumbnail.png",
+      "bytes": 1241910,
+      "sourceUrl": "https://public.blenderkit.com/thumbnails/assets/655dfb5373b14b99a97946a063137370/files/thumbnail_e7b0e318-5ece-4a56-aea1-98075b0f1add.png.1024x1024_q85_crop-%2C.png"
+    },
+    "blend": {
+      "file": "public/assets/blenderkit/brick_wall_d40f23bb/brick_wall_d40f23bb_resolution_0_5K.blend",
+      "url": "/studio/assets/blenderkit/brick_wall_d40f23bb/brick_wall_d40f23bb_resolution_0_5K.blend",
+      "bytes": 416435,
+      "fileType": "resolution_0_5K"
+    }
+  }
+}

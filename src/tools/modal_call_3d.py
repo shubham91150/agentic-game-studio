@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
-"""Call a deployed Modal image-to-3D backend and save the GLB locally.
+"""Call a deployed Meta 3D Modal backend (SAM 3D Objects or Meta VGGT-1B) and save the GLB locally.
 
 Usage:
-  python3 src/tools/modal_call_3d.py --backend trellis --image in.png --out out.glb
   python3 src/tools/modal_call_3d.py --backend sam3d --image in.png --mask mask.png --out out.glb
+  python3 src/tools/modal_call_3d.py --backend vggt --image in.png --out out.glb
 
-Backends:
-  trellis = Microsoft TRELLIS (dev/testing only, NOT hackathon-compliant)
-  sam3d   = Meta SAM 3D Objects (hackathon submission backend)
+Backends (100% Meta open-weight models):
+  sam3d = Meta SAM 3D Objects (facebook/sam-3d-objects)
+  vggt  = Meta VGGT-1B (facebook/VGGT-1B)
 """
 import argparse
 import os
@@ -16,18 +16,14 @@ import sys
 import modal
 
 BACKENDS = {
-    "trellis": (
-        "spurcode-microsoft-trellis-pipeline",
-        "MicrosoftTrellisGenerator",
-        "generate_3d_glb",
-    ),
     "sam3d": ("spurcode-sam3d-objects", "SAM3DObjects", "reconstruct"),
+    "vggt": ("spurcode-meta-vggt", "MetaVGGT", "reconstruct_glb"),
 }
 
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--backend", required=True, choices=list(BACKENDS))
+    ap.add_argument("--backend", default="sam3d", choices=list(BACKENDS))
     ap.add_argument("--image", required=True)
     ap.add_argument("--mask", default="")
     ap.add_argument("--out", required=True)

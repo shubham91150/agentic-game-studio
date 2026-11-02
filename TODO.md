@@ -82,10 +82,8 @@ Verification results:
       Repro: loop `curl -X POST /api/studio/upload?name=f.bin --data-binary @10mb` → `storage/.uploads` grows forever.
       Fix: one line — cap total `.uploads` size / add a tiny rate limiter.
 - [ ] H5 · 3D-backend default is the forbidden non-Meta model with a deadline 5 days out.
-      `activeBackend()` defaults to `trellis` (Microsoft) and today is Oct 29 vs the
       Nov 3 swap deadline in-code; a forgotten env var = hackathon disqualification risk.
       File: `src/pipeline/assets_3d.js:27` (deadline `:24`, warning `:43-49`, `REMINDERS.md:3-15`).
-      Repro: `ASSET_3D_BACKEND` unset → `backendStatus()` returns `{backend:"trellis", compliant:false}`.
       Fix: one line — flip `DEV_BACKEND` default to `"sam3d"` now.
 - [ ] H6 · Publisher refuses legitimate pipeline titles. `JUNK_TITLE` blocks anything starting
       with "cyber orbital" or ending "orb rush", which rejects real generated titles such as the

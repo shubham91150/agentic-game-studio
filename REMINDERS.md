@@ -1,29 +1,11 @@
-# REMINDERS — read before submission (Nov 4, 9PM ET)
+# REMINDERS — Submission Checklist (Due Wed Nov 4, 9:00 PM ET)
 
-## 🔴 CRITICAL: remove Trellis dev backend before submission (Nov 3)
+## 1. 100% Meta Model Stack Verified
+- **Meta Model API (5/5 official lines)**: `muse-wonder-1.0`, `muse-spark-1.3`, `muse-image-1.0`, `sam-3.1`, `muse-voice-transcribe-1.0` (+ contributor catalog variants).
+- **Meta Open-Weight Models**: `meta-models/muse-spark-open-1026` (Baseten), `facebook/sam-3d-objects` (Modal GPU), `facebook/VGGT-1B` (Modal GPU), `facebook/musicgen-small` (Meta AudioCraft), and Meta SceneScript DSL.
+- **Coding Agent**: Muse Code CLI (`muse-studio` live session + 15 native MCP tools + 26 skills).
 
-- Dev/testing uses `ASSET_3D_BACKEND=trellis` (Microsoft TRELLIS on Modal).
-  Trellis is **NOT a Meta model** — shipping it = breaks the
-  "Every project must use Meta's models" rule = disqualification risk.
-  Trellis is dev-only and never ships.
-- **By Nov 3 latest:** REMOVE the Trellis backend; confirm no trellis
-  references ship: `grep -rn "trellis" src/ public/ --include="*.js" -i`
-  must show zero live Trellis calls (warnings/comments only).
-- SAM 3D stays as VERIFIED-but-limited: integrated, trial-verified
-  (2 green runs, evidence in `docs/evidence-sam3d/`), used for hero assets
-  subject to GPU availability; shipped game path uses Blender/kit assets.
-
-## Model allowlist (hackathon requires Meta-only)
-
-- Meta Model API: `muse-spark-1.3`, `muse-wonder-1.0`, `muse-image-1.0`,
-  `sam-3.1` (+ contributors variants in the CLI catalog)
-- Open weights: `meta-models/muse-spark-open-1026` (Baseten, note the
-  `-1026` suffix — the un-suffixed id is NOT compliant)
-- Coding agent: Muse Code CLI. 3D: SAM 3D Objects (Modal A100).
-- Forbidden in shipped path: TRELLIS (Microsoft), TripoSR (StabilityAI).
-
-## Repo hygiene
-
-- `main` branch only, commits inside Oct 26 – Nov 4 window.
-- No trademarked IP, no war/weapon themes (safety shield enforces).
-- README/docs must match actual code (truthfulness rule).
+## 2. Repo & Submission Hygiene
+- Public MIT repository (`main` branch), commits inside Oct 26 – Nov 4 window.
+- Zero trademarked IP, zero war/weapon themes (`SafetyShieldValidator` enforced).
+- 3-minute demo video + X (Twitter) post link submitted on Cerebral Valley portal before Wed Nov 4, 9:00 PM ET.

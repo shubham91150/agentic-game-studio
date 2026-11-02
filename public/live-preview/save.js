@@ -1,46 +1,69 @@
-/* Horizon Sprint — save.js
- * localStorage persistence: best lap, volume, quality, steering, car color. */
+/* Ashes of St. Vermilion — persistence (Stage 1).
+ * Key: ags_stv_v1 -> {volume, quality, sensitivity, mute, bestMs}.
+ * r128 global style: exposes window.StV_Save. No module syntax.
+ * localStorage may be blocked (private iframe) — every access is guarded.
+ */
 (function () {
-  window.G = window.G || {};
-  var G = window.G;
-  var KEY = "horizon_sprint_v1";
+  'use strict';
 
-  G.Save = {
-    data: {
-      best: null,
-      volume: 70,
-      quality: 1,
-      sens: 100,
-      muted: false,
-      color: "210,31,38",
-      colorblind: false,
-      subs: true,
-      keys: { left: "KeyA", right: "KeyD" },
-    },
+  var KEY = 'ags_stv_v1';
+
+  var DEFAULTS = {
+    volume: 0.8,
+    quality: 'High',
+    sensitivity: 1.0,
+    mute: false,
+    bestMs: null
+  };
+
+  function clone(o) {
+    return {
+      volume: o.volume,
+      quality: o.quality,
+      sensitivity: o.sensitivity,
+      mute: o.mute,
+      bestMs: o.bestMs
+    };
+  }
+
+  function sanitize(raw) {
+    var out = clone(DEFAULTS);
+    if (!raw || typeof raw !== 'object') return out;
+    if (typeof raw.volume === 'number' && isFinite(raw.volume)) {
+      out.volume = Math.min(1, Math.max(0, raw.volume));
+    }
+    if (raw.quality === 'Low' || raw.quality === 'Med' || raw.quality === 'Medium' ||
+        raw.quality === 'High') {
+      out.quality = (raw.quality === 'Medium') ? 'Med' : raw.quality;
+    }
+    if (typeof raw.sensitivity === 'number' && isFinite(raw.sensitivity)) {
+      out.sensitivity = Math.min(2, Math.max(0.5, raw.sensitivity));
+    }
+    out.mute = !!raw.mute;
+    if (typeof raw.bestMs === 'number' && isFinite(raw.bestMs) && raw.bestMs > 0) {
+      out.bestMs = Math.round(raw.bestMs);
+    }
+    return out;
+  }
+
+  window.StV_Save = {
     load: function () {
       try {
-        var raw = localStorage.getItem(KEY);
-        if (!raw) return this.data;
-        var d = JSON.parse(raw);
-        for (var k in this.data) if (d[k] !== undefined) this.data[k] = d[k];
-        // Nested keymap: merge per-key so old saves keep working (additive).
-        if (d.keys && typeof d.keys === "object") {
-          for (var kk in this.data.keys)
-            if (d.keys[kk] !== undefined) this.data.keys[kk] = d.keys[kk];
-        }
-      } catch (e) {
-        /* private mode etc — play with defaults */
+        var raw = window.localStorage.getItem(KEY);
+        if (!raw) return clone(DEFAULTS);
+        return sanitize(JSON.parse(raw));
+      } catch (err) {
+        return clone(DEFAULTS);
       }
-      return this.data;
     },
-    save: function () {
+    save: function (s) {
+      var merged = sanitize(s);
       try {
-        localStorage.setItem(KEY, JSON.stringify(this.data));
-      } catch (e) {}
-    },
-    reset: function () {
-      this.data.best = null;
-      this.save();
-    },
+        window.localStorage.setItem(KEY, JSON.stringify(merged));
+      } catch (err) {
+        /* storage blocked — settings still apply for this session */
+      }
+      return merged;
+    }
   };
 })();

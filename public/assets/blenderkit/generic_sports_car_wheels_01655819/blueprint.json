@@ -1,0 +1,140 @@
+{
+  "id": "eb07de89-63b7-45f4-9c32-f9ddf3c958d7",
+  "assetBaseId": "01655819-9381-4718-854c-aa0bd13df13b",
+  "slug": "generic_sports_car_wheels_01655819",
+  "name": "Generic Sports Car Wheels",
+  "assetType": "model",
+  "category": "part-vehicle",
+  "author": "MPlex ",
+  "license": "royalty_free",
+  "isFree": true,
+  "score": 300.0,
+  "ratingsAverage": {
+    "bookmarks": 0.9811320754716981,
+    "workingHours": 5.0,
+    "quality": 6.0,
+    "virtualPrice": null
+  },
+  "description": "Generic sports car wheels. \r\n\r\n- Low profile 24-Inch outer diameter tires. \r\n\r\n- Brake assembly included as seen in thumbnail.\r\n\r\n- Materials compatible with EEVEE and Cycles.\r\n\r\nIf you found this model useful, consider leaving a rating. Thanks!",
+  "tags": [
+    "wheel",
+    "tire",
+    "tyre",
+    "rims",
+    "brake",
+    "sports_car"
+  ],
+  "parameters": {
+    "dimensionX": 0.1812,
+    "dimensionY": 0.631,
+    "dimensionZ": 0.631,
+    "dimensionsMeters": {
+      "width": 0.1812,
+      "depth": 0.631,
+      "height": 0.631
+    },
+    "boundingBox": {
+      "min": [
+        -0.0906,
+        -0.3154,
+        0.0001
+      ],
+      "max": [
+        0.0906,
+        0.3156,
+        0.6311
+      ]
+    },
+    "faceCount": 32470,
+    "faceCountRender": 508930,
+    "objectCount": 7,
+    "nodeCount": 40,
+    "meshPolyType": "quad_dominant",
+    "materials": [
+      "[SportsCarWheels_Tire SportsCarWheels_Rim Main SportsCarWheels_Rim Accent SportsCarWheels_Brake Assembly Bronze Coat SportsCarWheels_Brake Pads SportsCarWheels_Brake Callipers SportsCarWheels_Brake Disc Body SportsCarWheels_Brake Disc Face SportsCarWheels"
+    ],
+    "shaders": [
+      "[principled]"
+    ],
+    "modifiers": [
+      "[subsurf]"
+    ],
+    "pbrType": "metallic",
+    "purePbr": true,
+    "procedural": false,
+    "uv": true,
+    "animated": null,
+    "rig": false,
+    "modelStyle": "realistic",
+    "condition": "new",
+    "designVariant": null,
+    "textureResolutionMax": 4096,
+    "engines": [
+      "[cycles]"
+    ]
+  },
+  "availableFiles": [
+    {
+      "fileType": "blend",
+      "uuid": "f6e9495f-504e-429e-95d4-753d176f44f1",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/f6e9495f-504e-429e-95d4-753d176f44f1/",
+      "fileUploadSize": 24870570
+    },
+    {
+      "fileType": "gltf",
+      "uuid": "00804ec3-1424-4a28-a3de-11e505f6e92e",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/00804ec3-1424-4a28-a3de-11e505f6e92e/",
+      "fileUploadSize": 3815740
+    },
+    {
+      "fileType": "resolution_0_5K",
+      "uuid": "b4740b02-4512-4207-b13a-d11a088fb6fa",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/b4740b02-4512-4207-b13a-d11a088fb6fa/",
+      "fileUploadSize": 1630668
+    },
+    {
+      "fileType": "resolution_1K",
+      "uuid": "996d92e2-7835-40ca-aaaa-2343b7e563ca",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/996d92e2-7835-40ca-aaaa-2343b7e563ca/",
+      "fileUploadSize": 1884652
+    },
+    {
+      "fileType": "resolution_2K",
+      "uuid": "a0c8c635-874a-4d09-8d96-e3dc7f16a147",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/a0c8c635-874a-4d09-8d96-e3dc7f16a147/",
+      "fileUploadSize": 2966889
+    },
+    {
+      "fileType": "resolution_4K",
+      "uuid": "07f4d0de-9eca-436c-b402-f8b41eabafe2",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/07f4d0de-9eca-436c-b402-f8b41eabafe2/",
+      "fileUploadSize": 7209773
+    },
+    {
+      "fileType": "thumbnail",
+      "uuid": "d1267a26-289e-4635-b23c-c7fdc7247910",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/d1267a26-289e-4635-b23c-c7fdc7247910/",
+      "fileUploadSize": 14771857
+    }
+  ],
+  "downloaded": {
+    "thumbnail": {
+      "file": "public/assets/blenderkit/generic_sports_car_wheels_01655819/thumbnail.png",
+      "url": "/studio/assets/blenderkit/generic_sports_car_wheels_01655819/thumbnail.png",
+      "bytes": 1141457,
+      "sourceUrl": "https://public.blenderkit.com/thumbnails/assets/eb07de8963b745f49c32f9ddf3c958d7/files/thumbnail_b2fd2f92-de28-407e-86a1-5e5ed5d3f3fa.png.1024x1024_q85_crop-%2C.png"
+    },
+    "glb": {
+      "file": "public/assets/blenderkit/generic_sports_car_wheels_01655819/generic_sports_car_wheels_01655819.glb",
+      "url": "/studio/assets/blenderkit/generic_sports_car_wheels_01655819/generic_sports_car_wheels_01655819.glb",
+      "bytes": 3815740,
+      "fileType": "gltf"
+    },
+    "blend": {
+      "file": "public/assets/blenderkit/generic_sports_car_wheels_01655819/generic_sports_car_wheels_01655819_resolution_0_5K.blend",
+      "url": "/studio/assets/blenderkit/generic_sports_car_wheels_01655819/generic_sports_car_wheels_01655819_resolution_0_5K.blend",
+      "bytes": 1630668,
+      "fileType": "resolution_0_5K"
+    }
+  }
+}

@@ -1,935 +1,235 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta
-      name="viewport"
-      content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"
-    />
-    <title>Horizon Sprint — 3D Sports Car Racing</title>
-    <link rel="icon" href="data:," />
-    <style>
-      :root {
-        --bg: #0b0e13;
-        --glass: rgba(10, 14, 20, 0.74);
-        --line: rgba(255, 255, 255, 0.14);
-        --txt: #f2f5f9;
-        --dim: #aeb8c4;
-        --gold: #ffb300;
-        --ember: #ff6a00;
-        --good: #35d07f;
-        --bad: #ff4d5e;
-      }
-      * {
-        box-sizing: border-box;
-        -webkit-tap-highlight-color: transparent;
-      }
-      html,
-      body {
-        margin: 0;
-        height: 100%;
-        overflow: hidden;
-        background: var(--bg);
-        font-family: "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
-        color: var(--txt);
-      }
-      #app {
-        position: fixed;
-        inset: 0;
-      }
-      #canvas-container {
-        position: absolute;
-        inset: 0;
-      }
-      #canvas-container canvas {
-        display: block;
-        width: 100%;
-        height: 100%;
-      }
-      .hidden {
-        display: none !important;
-      }
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Ashes of St. Vermilion — Stage 1</title>
+<link rel="icon" href="data:,">
+<style>
+  :root {
+    --amber: #ffb14e;
+    --amber-dim: #8a5a24;
+    --teal: #1a2b3a;
+    --ink: rgba(3, 5, 7, 0.92);
+    --paper: #e8dcc4;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0; width: 100%; height: 100%;
+    background: #030507; color: var(--paper);
+    font-family: Georgia, "Times New Roman", serif;
+    overflow: hidden; touch-action: none;
+    -webkit-user-select: none; user-select: none;
+  }
+  #canvas-container { position: fixed; inset: 0; }
+  #canvas-container canvas { display: block; width: 100%; height: 100%; }
 
-      #vignette {
-        position: absolute;
-        inset: 0;
-        pointer-events: none;
-        background: radial-gradient(
-          ellipse at center,
-          transparent 55%,
-          rgba(0, 0, 0, 0.42) 100%
-        );
-      }
-      #flash {
-        position: absolute;
-        inset: 0;
-        pointer-events: none;
-        background: #fff;
-        opacity: 0;
-      }
-      #speedlines {
-        position: absolute;
-        inset: 0;
-        pointer-events: none;
-        opacity: 0;
-        background: repeating-conic-gradient(
-          from 0deg at 50% 50%,
-          transparent 0deg 5deg,
-          rgba(255, 255, 255, 0.12) 5deg 6.5deg
-        );
-        -webkit-mask-image: radial-gradient(
-          ellipse at center,
-          transparent 52%,
-          #000 100%
-        );
-        mask-image: radial-gradient(
-          ellipse at center,
-          transparent 52%,
-          #000 100%
-        );
-      }
+  /* ---------- HUD ---------- */
+  #hud {
+    position: fixed; top: 0; left: 0; right: 0;
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 14px; pointer-events: none; z-index: 5;
+    background: linear-gradient(to bottom, rgba(0,0,0,0.55), rgba(0,0,0,0));
+  }
+  #hud-obj { font-size: 15px; letter-spacing: 0.06em; color: var(--paper); flex: 1; }
+  #hud-key {
+    font-size: 13px; letter-spacing: 0.1em; color: var(--amber);
+    border: 1px solid var(--amber-dim); border-radius: 4px;
+    padding: 4px 10px; white-space: nowrap;
+  }
+  #noise-wrap { display: flex; align-items: center; gap: 6px; }
+  #noise-label { font-size: 11px; letter-spacing: 0.14em; color: #9ab; }
+  #noise-meter {
+    width: 110px; height: 10px; border: 1px solid #557;
+    border-radius: 5px; background: rgba(0,0,0,0.6); overflow: hidden;
+  }
+  #noise-fill {
+    height: 100%; width: 0%;
+    background: linear-gradient(to right, #3d6b4f, #c9a13b, #c0392b);
+    transition: width 120ms linear;
+  }
+  #crosshair {
+    position: fixed; left: 50%; top: 50%; width: 6px; height: 6px;
+    margin: -3px 0 0 -3px; border-radius: 50%;
+    background: rgba(232, 220, 196, 0.75); z-index: 5; pointer-events: none;
+  }
+  #banner {
+    position: fixed; left: 50%; top: 22%; transform: translateX(-50%);
+    max-width: 82%; padding: 10px 22px; z-index: 6;
+    background: var(--ink); border: 1px solid var(--amber-dim); border-radius: 6px;
+    color: var(--amber); font-size: 17px; letter-spacing: 0.08em; text-align: center;
+    pointer-events: none;
+  }
+  #prompt {
+    position: fixed; left: 50%; bottom: 24%; transform: translateX(-50%);
+    padding: 6px 16px; z-index: 5; font-size: 15px; letter-spacing: 0.08em;
+    color: #fff; background: rgba(0,0,0,0.55); border-radius: 4px;
+    border: 1px solid #667; pointer-events: none;
+  }
+  #debug {
+    position: fixed; left: 8px; bottom: 8px; z-index: 7;
+    font-family: monospace; font-size: 12px; color: #7fd;
+    background: rgba(0,0,0,0.6); padding: 4px 8px; border-radius: 4px;
+    pointer-events: none; white-space: pre;
+  }
+  #flash {
+    position: fixed; inset: 0; z-index: 4; pointer-events: none;
+    background: #cfe4ff; opacity: 0;
+  }
+  .hidden { display: none !important; }
 
-      /* ---------- HUD ---------- */
-      #hud {
-        position: absolute;
-        inset: 0;
-        pointer-events: none;
-      }
-      #hud-topleft {
-        position: absolute;
-        top: 14px;
-        left: 16px;
-        text-shadow: 0 2px 8px rgba(0, 0, 0, 0.7);
-      }
-      #hud-pos {
-        font-size: 52px;
-        font-weight: 900;
-        font-style: italic;
-        line-height: 1;
-        letter-spacing: 1px;
-      }
-      #hud-lap {
-        font-size: 20px;
-        font-weight: 700;
-        letter-spacing: 3px;
-        color: var(--gold);
-      }
-      #hud-topcenter {
-        position: absolute;
-        top: 12px;
-        left: 50%;
-        transform: translateX(-50%);
-        text-align: center;
-        text-shadow: 0 2px 8px rgba(0, 0, 0, 0.7);
-      }
-      #hud-time-cur {
-        font-size: 30px;
-        font-weight: 800;
-        font-variant-numeric: tabular-nums;
-      }
-      #hud-times-sub {
-        font-size: 13px;
-        color: var(--dim);
-        letter-spacing: 1px;
-        display: flex;
-        gap: 14px;
-        justify-content: center;
-        font-variant-numeric: tabular-nums;
-      }
-      #hud-topright {
-        position: absolute;
-        top: 14px;
-        right: 16px;
-        display: flex;
-        flex-direction: column;
-        align-items: flex-end;
-        gap: 8px;
-      }
-      #minimap {
-        width: 172px;
-        height: 172px;
-        border-radius: 12px;
-        border: 1px solid var(--line);
-        background: rgba(8, 10, 14, 0.55);
-      }
-      #hud-btns {
-        display: flex;
-        gap: 8px;
-        pointer-events: auto;
-      }
-      .icon-btn {
-        min-width: 52px;
-        height: 34px;
-        border-radius: 9px;
-        border: 1px solid var(--line);
-        background: var(--glass);
-        color: var(--txt);
-        font-weight: 800;
-        font-size: 12px;
-        letter-spacing: 1px;
-        cursor: pointer;
-        backdrop-filter: blur(6px);
-      }
-      .icon-btn:active {
-        transform: scale(0.94);
-      }
-      #hud-speedbox {
-        position: absolute;
-        right: 20px;
-        bottom: 18px;
-        text-align: right;
-        text-shadow: 0 2px 10px rgba(0, 0, 0, 0.75);
-      }
-      /* Stage 3: analog needle speedometer (0-260 km/h, sweep -120..+120deg) */
-      #dial {
-        width: 208px;
-        height: 208px;
-        display: block;
-        margin-left: auto;
-        margin-bottom: 6px;
-        filter: drop-shadow(0 2px 10px rgba(0, 0, 0, 0.75));
-      }
-      .dtrk {
-        fill: none;
-        stroke: rgba(255, 255, 255, 0.22);
-        stroke-width: 3;
-      }
-      .dred {
-        fill: none;
-        stroke: var(--bad);
-        stroke-width: 7;
-      }
-      .dtk {
-        stroke: #aeb8c4;
-        stroke-width: 2.5;
-      }
-      .dnum {
-        fill: #cfd6de;
-        font-size: 14px;
-        font-weight: 700;
-        text-anchor: middle;
-        dominant-baseline: central;
-        font-variant-numeric: tabular-nums;
-      }
-      #dial-needle polygon {
-        fill: var(--bad);
-      }
-      .dhub {
-        fill: #141a23;
-        stroke: #e8edf3;
-        stroke-width: 2.5;
-      }
-      #dial-digital {
-        fill: var(--txt);
-        font-size: 30px;
-        font-weight: 900;
-        font-style: italic;
-        text-anchor: middle;
-        font-variant-numeric: tabular-nums;
-      }
-      #dial-gear {
-        fill: var(--txt);
-        font-size: 20px;
-        font-weight: 900;
-        text-anchor: middle;
-        dominant-baseline: central;
-        font-variant-numeric: tabular-nums;
-      }
-      .dunit {
-        fill: var(--dim);
-        font-size: 11px;
-        letter-spacing: 3px;
-        text-anchor: middle;
-      }
-      /* Stage 3: NEW-BEST gold pulse (1.2s, once per improvement) */
-      #hud-time-best.best-flash {
-        animation: bestflash 1.2s ease-out 1;
-      }
-      @keyframes bestflash {
-        0% {
-          color: #ffd75e;
-        }
-        30% {
-          color: var(--gold);
-        }
-        100% {
-          color: var(--dim);
-        }
-      }
-      #nitro-wrap {
-        position: relative;
-        width: 210px;
-        height: 20px;
-        border-radius: 11px;
-        border: 1px solid var(--line);
-        background: rgba(0, 0, 0, 0.5);
-        overflow: hidden;
-      }
-      #nitro-fill {
-        position: absolute;
-        inset: 2px;
-        width: 50%;
-        border-radius: 8px;
-        background: linear-gradient(90deg, #1f8fff, #54e0ff);
-      }
-      #nitro-label {
-        position: absolute;
-        inset: 0;
-        font-size: 11px;
-        font-weight: 800;
-        letter-spacing: 4px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: #eaf6ff;
-        text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
-      }
-      #hud-hint {
-        position: absolute;
-        left: 16px;
-        bottom: 16px;
-        font-size: 13px;
-        color: var(--dim);
-        letter-spacing: 1px;
-        text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
-      }
+  /* ---------- Menu overlays ---------- */
+  .screen {
+    position: fixed; inset: 0; z-index: 10;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 12px; text-align: center; padding: 24px;
+    background: radial-gradient(ellipse at 50% 35%, rgba(26,43,58,0.96), rgba(3,5,7,0.98));
+  }
+  .screen h1 {
+    margin: 0; font-size: clamp(30px, 6vw, 58px); font-weight: normal;
+    letter-spacing: 0.12em; color: var(--amber);
+    text-shadow: 0 0 24px rgba(255, 145, 60, 0.35), 0 2px 0 #000;
+  }
+  .screen h2 {
+    margin: 0 0 6px; font-size: clamp(24px, 4.5vw, 40px); font-weight: normal;
+    letter-spacing: 0.14em; color: var(--amber);
+  }
+  .screen p { margin: 4px 0; font-size: 16px; line-height: 1.5; color: #cbbf9f; max-width: 560px; }
+  .screen .controls { font-size: 13px; color: #8fa0ad; letter-spacing: 0.04em; }
+  .btn {
+    font-family: inherit; font-size: 17px; letter-spacing: 0.12em;
+    color: var(--paper); background: rgba(60, 36, 14, 0.85);
+    border: 1px solid var(--amber-dim); border-radius: 6px;
+    padding: 12px 34px; margin-top: 8px; cursor: pointer; min-height: 48px;
+  }
+  .btn:hover, .btn:focus-visible { background: rgba(120, 70, 22, 0.9); color: #fff; outline: none; }
+  .btn-row { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+  .opt-row {
+    display: flex; align-items: center; gap: 12px; margin-top: 6px;
+    font-size: 15px; color: #cbbf9f;
+  }
+  .opt-row label { min-width: 110px; text-align: right; letter-spacing: 0.08em; }
+  .opt-row input[type="range"] { width: 180px; accent-color: var(--amber); }
+  .opt-row select {
+    font-family: inherit; font-size: 15px; color: var(--paper);
+    background: #111; border: 1px solid var(--amber-dim); border-radius: 4px;
+    padding: 6px 10px;
+  }
+  #clear-time { font-size: 20px; color: #fff; letter-spacing: 0.1em; }
 
-      #countdown {
-        position: absolute;
-        inset: 0;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 150px;
-        font-weight: 900;
-        font-style: italic;
-        color: var(--gold);
-        text-shadow: 0 6px 40px rgba(0, 0, 0, 0.8);
-        pointer-events: none;
-      }
-      #toast {
-        position: absolute;
-        top: 22%;
-        left: 50%;
-        transform: translateX(-50%);
-        font-size: 34px;
-        font-weight: 900;
-        font-style: italic;
-        letter-spacing: 2px;
-        color: #fff;
-        text-shadow: 0 3px 14px rgba(0, 0, 0, 0.8);
-        pointer-events: none;
-        white-space: nowrap;
-      }
-      #caption {
-        position: absolute;
-        left: 50%;
-        bottom: 120px;
-        transform: translateX(-50%);
-        max-width: min(560px, calc(100vw - 48px));
-        padding: 8px 16px;
-        border-radius: 8px;
-        background: rgba(8, 10, 14, 0.82);
-        border: 1px solid var(--line);
-        color: var(--txt);
-        font-size: 14px;
-        line-height: 1.5;
-        text-align: center;
-        pointer-events: none;
-        z-index: 6;
-      }
-      #wrongway {
-        position: absolute;
-        top: 34%;
-        left: 50%;
-        transform: translateX(-50%);
-        font-size: 44px;
-        font-weight: 900;
-        font-style: italic;
-        color: var(--bad);
-        text-shadow: 0 3px 16px rgba(0, 0, 0, 0.9);
-        pointer-events: none;
-        animation: blink 0.5s steps(2) infinite;
-      }
-      @keyframes blink {
-        50% {
-          opacity: 0.25;
-        }
-      }
+  /* ---------- Touch UI ---------- */
+  #touch-ui { display: none; }
+  @media (pointer: coarse) { #touch-ui { display: block; } }
+  body.touch #touch-ui { display: block; }
+  #joy {
+    position: fixed; left: 22px; bottom: 22px; width: 128px; height: 128px;
+    border: 2px solid rgba(255, 177, 78, 0.4); border-radius: 50%;
+    background: rgba(0, 0, 0, 0.35); z-index: 8;
+  }
+  #joy-knob {
+    position: absolute; left: 50%; top: 50%; width: 56px; height: 56px;
+    margin: -28px 0 0 -28px; border-radius: 50%;
+    background: rgba(255, 177, 78, 0.55); border: 2px solid rgba(255, 177, 78, 0.8);
+  }
+  .touch-col { position: fixed; right: 18px; bottom: 22px; z-index: 8; display: flex; flex-direction: column; gap: 12px; }
+  .touch-btn {
+    width: 68px; height: 68px; border-radius: 50%;
+    font-family: inherit; font-size: 12px; letter-spacing: 0.06em;
+    color: var(--paper); background: rgba(20, 28, 36, 0.75);
+    border: 2px solid rgba(255, 177, 78, 0.5);
+  }
+  .touch-btn.on { background: rgba(120, 70, 22, 0.85); color: #fff; }
 
-      /* ---------- Overlays ---------- */
-      #menu,
-      #pause,
-      #results {
-        position: absolute;
-        inset: 0;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background: rgba(5, 7, 11, 0.45);
-        backdrop-filter: blur(3px);
-        z-index: 5;
-        padding: 16px;
-      }
-      .panel {
-        background: var(--glass);
-        border: 1px solid var(--line);
-        border-radius: 18px;
-        padding: 30px 36px;
-        max-width: 560px;
-        width: 100%;
-        text-align: center;
-        box-shadow: 0 20px 80px rgba(0, 0, 0, 0.6);
-        backdrop-filter: blur(10px);
-        max-height: 94vh;
-        overflow-y: auto;
-      }
-      .kicker {
-        font-size: 12px;
-        letter-spacing: 6px;
-        color: var(--gold);
-        font-weight: 700;
-      }
-      h1 {
-        font-size: 58px;
-        margin: 6px 0 2px;
-        font-weight: 900;
-        font-style: italic;
-        letter-spacing: 1px;
-        line-height: 1;
-      }
-      h1 span {
-        background: linear-gradient(90deg, var(--gold), var(--ember));
-        -webkit-background-clip: text;
-        background-clip: text;
-        color: transparent;
-      }
-      h2 {
-        font-size: 34px;
-        margin: 0 0 10px;
-        font-weight: 900;
-        font-style: italic;
-      }
-      .tag {
-        color: var(--dim);
-        margin: 0 0 16px;
-        letter-spacing: 1px;
-        font-size: 15px;
-      }
-      .lbl {
-        font-size: 12px;
-        letter-spacing: 3px;
-        color: var(--dim);
-        font-weight: 700;
-      }
-      .sw-row {
-        margin: 6px 0 18px;
-      }
-      #swatches {
-        display: flex;
-        gap: 12px;
-        justify-content: center;
-        margin-top: 8px;
-      }
-      .sw {
-        width: 46px;
-        height: 46px;
-        border-radius: 50%;
-        border: 3px solid transparent;
-        background: var(--c);
-        cursor: pointer;
-        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5);
-      }
-      .sw.sel {
-        border-color: #fff;
-        transform: scale(1.12);
-      }
-      .btn-row {
-        display: flex;
-        gap: 12px;
-        justify-content: center;
-        flex-wrap: wrap;
-      }
-      .big-btn {
-        font-size: 20px;
-        font-weight: 900;
-        font-style: italic;
-        letter-spacing: 2px;
-        padding: 14px 44px;
-        border: none;
-        border-radius: 12px;
-        cursor: pointer;
-        color: #111;
-        background: linear-gradient(90deg, var(--gold), var(--ember));
-        box-shadow: 0 8px 26px rgba(255, 106, 0, 0.35);
-      }
-      .big-btn:active {
-        transform: scale(0.96);
-      }
-      .ghost-btn {
-        font-size: 15px;
-        font-weight: 800;
-        letter-spacing: 2px;
-        padding: 14px 26px;
-        border-radius: 12px;
-        cursor: pointer;
-        color: var(--txt);
-        background: transparent;
-        border: 1px solid var(--line);
-      }
-      .ghost-btn:active {
-        transform: scale(0.96);
-      }
-      #howto {
-        margin-top: 16px;
-        text-align: left;
-        font-size: 14px;
-        color: var(--dim);
-        border-top: 1px solid var(--line);
-        padding-top: 12px;
-        line-height: 1.65;
-      }
-      #howto b {
-        color: var(--txt);
-        display: inline-block;
-        min-width: 118px;
-      }
-      .credit {
-        margin-top: 16px;
-        font-size: 11.5px;
-        color: #7c8794;
-        letter-spacing: 0.4px;
-      }
-      .opt-row {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 12px;
-        margin: 10px 0;
-        font-size: 14px;
-        color: var(--dim);
-        letter-spacing: 1px;
-      }
-      .opt-row input[type="range"] {
-        flex: 1;
-        accent-color: var(--gold);
-      }
-      .opt-row select {
-        background: #141a23;
-        color: var(--txt);
-        border: 1px solid var(--line);
-        border-radius: 8px;
-        padding: 6px 10px;
-        font-weight: 700;
-      }
-      .chk-row {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        justify-content: center;
-        font-size: 14px;
-        color: var(--dim);
-        margin: 8px 0;
-      }
-      #results-rows {
-        margin: 12px 0;
-        text-align: left;
-      }
-      .rrow {
-        display: flex;
-        justify-content: space-between;
-        padding: 9px 14px;
-        border-radius: 10px;
-        font-size: 16px;
-        font-weight: 700;
-        letter-spacing: 1px;
-        font-variant-numeric: tabular-nums;
-      }
-      .rrow.you {
-        background: rgba(255, 179, 0, 0.14);
-        border: 1px solid rgba(255, 179, 0, 0.4);
-      }
-      .rrow .p1 {
-        color: var(--gold);
-      }
-      #results-best {
-        color: var(--good);
-        font-weight: 800;
-        letter-spacing: 2px;
-        margin: 4px 0 14px;
-      }
+  /* ---------- Narrow screens: keep one-line HUD ---------- */
+  @media (max-width: 640px) {
+    #hud { gap: 8px; padding: 8px 10px; }
+    #hud-obj { font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #noise-meter { width: 64px; }
+    #hud-key { font-size: 11px; padding: 3px 7px; }
+  }
+</style>
+</head>
+<body>
+  <div id="canvas-container"></div>
 
-      /* ---------- Touch ---------- */
-      #touch {
-        position: absolute;
-        inset: 0;
-        pointer-events: none;
-        z-index: 4;
-      }
-      .tbtn {
-        position: absolute;
-        pointer-events: auto;
-        width: 78px;
-        height: 78px;
-        border-radius: 50%;
-        border: 1px solid var(--line);
-        background: rgba(10, 14, 20, 0.55);
-        color: #fff;
-        font-size: 26px;
-        font-weight: 900;
-        backdrop-filter: blur(4px);
-      }
-      .tbtn.on {
-        background: rgba(255, 179, 0, 0.5);
-      }
-      #t-left {
-        left: 18px;
-        bottom: 96px;
-      }
-      #t-right {
-        left: 112px;
-        bottom: 96px;
-      }
-      #t-gas {
-        right: 18px;
-        bottom: 150px;
-        border-color: rgba(53, 208, 127, 0.6);
-      }
-      #t-brake {
-        right: 112px;
-        bottom: 96px;
-        border-color: rgba(255, 77, 94, 0.6);
-      }
-      #t-nitro {
-        right: 18px;
-        bottom: 56px;
-        width: 64px;
-        height: 64px;
-        font-size: 15px;
-        border-color: rgba(84, 224, 255, 0.7);
-      }
-
-      #fps {
-        position: absolute;
-        left: 8px;
-        top: 8px;
-        font-size: 11px;
-        color: #0f0;
-        font-family: monospace;
-        z-index: 9;
-        pointer-events: none;
-      }
-      #fatal {
-        position: absolute;
-        inset: 0;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background: #14090b;
-        color: #ffb3b3;
-        z-index: 50;
-        font-size: 17px;
-        padding: 30px;
-        text-align: center;
-      }
-
-      @media (max-width: 760px) {
-        h1 {
-          font-size: 40px;
-        }
-        #minimap {
-          width: 110px;
-          height: 110px;
-        }
-        #hud-pos {
-          font-size: 36px;
-        }
-        #hud-lap {
-          font-size: 15px;
-        }
-        #hud-time-cur {
-          font-size: 20px;
-        }
-        #dial {
-          width: 150px;
-          height: 150px;
-        }
-        #nitro-wrap {
-          width: 150px;
-        }
-        #hud-hint {
-          display: none;
-        }
-        #countdown {
-          font-size: 96px;
-        }
-        .panel {
-          padding: 22px;
-        }
-      }
-      @media (pointer: coarse) {
-        #hud-hint {
-          display: none;
-        }
-      }
-    </style>
-  </head>
-  <body>
-    <div id="app">
-      <div id="canvas-container"></div>
-      <div id="vignette"></div>
-      <div id="flash"></div>
-      <div id="speedlines"></div>
-
-      <div id="hud" class="hidden">
-        <div id="hud-topleft">
-          <div id="hud-pos">4TH</div>
-          <div id="hud-lap">LAP 1/3</div>
-        </div>
-        <div id="hud-topcenter">
-          <div id="hud-time-cur">0:00.0</div>
-          <div id="hud-times-sub">
-            <span id="hud-time-last">LAST --:--.-</span
-            ><span id="hud-time-best">BEST --:--.-</span>
-          </div>
-        </div>
-        <div id="hud-topright">
-          <canvas id="minimap" width="200" height="200"></canvas>
-          <div id="hud-btns">
-            <button id="btn-cam" class="icon-btn" title="Camera (C)">
-              CAM
-            </button>
-            <button id="btn-mute" class="icon-btn" title="Mute (M)">SND</button>
-            <button id="btn-pause" class="icon-btn" title="Pause (Esc)">
-              | |
-            </button>
-          </div>
-        </div>
-        <div id="hud-speedbox">
-          <svg id="dial" viewBox="0 0 200 200" role="img" aria-label="Speedometer">
-            <path class="dtrk" d="M 29.0 141.0 A 82 82 0 1 1 171.0 141.0" />
-            <path class="dred" d="M 181.4 90.1 A 82 82 0 0 1 171.0 141.0" />
-            <g>
-              <line class="dtk" x1="34.2" y1="138.0" x2="23.8" y2="144.0" />
-              <line class="dtk" x1="25.5" y1="115.2" x2="13.8" y2="117.6" />
-              <line class="dtk" x1="24.6" y1="90.8" x2="12.6" y2="89.4" />
-              <line class="dtk" x1="31.3" y1="67.4" x2="20.5" y2="62.3" />
-              <line class="dtk" x1="45.2" y1="47.4" x2="36.5" y2="39.0" />
-              <line class="dtk" x1="64.7" y1="32.7" x2="59.1" y2="22.1" />
-              <line class="dtk" x1="87.8" y1="25.0" x2="85.9" y2="13.1" />
-              <line class="dtk" x1="112.2" y1="25.0" x2="114.1" y2="13.1" />
-              <line class="dtk" x1="135.3" y1="32.7" x2="140.9" y2="22.1" />
-              <line class="dtk" x1="154.8" y1="47.4" x2="163.5" y2="39.0" />
-              <line class="dtk" x1="168.7" y1="67.4" x2="179.5" y2="62.3" />
-              <line class="dtk" x1="175.4" y1="90.8" x2="187.4" y2="89.4" />
-              <line class="dtk" x1="174.5" y1="115.2" x2="186.2" y2="117.6" />
-              <line class="dtk" x1="165.8" y1="138.0" x2="176.2" y2="144.0" />
-            </g>
-            <g>
-              <text class="dnum" x="49.8" y="129.0">0</text>
-              <text class="dnum" x="42.4" y="93.0">40</text>
-              <text class="dnum" x="58.2" y="59.8">80</text>
-              <text class="dnum" x="90.7" y="42.8">120</text>
-              <text class="dnum" x="127.0" y="48.6">160</text>
-              <text class="dnum" x="152.4" y="75.1">200</text>
-              <text class="dnum" x="156.8" y="111.6">240</text>
-            </g>
-            <text id="dial-gear" x="100" y="70">N</text>
-            <g id="dial-needle" transform="rotate(-120 100 100)">
-              <polygon points="100,36 103.6,100 100,109 96.4,100" />
-            </g>
-            <circle class="dhub" cx="100" cy="100" r="7" />
-            <text id="dial-digital" x="100" y="144">0</text>
-            <text class="dunit" x="102" y="162">km/h</text>
-          </svg>
-          <div id="nitro-wrap">
-            <div id="nitro-fill"></div>
-            <span id="nitro-label">NITRO</span>
-          </div>
-        </div>
-        <div id="hud-hint">
-          W A S D drive &nbsp;·&nbsp; SPACE drift &nbsp;·&nbsp; SHIFT nitro
-          &nbsp;·&nbsp; C camera &nbsp;·&nbsp; R reset
-        </div>
-      </div>
-
-      <div id="countdown" class="hidden"></div>
-      <div id="toast" class="hidden"></div>
-      <div id="caption" class="hidden" role="status" aria-live="polite"></div>
-      <div id="wrongway" class="hidden">WRONG WAY</div>
-
-      <div id="menu">
-        <div class="panel">
-          <div class="kicker">AGENTIC GAME STUDIO</div>
-          <h1>HORIZON <span>SPRINT</span></h1>
-          <p class="tag">
-            3-lap sports-car circuit &nbsp;·&nbsp; golden hour &nbsp;·&nbsp; 3
-            AI rivals
-          </p>
-          <div class="sw-row">
-            <span class="lbl">YOUR CAR</span>
-            <div id="swatches">
-              <button
-                class="sw sel"
-                data-color="210,31,38"
-                style="--c: #d21f26"
-                aria-label="red"
-              ></button>
-              <button
-                class="sw"
-                data-color="31,111,210"
-                style="--c: #1f6fd2"
-                aria-label="blue"
-              ></button>
-              <button
-                class="sw"
-                data-color="242,183,5"
-                style="--c: #f2b705"
-                aria-label="yellow"
-              ></button>
-              <button
-                class="sw"
-                data-color="31,157,85"
-                style="--c: #1f9d55"
-                aria-label="green"
-              ></button>
-              <button
-                class="sw"
-                data-color="123,47,247"
-                style="--c: #7b2ff7"
-                aria-label="violet"
-              ></button>
-            </div>
-          </div>
-          <div class="btn-row">
-            <button id="menu-start" class="big-btn">START RACE</button>
-            <button id="menu-howto" class="ghost-btn">HOW TO PLAY</button>
-          </div>
-          <div id="howto" class="hidden">
-            <div>
-              <b>W / UP</b> accelerate &nbsp; <b>S / DOWN</b> brake · reverse
-            </div>
-            <div><b>A D / LEFT RIGHT</b> steer</div>
-            <div>
-              <b>SPACE</b> handbrake drift &nbsp; <b>SHIFT</b> nitro boost
-            </div>
-            <div>
-              <b>C</b> camera &nbsp; <b>R</b> back on track &nbsp;
-              <b>M</b> sound &nbsp; <b>ESC</b> pause
-            </div>
-            <div style="margin-top: 8px">
-              Finish <b>3 laps</b> first. Hit every checkpoint — cut the track
-              and the lap won't count. Checkpoints refill nitro.
-            </div>
-          </div>
-          <div class="credit">
-            Vehicles &amp; scenery: GLTF 3D models · Road, rock &amp; 30k
-            wind-sway grass blades: WorldRealism PBR · ACES Filmic IBL
-          </div>
-        </div>
-      </div>
-
-      <div id="pause" class="hidden">
-        <div class="panel">
-          <h2>PAUSED</h2>
-          <div class="btn-row" style="margin-bottom: 14px">
-            <button
-              id="btn-resume"
-              class="big-btn"
-              style="font-size: 16px; padding: 12px 34px"
-            >
-              RESUME
-            </button>
-            <button id="btn-restart-p" class="ghost-btn">RESTART</button>
-            <button id="btn-quit" class="ghost-btn">MENU</button>
-          </div>
-          <div class="opt-row">
-            <span>VOLUME</span
-            ><input id="opt-volume" type="range" min="0" max="100" value="70" />
-          </div>
-          <div class="opt-row">
-            <span>QUALITY</span
-            ><select id="opt-quality">
-              <option value="0">LOW</option>
-              <option value="1" selected>MED</option>
-              <option value="2">HIGH</option>
-            </select>
-          </div>
-          <div class="opt-row">
-            <span>STEERING</span
-            ><input id="opt-sens" type="range" min="50" max="200" value="100" />
-          </div>
-          <div class="chk-row">
-            <input id="opt-mute" type="checkbox" /><label for="opt-mute"
-              >MUTE ALL SOUND</label
-            >
-          </div>
-          <div class="chk-row">
-            <input id="opt-colorblind" type="checkbox" /><label
-              for="opt-colorblind"
-              >COLORBLIND-SAFE COLORS</label
-            >
-          </div>
-          <div class="chk-row">
-            <input id="opt-subs" type="checkbox" checked /><label for="opt-subs"
-              >NPC SUBTITLES + VOICE</label
-            >
-          </div>
-          <div class="opt-row">
-            <span>STEER KEYS</span
-            ><span
-              ><button id="key-left" class="icon-btn" title="Remap steer left">
-                A
-              </button>
-              <button id="key-right" class="icon-btn" title="Remap steer right">
-                D
-              </button></span
-            >
-          </div>
-        </div>
-      </div>
-
-      <div id="results" class="hidden">
-        <div class="panel">
-          <div class="kicker" id="results-kicker">RACE COMPLETE</div>
-          <h2 id="results-title">P1 — VICTORY!</h2>
-          <div id="results-best">BEST LAP --:--.-</div>
-          <div id="results-rows"></div>
-          <div class="btn-row">
-            <button
-              id="btn-restart-r"
-              class="big-btn"
-              style="font-size: 16px; padding: 12px 34px"
-            >
-              RACE AGAIN
-            </button>
-            <button id="btn-menu-r" class="ghost-btn">MENU</button>
-          </div>
-        </div>
-      </div>
-
-      <div id="touch" class="hidden">
-        <button class="tbtn" id="t-left">&#8592;</button>
-        <button class="tbtn" id="t-right">&#8594;</button>
-        <button class="tbtn" id="t-gas">&#8593;</button>
-        <button class="tbtn" id="t-brake">&#8595;</button>
-        <button class="tbtn" id="t-nitro">N2O</button>
-      </div>
-
-      <div id="fps" class="hidden"></div>
-      <div id="fatal" class="hidden"></div>
+  <div id="hud">
+    <div id="hud-obj">Find the Chapel Key</div>
+    <div id="noise-wrap">
+      <span id="noise-label">NOISE</span>
+      <div id="noise-meter"><div id="noise-fill"></div></div>
     </div>
-    <script src="/studio/vendor/three.min.js" defer></script>
-    <script src="/studio/vendor/GLTFLoader.js" defer></script>
-    <script src="/studio/vendor/world_realism.js" defer></script>
-    <script src="./save.js" defer></script>
-    <script src="./audio.js" defer></script>
-    <script src="./model_data.js" defer></script>
-    <script src="./levels.js" defer></script>
-    <script src="./player.js" defer></script>
-    <script src="./enemies.js" defer></script>
-    <script src="./vfx.js" defer></script>
-    <script src="./ui.js" defer></script>
-    <script src="./game.js" defer></script>
-  </body>
+    <div id="hud-key">KEY: —</div>
+  </div>
+  <div id="crosshair" class="hidden"></div>
+  <div id="banner" class="hidden"></div>
+  <div id="prompt" class="hidden"></div>
+  <div id="debug" class="hidden"></div>
+  <div id="flash"></div>
+
+  <div id="menu" class="screen">
+    <h1>ASHES OF ST. VERMILION</h1>
+    <p id="menu-intro">The convent school burned. The chapel keeps its dead. Find the Chapel Key and finish what the fire started.</p>
+    <button id="btn-start" class="btn" type="button">ENTER THE CONVENT</button>
+    <p class="controls">WASD move · Mouse look · SHIFT run (loud) · C crouch (quiet) · T torch · E interact · ESC pause</p>
+  </div>
+
+  <div id="pause" class="screen hidden">
+    <h2>PAUSED</h2>
+    <div class="btn-row">
+      <button id="btn-resume" class="btn" type="button">RESUME</button>
+      <button id="btn-restart" class="btn" type="button">RESTART</button>
+      <button id="btn-quit" class="btn" type="button">QUIT TO MENU</button>
+    </div>
+    <div class="opt-row">
+      <label for="opt-volume">Volume</label>
+      <input id="opt-volume" type="range" min="0" max="100" value="80">
+    </div>
+    <div class="opt-row">
+      <label for="opt-quality">Quality</label>
+      <select id="opt-quality">
+        <option value="low">Low</option>
+        <option value="medium" selected>Medium</option>
+        <option value="high">High</option>
+      </select>
+    </div>
+    <div class="opt-row">
+      <label for="opt-sensitivity">Sensitivity</label>
+      <input id="opt-sensitivity" type="range" min="20" max="200" value="100">
+    </div>
+    <div class="btn-row">
+      <button id="btn-mute" class="btn" type="button">MUTE: OFF</button>
+    </div>
+  </div>
+
+  <div id="clear" class="screen hidden">
+    <h2>STAGE CLEAR</h2>
+    <p>The Chapel Key is yours. The north door waits.</p>
+    <div id="clear-time">TIME 00:00</div>
+    <div class="btn-row">
+      <button id="btn-restart-clear" class="btn" type="button">PLAY AGAIN</button>
+      <button id="btn-menu-clear" class="btn" type="button">MENU</button>
+    </div>
+  </div>
+
+  <div id="touch-ui">
+    <div id="joy"><div id="joy-knob"></div></div>
+    <div class="touch-col">
+      <button id="btn-act" class="touch-btn" type="button">USE</button>
+      <button id="btn-crouch" class="touch-btn" type="button">CROUCH</button>
+      <button id="btn-torch" class="touch-btn on" type="button">TORCH</button>
+    </div>
+  </div>
+
+  <script src="/studio/vendor/three.min.js" defer></script>
+  <script src="/studio/vendor/GLTFLoader.js" defer></script>
+  <script src="/studio/vendor/world_realism.js" defer></script>
+  <script src="./story.js" defer></script>
+  <script src="./save.js" defer></script>
+  <script src="./levels.js" defer></script>
+  <script src="./player.js" defer></script>
+  <script src="./audio.js" defer></script>
+  <script src="./vfx.js" defer></script>
+  <script src="./ui.js" defer></script>
+  <script src="./game.js" defer></script>
+</body>
 </html>

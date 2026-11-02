@@ -42,7 +42,6 @@ proof ke saath exact file path aur command diya hai.
 
 ## SKIP + WHY (resource discipline, one line each)
 
-- **Trellis in submission path** — non-Meta (Microsoft), sirf dev-only fallback (`src/pipeline/assets_3d.js`); primary submission 3D backends **SAM 3D Objects** aur **Meta VGGT-1B** (both Meta) hain.
 - **Unbounded open-world scale** — bounded high-density zones (`worldBound:72` in `src/pipeline/layout.js` or 200m OSM city blocks in `osm_city_3d.py`) ensure 60 FPS browser performance and deterministic BFS verification.
 - **Multi-hour per-scene NeRF training** — instead of slow iterative NeRF optimization, we use feed-forward **Meta VGGT-1B** (`meta_vggt_scene.py`) and instant **Depth-Anything-V2 → 3D Gaussian Splatting** (`depth_to_gaussian_splat.py`, 40,000 splats in <2s).
 - **Mixamo external dependency** — removed by design (`commit 2458344`); character rigging and `Idle`/`Walk`/`Wave` NLA keyframe animation baking run 100% in-house via `src/tools/blender_autorig_animate.py`.

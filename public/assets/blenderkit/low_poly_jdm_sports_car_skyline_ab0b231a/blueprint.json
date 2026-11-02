@@ -1,0 +1,138 @@
+{
+  "id": "b20a329f-ba0e-43d7-8fbf-303627c6a8dc",
+  "assetBaseId": "ab0b231a-8351-422f-b55f-108faa77641d",
+  "slug": "low_poly_jdm_sports_car_skyline_ab0b231a",
+  "name": "Low Poly JDM Sports Car (Skyline)",
+  "assetType": "model",
+  "category": "standard",
+  "author": "Sachin H",
+  "license": "royalty_free",
+  "isFree": true,
+  "score": 800.0,
+  "ratingsAverage": {
+    "bookmarks": 0.9830508474576272,
+    "workingHours": 10.0,
+    "quality": 8.0,
+    "virtualPrice": null
+  },
+  "description": "Stylized low poly car inspired by the Nissan Skyline GT-R. Finished in blue with no textures, using simple procedural materials. Includes a basic interior with seats, steering wheel, and gearbox. Wheels, steering, and gearbox are separated for simple rigging and animation. Fully UV unwrapped and ready for custom texturing. Suitable for Games and stylized scenes ,",
+  "tags": [
+    "car",
+    "sports_car",
+    "jdm",
+    "japanese_car",
+    "skyline",
+    "gtr",
+    "low_poly",
+    "stylized",
+    "uv_unwrapped",
+    "game_ready"
+  ],
+  "parameters": {
+    "dimensionX": 2.0571,
+    "dimensionY": 4.8707,
+    "dimensionZ": 1.4514,
+    "dimensionsMeters": {
+      "width": 2.0571,
+      "depth": 4.8707,
+      "height": 1.4514
+    },
+    "boundingBox": {
+      "min": [
+        -1.0285,
+        -2.3943,
+        0.0
+      ],
+      "max": [
+        1.0285,
+        2.4764,
+        1.4514
+      ]
+    },
+    "faceCount": 3803,
+    "faceCountRender": 3803,
+    "objectCount": 10,
+    "nodeCount": 47,
+    "meshPolyType": "quad",
+    "materials": [
+      "[TailLight Paint Mirrors Lamp Carbon Glass Tire Plate Rims Indicator Interiror]"
+    ],
+    "shaders": [
+      "[principled mix shader transparent]"
+    ],
+    "modifiers": [
+      "[weighted normal nodes]"
+    ],
+    "pbrType": null,
+    "purePbr": false,
+    "procedural": false,
+    "uv": true,
+    "animated": false,
+    "rig": false,
+    "modelStyle": "lowpoly",
+    "condition": "new",
+    "designVariant": null,
+    "textureResolutionMax": 1536,
+    "engines": [
+      "[cycles]"
+    ]
+  },
+  "availableFiles": [
+    {
+      "fileType": "blend",
+      "uuid": "f1d29bc1-f75d-4f47-a5c7-3d3157445f32",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/f1d29bc1-f75d-4f47-a5c7-3d3157445f32/",
+      "fileUploadSize": 612384
+    },
+    {
+      "fileType": "gltf",
+      "uuid": "7ca51f48-8713-4373-89a1-3db3d394d514",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/7ca51f48-8713-4373-89a1-3db3d394d514/",
+      "fileUploadSize": 235484
+    },
+    {
+      "fileType": "gltf_godot",
+      "uuid": "3343f920-59a8-4695-b764-09dda9e1e78e",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/3343f920-59a8-4695-b764-09dda9e1e78e/",
+      "fileUploadSize": 756768
+    },
+    {
+      "fileType": "resolution_0_5K",
+      "uuid": "46d91e00-ca99-4171-bb7e-ef26f8187b73",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/46d91e00-ca99-4171-bb7e-ef26f8187b73/",
+      "fileUploadSize": 290647
+    },
+    {
+      "fileType": "resolution_1K",
+      "uuid": "85be6ae5-264b-4d39-91ea-9dc59c2cbe10",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/85be6ae5-264b-4d39-91ea-9dc59c2cbe10/",
+      "fileUploadSize": 327159
+    },
+    {
+      "fileType": "thumbnail",
+      "uuid": "487e2e42-6b19-4496-9a0e-36d829e8386e",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/487e2e42-6b19-4496-9a0e-36d829e8386e/",
+      "fileUploadSize": 2494322
+    }
+  ],
+  "downloaded": {
+    "thumbnail": {
+      "file": "public/assets/blenderkit/low_poly_jdm_sports_car_skyline_ab0b231a/thumbnail.jpg",
+      "url": "/studio/assets/blenderkit/low_poly_jdm_sports_car_skyline_ab0b231a/thumbnail.jpg",
+      "bytes": 77409,
+      "sourceUrl": "https://public.blenderkit.com/thumbnails/assets/b20a329fba0e43d78fbf303627c6a8dc/files/thumbnail_75a20422-383a-4829-be00-ce13bd51dc4e.png.1024x1024_q85_crop-%2C.jpg"
+    },
+    "glb": {
+      "file": "public/assets/blenderkit/low_poly_jdm_sports_car_skyline_ab0b231a/low_poly_jdm_sports_car_skyline_ab0b231a.glb",
+      "url": "/studio/assets/blenderkit/low_poly_jdm_sports_car_skyline_ab0b231a/low_poly_jdm_sports_car_skyline_ab0b231a.glb",
+      "bytes": 235484,
+      "fileType": "gltf"
+    },
+    "blend": {
+      "file": "public/assets/blenderkit/low_poly_jdm_sports_car_skyline_ab0b231a/low_poly_jdm_sports_car_skyline_ab0b231a_resolution_0_5K.blend",
+      "url": "/studio/assets/blenderkit/low_poly_jdm_sports_car_skyline_ab0b231a/low_poly_jdm_sports_car_skyline_ab0b231a_resolution_0_5K.blend",
+      "bytes": 290647,
+      "fileType": "resolution_0_5K"
+    }
+  }
+}

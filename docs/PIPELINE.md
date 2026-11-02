@@ -4,7 +4,7 @@
 > `src/server.js` (routes), `src/tools/` (build-game, make-image, segment_image,
 > depth_map, novel_view, blender_project, blender_cleanup, npc_dialogue,
 > publish-game, modal_call_3d), `.agents/skills/` + `skills/`,
-> `docs/WORLD_PIPELINE.md`, `REMINDERS.md` (trellis-dev vs sam3d-submission).
+> `docs/WORLD_PIPELINE.md`, `REMINDERS.md` (100% Meta model stack).
 
 Legend: **[Meta]** = Meta model (hackathon-compliant) · **[Tool]** = open/local
 tooling, never the shipped model path · **[DEV]** = dev-only, never ships.
@@ -29,7 +29,7 @@ flowchart TD
         IMG["Step 1b Concept art Muse Image 1.0<br/>key art, cached webp [Meta]"]
         SEG["SAM 3.1 segment_image<br/>boxes + masks → overlay + cutout [Meta]"]
         T3D["SAM 3D Objects Modal A100 → .glb<br/>shipped --backend sam3d [Meta]"]
-        TRE["Trellis Modal backend<br/>DEV-ONLY, removed before submission Nov 3 [DEV]"]
+        VGG["Meta VGGT-1B Modal<br/>feed-forward 3D scene mesh [Meta]"]
         DWP["Depth/warp/projection chain [Tool]<br/>depth_map + novel_view + blender_project"]
         BCL["Blender cleanup headless<br/>decimate + merge + export .glb [Tool]"]
         NPC["NPC dialogue via Spark Open<br/>npc_dialogue.js, Baseten [Meta open]"]
@@ -76,7 +76,7 @@ flowchart TD
     classDef dev fill:#1a1a1a,stroke:#f59e0b,stroke-width:2px,stroke-dasharray:6 3,color:#fff;
     class WO,BO,CLI,IMG,SEG,T3D,NPC meta;
     class U,TS,TMUX,SH,DWP,BCL,TER,ENG,QA,LIB,PVW,API tool;
-    class TRE dev;
+    class VGG meta;
 ```
 
 ## Route map (`src/server.js`)
@@ -98,30 +98,3 @@ flowchart TD
    concept art (cached) → CLI writes `SPEC.md` + `AgenticPlayerController.cs`
    (cached) → 3. Terrain + layout → 4. Three.js + Unity compile → 5. QA gate →
 1. Library save → `done` (gameId, playUrl, imageUrl, unitySource).
-
-## ⚠️ Nov-3: remove Trellis, confirm zero trellis references ship (REMINDERS.md)
-
-Dev/testing uses `ASSET_3D_BACKEND=trellis` (Microsoft TRELLIS on Modal).
-Trellis is **NOT a Meta model** — shipping it breaks the Meta-models-only rule.
-**By Nov 3:** REMOVE the Trellis backend (dev-only, never ships); confirm no
-trellis references ship: `grep -rni trellis src/ public/` must show zero
-live calls (warnings/comments only). SAM 3D stays as VERIFIED-but-limited:
-integrated, trial-verified (2 green runs, evidence in
-`docs/evidence-sam3d/`), used for hero assets subject to GPU availability;
-shipped game path uses Blender/kit assets. After Nov 3,
-`src/pipeline/assets_3d.js` prints a SUBMISSION BLOCKER warning on every
-Trellis call.
-
-## Skills (`.agents/skills/` — composer capabilities)
-
-`3d-web-experience` · `game-pipeline` · `game-logic` · `unity-build` ·
-`godot-web` · `frontend-design` · `better-ui` · `better-interface` ·
-`web-design-guidelines` · `mobile-design` · `ios-design` · `ui-taste` ·
-`ui-ux-pro-max` (+ `skills/ios-design`, `skills/ui-taste` mirror).
-Listed by `GET /api/studio/capabilities` alongside MCP servers + models.
-
-## PNG
-
-`docs/pipeline.png` — same pipeline drawn with PIL: dark `#000` bg,
-white/grey boxes, cyan Meta accents, orange dashed dev-only box, staged in
-columns INPUT → BRAIN → ASSETS → BUILD → PLAY.

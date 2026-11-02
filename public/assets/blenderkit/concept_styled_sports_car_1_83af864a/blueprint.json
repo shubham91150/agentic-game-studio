@@ -1,0 +1,173 @@
+{
+  "id": "7f16782d-602b-4b4a-95fa-7d957d8c7deb",
+  "assetBaseId": "83af864a-734b-433c-98c9-27c929957af2",
+  "slug": "concept_styled_sports_car_1_83af864a",
+  "name": "Concept styled sports car 1",
+  "assetType": "model",
+  "category": "concept",
+  "author": "Sharif Miah",
+  "license": "royalty_free",
+  "isFree": true,
+  "score": 240.0,
+  "ratingsAverage": {
+    "bookmarks": 0.96875,
+    "workingHours": 6.0,
+    "quality": 4.0,
+    "virtualPrice": null
+  },
+  "description": "A concept styled car designed like that of cars in a concept state like in drawings or concept renders.",
+  "tags": [
+    "concept",
+    "car",
+    "vehicle",
+    "interior",
+    "sports",
+    "automobile",
+    "town",
+    "city"
+  ],
+  "parameters": {
+    "dimensionX": 1.1577,
+    "dimensionY": 2.0258,
+    "dimensionZ": 0.7008,
+    "dimensionsMeters": {
+      "width": 1.1577,
+      "depth": 2.0258,
+      "height": 0.7008
+    },
+    "boundingBox": {
+      "min": [
+        -0.5788,
+        -0.9842,
+        -0.0007
+      ],
+      "max": [
+        0.5788,
+        1.0416,
+        0.7
+      ]
+    },
+    "faceCount": 158258,
+    "faceCountRender": 2532128,
+    "objectCount": 36,
+    "nodeCount": null,
+    "meshPolyType": "quad_dominant",
+    "materials": [
+      "window windscreen",
+      "tinted window section",
+      "charcoal",
+      "rear lights main cover",
+      "dark metal",
+      "black filler",
+      "indicator orange emission plane",
+      "brake lights",
+      "indicatoor lighter orange shade",
+      "brake lights lighter shade",
+      "lamp cover glass (inner)",
+      "red interior.001",
+      "dark red leather.001",
+      "dark red interior",
+      "clay.001",
+      "dark clay.001",
+      "main body black",
+      "main body black.001",
+      "black filler.001",
+      "red leather.001",
+      "alloy.001",
+      "black door borders.003",
+      "wing mirror glass.001",
+      "windows for doors",
+      "black door borders.002",
+      "tyre treads.001",
+      "main body 2 red.001",
+      "headlight metal .001",
+      "light emission plane.001",
+      "main lamp covers front",
+      "rear tyre treads.001",
+      "speedometer display plane.001",
+      "interior screen covers",
+      "grill.001",
+      "darker shade light emission plane.001",
+      "centre screen display plane.001",
+      "interior roof light emission plane.001",
+      "interior roof light emission plane darker shade.001"
+    ],
+    "shaders": [
+      ""
+    ],
+    "modifiers": [
+      "subsurf"
+    ],
+    "pbrType": "metallic",
+    "purePbr": true,
+    "procedural": null,
+    "uv": true,
+    "animated": null,
+    "rig": false,
+    "modelStyle": "3d_graphics",
+    "condition": "new",
+    "designVariant": null,
+    "textureResolutionMax": null,
+    "engines": [
+      "cycles"
+    ]
+  },
+  "availableFiles": [
+    {
+      "fileType": "blend",
+      "uuid": "a286c5d8-ac25-4bdd-8d45-83ecb804b82e",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/a286c5d8-ac25-4bdd-8d45-83ecb804b82e/",
+      "fileUploadSize": 6688365
+    },
+    {
+      "fileType": "gltf",
+      "uuid": "e756ae1e-25a9-4bb0-a644-fdd8878b2f7c",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/e756ae1e-25a9-4bb0-a644-fdd8878b2f7c/",
+      "fileUploadSize": 9049216
+    },
+    {
+      "fileType": "gltf_godot",
+      "uuid": "00d23d3f-f0ab-477a-8f73-2df4ceb7a3c9",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/00d23d3f-f0ab-477a-8f73-2df4ceb7a3c9/",
+      "fileUploadSize": 33478332
+    },
+    {
+      "fileType": "resolution_0_5K",
+      "uuid": "128f52e8-db0d-4a5b-80a4-d0580e22880e",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/128f52e8-db0d-4a5b-80a4-d0580e22880e/",
+      "fileUploadSize": 6374363
+    },
+    {
+      "fileType": "resolution_1K",
+      "uuid": "0672be6b-11da-448c-9889-6c5d1b7b671a",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/0672be6b-11da-448c-9889-6c5d1b7b671a/",
+      "fileUploadSize": 6503586
+    },
+    {
+      "fileType": "thumbnail",
+      "uuid": "3b5117de-2dea-43cc-99e8-5a7774126364",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/3b5117de-2dea-43cc-99e8-5a7774126364/",
+      "fileUploadSize": 133602
+    }
+  ],
+  "downloaded": {
+    "thumbnail": {
+      "file": "public/assets/blenderkit/concept_styled_sports_car_1_83af864a/thumbnail.jpg",
+      "url": "/studio/assets/blenderkit/concept_styled_sports_car_1_83af864a/thumbnail.jpg",
+      "bytes": 29251,
+      "sourceUrl": "https://public.blenderkit.com/thumbnails/assets/7f16782d602b4b4a95fa7d957d8c7deb/files/thumbnail_166ff6cc-631e-44fd-9c4e-5d5b502e767d.jpg.1024x1024_q85_crop-%2C.jpg"
+    },
+    "glb": {
+      "file": "public/assets/blenderkit/concept_styled_sports_car_1_83af864a/concept_styled_sports_car_1_83af864a.glb",
+      "url": "/studio/assets/blenderkit/concept_styled_sports_car_1_83af864a/concept_styled_sports_car_1_83af864a.glb",
+      "bytes": 9049216,
+      "fileType": "gltf"
+    },
+    "blend": {
+      "file": "public/assets/blenderkit/concept_styled_sports_car_1_83af864a/concept_styled_sports_car_1_83af864a_resolution_0_5K.blend",
+      "url": "/studio/assets/blenderkit/concept_styled_sports_car_1_83af864a/concept_styled_sports_car_1_83af864a_resolution_0_5K.blend",
+      "bytes": 6374363,
+      "fileType": "resolution_0_5K"
+    }
+  }
+}

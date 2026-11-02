@@ -1,258 +1,119 @@
-/* Horizon Sprint — vfx.js
- * Pooled skid marks + dust puffs. Zero per-frame allocation. */
+/* Ashes of St. Vermilion — camera feel + lightning flash (Stage 1).
+ * window.StV_VFX.create(scene, renderer?) ->
+ *   {addTrauma, flashLightning, update(dt,camera), + additive: reset}
+ * Trauma shake: offset = trauma^2, decay 1.5/s, smoothed layered sines
+ * (never per-frame white buzz). Honors prefers-reduced-motion: no shake.
+ * Lightning: levels drive the sky light and publish the strike envelope
+ * at scene.userData.stvFlash (0..1); here we mirror it to tone exposure
+ * plus the #flash overlay. flashLightning() stays as a manual bump.
+ * No post chain in Stage 1. Zero allocations in update().
+ */
 (function () {
-  window.G = window.G || {};
-  var G = window.G;
+  'use strict';
 
-  var SKIDS = 160;
-  var DUST = 36;
-  var SMOKE = 48;
+  var DECAY = 1.5;
+  var EXPOSURE_DECAY = 7;
+  var FLASH_EXPOSURE = 2.4;
 
-  G.VFX = {
-    skidMesh: null,
-    skidCur: 0,
-    skidN: 0,
-    dust: [],
-    dustTex: null,
-    smoke: [],
-    _dummy: null,
-    _slEl: null,
-    _slV: -1,
+  window.StV_VFX = {
+    create: function (scene, renderer) {
+      var trauma = 0;
+      var t = 0;
+      var baseExposure = 1.0;
+      var exposure = 1.0;
+      var reduced = false;
 
-    init: function (scene) {
-      this._dummy = new THREE.Object3D();
-      var g = new THREE.PlaneGeometry(0.34, 1.15);
-      g.rotateX(-Math.PI / 2);
-      this.skidMesh = new THREE.InstancedMesh(
-        g,
-        new THREE.MeshBasicMaterial({
-          color: 0x0a0a0a,
-          transparent: true,
-          opacity: 0.5,
-          depthWrite: false,
-          polygonOffset: true,
-          polygonOffsetFactor: -2,
-          polygonOffsetUnits: -2,
-        }),
-        SKIDS,
-      );
-      this.skidMesh.count = 0;
-      this.skidMesh.renderOrder = 2;
-      this.skidMesh.frustumCulled = false;
-      scene.add(this.skidMesh);
+      try {
+        reduced = window.matchMedia &&
+          window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      } catch (err) { reduced = false; }
 
-      var c = document.createElement("canvas");
-      c.width = c.height = 64;
-      var x = c.getContext("2d");
-      var gr = x.createRadialGradient(32, 32, 2, 32, 32, 30);
-      gr.addColorStop(0, "rgba(255,255,255,0.85)");
-      gr.addColorStop(1, "rgba(255,255,255,0)");
-      x.fillStyle = gr;
-      x.fillRect(0, 0, 64, 64);
-      this.dustTex = new THREE.CanvasTexture(c);
-      for (var i = 0; i < DUST; i++) {
-        var m = new THREE.SpriteMaterial({
-          map: this.dustTex,
-          transparent: true,
-          opacity: 0,
-          depthWrite: false,
-        });
-        var s = new THREE.Sprite(m);
-        s.visible = false;
-        scene.add(s);
-        this.dust.push({ s: s, life: 0, max: 1, vx: 0, vy: 0, vz: 0, grow: 3 });
+      var flashEl = null;
+      var flashShown = -1;
+      if (!renderer && scene && scene.userData) {
+        renderer = scene.userData.renderer || null;
       }
-      this._di = 0;
-      // Stage 1: dedicated near-white drift-smoke pool (separate from dust so
-      // drift bursts never starve offroad/nitro puffs). 48 pooled sprites.
-      for (var si = 0; si < SMOKE; si++) {
-        var sm = new THREE.SpriteMaterial({
-          map: this.dustTex,
-          transparent: true,
-          opacity: 0,
-          depthWrite: false,
-        });
-        var ss = new THREE.Sprite(sm);
-        ss.visible = false;
-        scene.add(ss);
-        this.smoke.push({
-          s: ss,
-          life: 0,
-          max: 1,
-          vx: 0,
-          vy: 0,
-          vz: 0,
-          grow: 5,
-        });
+      if (renderer && typeof renderer.toneMappingExposure === 'number') {
+        baseExposure = renderer.toneMappingExposure;
+        exposure = baseExposure;
+      } else {
+        renderer = null;
       }
-      this._smi = 0;
-      this.initAmbient(scene);
-    },
 
-    amb: null,
-    ambN: 260,
-    ambOff: null,
-    initAmbient: function (scene) {
-      var g = new THREE.BufferGeometry();
-      var p = new Float32Array(this.ambN * 3);
-      this.ambOff = new Float32Array(this.ambN * 3);
-      for (var i = 0; i < this.ambN; i++) {
-        this.ambOff[i * 3] = (Math.random() - 0.5) * 240;
-        this.ambOff[i * 3 + 1] = 0.5 + Math.random() * 22;
-        this.ambOff[i * 3 + 2] = (Math.random() - 0.5) * 240;
+      function readSkyFlash() {
+        try {
+          var f = scene && scene.userData && scene.userData.stvFlash;
+          if (typeof f !== 'number') return 0;
+          if (f < 0) return 0;
+          if (f > 1) return 1;
+          return f;
+        } catch (err) { return 0; }
       }
-      g.setAttribute("position", new THREE.BufferAttribute(p, 3));
-      this.amb = new THREE.Points(
-        g,
-        new THREE.PointsMaterial({
-          map: this.dustTex,
-          size: 1.1,
-          transparent: true,
-          opacity: 0.28,
-          color: 0xffdcb0,
-          depthWrite: false,
-          sizeAttenuation: true,
-        }),
-      );
-      this.amb.frustumCulled = false;
-      this.amb.renderOrder = 4;
-      scene.add(this.amb);
-    },
-    setAmbient: function (on) {
-      if (this.amb) this.amb.visible = !!on;
-    },
-    updateAmbient: function (time, px, pz) {
-      if (!this.amb || !this.amb.visible) return;
-      var attr = this.amb.geometry.attributes.position;
-      var a = attr.array,
-        o = this.ambOff;
-      for (var i = 0; i < this.ambN; i++) {
-        var ox = o[i * 3] + time * 1.5;
-        ox = ((((ox + 120) % 240) + 240) % 240) - 120;
-        a[i * 3] = px + ox;
-        a[i * 3 + 1] = o[i * 3 + 1] + Math.sin(time * 0.5 + i * 1.7) * 1.6;
-        a[i * 3 + 2] = pz + o[i * 3 + 2];
-      }
-      attr.needsUpdate = true;
-    },
 
-    dropSkid: function (x, z, angle) {
-      var d = this._dummy;
-      d.position.set(x, 0.012, z);
-      d.rotation.set(0, angle, 0);
-      d.updateMatrix();
-      this.skidMesh.setMatrixAt(this.skidCur, d.matrix);
-      this.skidCur = (this.skidCur + 1) % SKIDS;
-      if (this.skidN < SKIDS) {
-        this.skidN++;
-        this.skidMesh.count = this.skidN;
-      }
-      this.skidMesh.instanceMatrix.needsUpdate = true;
-    },
-
-    puff: function (x, y, z, color, n, spread, up) {
-      for (var k = 0; k < n; k++) {
-        var p = this.dust[this._di];
-        this._di = (this._di + 1) % DUST;
-        p.s.visible = true;
-        p.s.position.set(
-          x + (Math.random() - 0.5) * spread,
-          y,
-          z + (Math.random() - 0.5) * spread,
-        );
-        p.s.material.color.setHex(color);
-        p.s.material.opacity = 0.55;
-        p.s.scale.set(1.4, 1.4, 1);
-        p.max = 0.7 + Math.random() * 0.5;
-        p.life = p.max;
-        p.vx = (Math.random() - 0.5) * 3;
-        p.vy = up + Math.random() * 2;
-        p.vz = (Math.random() - 0.5) * 3;
-        p.grow = 4 + Math.random() * 3;
-      }
-    },
-
-    // Stage 1: near-white drift smoke burst. Zero per-frame allocation —
-    // round-robin over the SMOKE pool. Outward velocity + grow + fade.
-    smokeBurst: function (x, y, z, n) {
-      for (var k = 0; k < n; k++) {
-        var p = this.smoke[this._smi];
-        this._smi = (this._smi + 1) % SMOKE;
-        p.s.visible = true;
-        p.s.position.set(
-          x + (Math.random() - 0.5) * 1.6,
-          y,
-          z + (Math.random() - 0.5) * 1.6,
-        );
-        p.s.material.color.setHex(0xeeeeee);
-        p.s.material.opacity = 0.6;
-        p.s.scale.set(1.2, 1.2, 1);
-        p.max = 0.6 + Math.random() * 0.4;
-        p.life = p.max;
-        var a = Math.random() * Math.PI * 2;
-        var sp = 2 + Math.random() * 3;
-        p.vx = Math.cos(a) * sp;
-        p.vy = 1 + Math.random() * 2;
-        p.vz = Math.sin(a) * sp;
-        p.grow = 5 + Math.random() * 3;
-      }
-    },
-
-    // Stage 1: CSS speed-line overlay driver (0..1). Caches element + last
-    // value; only touches the DOM when the quantized value changes.
-    setSpeedLines: function (v) {
-      v = Math.max(0, Math.min(1, v));
-      var q = Math.round(v * 100);
-      if (q === this._slV) return;
-      this._slV = q;
-      if (!this._slEl) this._slEl = document.getElementById("speedlines");
-      if (this._slEl) this._slEl.style.opacity = (q / 100).toFixed(2);
-    },
-
-    update: function (dt, time, px, pz) {
-      this.updateAmbient(time || 0, px || 0, pz || 0);
-      for (var i = 0; i < DUST; i++) {
-        var p = this.dust[i];
-        if (!p.s.visible) continue;
-        p.life -= dt;
-        if (p.life <= 0) {
-          p.s.visible = false;
-          continue;
+      function paintFlashDiv(f) {
+        if (Math.abs(f - flashShown) < 0.02 && f !== 0 && flashShown !== -1) return;
+        if (!flashEl) {
+          try { flashEl = document.getElementById('flash'); } catch (err) { flashEl = null; }
         }
-        var f = p.life / p.max;
-        p.s.position.x += p.vx * dt;
-        p.s.position.y += p.vy * dt;
-        p.s.position.z += p.vz * dt;
-        var sc = p.s.scale.x + p.grow * dt;
-        p.s.scale.set(sc, sc, 1);
-        p.s.material.opacity = 0.5 * f;
+        if (!flashEl) return;
+        flashShown = f;
+        try { flashEl.style.opacity = f <= 0.01 ? '0' : (f * 0.5).toFixed(3); } catch (err) { /* x */ }
       }
-      for (var j = 0; j < SMOKE; j++) {
-        var q = this.smoke[j];
-        if (!q.s.visible) continue;
-        q.life -= dt;
-        if (q.life <= 0) {
-          q.s.visible = false;
-          continue;
-        }
-        var qf = q.life / q.max;
-        q.s.position.x += q.vx * dt;
-        q.s.position.y += q.vy * dt;
-        q.s.position.z += q.vz * dt;
-        var qsc = q.s.scale.x + q.grow * dt;
-        q.s.scale.set(qsc, qsc, 1);
-        q.s.material.opacity = 0.6 * qf;
-      }
-    },
 
-    reset: function () {
-      this.skidCur = 0;
-      this.skidN = 0;
-      if (this.skidMesh) this.skidMesh.count = 0;
-      for (var i = 0; i < this.dust.length; i++) this.dust[i].s.visible = false;
-      for (var j = 0; j < this.smoke.length; j++)
-        this.smoke[j].s.visible = false;
-      this.setSpeedLines(0);
-    },
+      return {
+        addTrauma: function (x) {
+          trauma = Math.min(1, trauma + (+x || 0));
+          if (trauma < 0) trauma = 0;
+        },
+
+        flashLightning: function () {
+          exposure = FLASH_EXPOSURE;
+          if (!reduced) trauma = Math.min(1, trauma + 0.12);
+        },
+
+        reset: function () {
+          trauma = 0;
+          exposure = baseExposure;
+          if (renderer) {
+            try { renderer.toneMappingExposure = baseExposure; }
+            catch (err) { /* ignore */ }
+          }
+          paintFlashDiv(0);
+        },
+
+        update: function (dt, camera) {
+          t += dt;
+          /* Primary sync: levels publish the strike envelope at
+           * scene.userData.stvFlash (0..1); mirror it to exposure. */
+          var sky = readSkyFlash();
+          var skyExposure = baseExposure + sky * 1.6;
+          if (skyExposure > exposure) exposure = skyExposure;
+          paintFlashDiv(sky);
+          if (exposure > baseExposure) {
+            exposure -= EXPOSURE_DECAY * dt;
+            if (exposure < baseExposure) exposure = baseExposure;
+            var live = exposure > skyExposure ? exposure : skyExposure;
+            if (renderer) {
+              try { renderer.toneMappingExposure = live; }
+              catch (err) { /* ignore */ }
+            }
+          } else if (renderer && sky > 0) {
+            try { renderer.toneMappingExposure = skyExposure; }
+            catch (err) { /* ignore */ }
+          }
+          if (trauma > 0) {
+            trauma -= DECAY * dt;
+            if (trauma < 0) trauma = 0;
+            if (!reduced && camera && trauma > 0) {
+              var s = trauma * trauma;
+              camera.position.x += s * 0.18 * Math.sin(t * 47.3);
+              camera.position.y += s * 0.14 * Math.sin(t * 38.9 + 1.3);
+              camera.rotation.z += s * 0.02 * Math.sin(t * 43.1 + 0.7);
+              camera.rotation.x += s * 0.015 * Math.sin(t * 51.7 + 2.1);
+            }
+          }
+        }
+      };
+    }
   };
 })();

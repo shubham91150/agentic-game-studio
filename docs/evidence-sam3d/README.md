@@ -2,7 +2,7 @@
 
 SAM 3D = **integrated, trial-verified (2 green runs below), used for hero
 assets subject to GPU availability; the shipped game path uses Blender/kit
-assets**. Trellis = dev-only, removed before submission Nov 3.
+assets**. 100% Meta open-weight 3D stack (SAM 3D Objects + Meta VGGT-1B).
 
 ## Files
 

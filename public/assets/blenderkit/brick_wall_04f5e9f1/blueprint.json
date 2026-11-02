@@ -1,0 +1,105 @@
+{
+  "id": "67ffca8f-87a7-45b3-a52b-8b39f29a7313",
+  "assetBaseId": "04f5e9f1-f8e4-457f-944b-3ec5a829ac9a",
+  "slug": "brick_wall_04f5e9f1",
+  "name": "Brick wall",
+  "assetType": "material",
+  "category": "bricks",
+  "author": "ydd 3D",
+  "license": "royalty_free",
+  "isFree": true,
+  "score": 483.33333333333326,
+  "ratingsAverage": {
+    "bookmarks": 0.96,
+    "workingHours": 5.0,
+    "quality": 9.666666666666666,
+    "virtualPrice": null
+  },
+  "description": "Simple red brick wall for your interior or exterior scenes",
+  "tags": [
+    "wall",
+    "brick",
+    "red",
+    "exterior"
+  ],
+  "parameters": {
+    "dimensionX": null,
+    "dimensionY": null,
+    "dimensionZ": null,
+    "dimensionsMeters": null,
+    "boundingBox": null,
+    "faceCount": null,
+    "faceCountRender": null,
+    "objectCount": null,
+    "nodeCount": 13,
+    "meshPolyType": null,
+    "materials": [],
+    "shaders": [
+      "[principled]"
+    ],
+    "modifiers": [],
+    "pbrType": "metallic",
+    "purePbr": true,
+    "procedural": false,
+    "uv": false,
+    "animated": null,
+    "rig": null,
+    "modelStyle": null,
+    "condition": "new",
+    "designVariant": null,
+    "textureResolutionMax": 4096,
+    "engines": []
+  },
+  "availableFiles": [
+    {
+      "fileType": "blend",
+      "uuid": "f7a82835-f6b8-4cc5-8016-6defd535c802",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/f7a82835-f6b8-4cc5-8016-6defd535c802/",
+      "fileUploadSize": 18896083
+    },
+    {
+      "fileType": "resolution_0_5K",
+      "uuid": "35e6427c-ac9c-416a-bf71-4f4c4a176c29",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/35e6427c-ac9c-416a-bf71-4f4c4a176c29/",
+      "fileUploadSize": 386835
+    },
+    {
+      "fileType": "resolution_1K",
+      "uuid": "32945902-ebf0-47f0-a627-dd5099c47ffc",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/32945902-ebf0-47f0-a627-dd5099c47ffc/",
+      "fileUploadSize": 1165706
+    },
+    {
+      "fileType": "resolution_2K",
+      "uuid": "460798e2-d707-45d5-8642-553de60fecae",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/460798e2-d707-45d5-8642-553de60fecae/",
+      "fileUploadSize": 3905766
+    },
+    {
+      "fileType": "resolution_4K",
+      "uuid": "39065b90-684a-4847-94e0-8c4ced967a67",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/39065b90-684a-4847-94e0-8c4ced967a67/",
+      "fileUploadSize": 14068099
+    },
+    {
+      "fileType": "thumbnail",
+      "uuid": "85140907-3160-404b-9216-d0745fa6ba4d",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/85140907-3160-404b-9216-d0745fa6ba4d/",
+      "fileUploadSize": 4713639
+    }
+  ],
+  "downloaded": {
+    "thumbnail": {
+      "file": "public/assets/blenderkit/brick_wall_04f5e9f1/thumbnail.png",
+      "url": "/studio/assets/blenderkit/brick_wall_04f5e9f1/thumbnail.png",
+      "bytes": 1302686,
+      "sourceUrl": "https://public.blenderkit.com/thumbnails/assets/67ffca8f87a745b3a52b8b39f29a7313/files/thumbnail_85140907-3160-404b-9216-d0745fa6ba4d.png.1024x1024_q85_crop-%2C.png"
+    },
+    "blend": {
+      "file": "public/assets/blenderkit/brick_wall_04f5e9f1/brick_wall_04f5e9f1_resolution_0_5K.blend",
+      "url": "/studio/assets/blenderkit/brick_wall_04f5e9f1/brick_wall_04f5e9f1_resolution_0_5K.blend",
+      "bytes": 386835,
+      "fileType": "resolution_0_5K"
+    }
+  }
+}
