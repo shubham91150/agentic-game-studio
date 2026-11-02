@@ -53,6 +53,7 @@
   var refreshPreviewBtn = document.getElementById("refresh-preview-btn");
   var landscapePreviewBtn = document.getElementById("landscape-preview-btn");
   var landscapeBtnLabel = document.getElementById("landscape-btn-label");
+  var downloadGameBtn = document.getElementById("download-game-btn");
   var previewBox =
     document.getElementById("preview-box") ||
     document.querySelector(".preview-box");
@@ -449,6 +450,45 @@
         refreshPreviewBtn.disabled = false;
         setStatus("Ready.", "ok");
       }, 500);
+    });
+  }
+
+  // Download the current game as a .zip (ui-taste: matches preview-actions chip).
+  // Hits GET /api/studio/download which zips public/live-preview/ on the fly.
+  if (downloadGameBtn) {
+    downloadGameBtn.addEventListener("click", function () {
+      if (downloadGameBtn.disabled) return;
+      downloadGameBtn.disabled = true;
+      downloadGameBtn.classList.add("is-busy");
+      setStatus("Preparing download…", "ok");
+      fetch("/api/studio/download", { method: "GET" })
+        .then(function (res) {
+          if (!res.ok) throw new Error("download failed");
+          var cd = res.headers.get("content-disposition") || "";
+          var m = /filename="?([^";]+)"?/i.exec(cd);
+          var fname = m ? m[1] : "game.zip";
+          return res.blob().then(function (b) {
+            var url = URL.createObjectURL(b);
+            var a = document.createElement("a");
+            a.href = url;
+            a.download = fname;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            setTimeout(function () {
+              URL.revokeObjectURL(url);
+            }, 1500);
+            setStatus("Downloaded " + fname, "ok");
+          });
+        })
+        .catch(function (err) {
+          console.error("Download error:", err);
+          setStatus("Download failed.", "err");
+        })
+        .finally(function () {
+          downloadGameBtn.classList.remove("is-busy");
+          downloadGameBtn.disabled = false;
+        });
     });
   }
 
@@ -960,6 +1000,9 @@
         }
         if (refreshPreviewBtn) {
           refreshPreviewBtn.classList.toggle("hidden", !data.ready);
+        }
+        if (downloadGameBtn) {
+          downloadGameBtn.classList.toggle("hidden", !data.ready);
         }
         if (typeof data.cliBusy === "boolean") {
           if (data.cliBusy) {

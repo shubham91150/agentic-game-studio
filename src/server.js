@@ -12,6 +12,7 @@
  *   POST /api/studio/generate             -> SSE stream of agent events
  *   GET  /studio/games/:id/index.html     -> play a stored game
  *   GET  /api/studio/export/unity/:id     -> download a Unity C# script
+ *   GET  /api/studio/download             -> download the current live-preview game as a .zip
  */
 
 import http from "node:http";
@@ -28,6 +29,7 @@ import {
   resolveMetaApiKey,
 } from "./agent/agent_runner.js";
 import { GameStorageManager } from "./storage/game_store.js";
+import AdmZip from "adm-zip";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT_DIR = path.resolve(__dirname, "..");
@@ -510,6 +512,61 @@ const server = http.createServer(async (req, res) => {
       "content-disposition": "attachment; filename=AgenticPlayerController.cs",
     });
     return fs.createReadStream(scriptPath).pipe(res);
+  }
+
+  // ---------- Download current live-preview game as a .zip ----------
+  // Zips public/live-preview/ on the fly and returns it as a downloadable
+  // .zip archive so judges/users can grab the playable game offline.
+  if (pathname === "/api/studio/download" && req.method === "GET") {
+    const liveDir = path.join(PUBLIC_DIR, "live-preview");
+    if (!fs.existsSync(liveDir)) {
+      return json(res, 404, { error: "No game in preview to download" });
+    }
+    try {
+      const zip = new AdmZip();
+      const addDirRecursive = (dir, zipPath) => {
+        const entries = fs.readdirSync(dir, { withFileTypes: true });
+        for (const ent of entries) {
+          const full = path.join(dir, ent.name);
+          const entryPath = zipPath ? zipPath + "/" + ent.name : ent.name;
+          if (ent.isDirectory()) {
+            addDirRecursive(full, entryPath);
+          } else if (ent.isFile()) {
+            const buf = fs.readFileSync(full);
+            zip.addFile(entryPath, buf);
+          }
+        }
+      };
+      addDirRecursive(liveDir, "");
+      let title = "game";
+      try {
+        const idxHtml = fs.readFileSync(
+          path.join(liveDir, "index.html"),
+          "utf8",
+        );
+        const m = /<title>([^<]+)<\/title>/i.exec(idxHtml);
+        if (m && m[1]) title = m[1].trim();
+      } catch {
+        /* keep default */
+      }
+      const slug =
+        String(title)
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/^-+|-+$/g, "")
+          .substring(0, 40) || "game";
+      const zipBuf = zip.toBuffer();
+      res.writeHead(200, {
+        "content-type": "application/zip",
+        "content-disposition": `attachment; filename="${slug}.zip"`,
+        "content-length": String(zipBuf.length),
+        "cache-control": "no-store",
+      });
+      return res.end(zipBuf);
+    } catch (err) {
+      console.error("Download zip error:", err);
+      return json(res, 500, { error: "Failed to build game archive" });
+    }
   }
 
   // ---------- Vendor assets (Three.js, GLTFLoader, World Realism, Rapier physics) ----------

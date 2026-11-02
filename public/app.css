@@ -673,6 +673,13 @@ body {
   }
 }
 
+/* Download-game chip spin (ui-taste): reuses the .preview-actions chip —
+ * only adds a half-turn spin of the download icon while the zip is being
+ * built server-side, mirroring the refresh-btn affordance. */
+.download-btn.is-busy svg {
+  animation: refresh-btn-spin 0.5s var(--ease-out);
+}
+
 /* Terminal connect empty state */
 
 /* Fresh-terminal reconnect veil (ui-taste distill): quiet black cover with
