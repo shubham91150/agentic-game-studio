@@ -29,16 +29,69 @@ TOOLS = [
     },
     {
         "name": "blender_pro_generate",
-        "description": "Generate high-detail 3D assets via Blender 3.4 built-in generators: sapling_tree (oak/pine/willow), arch_building (multi-floor Archimesh building), or landscape (canyon/mountain/hills).",
+        "description": "Generate high-detail 3D assets via Blender 3.4 built-in & procedural generators: sapling_tree (oak/pine/willow), arch_building (multi-floor Archimesh building), landscape (canyon/mountain/hills), jalebi_spiral_stack (Sverchok/Sorcar parametric coiled stack on brass platter), or carved_brick_arch (Erindale-style Lucknow/Mughal brick arch).",
         "inputSchema": {
             "type": "object",
             "properties": {
-                "asset_type": {"type": "string", "enum": ["sapling_tree", "arch_building", "landscape"]},
+                "asset_type": {
+                    "type": "string",
+                    "enum": [
+                        "sapling_tree",
+                        "arch_building",
+                        "landscape",
+                        "jalebi_spiral_stack",
+                        "carved_brick_arch",
+                    ],
+                },
                 "preset": {"type": "string", "description": "oak | pine | willow | canyon | mountain | hills"},
                 "floors": {"type": "integer", "description": "Number of floors for arch_building (default 3)"},
+                "count": {"type": "integer", "description": "Number of coils for jalebi_spiral_stack (default 40)"},
                 "out": {"type": "string", "description": "Output .glb path relative to repo root"},
             },
             "required": ["asset_type", "out"],
+        },
+    },
+    {
+        "name": "blender_autorig_animate",
+        "description": "Auto-rig a 3D mesh or generate an articulated humanoid NPC (shopkeeper, runner, guard) with a 7-bone Blender Armature skeleton and bake 3 keyframe NLA animation clips (Idle, Walk, Wave) for THREE.AnimationMixer.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "preset": {"type": "string", "enum": ["shopkeeper", "runner", "guard"], "description": "Character preset when in_glb is omitted"},
+                "in_glb": {"type": "string", "description": "Optional existing .glb file to auto-rig"},
+                "out": {"type": "string", "description": "Output animated .glb path relative to repo root"},
+            },
+            "required": ["out"],
+        },
+    },
+    {
+        "name": "depth_to_gaussian_splat",
+        "description": "Convert a 2D RGB image + Depth Anything V2 depth map into a 3D Gaussian Splatting binary (.splat / .ply) ready for WorldRealism.loadGaussianSplat in Three.js.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "image": {"type": "string", "description": "Input 2D RGB image path"},
+                "depth": {"type": "string", "description": "Depth map path (auto-computed via Depth Anything V2 if missing)"},
+                "out": {"type": "string", "description": "Output .splat path"},
+                "ply": {"type": "string", "description": "Optional output 3DGS .ply path"},
+                "max_splats": {"type": "integer", "description": "Max splat count (default 40000)"},
+            },
+            "required": ["image", "out"],
+        },
+    },
+    {
+        "name": "generate_game_audio",
+        "description": "Synthesize 44.1kHz 16-bit PCM .wav game audio stems (bazaar_ambience, jalebi_sizzle, footstep_stone, collect_chime, impact_crash) into public/assets/audio/.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "all": {"type": "boolean", "description": "If true, generate all 5 standard audio stems"},
+                "stem": {
+                    "type": "string",
+                    "enum": ["bazaar_ambience", "jalebi_sizzle", "footstep_stone", "collect_chime", "impact_crash"],
+                },
+                "out_dir": {"type": "string", "description": "Output directory (default public/assets/audio)"},
+            },
         },
     },
     {
@@ -138,7 +191,46 @@ def handle_call(name: str, args: dict) -> str:
             cmd += ["--preset", str(args["preset"])]
         if args.get("floors"):
             cmd += ["--floors", str(args["floors"])]
+        if args.get("count"):
+            cmd += ["--count", str(args["count"])]
         return run_cmd(cmd, timeout=180)
+    if name == "blender_autorig_animate":
+        cmd = [
+            "python3",
+            "src/tools/blender_autorig_animate.py",
+            "--out",
+            str(args.get("out", "public/assets/custom/npc_animated.glb")),
+        ]
+        if args.get("preset"):
+            cmd += ["--preset", str(args["preset"])]
+        if args.get("in_glb"):
+            cmd += ["--in", str(args["in_glb"])]
+        return run_cmd(cmd, timeout=180)
+    if name == "depth_to_gaussian_splat":
+        cmd = [
+            "python3",
+            "src/tools/depth_to_gaussian_splat.py",
+            "--image",
+            str(args.get("image", "storage/.uploads/sunrise_valley.jpg")),
+            "--depth",
+            str(args.get("depth", "/tmp/opencode/sunrise_depth.png")),
+            "--out",
+            str(args.get("out", "public/assets/custom/scene.splat")),
+        ]
+        if args.get("ply"):
+            cmd += ["--ply", str(args["ply"])]
+        if args.get("max_splats"):
+            cmd += ["--max-splats", str(args["max_splats"])]
+        return run_cmd(cmd, timeout=180)
+    if name == "generate_game_audio":
+        cmd = ["python3", "src/tools/generate_game_audio.py"]
+        if args.get("all") or not args.get("stem"):
+            cmd.append("--all")
+        else:
+            cmd += ["--stem", str(args["stem"])]
+        if args.get("out_dir"):
+            cmd += ["--out-dir", str(args["out_dir"])]
+        return run_cmd(cmd, timeout=60)
     if name == "osm_real_world_city_3d":
         cmd = [
             "python3",

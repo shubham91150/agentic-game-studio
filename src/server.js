@@ -138,6 +138,9 @@ const CONTENT_TYPES = {
   ".wasm": "application/wasm",
   ".hdr": "application/octet-stream",
   ".exr": "application/octet-stream",
+  ".wav": "audio/wav",
+  ".splat": "application/octet-stream",
+  ".ply": "application/octet-stream",
 };
 
 function sendFile(res, filePath) {

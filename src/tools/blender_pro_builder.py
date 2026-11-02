@@ -38,8 +38,20 @@ def parse_cli_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument(
         "--type",
         required=True,
-        choices=["sapling_tree", "arch_building", "landscape"],
+        choices=[
+            "sapling_tree",
+            "arch_building",
+            "landscape",
+            "jalebi_spiral_stack",
+            "carved_brick_arch",
+        ],
         help="Asset generator type",
+    )
+    parser.add_argument(
+        "--count",
+        type=int,
+        default=40,
+        help="Count of coiled items for jalebi_spiral_stack (default: 40)",
     )
     parser.add_argument(
         "--preset",
@@ -677,6 +689,364 @@ def run_inside_blender():
                 metallic=0.0,
             )
             assign_mat(land_obj, mat_land)
+
+    # ========================================================================
+    # 4. SVERCHOK / SORCAR PARAMETRIC JALEBI SPIRAL STACK (jalebi_spiral_stack)
+    # ========================================================================
+    elif args.type == "jalebi_spiral_stack":
+        count = max(4, int(args.count))
+        mat_brass = make_pbr_mat(
+            "brass_thaal_platter_pbr",
+            (0.84, 0.65, 0.22, 1.0),
+            roughness=0.26,
+            metallic=0.88,
+        )
+        mat_jalebi = make_pbr_mat(
+            "saffron_jalebi_glaze_pbr",
+            (0.96, 0.44, 0.06, 1.0),
+            roughness=0.22,
+            metallic=0.04,
+            emission=(0.24, 0.07, 0.01),
+        )
+        mat_pistachio = make_pbr_mat(
+            "pistachio_garnish_pbr",
+            (0.46, 0.68, 0.24, 1.0),
+            roughness=0.55,
+            metallic=0.0,
+        )
+
+        # Part 1: Ornate Brass Thaal (Platter base + raised scalloped rim)
+        bpy.ops.mesh.primitive_cylinder_add(
+            vertices=48, radius=0.58, depth=0.035, location=(0.0, 0.0, 0.0175)
+        )
+        platter_base = bpy.context.active_object
+        platter_base.name = "brass_thaal_base"
+        assign_mat(platter_base, mat_brass)
+        add_bevel_and_weighted_normals(platter_base, width=0.008, segments=2)
+
+        bpy.ops.mesh.primitive_torus_add(
+            major_segments=48,
+            minor_segments=16,
+            major_radius=0.57,
+            minor_radius=0.028,
+            location=(0.0, 0.0, 0.042),
+        )
+        platter_rim = bpy.context.active_object
+        platter_rim.name = "brass_thaal_rim"
+        assign_mat(platter_rim, mat_brass)
+
+        # Part 2: Sverchok/Sorcar mathematical parametric spiral coils stacked in a radial pyramid
+        # Build one parametric 3.25-turn Archimedes + figure-8 pretzel loop curve mesh and instance/stack
+        jalebi_objs = []
+        placed = 0
+        tier = 0
+        base_ring_radius = 0.40
+
+        while placed < count:
+            ring_r = max(0.0, base_ring_radius - tier * 0.085)
+            items_in_tier = (
+                1 if ring_r < 0.05 else max(4, int(round((2.0 * math.pi * ring_r) / 0.14)))
+            )
+            items_in_tier = min(items_in_tier, count - placed)
+            z_tier = 0.052 + tier * 0.036
+
+            for k in range(items_in_tier):
+                ang = (2.0 * math.pi * k) / max(1, items_in_tier) + tier * 0.37
+                cx = ring_r * math.cos(ang)
+                cy = ring_r * math.sin(ang)
+
+                # Create parametric 3-whorl jalebi coil curve
+                curve_data = bpy.data.curves.new(
+                    name=f"jalebi_curve_{placed}", type="CURVE"
+                )
+                curve_data.dimensions = "3D"
+                curve_data.resolution_u = 6
+                curve_data.bevel_depth = 0.0115
+                curve_data.bevel_resolution = 3
+                curve_data.use_fill_caps = True
+
+                spline = curve_data.splines.new(type="POLY")
+                num_pts = 44
+                spline.points.add(num_pts - 1)
+                turns = 3.25
+                for p_i in range(num_pts):
+                    t = p_i / float(num_pts - 1)
+                    theta = t * turns * 2.0 * math.pi
+                    # Spiral radius with subtle pretzel crimp modulation
+                    rad = 0.012 + t * 0.058 + 0.004 * math.sin(3.0 * theta)
+                    px = rad * math.cos(theta)
+                    py = rad * math.sin(theta)
+                    # Slight cross-over bridge at the end like a real hand-piped jalebi
+                    pz = 0.004 * math.sin(theta * 1.5) + (0.008 if t > 0.82 else 0.0)
+                    spline.points[p_i].co = (px, py, pz, 1.0)
+
+                c_obj = bpy.data.objects.new(f"jalebi_coil_{placed}", curve_data)
+                bpy.context.collection.objects.link(c_obj)
+                c_obj.location = (cx, cy, z_tier)
+                c_obj.rotation_euler = (
+                    0.14 * math.sin(ang + tier),
+                    0.14 * math.cos(ang),
+                    ang + placed * 0.45,
+                )
+
+                bpy.ops.object.select_all(action="DESELECT")
+                c_obj.select_set(True)
+                bpy.context.view_layer.objects.active = c_obj
+                bpy.ops.object.convert(target="MESH")
+                assign_mat(c_obj, mat_jalebi)
+                jalebi_objs.append(c_obj)
+                placed += 1
+                if placed >= count:
+                    break
+            tier += 1
+
+        if jalebi_objs:
+            bpy.ops.object.select_all(action="DESELECT")
+            for o in jalebi_objs:
+                o.select_set(True)
+            bpy.context.view_layer.objects.active = jalebi_objs[0]
+            if len(jalebi_objs) > 1:
+                bpy.ops.object.join()
+            jalebi_objs[0].name = "jalebi_spiral_stack_coils"
+            jalebi_objs[0].data.name = "jalebi_spiral_stack_coils"
+
+        # Part 3: Slivered pistachio garnish shards scattered on top of the pyramid
+        garnish_objs = []
+        for g_idx in range(12):
+            g_ang = g_idx * (2.0 * math.pi / 12.0)
+            g_rad = 0.06 + (g_idx % 3) * 0.09
+            gz = 0.075 + (2 - (g_idx % 3)) * 0.034
+            g_obj = create_box_part(
+                f"pistachio_sliver_{g_idx}",
+                (0.018, 0.008, 0.006),
+                (g_rad * math.cos(g_ang), g_rad * math.sin(g_ang), gz),
+                mat_pistachio,
+                bevel_width=0.001,
+            )
+            g_obj.rotation_euler = (0.2, 0.1, g_ang)
+            garnish_objs.append(g_obj)
+
+        if garnish_objs:
+            bpy.ops.object.select_all(action="DESELECT")
+            for o in garnish_objs:
+                o.select_set(True)
+            bpy.context.view_layer.objects.active = garnish_objs[0]
+            bpy.ops.object.join()
+            garnish_objs[0].name = "pistachio_garnish_flakes"
+
+    # ========================================================================
+    # 5. ERINDALE-STYLE CARVED BRICK LUCKNOW/MUGHAL ARCH (carved_brick_arch)
+    # ========================================================================
+    elif args.type == "carved_brick_arch":
+        mat_lakhori_brick = make_pbr_mat(
+            "lakhori_terracotta_brick_pbr",
+            (0.66, 0.28, 0.18, 1.0),
+            roughness=0.76,
+            metallic=0.0,
+        )
+        mat_sandstone_carving = make_pbr_mat(
+            "carved_red_sandstone_pbr",
+            (0.84, 0.74, 0.60, 1.0),
+            roughness=0.62,
+            metallic=0.0,
+        )
+        mat_lime_stucco = make_pbr_mat(
+            "lucknow_chikan_stucco_pbr",
+            (0.92, 0.88, 0.79, 1.0),
+            roughness=0.58,
+            metallic=0.0,
+        )
+        mat_brass_finial = make_pbr_mat(
+            "arch_brass_finial_pbr",
+            (0.85, 0.68, 0.24, 1.0),
+            roughness=0.28,
+            metallic=0.86,
+        )
+
+        arch_w = 5.4
+        arch_d = 0.75
+        arch_h = 5.2
+        opening_r = 1.55
+        spring_z = 2.45
+
+        # Part 1: Stepped stone plinth & twin pillar bases
+        plinth_objs = []
+        for side_x in (-1.95, 1.95):
+            p_base = create_box_part(
+                f"plinth_peer_{side_x}",
+                (1.55, arch_d + 0.22, 0.42),
+                (side_x, 0.0, 0.21),
+                mat_sandstone_carving,
+                bevel_width=0.018,
+            )
+            plinth_objs.append(p_base)
+        bpy.ops.object.select_all(action="DESELECT")
+        for o in plinth_objs:
+            o.select_set(True)
+        bpy.context.view_layer.objects.active = plinth_objs[0]
+        bpy.ops.object.join()
+        plinth_objs[0].name = "arch_plinth_base"
+
+        # Part 2: Twin Mughal Fluted Pillars (Guldasta shafts + lotus capitals)
+        pillar_objs = []
+        for p_idx, px in enumerate((-2.52, -1.38, 1.38, 2.52)):
+            bpy.ops.mesh.primitive_cylinder_add(
+                vertices=16,
+                radius=0.19,
+                depth=spring_z + 0.35,
+                location=(px, -arch_d * 0.48, 0.42 + (spring_z + 0.35) * 0.5),
+            )
+            shaft = bpy.context.active_object
+            shaft.name = f"fluted_pillar_{p_idx}"
+            assign_mat(shaft, mat_lime_stucco)
+            pillar_objs.append(shaft)
+
+            # Lotus capital & base collar
+            for cap_z in (0.48, 0.42 + spring_z + 0.32):
+                bpy.ops.mesh.primitive_torus_add(
+                    major_segments=18,
+                    minor_segments=10,
+                    major_radius=0.22,
+                    minor_radius=0.055,
+                    location=(px, -arch_d * 0.48, cap_z),
+                )
+                collar = bpy.context.active_object
+                assign_mat(collar, mat_sandstone_carving)
+                pillar_objs.append(collar)
+
+        bpy.ops.object.select_all(action="DESELECT")
+        for o in pillar_objs:
+            o.select_set(True)
+        bpy.context.view_layer.objects.active = pillar_objs[0]
+        bpy.ops.object.join()
+        pillar_objs[0].name = "fluted_guldasta_pillars"
+
+        # Part 3: Staggered Lakhori Brick Coursing piers & spandrel wall
+        brick_objs = []
+        brick_w = 0.36
+        brick_h = 0.14
+        brick_d = arch_d
+        courses = int((arch_h - 0.42) / brick_h)
+        cols = int(arch_w / brick_w)
+
+        for r_i in range(courses):
+            bz = 0.42 + (r_i + 0.5) * brick_h
+            stagger = (brick_w * 0.5) if (r_i % 2 == 1) else 0.0
+            for c_i in range(cols):
+                bx = -arch_w * 0.5 + (c_i + 0.5) * brick_w + (stagger * 0.25)
+                # Carve out the central pointed Mughal arch opening
+                if bz < spring_z:
+                    if abs(bx) < opening_r:
+                        continue
+                else:
+                    dz = bz - spring_z
+                    # Pointed ogee arch profile
+                    arch_half_w = max(0.0, opening_r * (1.0 - (dz / 2.15) ** 1.35))
+                    if abs(bx) < arch_half_w:
+                        continue
+                b_obj = create_box_part(
+                    f"brick_{r_i}_{c_i}",
+                    (brick_w * 0.94, brick_d, brick_h * 0.88),
+                    (bx, 0.0, bz),
+                    mat_lakhori_brick,
+                    bevel_width=0.006,
+                )
+                brick_objs.append(b_obj)
+
+        if brick_objs:
+            bpy.ops.object.select_all(action="DESELECT")
+            for o in brick_objs:
+                o.select_set(True)
+            bpy.context.view_layer.objects.active = brick_objs[0]
+            bpy.ops.object.join()
+            brick_objs[0].name = "staggered_lakhori_brickwork"
+
+        # Part 4: Ornate Multi-Foil Cusped Archway Vouissoirs (9-cusp scalloped intrados)
+        cusp_objs = []
+        num_cusps = 9
+        for c_k in range(num_cusps):
+            t0 = c_k / float(num_cusps)
+            t1 = (c_k + 1) / float(num_cusps)
+            tm = 0.5 * (t0 + t1)
+            ang = math.pi * (1.0 - tm)
+            # Pointed arch trajectory with inward cusp scallops
+            cx = opening_r * math.cos(ang) * (1.0 - 0.18 * math.sin(ang))
+            cz = spring_z + 2.05 * math.sin(ang)
+            bpy.ops.mesh.primitive_torus_add(
+                major_segments=18,
+                minor_segments=10,
+                major_radius=0.28,
+                minor_radius=0.075,
+                location=(cx, 0.0, cz),
+                rotation=(math.pi * 0.5, 0.0, 0.0),
+            )
+            foil = bpy.context.active_object
+            foil.scale = (1.0, 1.0, arch_d * 4.5)
+            bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
+            assign_mat(foil, mat_lime_stucco)
+            cusp_objs.append(foil)
+
+        if cusp_objs:
+            bpy.ops.object.select_all(action="DESELECT")
+            for o in cusp_objs:
+                o.select_set(True)
+            bpy.context.view_layer.objects.active = cusp_objs[0]
+            bpy.ops.object.join()
+            cusp_objs[0].name = "cusped_arch_voussoirs"
+
+        # Part 5: Carved Spandrel Medallions (Rosette bosses) + Chhajja Cornice + Merlons
+        carving_objs = []
+        for sx in (-1.45, 1.45):
+            bpy.ops.mesh.primitive_torus_add(
+                major_segments=24,
+                minor_segments=12,
+                major_radius=0.32,
+                minor_radius=0.06,
+                location=(sx, -arch_d * 0.52, spring_z + 1.45),
+                rotation=(math.pi * 0.5, 0.0, 0.0),
+            )
+            rosette = bpy.context.active_object
+            assign_mat(rosette, mat_sandstone_carving)
+            carving_objs.append(rosette)
+
+        # Projecting Chhajja eave cornice + crowning guldasta parapet merlons
+        chhajja = create_box_part(
+            "chhajja_cornice",
+            (arch_w + 0.65, arch_d + 0.55, 0.24),
+            (0.0, -0.08, arch_h + 0.12),
+            mat_sandstone_carving,
+            bevel_width=0.02,
+        )
+        carving_objs.append(chhajja)
+
+        for m_i in range(9):
+            mx = -arch_w * 0.44 + m_i * (arch_w * 0.88 / 8.0)
+            merlon = create_box_part(
+                f"parapet_merlon_{m_i}",
+                (0.36, 0.28, 0.44),
+                (mx, -arch_d * 0.35, arch_h + 0.46),
+                mat_lime_stucco,
+                bevel_width=0.015,
+            )
+            carving_objs.append(merlon)
+
+        # Central brass kalash finial at apex
+        bpy.ops.mesh.primitive_uv_sphere_add(
+            segments=16,
+            ring_count=12,
+            radius=0.18,
+            location=(0.0, 0.0, arch_h + 0.82),
+        )
+        finial = bpy.context.active_object
+        assign_mat(finial, mat_brass_finial)
+        carving_objs.append(finial)
+
+        bpy.ops.object.select_all(action="DESELECT")
+        for o in carving_objs:
+            o.select_set(True)
+        bpy.context.view_layer.objects.active = carving_objs[0]
+        bpy.ops.object.join()
+        carving_objs[0].name = "carved_spandrel_and_chhajja"
 
     # Export to binary glTF (.glb)
     bpy.ops.export_scene.gltf(
