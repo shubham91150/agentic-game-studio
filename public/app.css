@@ -226,15 +226,17 @@ body {
 .crumb-right a {
   color: var(--muted);
   text-decoration: none;
-  padding: 6px 10px;
+  padding: 4px 9px;
   border-radius: 6px;
   border: 1px solid var(--line);
   transition:
     color var(--dur-fast) ease,
     background-color var(--dur-fast) ease,
     border-color var(--dur-fast) ease;
-  font-weight: 500;
-  font-size: var(--fs-12);
+  font-weight: 600;
+  font-size: var(--fs-11);
+  display: inline-flex;
+  align-items: center;
 }
 
 .crumb-right a:hover {
@@ -249,9 +251,9 @@ body {
   background: var(--surface-1);
   color: var(--ink-2);
   font: inherit;
-  font-size: var(--fs-12);
+  font-size: var(--fs-11);
   font-weight: 600;
-  padding: 6px 11px;
+  padding: 4px 9px;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
@@ -275,8 +277,10 @@ body {
   background: var(--accent-dim);
   color: var(--accent);
   border-radius: var(--r-pill);
-  padding: 1px 7px;
-  line-height: 1.6;
+  padding: 1px 6px;
+  line-height: 1;
+  min-width: 16px;
+  text-align: center;
 }
 
 .count-badge:empty {
@@ -2164,14 +2168,13 @@ button.icon-btn {
   }
 
   .crumb-right a {
-    padding: 8px 10px;
-    min-height: 44px;
+    padding: 4px 9px;
     display: inline-flex;
     align-items: center;
   }
 
   .crumb-btn {
-    min-height: 36px;
+    padding: 4px 9px;
   }
 
   .panel-btn {
@@ -2461,8 +2464,7 @@ button.icon-btn {
   }
 
   .crumb-btn {
-    padding: 5px 9px;
-    min-height: 36px;
+    padding: 4px 9px;
     white-space: nowrap;
   }
 

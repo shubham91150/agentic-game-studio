@@ -469,7 +469,9 @@
         : "Toggle landscape / fullscreen",
     );
     if (landscapeBtnLabel) {
-      landscapeBtnLabel.textContent = active ? "Exit" : "Landscape";
+      landscapeBtnLabel.textContent = active
+        ? "Exit fullscreen landscape"
+        : "Toggle landscape / fullscreen";
     }
   }
 
