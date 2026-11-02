@@ -1,25 +1,30 @@
 ---
 name: 3d-asset-and-world-tools
-description: Native studio-3d-tools MCP and CLI tools for PartNet/ShapeNet, Blender Pro/AutoRig, 3DGS, OSM 3D City, SceneScript+WFC, VGGT, Objaverse, BlenderKit, PolyHaven, ambientCG, and audio.
+description: Native studio-3d-tools MCP (15 tools) and CLI tools for PartNet/ShapeNet, Blender Pro/AutoRig, 3DGS, OSM 3D City, SceneScript+WFC, VGGT, MusicGen, Muse Voice Transcribe, Objaverse, BlenderKit, PolyHaven, ambientCG, and Visual QA.
 type: project
 ---
 
-# 3D Asset, World & Audio Generation Tools (Full Potential Reference)
+# 3D Asset, World, Audio & Voice Generation Tools (Full Potential Reference)
 
 ## 1. First-Class MCP Server (`studio-3d-tools`)
 
-Registered in `~/.config/muse/settings.json` (`src/tools/studio_3d_mcp_server.py`), exposing **10 native MCP tools**:
+Registered in `~/.config/muse/settings.json` (`src/tools/studio_3d_mcp_server.py`), exposing **15 native MCP tools**:
 
 - `partnet_shapenet_build`: Inspect or synthesize multi-part CAD-accurate `.glb` assets from PartNet part-hierarchies & ShapeNet metric dimensions (`bazaar_stall`, `sports_car`, `commercial_building`, `streetlamp`).
 - `blender_pro_generate`: Run Blender 3.4 built-in & procedural generators (`sapling_tree` oak/pine/willow, `arch_building` multi-floor Archimesh building, `landscape` canyon/mountain/hills, `jalebi_spiral_stack` Sverchok/Sorcar parametric coiled pyramid on brass platter, `carved_brick_arch` Erindale-style Lucknow/Mughal brick arch).
 - `blender_autorig_animate`: Auto-rig a 3D mesh (`--in`) or synthesize an articulated humanoid NPC (`shopkeeper`, `runner`, `guard`) with a 7-bone Blender `Armature` skeleton (`root`, `spine`, `head`, `arm_L`, `arm_R`, `leg_L`, `leg_R`) and bake 3 keyframe NLA animation clips (`Idle`, `Walk`, `Wave`) ready for `THREE.AnimationMixer`.
 - `depth_to_gaussian_splat`: Back-project a 2D image + Depth Anything V2 depth map into 3D space and export a 32-byte binary `.splat` (and optional `.ply`) for `WorldRealism.loadGaussianSplat(url, onLoaded, options)`.
 - `generate_game_audio`: Synthesize 44.1 kHz 16-bit PCM `.wav` game audio stems (`bazaar_ambience.wav`, `jalebi_sizzle.wav`, `footstep_stone.wav`, `collect_chime.wav`, `impact_crash.wav`) into `public/assets/audio/`.
+- `meta_musicgen_generate`: Generate real 32 kHz AI music & soundscapes from a text prompt using Meta's official AudioCraft `facebook/musicgen-small` (300M parameter neural model).
 - `osm_real_world_city_3d`: Extrude a real-world 3D city/bazaar district `.glb` from OpenStreetMap building footprints, heights, roads, parks, and waterways (`lucknow_hazratganj`, `monaco_harbor`, `tokyo_shibuya`, `nyc_times_square`).
 - `objaverse_inspect_3d`: Search Objaverse-XL / LVIS 10M+ 3D models and inspect real artist mesh/node/material hierarchies.
 - `blenderkit_search_free`: Search BlenderKit's free 3D models, PBR materials, and HDRIs with exact metric dimensions and face counts.
 - `fetch_cc0_pbr_or_model`: Download 100% free CC0 photogrammetry 3D models or 1K PBR texture sets from Poly Haven (`fetch_polyhaven.py`) or ambientCG (`fetch_ambientcg.py`).
+- `scenescript_wfc_build`: Compile Meta SceneScript architectural DSL (with real `manifold3d` CSG boolean door/window openings) or Wave Function Collapse (WFC) 3D courtyard/city grids into a multi-material `.glb`.
+- `meta_vggt_reconstruct`: Reconstruct a 3D metric surface mesh (`.glb`) from an image using Meta VGGT-1B on Modal GPU (`--backend modal`) with automatic local Depth-Anything-V2 + Delaunay 3D mesh fallback (`--backend local`).
+- `gltf_transform_optimize`: Optimize any `.glb` 3D model using `@gltf-transform/core` + `@gltf-transform/functions` (dedup, weld, prune, center pivot).
 - `run_visual_qa_gate`: Run `node src/verifier/visual_qa_gate.js` on `public/live-preview`.
+- `meta_voice_transcribe`: Transcribe spoken voice prompts or game audio clips into text using Meta's official `muse-voice-transcribe-1.0` model (`POST /v1/asr/transcribe` and `muse voice transcribe`).
 
 ## 2. Direct CLI Commands (Equivalents)
 

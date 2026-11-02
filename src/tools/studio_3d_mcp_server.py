@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Studio 3D & World Generation MCP Server (stdio JSON-RPC 2.0).
 
-Exposes Agentic Game Studio's 14 real 3D, World, Audio, and QA tools:
+Exposes Agentic Game Studio's 15 real 3D, World, Audio, Voice, and QA tools:
   1. partnet_shapenet_build
   2. blender_pro_generate
   3. blender_autorig_animate
@@ -16,6 +16,7 @@ Exposes Agentic Game Studio's 14 real 3D, World, Audio, and QA tools:
   12. meta_vggt_reconstruct
   13. gltf_transform_optimize
   14. run_visual_qa_gate
+  15. meta_voice_transcribe
 """
 import json
 import os
@@ -217,6 +218,18 @@ TOOLS = [
             },
         },
     },
+    {
+        "name": "meta_voice_transcribe",
+        "description": "Transcribe spoken voice prompts or game audio clips into text using Meta's official `muse-voice-transcribe-1.0` model (`/v1/asr/transcribe` and `muse voice transcribe`).",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "audio": {"type": "string", "description": "Input audio file path (.wav/.mp3/.ogg, default 'public/assets/audio/voice_prompt_sample.wav')"},
+                "backend": {"type": "string", "enum": ["api", "cli"], "description": "Preferred backend: 'api' (/v1/asr/transcribe) or 'cli' (muse voice transcribe)"},
+            },
+            "required": ["audio"],
+        },
+    },
 ]
 
 
@@ -374,6 +387,10 @@ def handle_call(name: str, args: dict) -> str:
     if name == "run_visual_qa_gate":
         target = str(args.get("target_dir", "public/live-preview"))
         return run_cmd(["node", "src/verifier/visual_qa_gate.js", target], timeout=30)
+    if name == "meta_voice_transcribe":
+        audio = str(args.get("audio", "public/assets/audio/voice_prompt_sample.wav"))
+        backend = str(args.get("backend", "api"))
+        return run_cmd(["node", "src/tools/meta_voice_transcribe.js", "--audio", audio, "--backend", backend], timeout=60)
     return f"Unknown tool: {name}"
 
 
