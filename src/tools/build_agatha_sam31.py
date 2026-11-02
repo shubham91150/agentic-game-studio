@@ -24,7 +24,8 @@ r, g, b = arr[:,:,0], arr[:,:,1], arr[:,:,2]
 yy, xx = np.mgrid[0:arr.shape[0], 0:arr.shape[1]]
 is_teal_bg = (b > r + 10) | (g > r + 12) | (xx < 340) | (xx > 795)
 is_2d_lantern = (xx < 420) & (yy > 580) & (yy < 1350) & (r > 65)
-mask_replace = is_teal_bg | is_2d_lantern
+is_head_on_robe = (xx > 420) & (xx < 710) & (yy > 200) & (yy < 525)
+mask_replace = is_teal_bg | is_2d_lantern | is_head_on_robe
 # Replace background/lantern-bleed with dark charcoal tattered cloth weave
 noise = ((np.sin(xx * 0.37) * np.cos(yy * 0.29)) * 6.0)
 arr[mask_replace, 0] = np.clip(18 + noise[mask_replace], 10, 28)
@@ -34,9 +35,21 @@ im_clean_robe = Image.fromarray(arr.astype(np.uint8), "RGBA")
 robe_tex_path = "/tmp/opencode/agatha_robe_tex.png"
 im_clean_robe.resize((1024, 1024), Image.Resampling.LANCZOS).save(robe_tex_path)
 
-# Save 512x512 high-detail face crop from SAM 3.1 yellow box (x1=498, y1=259, x2=636, y2=478)
+# Save 512x512 high-detail HORROR face texture from SAM 3.1 yellow box (x1=502, y1=262, x2=632, y2=476)
+# Grade it to corpse-ash pale with deep blackened eye hollows & bruised stitched cheeks (zero warm yellow/cat tint!)
 face_crop_path = "/tmp/opencode/agatha_face_tex.png"
-im_face = im_ref.crop((494, 255, 640, 482)).resize((512, 512), Image.Resampling.LANCZOS)
+im_face_raw = im_ref.crop((502, 262, 632, 476)).resize((512, 512), Image.Resampling.LANCZOS)
+f_arr = np.array(im_face_raw).astype(np.float32)
+fr, fg, fb = f_arr[:,:,0], f_arr[:,:,1], f_arr[:,:,2]
+lum = 0.299 * fr + 0.587 * fg + 0.114 * fb
+# High-contrast S-curve so eye sockets, mouth cavity, and cheek stitches are pitch-dark and bone ridges are ash-pale
+norm = np.clip((lum - 28.0) / 185.0, 0.0, 1.0)
+curved = np.power(norm, 1.35) * 215.0
+# Corpse-grey-blue desaturated palette (no warm yellow/orange!)
+f_arr[:,:,0] = np.clip(curved * 0.92 + 8.0, 4, 225)
+f_arr[:,:,1] = np.clip(curved * 0.95 + 10.0, 5, 230)
+f_arr[:,:,2] = np.clip(curved * 1.02 + 14.0, 8, 240)
+im_face = Image.fromarray(f_arr.astype(np.uint8), "RGBA")
 im_face.save(face_crop_path)
 
 def project_sam31_uvs(obj, x_center=567.0, y_top=184.0, y_bot=2106.0, z_top=1.72, z_bot=0.00):
@@ -83,42 +96,131 @@ bpy.context.view_layer.objects.active = base_mesh_obj
 base_mesh_obj.select_set(True)
 bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
 
-# (A) Extract Agatha_Head (z >= 1.37, |x| <= 0.13)
-head_obj = base_mesh_obj.copy()
-head_obj.data = base_mesh_obj.data.copy()
-head_obj.name = "Agatha_Head"
+# (A) Sculpt Anatomical 3D Horror Nun Head + Sunken Eye Sockets + 3D Eyeballs (ZERO ears sticking out!)
+head_mesh = bpy.data.meshes.new("Agatha_Head")
+head_obj = bpy.data.objects.new("Agatha_Head", head_mesh)
 bpy.context.collection.objects.link(head_obj)
 
+# Sample luminance of im_face for micro-relief (wrinkles, stitches, brow furrows, lips)
+lum_grid = (0.299 * f_arr[:,:,0] + 0.587 * f_arr[:,:,1] + 0.114 * f_arr[:,:,2]) / 255.0
+
 bm = bmesh.new()
-bm.from_mesh(head_obj.data)
-to_del = [v for v in bm.verts if (v.co.z < 1.37 or abs(v.co.x) > 0.13)]
-bmesh.ops.delete(bm, geom=to_del, context='VERTS')
-xs = [v.co.x for v in bm.verts]
-ys = [v.co.y for v in bm.verts]
-zs = [v.co.z for v in bm.verts]
-cx = 0.5 * (min(xs) + max(xs))
-cy = 0.5 * (min(ys) + max(ys))
-z_min, z_max = min(zs), max(zs)
-
 uv_layer = bm.loops.layers.uv.verify()
-for f in bm.faces:
-    for loop in f.loops:
-        co = loop.vert.co
-        u = 0.5 + (co.x - cx) / 0.142
-        v = (co.z - 1.41) / (1.655 - 1.41)
-        u = max(0.03, min(0.97, u))
-        v = max(0.03, min(0.97, v))
-        if co.y > cy + 0.025:
-            u = 0.08
-            v = 0.92
-        loop[uv_layer].uv = (u, v)
+H_ROWS = 72
+W_COLS = 64
+h_grid = []
 
-for v in bm.verts:
-    v.co.x = (v.co.x - cx) * 0.92
-    v.co.y = (v.co.y - cy) * 0.95 - 0.045
-    v.co.z = 1.43 + (v.co.z - z_min) / max(0.001, (z_max - z_min)) * 0.22
+for r in range(H_ROWS):
+    v_frac = r / (H_ROWS - 1)  # 0.0 = neck/chin bottom (z=1.415m), 1.0 = forehead wimple top (z=1.645m)
+    z = 1.415 + v_frac * 0.230
+    row = []
+    for c in range(W_COLS):
+        u_frac = c / (W_COLS - 1)  # 0.0 = right side (-x), 0.5 = center (x=0), 1.0 = left side (+x)
+        # Half-cylinder + back cranium angle: theta in [-0.88*pi, +0.88*pi], where 0 is dead-front (-Y)
+        theta = (u_frac - 0.5) * 1.76 * math.pi
+        sin_t = math.sin(theta)
+        cos_t = math.cos(theta)
 
-bm.to_mesh(head_obj.data)
+        # Narrow gaunt horror face silhouette (NO ears! Tapered hollow jaw, prominent cheekbones, narrow temples)
+        if v_frac < 0.18:
+            # Neck & sharp narrow chin point
+            t_chin = v_frac / 0.18
+            rx = 0.036 + 0.022 * (t_chin ** 0.7)
+            ry = 0.048 + 0.024 * t_chin
+        elif v_frac < 0.48:
+            # Gaunt hollow lower cheeks expanding to sharp zygomatic cheekbones at v_frac=0.52
+            t_jaw = (v_frac - 0.18) / 0.30
+            hollow = -0.007 * math.sin(t_jaw * math.pi) * (1.0 - abs(abs(sin_t) - 0.65))
+            rx = 0.058 + 0.011 * t_jaw + hollow
+            ry = 0.072 + 0.010 * t_jaw
+        elif v_frac < 0.76:
+            # Cheekbones (0.48) -> Eye sockets (0.60) -> Brow ridge (0.70)
+            t_mid = (v_frac - 0.48) / 0.28
+            rx = 0.069 - 0.005 * t_mid
+            ry = 0.082
+        else:
+            # Forehead wimple band tapering smoothly into hood
+            t_top = (v_frac - 0.76) / 0.24
+            rx = 0.064 * (1.0 - 0.22 * (t_top ** 1.4))
+            ry = 0.080 * (1.0 - 0.18 * (t_top ** 1.4))
+
+        x = rx * sin_t
+        y = -ry * cos_t - 0.032  # Front of face is towards -Y
+
+        # 3D Anatomical Horror Features on the front face (cos_t > 0.15):
+        if cos_t > 0.15:
+            fw = cos_t
+            # 1. Sharp protruding hooked nose bridge & tip (x near 0, v_frac in [0.36, 0.66])
+            if 0.35 <= v_frac <= 0.68:
+                nx = abs(x) / 0.014
+                if nx < 1.0:
+                    nt_v = (v_frac - 0.35) / 0.33  # 0 at tip/nostrils, 1 at brow bridge
+                    nose_prof = math.sin(nt_v * math.pi) ** 0.75
+                    # Hooked bridge + sharp tip at v_frac=0.42
+                    tip_boost = 0.009 * math.exp(-((v_frac - 0.43) / 0.06) ** 2)
+                    y -= (0.022 * nose_prof + tip_boost) * ((1.0 - nx * nx) ** 1.3) * fw
+
+            # 2. Deeply sunken hollow eye sockets (centers at x = +-0.024, v_frac = 0.60)
+            for ex_c in (-0.024, 0.024):
+                edx = (x - ex_c) / 0.018
+                edz = (v_frac - 0.60) / 0.075
+                ed2 = edx * edx + edz * edz
+                if ed2 < 1.0:
+                    y += 0.016 * ((1.0 - ed2) ** 1.4) * fw
+
+            # 3. Heavy menacing furrowed brow ridge above eyes (v_frac around 0.69)
+            brow_d = abs(v_frac - 0.69) / 0.045
+            if brow_d < 1.0 and abs(x) < 0.048:
+                y -= 0.010 * (1.0 - brow_d * brow_d) * fw
+
+            # 4. Gaunt sunken cheek hollows below cheekbones (x = +-0.036, v_frac = 0.38)
+            for cx_c in (-0.036, 0.036):
+                cdx = (x - cx_c) / 0.020
+                cdz = (v_frac - 0.38) / 0.11
+                cd2 = cdx * cdx + cdz * cdz
+                if cd2 < 1.0:
+                    y += 0.012 * ((1.0 - cd2) ** 1.2) * fw
+
+            # 5. Open screaming/gasping dark horror mouth cavity (x in [-0.016, +0.016], v_frac in [0.20, 0.31])
+            mdx = x / 0.015
+            mdz = (v_frac - 0.255) / 0.052
+            md2 = mdx * mdx + mdz * mdz
+            if md2 < 1.0:
+                y += 0.018 * ((1.0 - md2) ** 1.5) * fw
+
+            # 6. Micro-displacement from SAM 3.1 face texture luminance (wrinkles, stitches, nasolabial folds)
+            u_img = max(0.04, min(0.96, 0.5 + x / 0.118))
+            v_img = max(0.04, min(0.96, v_frac))
+            px_i = int(u_img * 511)
+            py_i = int((1.0 - v_img) * 511)
+            l_val = float(lum_grid[py_i, px_i])
+            y -= (l_val - 0.45) * 0.008 * fw
+
+        vtx = bm.verts.new((x, y, z))
+        row.append(vtx)
+    h_grid.append(row)
+
+for r in range(H_ROWS - 1):
+    v_f0 = r / (H_ROWS - 1)
+    v_f1 = (r + 1) / (H_ROWS - 1)
+    for c in range(W_COLS - 1):
+        v1 = h_grid[r][c]
+        v2 = h_grid[r][c + 1]
+        v3 = h_grid[r + 1][c + 1]
+        v4 = h_grid[r + 1][c]
+        fc = bm.faces.new((v1, v2, v3, v4))
+        for loop, vf in zip(fc.loops, (v_f0, v_f0, v_f1, v_f1)):
+            co = loop.vert.co
+            if co.y < -0.045:
+                u = max(0.04, min(0.96, 0.5 + co.x / 0.118))
+                v = max(0.04, min(0.96, vf))
+            else:
+                u = 0.08
+                v = 0.12
+            loop[uv_layer].uv = (u, v)
+
+bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+bm.to_mesh(head_mesh)
 bm.free()
 
 # (B) Extract Left & Right 3D Sculpted Hands from base_mesh_obj!
@@ -450,4 +552,11 @@ sheet.paste(im1, (0, 0))
 sheet.paste(im2, (im1.width, 0))
 sheet.paste(im3, (im1.width * 2, 0))
 sheet.save("/tmp/opencode/agatha_sam31_preview.png")
+# Also render a close-up face portrait
+cam.location = (0.0, -0.62, 1.53)
+cam.rotation_euler = (math.radians(89), 0, 0)
+scene.render.resolution_x = 700
+scene.render.resolution_y = 700
+scene.render.filepath = "/tmp/opencode/agatha_face_closeup.png"
+bpy.ops.render.render(write_still=True)
 print("RENDERED 3-VIEW TURNAROUND: /tmp/opencode/agatha_sam31_preview.png")
