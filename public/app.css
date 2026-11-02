@@ -606,6 +606,73 @@ body {
   }
 }
 
+/* ---------- Preview actions: single segmented container (ui-taste) ----------
+ * Save-to-Library, Refresh, and Landscape/Expand buttons merge into ONE
+ * bordered pill so they read as one control rather than three floating
+ * boxes. The container owns the border+radius; inner buttons are borderless
+ * chips with a quiet hover wash and (for save/landscape active states) a
+ * tinted fill — no internal dividers (keeps it clean and immune to the
+ * dynamic .hidden toggling of save/refresh). */
+.preview-actions {
+  display: inline-flex;
+  align-items: stretch;
+  gap: 1px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: transparent;
+  padding: 0 2px;
+  height: 27px;
+  flex: 0 0 auto;
+}
+
+.preview-actions .save-btn {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  padding: 0 8px;
+  height: 100%;
+  min-height: 0;
+  color: var(--muted);
+}
+
+.preview-actions .save-btn:hover {
+  color: var(--ink);
+  background: var(--surface-2);
+  border-color: transparent;
+}
+
+.preview-actions .save-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+  border-radius: 4px;
+}
+
+.preview-actions .save-btn.is-saved {
+  color: var(--ok);
+  background: rgba(74, 222, 128, 0.08);
+}
+
+.preview-actions .save-btn.is-busy {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.preview-actions .landscape-btn[aria-pressed="true"],
+.preview-box.landscape-fullscreen .preview-actions .landscape-btn {
+  color: var(--accent);
+  background: var(--accent-dim);
+}
+
+@media (max-width: 480px) {
+  .preview-actions {
+    height: 27px;
+    padding: 0 1px;
+  }
+  .preview-actions .save-btn {
+    padding: 0 7px;
+  }
+}
+
 /* Terminal connect empty state */
 
 /* Fresh-terminal reconnect veil (ui-taste distill): quiet black cover with
@@ -2524,12 +2591,7 @@ button.icon-btn {
    on mobile devices (<= 960px), even when the user holds the phone in portrait.
    ========================================================================== */
 
-.landscape-btn[aria-pressed="true"],
-.preview-box.landscape-fullscreen .landscape-btn {
-  color: var(--accent);
-  border-color: rgba(125, 211, 252, 0.35);
-  background: var(--accent-dim);
-}
+/* landscape-btn active state handled by .preview-actions rules above (ui-taste). */
 
 .preview-box.landscape-fullscreen {
   position: fixed;
