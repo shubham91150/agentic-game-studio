@@ -46,3 +46,5 @@ Registered in `~/.config/muse/settings.json` (`src/tools/studio_3d_mcp_server.py
 Configured in `/home/opencode/.config/blender/3.4/scripts/startup/enable_pro_addons.py`:
 
 - `add_curve_sapling` (Sapling Tree Generator), `archimesh` (Architectural rooms/doors/windows/columns/roofs), `ant_landscape` (A.N.T. Landscape), `add_mesh_BoltFactory` (exact metric screws/bolts), `mesh_tiny_cad` (CAD vertex intersection/circle/bisect), `object_boolean_tools` (BoolTool non-destructive booleans), `mesh_looptools`, `mesh_f2`, `measureit`, `node_wrangler`.
+- `scenescript_wfc_build` (`python3 src/tools/scenescript_wfc_world.py --mode scenescript|wfc --out public/assets/custom/world.glb`): Meta SceneScript architectural DSL compiler (with real `manifold3d` CSG boolean door/window cutouts) + Wave Function Collapse (WFC) 3D courtyard/city generator.
+- `meta_vggt_reconstruct` (`python3 src/tools/meta_vggt_scene.py --image <img.jpg> --out public/assets/custom/vggt_scene.glb`): Feed-forward 3D surface mesh reconstructor from single/multi-view images + depth.

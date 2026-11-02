@@ -145,6 +145,31 @@ TOOLS = [
         },
     },
     {
+        "name": "scenescript_wfc_build",
+        "description": "Compile Meta SceneScript architectural DSL (with real manifold3d CSG boolean door/window openings) OR Wave Function Collapse (WFC) 3D bazaar/courtyard/city grid into a multi-material .glb.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "mode": {"type": "string", "enum": ["scenescript", "wfc"]},
+                "grid": {"type": "integer", "description": "WFC grid size (default 6)"},
+                "out": {"type": "string", "description": "Output .glb path"},
+            },
+            "required": ["mode"],
+        },
+    },
+    {
+        "name": "meta_vggt_reconstruct",
+        "description": "Reconstruct a 3D metric surface mesh (.glb) from an image and depth map (Meta VGGT-1B / Depth Anything V2 feed-forward 3D scene reconstruction).",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "image": {"type": "string", "description": "Input image path"},
+                "depth": {"type": "string", "description": "Optional depth PNG path"},
+                "out": {"type": "string", "description": "Output .glb path"},
+            },
+            "required": ["image"],
+        },
+    },    {
         "name": "run_visual_qa_gate",
         "description": "Run the hard Visual QA Gate on a game directory (default public/live-preview) to verify zero primitive box/cone fakes, active GLTFLoader .glb usage, 3D wind-swaying grass blades, CSP compliance, and ACESFilmicToneMapping.",
         "inputSchema": {
@@ -271,6 +296,25 @@ def handle_call(name: str, args: dict) -> str:
         if src == "ambientcg":
             return run_cmd(["python3", "src/tools/fetch_ambientcg.py", "--query", aid, "--limit", "1"])
         return run_cmd(["python3", "src/tools/fetch_polyhaven.py", aid, "--type", "auto", "--res", "1k"])
+    if name == "scenescript_wfc_build":
+        mode = str(args.get("mode", "scenescript"))
+        out = str(args.get("out", f"public/assets/custom/{mode}_world.glb"))
+        cmd = ["python3", "src/tools/scenescript_wfc_world.py", "--mode", mode, "--out", out]
+        if args.get("grid"):
+            cmd += ["--grid", str(args["grid"])]
+        return run_cmd(cmd, timeout=60)
+    if name == "meta_vggt_reconstruct":
+        cmd = [
+            "python3",
+            "src/tools/meta_vggt_scene.py",
+            "--image",
+            str(args.get("image", "storage/.uploads/sunrise_valley.jpg")),
+            "--out",
+            str(args.get("out", "public/assets/custom/vggt_scene.glb")),
+        ]
+        if args.get("depth"):
+            cmd += ["--depth", str(args["depth"])]
+        return run_cmd(cmd, timeout=120)
     if name == "run_visual_qa_gate":
         target = str(args.get("target_dir", "public/live-preview"))
         return run_cmd(["node", "src/verifier/visual_qa_gate.js", target], timeout=30)
