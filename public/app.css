@@ -9,7 +9,7 @@
 
   /* Canvas & surfaces */
   --bg: #000;
-  --surface-0: #08080b;
+  --surface-0: #000;
   --surface-1: #0e0e13;
   --surface-2: #15151c;
   --surface-3: #1d1d26;
@@ -813,11 +813,11 @@ body {
 }
 
 .prompt-box {
-  // ui-taste: slightly lifted from pure black
+  // ui-taste: lifted one step above pure black app/terminal bg
   width: 100%;
   border: 1px solid rgba(255, 255, 255, 0.09);
   border-radius: 12px;
-  background: #141418;
+  background: #121212;
   overflow: visible;
   position: relative;
   text-align: left;
@@ -1085,10 +1085,10 @@ button.icon-btn {
 
 /* LEFT composer — minimal (ui-taste polish): single soft box, quiet row. */
 .prompt-box {
-  // ui-taste: slightly lifted from pure black
+  // ui-taste: #121212 sits one step above the pure-black app/terminal bg
   border-color: var(--line);
   border-radius: var(--r-lg);
-  background: var(--surface-0);
+  background: #121212;
   max-width: 100%;
 }
 
