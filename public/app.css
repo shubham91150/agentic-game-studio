@@ -2449,3 +2449,108 @@ button.icon-btn {
   text-overflow: ellipsis;
   max-width: 50vw;
 }
+
+/* ==========================================================================
+   Mobile Landscape Game Preview Stage (ui-taste + ios-design):
+   Ensures #game-frame always runs in true widescreen landscape (width > height)
+   on mobile devices (<= 960px), even when the user holds the phone in portrait.
+   ========================================================================== */
+
+.landscape-btn[aria-pressed="true"],
+.preview-box.landscape-fullscreen .landscape-btn {
+  color: var(--accent);
+  border-color: rgba(125, 211, 252, 0.35);
+  background: var(--accent-dim);
+}
+
+.preview-box.landscape-fullscreen {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  border: 0;
+  border-radius: 0;
+  background: var(--bg);
+}
+
+.preview-box.landscape-fullscreen > .terminal-head {
+  min-height: 40px;
+  padding: 6px 12px;
+  background: rgba(8, 8, 11, 0.92);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+@media (max-width: 960px) and (orientation: portrait) {
+  .workspace-split[data-active-pane="preview"] {
+    padding: 4px 7px calc(4px + env(safe-area-inset-bottom)) 7px;
+    gap: 4px;
+  }
+
+  .preview-box.mobile-landscape > .terminal-head {
+    min-height: 34px;
+    padding: 4px 10px;
+  }
+
+  .preview-box.mobile-landscape > .viewport {
+    overflow: hidden;
+    position: relative;
+  }
+
+  .preview-box.mobile-landscape > .viewport > #game-frame {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: calc(100dvh - 115px);
+    height: calc(100dvw - 16px);
+    max-width: none;
+    max-height: none;
+    flex: 0 0 auto;
+    transform: translate(-50%, -50%) rotate(90deg);
+    transform-origin: center center;
+  }
+
+  .preview-box.landscape-fullscreen > .viewport > #game-frame {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: calc(100dvh - 42px);
+    height: 100dvw;
+    max-width: none;
+    max-height: none;
+    flex: 0 0 auto;
+    transform: translate(-50%, -50%) rotate(90deg);
+    transform-origin: center center;
+  }
+}
+
+@media (max-width: 960px) and (orientation: landscape) {
+  .crumbs {
+    min-height: 34px;
+    padding: 3px 8px;
+  }
+
+  .mobile-tabs {
+    margin: 4px 8px 0 8px;
+    padding: 2px;
+  }
+
+  .mobile-tab {
+    min-height: 28px;
+    padding: 3px 8px;
+    font-size: var(--fs-12);
+  }
+
+  .workspace-split {
+    padding: 4px 8px calc(4px + env(safe-area-inset-bottom)) 8px;
+    gap: 4px;
+  }
+
+  .preview-box > .terminal-head {
+    min-height: 34px;
+    padding: 4px 10px;
+  }
+
+  .viewport {
+    min-height: 0;
+  }
+}

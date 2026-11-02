@@ -48,6 +48,11 @@
   var librarySub = document.getElementById("library-sub");
   var saveLibraryBtn = document.getElementById("save-library-btn");
   var refreshPreviewBtn = document.getElementById("refresh-preview-btn");
+  var landscapePreviewBtn = document.getElementById("landscape-preview-btn");
+  var landscapeBtnLabel = document.getElementById("landscape-btn-label");
+  var previewBox =
+    document.getElementById("preview-box") ||
+    document.querySelector(".preview-box");
   // Base preview URL (without cache-bust ?t=) tracked client-side so the
   // Refresh button can reload the iframe without a backend round-trip.
   var currentPreviewUrl = null;
@@ -200,8 +205,9 @@
     splitEl.setAttribute("data-active-pane", pane);
     if (tabCli) tabCli.classList.toggle("active", pane === "cli");
     if (tabPreview) tabPreview.classList.toggle("active", pane === "preview");
-    if (pane === "preview" && previewReadyDot) {
-      previewReadyDot.classList.add("hidden");
+    if (pane === "preview") {
+      if (previewReadyDot) previewReadyDot.classList.add("hidden");
+      if (previewBox) previewBox.classList.add("mobile-landscape");
     }
   }
   if (tabCli) {
@@ -404,6 +410,93 @@
       }, 500);
     });
   }
+
+  // Mobile landscape widescreen stage + full-bleed fullscreen lock (#landscape-preview-btn).
+  // By default .preview-box has .mobile-landscape so #game-frame runs in true
+  // widescreen landscape (width > height) on mobile portrait viewports.
+  if (previewBox) {
+    previewBox.classList.add("mobile-landscape");
+  }
+
+  function syncLandscapeFullscreenUi(active) {
+    if (!landscapePreviewBtn) return;
+    landscapePreviewBtn.setAttribute("aria-pressed", active ? "true" : "false");
+    landscapePreviewBtn.setAttribute(
+      "title",
+      active
+        ? "Exit fullscreen landscape (Esc)"
+        : "Toggle landscape / fullscreen",
+    );
+    if (landscapeBtnLabel) {
+      landscapeBtnLabel.textContent = active ? "Exit" : "Landscape";
+    }
+  }
+
+  function setLandscapeFullscreen(active) {
+    if (!previewBox) return;
+    previewBox.classList.add("mobile-landscape");
+    previewBox.classList.toggle("landscape-fullscreen", Boolean(active));
+    syncLandscapeFullscreenUi(Boolean(active));
+    if (active) {
+      if (previewBox.requestFullscreen) {
+        try {
+          var p = previewBox.requestFullscreen();
+          if (p && typeof p.catch === "function") p.catch(function () {});
+        } catch (e) {
+          /* ignore */
+        }
+      }
+      if (
+        window.screen &&
+        window.screen.orientation &&
+        typeof window.screen.orientation.lock === "function"
+      ) {
+        try {
+          var lp = window.screen.orientation.lock("landscape");
+          if (lp && typeof lp.catch === "function") lp.catch(function () {});
+        } catch (e) {
+          /* ignore */
+        }
+      }
+    } else {
+      if (document.fullscreenElement && document.exitFullscreen) {
+        try {
+          var ep = document.exitFullscreen();
+          if (ep && typeof ep.catch === "function") ep.catch(function () {});
+        } catch (e) {
+          /* ignore */
+        }
+      }
+      if (
+        window.screen &&
+        window.screen.orientation &&
+        typeof window.screen.orientation.unlock === "function"
+      ) {
+        try {
+          window.screen.orientation.unlock();
+        } catch (e) {
+          /* ignore */
+        }
+      }
+    }
+  }
+
+  if (landscapePreviewBtn && previewBox) {
+    landscapePreviewBtn.addEventListener("click", function () {
+      var next = !previewBox.classList.contains("landscape-fullscreen");
+      setLandscapeFullscreen(next);
+    });
+  }
+
+  document.addEventListener("keydown", function (event) {
+    if (
+      event.key === "Escape" &&
+      previewBox &&
+      previewBox.classList.contains("landscape-fullscreen")
+    ) {
+      setLandscapeFullscreen(false);
+    }
+  });
 
   // Chat history sidebar (LEFT slide-over): archived tmux transcripts.
   // The live terminal is a ttyd iframe, so resume = view transcript +

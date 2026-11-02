@@ -711,7 +711,7 @@
           id="result"
           aria-label="Game preview"
         >
-          <div class="preview-box">
+          <div class="preview-box mobile-landscape" id="preview-box">
             <div class="terminal-head">
               <div class="window-title-group">
                 <span class="window-dots" aria-hidden="true">
@@ -766,7 +766,31 @@
                       d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"
                     ></path>
                   </svg>
-                  
+                </button>
+                <button
+                  type="button"
+                  id="landscape-preview-btn"
+                  class="save-btn landscape-btn"
+                  title="Toggle landscape / fullscreen"
+                  aria-label="Toggle landscape / fullscreen"
+                  aria-pressed="false"
+                >
+                  <svg
+                    width="13"
+                    height="13"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <rect x="2" y="5" width="20" height="14" rx="2"></rect>
+                    <path d="M8 21h8"></path>
+                    <path d="M12 19v2"></path>
+                  </svg>
+                  <span class="save-btn-label" id="landscape-btn-label">Landscape</span>
                 </button>
               </div>
               <span class="stage-badge" aria-hidden="true">
