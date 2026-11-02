@@ -1,10 +1,21 @@
 #!/usr/bin/env python3
 """Studio 3D & World Generation MCP Server (stdio JSON-RPC 2.0).
 
-Exposes Agentic Game Studio's PartNet/ShapeNet builder, Blender Pro generators
-(Sapling Tree Gen, Archimesh Building, A.N.T. Landscape), OpenStreetMap 3D City
-Extruder, Objaverse structure inspector, BlenderKit/PolyHaven/ambientCG CC0
-fetchers, and Visual QA Gate as first-class MCP tools inside Muse Code CLI.
+Exposes Agentic Game Studio's 14 real 3D, World, Audio, and QA tools:
+  1. partnet_shapenet_build
+  2. blender_pro_generate
+  3. blender_autorig_animate
+  4. depth_to_gaussian_splat
+  5. generate_game_audio
+  6. meta_musicgen_generate
+  7. osm_real_world_city_3d
+  8. objaverse_inspect_3d
+  9. blenderkit_search_free
+  10. fetch_cc0_pbr_or_model
+  11. scenescript_wfc_build
+  12. meta_vggt_reconstruct
+  13. gltf_transform_optimize
+  14. run_visual_qa_gate
 """
 import json
 import os
@@ -95,6 +106,19 @@ TOOLS = [
         },
     },
     {
+        "name": "meta_musicgen_generate",
+        "description": "Generate real 32kHz AI music & soundscapes from a text prompt using Meta's official AudioCraft `facebook/musicgen-small` (300M parameter neural model).",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "prompt": {"type": "string", "description": "Text prompt describing the music or audio loop (e.g. 'upbeat electronic racing synthwave loop')"},
+                "seconds": {"type": "number", "description": "Duration in seconds (default 4.0)"},
+                "out": {"type": "string", "description": "Output .wav path (default public/assets/audio/musicgen_theme.wav)"},
+            },
+            "required": ["prompt"],
+        },
+    },
+    {
         "name": "osm_real_world_city_3d",
         "description": "Extrude a real-world 3D city/bazaar district (.glb) from OpenStreetMap building footprints, road networks, parks, and waterways (presets: lucknow_hazratganj, monaco_harbor, tokyo_shibuya, nyc_times_square).",
         "inputSchema": {
@@ -159,17 +183,31 @@ TOOLS = [
     },
     {
         "name": "meta_vggt_reconstruct",
-        "description": "Reconstruct a 3D metric surface mesh (.glb) from an image and depth map (Meta VGGT-1B / Depth Anything V2 feed-forward 3D scene reconstruction).",
+        "description": "Reconstruct a 3D metric surface mesh (.glb) from an image using Meta VGGT-1B on Modal GPU (`--backend modal`) with automatic local Depth-Anything-V2 + Delaunay 3D mesh fallback (`--backend local`).",
         "inputSchema": {
             "type": "object",
             "properties": {
                 "image": {"type": "string", "description": "Input image path"},
                 "depth": {"type": "string", "description": "Optional depth PNG path"},
+                "backend": {"type": "string", "enum": ["modal", "local"], "description": "Backend: 'modal' (Meta VGGT-1B on GPU) or 'local'"},
                 "out": {"type": "string", "description": "Output .glb path"},
             },
             "required": ["image"],
         },
-    },    {
+    },
+    {
+        "name": "gltf_transform_optimize",
+        "description": "Optimize any .glb 3D model using @gltf-transform/core + @gltf-transform/functions (dedup, weld, prune, center pivot).",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "in": {"type": "string", "description": "Input .glb path"},
+                "out": {"type": "string", "description": "Output optimized .glb path"},
+            },
+            "required": ["in"],
+        },
+    },
+    {
         "name": "run_visual_qa_gate",
         "description": "Run the hard Visual QA Gate on a game directory (default public/live-preview) to verify zero primitive box/cone fakes, active GLTFLoader .glb usage, 3D wind-swaying grass blades, CSP compliance, and ACESFilmicToneMapping.",
         "inputSchema": {
@@ -256,6 +294,18 @@ def handle_call(name: str, args: dict) -> str:
         if args.get("out_dir"):
             cmd += ["--out-dir", str(args["out_dir"])]
         return run_cmd(cmd, timeout=60)
+    if name == "meta_musicgen_generate":
+        cmd = [
+            "python3",
+            "src/tools/meta_musicgen_audio.py",
+            "--prompt",
+            str(args.get("prompt", "upbeat electronic racing synthwave loop")),
+            "--seconds",
+            str(args.get("seconds", 4.0)),
+            "--out",
+            str(args.get("out", "public/assets/audio/musicgen_theme.wav")),
+        ]
+        return run_cmd(cmd, timeout=300)
     if name == "osm_real_world_city_3d":
         cmd = [
             "python3",
@@ -309,12 +359,18 @@ def handle_call(name: str, args: dict) -> str:
             "src/tools/meta_vggt_scene.py",
             "--image",
             str(args.get("image", "storage/.uploads/sunrise_valley.jpg")),
+            "--backend",
+            str(args.get("backend", "local")),
             "--out",
             str(args.get("out", "public/assets/custom/vggt_scene.glb")),
         ]
         if args.get("depth"):
             cmd += ["--depth", str(args["depth"])]
-        return run_cmd(cmd, timeout=120)
+        return run_cmd(cmd, timeout=180)
+    if name == "gltf_transform_optimize":
+        in_glb = str(args.get("in", "storage/cache/pro_builder/bazaar_stall.glb"))
+        out_glb = str(args.get("out", in_glb))
+        return run_cmd(["node", "src/tools/gltf_optimize.js", "--in", in_glb, "--out", out_glb], timeout=60)
     if name == "run_visual_qa_gate":
         target = str(args.get("target_dir", "public/live-preview"))
         return run_cmd(["node", "src/verifier/visual_qa_gate.js", target], timeout=30)

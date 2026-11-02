@@ -1,14 +1,16 @@
 #!/usr/bin/env python3
-"""Meta VGGT-Style Feed-Forward 3D Scene & Surface Mesh Reconstructor.
+"""Meta VGGT-1B (`facebookresearch/vggt`) Feed-Forward 3D Scene & Surface Mesh Reconstructor.
 
-Reconstructs a metric 3D textured surface mesh (.glb) + camera intrinsics +
-3D point cloud from 1 or more images using metric depth back-projection and
-Delaunay / heightfield triangulation (compatible with Meta VGGT-1B outputs
-and local Depth Anything V2 depth maps on CPU-only VMs).
+Supports two backends via `--backend modal|local`:
+  - `modal`: Invokes real Meta `VGGT-1B` (`facebook/VGGT-1B`) on Modal GPU (`spurcode-meta-vggt` / `MetaVGGT`)
+    via `modal.Cls.from_name("spurcode-meta-vggt", "MetaVGGT")`, and automatically falls back
+    to `local` if Modal is offline or still deploying.
+  - `local`: Uses Depth Anything V2 metric depth back-projection + heightfield triangulation
+    for instant zero-GPU reconstruction.
 
 Usage:
   python3 src/tools/meta_vggt_scene.py --image storage/.uploads/sunrise_valley.jpg \
-    --depth /tmp/opencode/sunrise_depth.png --out public/assets/custom/vggt_scene.glb
+    --backend modal --out public/assets/custom/vggt_scene.glb
 """
 import argparse
 import json
@@ -23,7 +25,29 @@ from PIL import Image
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
-def reconstruct_vggt_mesh(image_path: str, depth_path: str, out_path: str, grid_w: int = 128, grid_h: int = 86) -> dict:
+def reconstruct_vggt_modal(image_path: str, out_path: str) -> dict:
+    import modal
+
+    with open(image_path, "rb") as f:
+        image_bytes = f.read()
+
+    cls = modal.Cls.from_name("spurcode-meta-vggt", "MetaVGGT")
+    glb_bytes = cls().reconstruct.remote(image_bytes)
+
+    os.makedirs(os.path.dirname(os.path.abspath(out_path)), exist_ok=True)
+    with open(out_path, "wb") as f:
+        f.write(glb_bytes)
+
+    return {
+        "ok": True,
+        "backend": "modal",
+        "model": "facebook/VGGT-1B (Modal GPU spurcode-meta-vggt)",
+        "out": out_path,
+        "bytes": len(glb_bytes),
+    }
+
+
+def reconstruct_vggt_local(image_path: str, depth_path: str, out_path: str, grid_w: int = 128, grid_h: int = 86, fallback_reason: str = "") -> dict:
     if not depth_path or not os.path.exists(depth_path):
         depth_path = "/tmp/opencode/vggt_auto_depth.png"
         subprocess.run(
@@ -48,7 +72,7 @@ def reconstruct_vggt_mesh(image_path: str, depth_path: str, out_path: str, grid_
     gy = d_norm * 4.2
 
     verts = np.stack([gx, gy, gz], axis=-1).reshape(-1, 3)
-    colors = np.concatenate([rgb.reshape(-1, 3), np.full(( grid_w * grid_h, 1), 255, dtype=np.uint8)], axis=-1)
+    colors = np.concatenate([rgb.reshape(-1, 3), np.full((grid_w * grid_h, 1), 255, dtype=np.uint8)], axis=-1)
 
     faces = []
     for r in range(grid_h - 1):
@@ -72,9 +96,10 @@ def reconstruct_vggt_mesh(image_path: str, depth_path: str, out_path: str, grid_
     with open(out_path, "wb") as f:
         f.write(glb_bytes)
 
-    return {
+    res = {
         "ok": True,
-        "model": "Meta-VGGT-1B-compatible feed-forward 3D surface reconstructor",
+        "backend": "local",
+        "model": "Meta-VGGT-1B-compatible feed-forward 3D surface reconstructor (Depth-Anything-V2 + Delaunay mesh)",
         "out": out_path,
         "bytes": len(glb_bytes),
         "grid": f"{grid_w}x{grid_h}",
@@ -82,16 +107,34 @@ def reconstruct_vggt_mesh(image_path: str, depth_path: str, out_path: str, grid_
         "faces": int(len(faces)),
         "intrinsics": {"fov_deg": 55.0, "aspect": round(aspect, 3)},
     }
+    if fallback_reason:
+        res["modal_fallback_reason"] = fallback_reason
+    return res
+
+
+def reconstruct_vggt_mesh(image_path: str, depth_path: str, out_path: str, backend: str = "local") -> dict:
+    if backend == "modal":
+        try:
+            return reconstruct_vggt_modal(image_path, out_path)
+        except Exception as exc:
+            return reconstruct_vggt_local(
+                image_path,
+                depth_path,
+                out_path,
+                fallback_reason=f"Modal spurcode-meta-vggt unavailable/deploying ({exc}); used local Depth-Anything-V2 + Delaunay 3D mesh fallback",
+            )
+    return reconstruct_vggt_local(image_path, depth_path, out_path)
 
 
 def main():
-    ap = argparse.ArgumentParser(description="Meta VGGT-Style 3D Scene & Mesh Reconstructor")
+    ap = argparse.ArgumentParser(description="Meta VGGT-1B 3D Scene & Mesh Reconstructor")
     ap.add_argument("--image", required=True, help="Input RGB image")
     ap.add_argument("--depth", default="", help="Optional precomputed depth PNG")
+    ap.add_argument("--backend", choices=["modal", "local"], default="local", help="Execution backend: modal (Meta VGGT-1B on GPU) or local (Depth-Anything-V2 + Delaunay fallback)")
     ap.add_argument("--out", default="public/assets/custom/vggt_scene.glb", help="Output .glb path")
     args = ap.parse_args()
 
-    res = reconstruct_vggt_mesh(args.image, args.depth, args.out)
+    res = reconstruct_vggt_mesh(args.image, args.depth, args.out, backend=args.backend)
     print(json.dumps(res, indent=2))
 
 
