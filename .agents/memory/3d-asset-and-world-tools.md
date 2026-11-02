@@ -1,3 +1,9 @@
+---
+name: 3d-asset-and-world-tools
+description: Native studio-3d-tools MCP and CLI tools for PartNet/ShapeNet, Blender Pro/AutoRig, 3DGS, OSM 3D City, SceneScript+WFC, VGGT, Objaverse, BlenderKit, PolyHaven, ambientCG, and audio.
+type: project
+---
+
 # 3D Asset, World & Audio Generation Tools (Full Potential Reference)
 
 ## 1. First-Class MCP Server (`studio-3d-tools`)

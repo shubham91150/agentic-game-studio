@@ -1,3 +1,9 @@
+---
+name: game-system-design-blueprints
+description: Authoritative game engineering blueprints in docs/game-system-design/01..05.md covering ECS, HFSM, Marco Monster car physics, Quake controller, Poisson/WFC/SceneScript, and 6 genre specs.
+type: project
+---
+
 # Game System Design Blueprints (`docs/game-system-design/`)
 
 Always consult the relevant blueprint in `docs/game-system-design/` (and skill `.agents/skills/game-system-design/SKILL.md`) before designing or coding any game system:

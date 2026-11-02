@@ -1,3 +1,9 @@
+---
+name: visual-qa-and-subagent-rules
+description: Mandatory multi-subagent orchestration (subagent_spawn), research-first workflow, PartNet part-by-part modeling, and visual_qa_gate.js enforcement.
+type: project
+---
+
 # Visual QA, Research-First & Multi-Subagent Rules
 
 1. **Mandatory Multi-Subagent Orchestration (`subagent_spawn` + `subagent_wait`)**:
