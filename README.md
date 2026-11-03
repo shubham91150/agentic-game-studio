@@ -1,6 +1,48 @@
+<div align="center">
+
 # Agentic Game Studio
 
-**Type a sentence (or speak a voice prompt). Watch a playable 3D prototype build in stages** — live in your browser with a real Muse Code CLI terminal, 17 native 3D/World/Audio MCP tools, 26 agent skills, and Unity C# export. Flagship proof: **Ashes of St. Vermilion** (Hello Neighbor 2-grade gothic stealth horror — photogrammetry furniture, bloom + film grade, cabinet hiding, live Meta AI Director) and **Horizon Sprint**.
+**Hello Neighbor 2-grade gothic horror — one prompt. Real Muse Code CLI, live in your browser.**
+
+**⚡ 19s → playable 3D game** · **✅ 81/81 tests** · **🔧 17 MCP tools** · **🧠 10 Meta AI models** · **🛡️ gVisor 4.19.0-gvisor sandbox**
+
+<table>
+<tr>
+<td width="62%"><img src="https://raw.githubusercontent.com/shubham91150/agentic-game-studio/main/public/assets/evidence/hn2_chapel.png" width="100%" alt="Ashes of St. Vermilion — chapel interior with altar and candlelight" /></td>
+<td width="38%" valign="top">
+<br/><br/>
+<a href="https://spurcode.duckdns.org/studio/?judge=meta-judge-2026">▶ Live Studio</a>
+<br/><br/>
+<a href="https://spurcode.duckdns.org/studio/hackathon.html">▶ Judges Brief</a>
+<br/><br/>
+<a href="https://spurcode.duckdns.org/studio/live-preview/index.html">▶ Play Ashes of St. Vermilion</a>
+</td>
+</tr>
+</table>
+
+**Judges: open https://spurcode.duckdns.org/studio/?judge=meta-judge-2026**
+
+</div>
+
+## Results / Highlights
+
+- One voice or text prompt → playable 3D game in ~19s (cached) / ~60s (fresh build)
+- Flagship: Ashes of St. Vermilion — 19 Polyhaven photogrammetry scans, UnrealBloomPass, 20-bone Blender rig, SAM 3.1 quadrant-calibrated Mother Agatha with red glowing eyes, live Meta AI Director, Gothic cabinet peek-hide
+- 5/5 official Meta Model APIs + 4 Meta open-weight models + Muse Code CLI INSIDE the app
+- Google gVisor (4.19.0-gvisor) kernel sandbox — judges build games with full CLI powers, zero VM risk
+- 825,000+ 3D models via Smithsonian + Khronos + Polyhaven + BlenderKit + Objaverse + Meta SAM 3D
+- 81/81 automated tests, 6/6 visual QA gate, 36/36 BFS physics reachability
+
+<table>
+<tr>
+<td><img src="https://raw.githubusercontent.com/shubham91150/agentic-game-studio/main/public/assets/evidence/hn2_desks.png" width="400" alt="Convent classroom with school desks" /></td>
+<td><img src="https://raw.githubusercontent.com/shubham91150/agentic-game-studio/main/public/assets/evidence/hn2_chapel.png" width="400" alt="Chapel interior with altar" /></td>
+</tr>
+<tr>
+<td><img src="https://raw.githubusercontent.com/shubham91150/agentic-game-studio/main/public/assets/evidence/hn2_hidden.png" width="400" alt="Cabinet peek-hide view" /></td>
+<td><img src="https://raw.githubusercontent.com/shubham91150/agentic-game-studio/main/public/assets/evidence/sam31_face.png" width="400" alt="SAM 3.1 face segmentation evidence" /></td>
+</tr>
+</table>
 
 Built for the **Meta Global AI Developer Hackathon 2026** · Indie Developer track · Theme: **Push the Frontier**
 
@@ -8,12 +50,12 @@ Built for the **Meta Global AI Developer Hackathon 2026** · Indie Developer tra
 
 ## Judging map (4 official criteria)
 
-| Criterion                       | Weight  | What to look at in this repo                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
-| ------------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Impact**                      | **30%** | Solo devs and game-jam teams lose days scaffolding a 3D prototype, rigging NPCs, extruding environments, and wiring physics/audio. Here, one prompt (or voice clip) runs a full agentic pipeline + live Muse Code CLI terminal with **17 native 3D/World MCP tools** — and judges can build + play new games with zero login inside a **Google gVisor (`4.19.0-gvisor`) sandbox**. |
-| **Use of Meta AI Tooling**      | **25%** | Covers **all 5 official Meta Model API product lines** (`muse-wonder-1.0`, `muse-spark-1.3`, `muse-image-1.0`, `sam-3.1`, `muse-voice-transcribe-1.0`) + **4 Meta Open-Weight models** (`muse-spark-open-1026` on Baseten powering the **live runtime AI Director**, **SAM 3D Objects**, **Meta VGGT-1B**, **Meta MusicGen**, plus **Meta SceneScript DSL**) + **Muse Code CLI** (`subagent_spawn`, `.agents/memory/`, 26 skills, 17 MCP tools). |
-| **Demo**                        | **25%** | Live studio with split-pane **Live Muse Code CLI terminal** + **3D WebGL preview** (desktop + mobile landscape touch controls + QR code). Flagship **Ashes of St. Vermilion**: photogrammetry convent, EffectComposer bloom + film grade, cabinet hiding, searchable drawers, adaptive 4-bus horror audio, and a live AI Director whispering room-aware Hindi/English tactics. In-app **Git & GitHub drawer** (status, commit & push, Pages export). Prebuilt games in the persistent library load instantly with zero wait. |
-| **Technical Depth & Execution** | **20%** | Deterministic shared layout + **BFS reachability** & **CCD zero-tunneling** physics QA (`src/verifier/physics_qa_gate.js`), **Visual QA Gate** banning box/cone fakes (`src/verifier/visual_qa_gate.js`, incl. universal PointsMaterial-map check), `manifold3d` CSG boolean SceneScript + WFC builder, PartNet/ShapeNet CAD builder, Blender 3.4 auto-rigger + NLA animation baker, 3D Gaussian Splatting (`.splat`), OpenStreetMap 3D city extruder, SHA-256 prompt-hash caching, and a one-call `WorldRealism.enableMasterpieceRendering` PMREM+post helper. Tests: `npm test` (59/59 passing). |
+| Criterion | Weight | Proof |
+| --- | --- | --- |
+| **Impact** | **30%** | Prompt builds games |
+| **Use of Meta AI Tooling** | **25%** | 10 Meta models live |
+| **Demo** | **25%** | Playable gothic horror |
+| **Technical Depth & Execution** | **20%** | 81/81 tests, QA gates |
 
 ## Complete Meta AI stack (10 Meta models & research pipelines)
 
@@ -103,7 +145,7 @@ git clone https://github.com/shubham91150/agentic-game-studio.git
 cd agentic-game-studio
 npm install
 cp .env.example .env   # add BASETEN_API_KEY and META_API_KEY (Meta Model API)
-npm test               # runs the 59 unit, security, tmux, gVisor, git & QA gate tests
+npm test               # runs the 81 unit, security, tmux, gVisor, git, assistant, voice & QA gate tests
 
 # Verify the 17-tool MCP server and Meta Voice Transcribe:
 node src/tools/meta_voice_transcribe.js --audio public/assets/audio/voice_prompt_sample.wav
@@ -129,6 +171,10 @@ node src/server.js     # http://localhost:3030  · SSE at /api/studio/generate
 All project commits are dated **Oct 26 – Nov 4, 2026** (the hackathon build window) in this public repository. Third-party open source used: Three.js (MIT), Rapier 3D (Apache-2.0), manifold3d / trimesh (Apache-2.0 / MIT), Next.js/React (MIT), Lucide icons (ISC). CC0 assets fetched via Poly Haven & ambientCG APIs.
 
 Track: Indie Developer · Bonus targets: Best Agentic Use-Case, Best Build on Meta Open Weight Models, Best Creative Build (Muse Image + Muse Wonder).
+
+## Deadline
+
+Submission: Nov 5, 7:30 AM IST (Wed Nov 4, 9:00 PM ET) — Cerebral Valley portal
 
 ## License
 
