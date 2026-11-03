@@ -46,7 +46,7 @@
 
 Built for the **Meta Global AI Developer Hackathon 2026** · Indie Developer track · Theme: **Push the Frontier**
 
-**[Live studio](https://agentic-game-studio.vercel.app/)** · **[Play a prebuilt game](https://spurcode.duckdns.org/studio/games/game_1793194032409_62ce9b/index.html)** · **[Repo](https://github.com/shubham91150/agentic-game-studio)**
+**[Live studio](https://agentic-game-studio.vercel.app/)** · **[Play a prebuilt game](https://spurcode.duckdns.org/studio/games/game_1793679153102_17eff3/index.html)** · **[Repo](https://github.com/shubham91150/agentic-game-studio)**
 
 ## Judging map (4 official criteria)
 
@@ -135,7 +135,8 @@ And when using the **interactive Live Muse Code CLI terminal** in the studio (`p
 
 Prebuilt examples (generated on the VM):
 
-- [Low-gravity glacier course](https://spurcode.duckdns.org/studio/games/game_1793194032409_62ce9b/index.html)
+- [Ashes of St. Vermilion — gothic stealth horror](https://spurcode.duckdns.org/studio/games/game_1793679153102_17eff3/index.html)
+- [Horizon Sprint — 3D sports car racing](https://spurcode.duckdns.org/studio/games/game_1793459815775_afba76/index.html)
 - Full library: `GET https://spurcode.duckdns.org/api/studio/games`
 
 ## Run it yourself

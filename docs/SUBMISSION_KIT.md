@@ -86,7 +86,7 @@ Repo:   https://github.com/shubham91150/agentic-game-studio   (git remote `origi
 Brief:  <deployed-studio-URL>/studio/hackathon.html  (judges brief: stack, evidence, SAM 3D viewers, AI assistant, live receipt)
 Studio: <deployed-studio-URL>/studio/?judge=meta-judge-2026  (judge access link; token default in src/server.js)
 Live:   https://agentic-game-studio.vercel.app/               (per README header)
-Prebuilt game: https://spurcode.duckdns.org/studio/games/game_1793194032409_62ce9b/index.html  (per README)
+Prebuilt game: https://spurcode.duckdns.org/studio/games/game_1793679153102_17eff3/index.html
 Game library API: GET https://spurcode.duckdns.org/api/studio/games  (per README)
 Evidence (SAM 3D GPU trials): docs/evidence-sam3d/  (2 .glb + trial1/trial3/trial4/speed logs)
 ```
