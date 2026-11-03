@@ -443,7 +443,10 @@ test("tampered/expired/wrong-secret cookie → 401", async () => {
     { username: "owner", token: "t", exp: Date.now() + 60000 },
     SECRET,
   );
-  const tampered = good.slice(0, -1) + (good.endsWith("A") ? "B" : "A");
+  // Flip a DATA bit of the tag: the last base64url char of a 16-byte tag
+  // carries 4 ignored excess bits, so A<->B flips a no-op bit 25% of the
+  // time (phantom tamper that still verifies). A<->Q differs in bit 4.
+  const tampered = good.slice(0, -1) + (good.endsWith("A") ? "Q" : "A");
   assert.equal((await forged("GET", "/api/studio/chats", undefined, tampered)).status, 401);
   const expired = mintCookie(
     { username: "owner", token: "t", exp: Date.now() - 1000 },
