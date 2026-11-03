@@ -834,6 +834,133 @@ function json(res, status, body) {
   res.end(data);
 }
 
+// ---------- Studio Git & GitHub helpers (pure fns exported for tests) ----------
+const STUDIO_REPO_URL = "https://github.com/shubham91150/agentic-game-studio";
+const GIT_LOG_FORMAT = "%H|%h|%s|%an|%ad";
+const GIT_EXPORT_VENDOR_FILES = [
+  "three.min.js",
+  "GLTFLoader.js",
+  "DRACOLoader.js",
+  "CopyShader.js",
+  "LuminosityHighPassShader.js",
+  "EffectComposer.js",
+  "RenderPass.js",
+  "ShaderPass.js",
+  "UnrealBloomPass.js",
+  "world_realism.js",
+];
+
+// Parse `git status --porcelain` output into [{status, path}].
+// Never throws on unexpected input.
+export function parseGitStatus(porcelain) {
+  if (!porcelain || typeof porcelain !== "string") return [];
+  const files = [];
+  for (const line of porcelain.split("\n")) {
+    if (!line.trim()) continue;
+    const status = line.slice(0, 2).trim() || "?";
+    const p = line.slice(3).trim();
+    if (!p) continue;
+    files.push({ status, path: p });
+  }
+  return files;
+}
+
+// Parse one `git log --format=%H|%h|%s|%an|%ad` line into a commit object.
+// Message may itself contain "|" so ends are peeled off, middle is message.
+export function formatCommit(line) {
+  const chunks = String(line || "").split("|");
+  const sha = (chunks.shift() || "").trim();
+  const shortSha = (chunks.shift() || "").trim();
+  const date = chunks.length >= 2 ? String(chunks.pop()).trim() : "";
+  const author = chunks.length >= 1 ? String(chunks.pop()).trim() : "";
+  const message = chunks.join("|").trim();
+  return {
+    sha,
+    shortSha,
+    message,
+    author,
+    date,
+    url: `${STUDIO_REPO_URL}/commit/${sha}`,
+  };
+}
+
+// Slugify an export repo name to [a-z0-9-]. Returns "" when nothing usable.
+export function slugifyGitRepoName(name) {
+  return String(name || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+// Scrub anything token-shaped from git/gh output before returning to clients.
+function scrubSecrets(text) {
+  return String(text || "").replace(
+    /(ghp_|gho_|ghu_|ghs_|ghr_|github_pat_)[A-Za-z0-9_]+/g,
+    "[redacted]",
+  );
+}
+
+function gitRunSync(args, timeoutMs) {
+  return execFileSync("git", ["-C", ROOT_DIR, ...args], {
+    encoding: "utf8",
+    timeout: timeoutMs || 15000,
+  });
+}
+
+// Fresh git status payload shared by the status route and the sync route.
+// Never throws: git failure becomes {ok:false, error}.
+function getGitStatusJson() {
+  try {
+    const branch = String(gitRunSync(["branch", "--show-current"])).trim();
+    const headLine = String(
+      gitRunSync(["log", "-1", `--format=${GIT_LOG_FORMAT}`, "--date=iso"]),
+    ).trim();
+    const headFull = formatCommit(headLine);
+    const head = {
+      sha: headFull.sha,
+      shortSha: headFull.shortSha,
+      message: headFull.message,
+      author: headFull.author,
+      date: headFull.date,
+    };
+    const changedFiles = parseGitStatus(
+      String(gitRunSync(["status", "--porcelain"])),
+    );
+    const logOut = String(
+      gitRunSync(["log", "-10", `--format=${GIT_LOG_FORMAT}`, "--date=iso"]),
+    );
+    const commits = logOut
+      .split("\n")
+      .filter((l) => l.trim())
+      .map(formatCommit);
+    return {
+      ok: true,
+      repoUrl: STUDIO_REPO_URL,
+      branch,
+      head,
+      dirtyCount: changedFiles.length,
+      changedFiles,
+      commits,
+    };
+  } catch (err) {
+    return {
+      ok: false,
+      error: scrubSecrets(
+        String((err && err.message) || err).slice(0, 500),
+      ),
+    };
+  }
+}
+
+function ghCliAvailable() {
+  try {
+    execFileSync("gh", ["--version"], { encoding: "utf8", timeout: 10000 });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 const server = http.createServer(async (req, res) => {
   const url = new URL(
     req.url || "/",
@@ -2492,6 +2619,192 @@ async function activateStoredGame(gameId) {
       }
       directorCache.set(sig, { at: Date.now(), model, decision });
       return json(res, 200, { ok: true, model, cached: false, ...decision });
+    });
+    return;
+  }
+
+  // ---------- Git status (PUBLIC read-only) ----------
+  if (pathname === "/api/studio/git/status" && req.method === "GET") {
+    return json(res, 200, getGitStatusJson());
+  }
+
+  // ---------- Git sync (OWNER-ONLY): add + commit + push ----------
+  if (pathname === "/api/studio/git/sync" && req.method === "POST") {
+    if (ownerGuard(req, res)) return;
+    let body = "";
+    req.on("data", (chunk) => (body += chunk));
+    req.on("end", async () => {
+      let payload = {};
+      try {
+        payload = JSON.parse(body || "{}");
+      } catch {
+        payload = {};
+      }
+      const message =
+        String(payload.message || "").trim() ||
+        "chore(studio): sync studio and game updates";
+      try {
+        execFileSync("git", ["-C", ROOT_DIR, "add", "-A"], {
+          encoding: "utf8",
+          timeout: 30000,
+        });
+        const dirty = parseGitStatus(
+          String(
+            execFileSync("git", ["-C", ROOT_DIR, "status", "--porcelain"], {
+              encoding: "utf8",
+              timeout: 30000,
+            }),
+          ),
+        );
+        if (dirty.length > 0) {
+          execFileSync("git", ["-C", ROOT_DIR, "commit", "-m", message], {
+            encoding: "utf8",
+            timeout: 30000,
+          });
+        }
+        try {
+          await execFileAsync(
+            "git",
+            ["-C", ROOT_DIR, "push", "origin", "main"],
+            { encoding: "utf8", timeout: 60000, maxBuffer: 1024 * 1024 },
+          );
+        } catch (pushErr) {
+          const detail = scrubSecrets(
+            String(
+              (pushErr && pushErr.stderr) ||
+                (pushErr && pushErr.message) ||
+                pushErr,
+            ).slice(0, 1000),
+          );
+          return json(res, 200, { ok: false, error: detail });
+        }
+        return json(res, 200, {
+          ok: true,
+          pushed: true,
+          status: getGitStatusJson(),
+        });
+      } catch (err) {
+        return json(res, 200, {
+          ok: false,
+          error: scrubSecrets(
+            String((err && err.message) || err).slice(0, 1000),
+          ),
+        });
+      }
+    });
+    return;
+  }
+
+  // ---------- Export live-preview game to its own GitHub repo (OWNER-ONLY) ----------
+  if (pathname === "/api/studio/git/export-game" && req.method === "POST") {
+    if (ownerGuard(req, res)) return;
+    let body = "";
+    req.on("data", (chunk) => (body += chunk));
+    req.on("end", async () => {
+      let payload = {};
+      try {
+        payload = JSON.parse(body || "{}");
+      } catch {
+        payload = {};
+      }
+      const slug = slugifyGitRepoName(payload.repoName);
+      if (!slug) {
+        return json(res, 400, {
+          ok: false,
+          error: "repoName is required (letters, numbers, dashes).",
+        });
+      }
+      const stage = `/tmp/ags-export-${slug}`;
+      try {
+        const liveDir = path.join(PUBLIC_DIR, "live-preview");
+        if (!fs.existsSync(path.join(liveDir, "index.html"))) {
+          return json(res, 400, {
+            ok: false,
+            error: "No live preview to export. Build a game first.",
+          });
+        }
+        fs.rmSync(stage, { recursive: true, force: true });
+        fs.mkdirSync(stage, { recursive: true });
+        fs.cpSync(liveDir, stage, { recursive: true });
+        const vendorDir = path.join(stage, "vendor");
+        fs.mkdirSync(vendorDir, { recursive: true });
+        for (const f of GIT_EXPORT_VENDOR_FILES) {
+          const src = path.join(ROOT_DIR, "src", "engine", "vendor", f);
+          try {
+            if (fs.existsSync(src)) fs.copyFileSync(src, path.join(vendorDir, f));
+          } catch {
+            /* skip unreadable vendor file */
+          }
+        }
+        const stageIndex = path.join(stage, "index.html");
+        try {
+          const html = fs.readFileSync(stageIndex, "utf8");
+          fs.writeFileSync(
+            stageIndex,
+            html.replaceAll("/studio/vendor/", "./vendor/"),
+            "utf8",
+          );
+        } catch {
+          /* keep un-rewritten index */
+        }
+        execFileSync("git", ["init", "-b", "main"], {
+          cwd: stage,
+          encoding: "utf8",
+          timeout: 30000,
+        });
+        execFileSync("git", ["add", "-A"], {
+          cwd: stage,
+          encoding: "utf8",
+          timeout: 30000,
+        });
+        execFileSync(
+          "git",
+          [
+            "-c",
+            "user.name=Agentic Game Studio",
+            "-c",
+            "user.email=studio@localhost",
+            "commit",
+            "-m",
+            `feat: export ${slug} game`,
+          ],
+          { cwd: stage, encoding: "utf8", timeout: 30000 },
+        );
+      } catch (err) {
+        return json(res, 200, {
+          ok: false,
+          error: scrubSecrets(
+            String((err && err.message) || err).slice(0, 1000),
+          ),
+          stage,
+        });
+      }
+      if (!ghCliAvailable()) {
+        return json(res, 200, {
+          ok: false,
+          needsGh: true,
+          message: "gh CLI with repo scope required",
+          stage,
+        });
+      }
+      try {
+        await execFileAsync(
+          "gh",
+          ["repo", "create", slug, "--public", "--source", stage, "--push"],
+          { encoding: "utf8", timeout: 60000, maxBuffer: 1024 * 1024 },
+        );
+        return json(res, 200, { ok: true, pushed: true, stage, repo: slug });
+      } catch (err) {
+        return json(res, 200, {
+          ok: false,
+          error: scrubSecrets(
+            String(
+              (err && err.stderr) || (err && err.message) || err,
+            ).slice(0, 1000),
+          ),
+          stage,
+        });
+      }
     });
     return;
   }

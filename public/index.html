@@ -13,7 +13,7 @@
     />
     <title>Agentic Game Studio</title>
     <link rel="stylesheet" href="/studio/fonts/fonts.css" />
-    <link rel="stylesheet" href="/studio/app.css?v=14" />
+    <link rel="stylesheet" href="/studio/app.css?v=15" />
     <link rel="manifest" href="/studio/manifest.webmanifest" />
     <link rel="apple-touch-icon" href="/studio/icon.svg" />
     <link
@@ -93,6 +93,36 @@
           >
             Library <span class="count-badge" id="library-count"></span>
           </button>
+          <button
+            type="button"
+            id="git-btn"
+            class="crumb-btn"
+            title="Git status &amp; GitHub sync"
+          >
+            <svg
+              width="13"
+              height="13"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <line x1="6" y1="3" x2="6" y2="15" />
+              <circle cx="18" cy="6" r="3" />
+              <circle cx="6" cy="18" r="3" />
+              <path d="M18 9a9 9 0 0 1-9 9" />
+            </svg>
+            Git
+            <span class="git-sha" id="git-sha"></span>
+            <span
+              class="git-dirty-dot hidden"
+              id="git-dirty-dot"
+              title="Uncommitted changes"
+            ></span>
+          </button>
           <a
             href="https://github.com/shubham91150/agentic-game-studio"
             target="_blank"
@@ -148,6 +178,120 @@
           Built by the agent, ready to play.
         </p>
         <div class="library-grid" id="library-grid"></div>
+      </aside>
+
+      <!-- Git & GitHub drawer -->
+      <aside
+        class="git-drawer"
+        id="git-drawer"
+        aria-label="Git and GitHub"
+        aria-hidden="true"
+      >
+        <div class="drawer-head">
+          <div class="window-title-group">
+            <span class="window-dots" aria-hidden="true">
+              <span></span><span></span><span></span>
+            </span>
+            <span class="terminal-title">Git &amp; GitHub</span>
+          </div>
+          <div class="git-head-actions">
+            <a
+              class="terminal-open"
+              id="git-repo-link"
+              href="https://github.com/shubham91150/agentic-game-studio"
+              target="_blank"
+              rel="noreferrer"
+              >Open on GitHub ↗</a
+            >
+            <button
+              type="button"
+              id="git-close"
+              class="icon-btn"
+              aria-label="Close git panel"
+            >
+              <svg
+                width="15"
+                height="15"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M18 6 6 18" />
+                <path d="m6 6 12 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
+        <div class="git-body">
+          <div class="git-card" id="git-head-card">
+            <div class="git-branch-row">
+              <span class="git-branch" id="git-branch">…</span>
+              <span
+                class="git-dirty-badge hidden"
+                id="git-dirty-badge"
+              ></span>
+            </div>
+            <p class="git-head-msg" id="git-head-msg">Loading git status…</p>
+            <p class="git-head-meta" id="git-head-meta"></p>
+          </div>
+          <div class="git-section">
+            <label class="sr-only" for="git-commit-input"
+              >Commit message</label
+            >
+            <input
+              type="text"
+              class="git-input"
+              id="git-commit-input"
+              placeholder="Commit message (optional)"
+              maxlength="200"
+              autocomplete="off"
+            />
+            <button
+              type="button"
+              class="git-btn-primary"
+              id="git-sync-btn"
+            >
+              Commit &amp; sync
+            </button>
+            <p
+              class="git-result"
+              id="git-sync-result"
+              role="status"
+              aria-live="polite"
+            ></p>
+          </div>
+          <div class="git-section">
+            <label class="sr-only" for="git-export-input"
+              >Standalone game repo name</label
+            >
+            <input
+              type="text"
+              class="git-input"
+              id="git-export-input"
+              placeholder="my-standalone-game"
+              maxlength="100"
+              autocomplete="off"
+            />
+            <button
+              type="button"
+              class="git-btn-primary"
+              id="git-export-btn"
+            >
+              Export standalone game repo
+            </button>
+            <p
+              class="git-result"
+              id="git-export-result"
+              role="status"
+              aria-live="polite"
+            ></p>
+          </div>
+          <h2 class="git-section-title">Recent commits</h2>
+          <div class="git-commits" id="git-commits-list"></div>
+        </div>
       </aside>
 
       <!-- Chat history sidebar (LEFT slide-over: archived transcripts) -->
@@ -881,6 +1025,6 @@
           </div>
         </section>
       </div>
-    <script src="/studio/studio.js?v=14"></script>
+    <script src="/studio/studio.js?v=15"></script>
   </body>
 </html>

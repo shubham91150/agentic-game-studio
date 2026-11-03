@@ -1,6 +1,6 @@
 # Agentic Game Studio
 
-**Type a sentence (or speak a voice prompt). Watch a playable 3D prototype build in stages** — live in your browser with a real Muse Code CLI terminal, 15 native 3D/World/Audio MCP tools, 26 agent skills, and Unity C# export.
+**Type a sentence (or speak a voice prompt). Watch a playable 3D prototype build in stages** — live in your browser with a real Muse Code CLI terminal, 17 native 3D/World/Audio MCP tools, 26 agent skills, and Unity C# export. Flagship proof: **Ashes of St. Vermilion** (Hello Neighbor 2-grade gothic stealth horror — photogrammetry furniture, bloom + film grade, cabinet hiding, live Meta AI Director) and **Horizon Sprint**.
 
 Built for the **Meta Global AI Developer Hackathon 2026** · Indie Developer track · Theme: **Push the Frontier**
 
@@ -10,10 +10,10 @@ Built for the **Meta Global AI Developer Hackathon 2026** · Indie Developer tra
 
 | Criterion                       | Weight  | What to look at in this repo                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
 | ------------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Impact**                      | **30%** | Solo devs and game-jam teams lose days scaffolding a 3D prototype, rigging NPCs, extruding environments, and wiring physics/audio. Here, one prompt (or voice clip) runs a full agentic pipeline + live Muse Code CLI terminal with **15 native 3D/World MCP tools**.                                                                                                                                                                                                          |
-| **Use of Meta AI Tooling**      | **25%** | Covers **all 5 official Meta Model API product lines** (`muse-wonder-1.0`, `muse-spark-1.3`, `muse-image-1.0`, `sam-3.1`, `muse-voice-transcribe-1.0`) + **Meta Open Weights** (`muse-spark-open-1026` on Baseten, **SAM 3D Objects**, **Meta VGGT-1B**, **Meta MusicGen**, **Meta SceneScript DSL**) + **Muse Code CLI** (`subagent_spawn`, `.agents/memory/`, 26 skills, 15 MCP tools).                                                                                      |
-| **Demo**                        | **25%** | Live studio with split-pane **Live Muse Code CLI terminal** + **3D WebGL preview** (desktop + mobile landscape touch controls + QR code). Prebuilt games in the persistent library load instantly with zero wait.                                                                                                                                                                                                                                                              |
-| **Technical Depth & Execution** | **20%** | Deterministic shared layout + **BFS reachability** & **CCD zero-tunneling** physics QA (`src/verifier/physics_qa_gate.js`), **Visual QA Gate** banning box/cone fakes (`src/verifier/visual_qa_gate.js`), `manifold3d` CSG boolean SceneScript + WFC builder, PartNet/ShapeNet CAD builder, Blender 3.4 auto-rigger + NLA animation baker, 3D Gaussian Splatting (`.splat`), OpenStreetMap 3D city extruder, and SHA-256 prompt-hash caching. Tests: `npm test` (9/9 passing). |
+| **Impact**                      | **30%** | Solo devs and game-jam teams lose days scaffolding a 3D prototype, rigging NPCs, extruding environments, and wiring physics/audio. Here, one prompt (or voice clip) runs a full agentic pipeline + live Muse Code CLI terminal with **17 native 3D/World MCP tools** — and judges can build + play new games with zero login inside a **Google gVisor (`4.19.0-gvisor`) sandbox**. |
+| **Use of Meta AI Tooling**      | **25%** | Covers **all 5 official Meta Model API product lines** (`muse-wonder-1.0`, `muse-spark-1.3`, `muse-image-1.0`, `sam-3.1`, `muse-voice-transcribe-1.0`) + **4 Meta Open-Weight models** (`muse-spark-open-1026` on Baseten powering the **live runtime AI Director**, **SAM 3D Objects**, **Meta VGGT-1B**, **Meta MusicGen**, plus **Meta SceneScript DSL**) + **Muse Code CLI** (`subagent_spawn`, `.agents/memory/`, 26 skills, 17 MCP tools). |
+| **Demo**                        | **25%** | Live studio with split-pane **Live Muse Code CLI terminal** + **3D WebGL preview** (desktop + mobile landscape touch controls + QR code). Flagship **Ashes of St. Vermilion**: photogrammetry convent, EffectComposer bloom + film grade, cabinet hiding, searchable drawers, adaptive 4-bus horror audio, and a live AI Director whispering room-aware Hindi/English tactics. In-app **Git & GitHub drawer** (status, commit & push, Pages export). Prebuilt games in the persistent library load instantly with zero wait. |
+| **Technical Depth & Execution** | **20%** | Deterministic shared layout + **BFS reachability** & **CCD zero-tunneling** physics QA (`src/verifier/physics_qa_gate.js`), **Visual QA Gate** banning box/cone fakes (`src/verifier/visual_qa_gate.js`, incl. universal PointsMaterial-map check), `manifold3d` CSG boolean SceneScript + WFC builder, PartNet/ShapeNet CAD builder, Blender 3.4 auto-rigger + NLA animation baker, 3D Gaussian Splatting (`.splat`), OpenStreetMap 3D city extruder, SHA-256 prompt-hash caching, and a one-call `WorldRealism.enableMasterpieceRendering` PMREM+post helper. Tests: `npm test` (59/59 passing). |
 
 ## Complete Meta AI stack (10 Meta models & research pipelines)
 
@@ -32,9 +32,9 @@ Every model and tool below is verified in this repository with exact file paths 
 | 9   | **Meta MusicGen** (`facebook/musicgen-small`)               | Local HuggingFace / PyTorch (`300M` params, 32 kHz neural audio)          | Text-to-music AI soundtrack & ambient loop generation (`.wav`)                  | `src/tools/meta_musicgen_audio.py`, `public/assets/audio/musicgen_theme.wav`        |
 | 10  | **Meta SceneScript DSL** + WFC                              | Local `manifold3d` CSG booleans + `trimesh`                               | Architectural DSL (`make_wall`, `make_door`, `make_window`) → watertight `.glb` | `src/tools/scenescript_wfc_world.py`, `public/assets/custom/scenescript_bazaar.glb` |
 
-## 15 Native MCP Tools (`studio-3d-tools`)
+## 17 Native MCP Tools (`studio-3d-tools`)
 
-Registered in `~/.config/muse/settings.json` and served by `src/tools/studio_3d_mcp_server.py` (JSON-RPC 2.0 stdio), giving the live **Muse Code CLI** direct access to 15 specialized 3D, World, Audio, Voice, and QA tools:
+Registered in `~/.config/muse/settings.json` and served by `src/tools/studio_3d_mcp_server.py` (JSON-RPC 2.0 stdio), giving the live **Muse Code CLI** direct access to 17 specialized 3D, World, Audio, Voice, and QA tools:
 
 | #   | MCP Tool Name             | What it builds / verifies                                                                                                                                            | Underlying Script / Engine                                     |
 | --- | ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
@@ -53,6 +53,8 @@ Registered in `~/.config/muse/settings.json` and served by `src/tools/studio_3d_
 | 13  | `gltf_transform_optimize` | Optimizes `.glb` models using `@gltf-transform/core` + `@gltf-transform/functions` (`dedup`, `weld`, `prune`, `center`)                                              | `src/tools/gltf_optimize.js`                                   |
 | 14  | `run_visual_qa_gate`      | Runs the hard **Visual QA Gate** verifying zero primitive box/cone fakes, active `GLTFLoader` `.glb` usage, 3D grass blades, and CSP                                 | `src/verifier/visual_qa_gate.js`                               |
 | 15  | `meta_voice_transcribe`   | Transcribes spoken voice prompts or audio clips via Meta's `muse-voice-transcribe-1.0` (`POST /v1/asr/transcribe` & `muse voice`)                                    | `src/tools/meta_voice_transcribe.js`                           |
+| 16  | `elite_imagination_engine` | Hitman/Resident-Evil/Hello-Neighbor-2 design engine: clockwork stealth sandboxes, multi-step puzzle chains, adaptive AI & 12 goosebump micro-detail layers        | `src/tools/elite_imagination_engine.js`                        |
+| 17  | `mega_3d_hub_search_and_fetch` | Unified 825K+ 3D-model hub search & fetch: Smithsonian 3D laser scans, Khronos glTF showcase, Poly Haven, BlenderKit (22K+ free)                          | `src/tools/fetch_mega_3d_hub.py`                               |
 
 ## 26 Validated Agent Skills & Persistent Memory
 
@@ -81,7 +83,7 @@ Every stage below runs in the automated SSE build path (`POST /api/studio/genera
 | 8   | Physics QA: CCD zero-tunneling, camera clearance, jump arc, **BFS reachability**  | local math                                       | `src/verifier/physics_qa_gate.js`                   |
 | 9   | Persistent library with playable links                                            | VM disk + JSON index                             | `src/storage/game_store.js`                         |
 
-And when using the **interactive Live Muse Code CLI terminal** in the studio (`public/live-preview/`), the agent orchestrates parallel subagents (`subagent_spawn`), invokes the **15 MCP tools** (`studio-3d-tools`) to build real multi-part `.glb` models, animated NPCs, 3D Gaussian Splats, and AI audio stems, and verifies the output with `node src/verifier/visual_qa_gate.js`.
+And when using the **interactive Live Muse Code CLI terminal** in the studio (`public/live-preview/`), the agent orchestrates parallel subagents (`subagent_spawn`), invokes the **17 MCP tools** (`studio-3d-tools`) to build real multi-part `.glb` models, animated NPCs, 3D Gaussian Splats, and AI audio stems, and verifies the output with `node src/verifier/visual_qa_gate.js`. Flagship results: **Ashes of St. Vermilion** (`public/live-preview/`) and **Horizon Sprint**.
 
 ## Try it
 
@@ -101,9 +103,9 @@ git clone https://github.com/shubham91150/agentic-game-studio.git
 cd agentic-game-studio
 npm install
 cp .env.example .env   # add BASETEN_API_KEY and META_API_KEY (Meta Model API)
-npm test               # runs the 9 unit & QA gate tests
+npm test               # runs the 59 unit, security, tmux, gVisor, git & QA gate tests
 
-# Verify the 15-tool MCP server and Meta Voice Transcribe:
+# Verify the 17-tool MCP server and Meta Voice Transcribe:
 node src/tools/meta_voice_transcribe.js --audio public/assets/audio/voice_prompt_sample.wav
 node src/verifier/visual_qa_gate.js public/live-preview
 
@@ -115,7 +117,10 @@ node src/server.js     # http://localhost:3030  · SSE at /api/studio/generate
 
 - **Two complementary build modes**:
   1. **Fast automated SSE path (`/api/studio/generate`)**: Runs steps 0–9 in ~19s (or ~26ms on cache hit) using Muse Wonder 1.0, Muse Spark Open (Baseten), Muse Image 1.0, Muse Code CLI (`muse-spark-1.3`), deterministic heightmap terrain, and BFS physics QA.
-  2. **Deep interactive CLI & MCP path (`/api/studio/terminal/send` + `studio-3d-tools` MCP)**: Uses the 15 MCP tools (PartNet/ShapeNet CAD `.glb` builder, Blender Sapling/Archimesh/Auto-Rig NLA animation baker, Meta SceneScript + WFC CSG builder, Meta VGGT-1B Modal GPU 3D reconstructor, SAM 3.1 / SAM 3D Objects, Meta MusicGen 32 kHz audio, Muse Voice Transcribe, and `visual_qa_gate.js`) to assemble rich multi-asset 3D worlds in `public/live-preview/`.
+  2. **Deep interactive CLI & MCP path (`/api/studio/terminal/send` + `studio-3d-tools` MCP)**: Uses the 17 MCP tools (PartNet/ShapeNet CAD `.glb` builder, Blender Sapling/Archimesh/Auto-Rig NLA animation baker, Meta SceneScript + WFC CSG builder, Meta VGGT-1B Modal GPU 3D reconstructor, SAM 3.1 / SAM 3D Objects, Meta MusicGen 32 kHz audio, Muse Voice Transcribe, mega 3D hub, elite imagination engine, and `visual_qa_gate.js`) to assemble rich multi-asset 3D worlds in `public/live-preview/`.
+- **Judge Sandbox**: unauthenticated visitors build real games via `POST /api/studio/generate`, executed inside **Google gVisor (`runsc`, `4.19.0-gvisor`)** with read-only mounts, while owner routes stay behind AES-256-GCM GitHub-cookie auth (`test/studio_security.test.js`).
+- **Live runtime AI Director**: `POST /api/studio/ai/director` streams `muse-spark-open-1026` tactics, Hindi/English whispers, and environment events (blackout, storm, ash vortex, chapel omen) into the running game every 14s.
+- **In-app Git integration**: header `#git-btn` + slide-over drawer (`GET /api/studio/git/status` public; owner-only sync & GitHub-Pages export).
 - **Baseten vs Meta Model API**: The Muse Code CLI binary cannot query Baseten directly (its model-catalog check gets HTTP 405 from Baseten's endpoint), so Baseten (`muse-spark-open-1026`) is called in the planner/dialogue layer while the CLI runs against the first-party Meta Model API (`muse-spark-1.3`).
 - If any external provider is unreachable, tools report exact status and fall back cleanly rather than faking silent success.
 

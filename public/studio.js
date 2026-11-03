@@ -390,6 +390,7 @@
 
   function openLibrary() {
     pausePreviewGame();
+    closeGit();
     if (libraryDrawer) {
       libraryDrawer.classList.add("open");
       libraryDrawer.setAttribute("aria-hidden", "false");
@@ -415,9 +416,10 @@
 
   if (libraryBtn) libraryBtn.addEventListener("click", openLibrary);
   if (libraryClose) libraryClose.addEventListener("click", closeLibrary);
-  if (drawerOverlay) drawerOverlay.addEventListener("click", closeLibrary);
+  // Shared overlay + Escape close whichever drawer is open (only one at a time).
+  if (drawerOverlay) drawerOverlay.addEventListener("click", closeAllDrawers);
   document.addEventListener("keydown", function (event) {
-    if (event.key === "Escape") closeLibrary();
+    if (event.key === "Escape") closeAllDrawers();
   });
 
   // Library count badge — refreshed on load and after a successful publish.
@@ -438,6 +440,353 @@
   }
   // Library count badge on load (no drawer fetch until opened)
   refreshLibraryCount();
+
+  // ---------- Git & GitHub drawer ----------
+  // Mirrors the library drawer: same shared #drawer-overlay, same open/close
+  // pattern, only one drawer open at a time. All server strings go through
+  // textContent (never innerHTML) — CSP-safe, zero inline handlers.
+  var gitBtn = document.getElementById("git-btn");
+  var gitSha = document.getElementById("git-sha");
+  var gitDirtyDot = document.getElementById("git-dirty-dot");
+  var gitDrawer = document.getElementById("git-drawer");
+  var gitClose = document.getElementById("git-close");
+  var gitRepoLink = document.getElementById("git-repo-link");
+  var gitBranch = document.getElementById("git-branch");
+  var gitHeadMsg = document.getElementById("git-head-msg");
+  var gitHeadMeta = document.getElementById("git-head-meta");
+  var gitDirtyBadge = document.getElementById("git-dirty-badge");
+  var gitCommitInput = document.getElementById("git-commit-input");
+  var gitSyncBtn = document.getElementById("git-sync-btn");
+  var gitSyncResult = document.getElementById("git-sync-result");
+  var gitExportInput = document.getElementById("git-export-input");
+  var gitExportBtn = document.getElementById("git-export-btn");
+  var gitExportResult = document.getElementById("git-export-result");
+  var gitCommitsList = document.getElementById("git-commits-list");
+  var gitRepoUrl = "https://github.com/shubham91150/agentic-game-studio";
+
+  function closeGit() {
+    if (gitDrawer) {
+      gitDrawer.classList.remove("open");
+      gitDrawer.setAttribute("aria-hidden", "true");
+    }
+    if (
+      drawerOverlay &&
+      (!libraryDrawer || !libraryDrawer.classList.contains("open"))
+    ) {
+      drawerOverlay.classList.add("hidden");
+    }
+  }
+
+  function closeAllDrawers() {
+    closeLibrary();
+    closeGit();
+  }
+
+  function safeHttpUrl(value) {
+    if (typeof value !== "string") return "";
+    var v = value.trim();
+    if (/^https:\/\//i.test(v)) return v;
+    if (/^http:\/\/localhost(:\d+)?\//i.test(v)) return v;
+    return "";
+  }
+
+  function formatGitDate(value) {
+    if (!value) return "";
+    try {
+      var d = new Date(value);
+      if (isNaN(d.getTime())) return String(value).slice(0, 16);
+      return d.toLocaleString(undefined, {
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    } catch (e) {
+      return "";
+    }
+  }
+
+  function renderGitCommits(commits) {
+    if (!gitCommitsList) return;
+    gitCommitsList.innerHTML = "";
+    var rows = Array.isArray(commits) ? commits.slice(0, 10) : [];
+    if (!rows.length) {
+      var empty = document.createElement("div");
+      empty.className = "git-empty";
+      empty.textContent = "No commits yet";
+      gitCommitsList.appendChild(empty);
+      return;
+    }
+    rows.forEach(function (c) {
+      var sha = c.sha || c.id || "";
+      var short = c.shortSha || (sha ? String(sha).slice(0, 7) : "…");
+      var row = document.createElement("div");
+      row.className = "git-commit-row";
+      var link = document.createElement("a");
+      link.className = "git-commit-sha";
+      link.textContent = short;
+      var url =
+        safeHttpUrl(c.url) ||
+        (sha ? safeHttpUrl(gitRepoUrl + "/commit/" + sha) : "");
+      if (url) {
+        link.href = url;
+        link.target = "_blank";
+        link.rel = "noreferrer";
+      } else {
+        link.href = "#";
+        link.addEventListener("click", function (ev) {
+          ev.preventDefault();
+        });
+      }
+      row.appendChild(link);
+      var main = document.createElement("div");
+      main.className = "git-commit-main";
+      var msg = document.createElement("p");
+      msg.className = "git-commit-msg";
+      var firstLine = String(c.message || c.msg || "—").split("\n")[0];
+      msg.textContent = firstLine;
+      msg.title = firstLine;
+      main.appendChild(msg);
+      var meta = document.createElement("p");
+      meta.className = "git-commit-meta";
+      meta.textContent = [c.author, formatGitDate(c.date || c.createdAt)]
+        .filter(Boolean)
+        .join(" · ");
+      main.appendChild(meta);
+      row.appendChild(main);
+      gitCommitsList.appendChild(row);
+    });
+  }
+
+  function renderGitStatus(data) {
+    var d = data && typeof data === "object" ? data : {};
+    var head = d.head && typeof d.head === "object" ? d.head : {};
+    var sha = d.sha || d.shortSha || head.sha || head.id || "";
+    var short = d.shortSha || (sha ? String(sha).slice(0, 7) : "");
+    var dirty =
+      typeof d.dirtyCount === "number"
+        ? d.dirtyCount
+        : typeof d.dirty === "number"
+          ? d.dirty
+          : d.dirty === true
+            ? 1
+            : 0;
+    if (gitSha) gitSha.textContent = short;
+    if (gitDirtyDot) gitDirtyDot.classList.toggle("hidden", !(dirty > 0));
+    if (gitBranch) gitBranch.textContent = d.branch || head.branch || "—";
+    if (gitHeadMsg) {
+      var msg = String(
+        d.headMsg || d.message || head.message || head.msg || "",
+      ).split("\n")[0];
+      gitHeadMsg.textContent = msg || (short ? "—" : "Git status unavailable");
+    }
+    if (gitHeadMeta) {
+      gitHeadMeta.textContent = [
+        short,
+        d.headAuthor || d.author || head.author,
+        formatGitDate(d.headDate || d.date || head.date),
+      ]
+        .filter(Boolean)
+        .join(" · ");
+    }
+    if (gitDirtyBadge) {
+      if (dirty > 0) {
+        gitDirtyBadge.textContent =
+          dirty + (dirty === 1 ? " change" : " changes");
+        gitDirtyBadge.classList.remove("hidden");
+      } else {
+        gitDirtyBadge.textContent = "";
+        gitDirtyBadge.classList.add("hidden");
+      }
+    }
+    var repo = safeHttpUrl(d.repoUrl || d.repo || d.remoteUrl);
+    if (repo) {
+      gitRepoUrl = repo;
+      if (gitRepoLink) gitRepoLink.href = repo;
+    }
+    renderGitCommits(d.commits || d.recent || d.log);
+  }
+
+  function refreshGitStatus() {
+    return fetch("/api/studio/git/status")
+      .then(function (res) {
+        if (res.status === 401) throw new Error("auth");
+        if (!res.ok) throw new Error("status " + res.status);
+        return res.json();
+      })
+      .then(renderGitStatus)
+      .catch(function (err) {
+        // Backend may not exist yet: keep last-good values, show a hint
+        // only in the drawer (never break the header button).
+        if (
+          gitHeadMsg &&
+          (!gitHeadMsg.textContent || !gitSha || !gitSha.textContent)
+        ) {
+          gitHeadMsg.textContent =
+            err && err.message === "auth"
+              ? "Owner sign-in required"
+              : "Git status unavailable";
+        }
+        if (gitCommitsList && !gitCommitsList.hasChildNodes()) {
+          renderGitCommits([]);
+        }
+      });
+  }
+
+  function setGitResult(el, text, cls) {
+    if (!el) return;
+    el.classList.remove("is-ok", "is-error");
+    el.textContent = text || "";
+    if (cls) el.classList.add(cls);
+  }
+
+  function openGit() {
+    pausePreviewGame();
+    closeLibrary();
+    if (gitDrawer) {
+      gitDrawer.classList.add("open");
+      gitDrawer.setAttribute("aria-hidden", "false");
+    }
+    if (drawerOverlay) drawerOverlay.classList.remove("hidden");
+    refreshGitStatus();
+  }
+
+  if (gitBtn) gitBtn.addEventListener("click", openGit);
+  if (gitClose) gitClose.addEventListener("click", closeGit);
+
+  // Sync: commit (optional message) + push. Disabled while pending, inline
+  // result, 401 → owner sign-in hint.
+  if (gitSyncBtn) {
+    gitSyncBtn.addEventListener("click", function () {
+      if (gitSyncBtn.disabled) return;
+      gitSyncBtn.disabled = true;
+      var label = gitSyncBtn.textContent;
+      gitSyncBtn.textContent = "Syncing…";
+      setGitResult(gitSyncResult, "");
+      var message = gitCommitInput ? gitCommitInput.value.trim() : "";
+      fetch("/api/studio/git/sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: message }),
+      })
+        .then(function (res) {
+          return res.json().then(function (data) {
+            return { status: res.status, ok: res.ok, data: data || {} };
+          });
+        })
+        .then(function (result) {
+          if (result.status === 401) {
+            setGitResult(
+              gitSyncResult,
+              "Owner sign-in required",
+              "is-error",
+            );
+            return;
+          }
+          if (!result.ok) {
+            throw new Error(result.data.error || "sync failed");
+          }
+          var out =
+            result.data.message ||
+            result.data.sha ||
+            (result.data.pushed ? "Synced ✓" : "Synced ✓");
+          setGitResult(gitSyncResult, String(out), "is-ok");
+          if (gitCommitInput) gitCommitInput.value = "";
+          refreshGitStatus();
+        })
+        .catch(function (err) {
+          setGitResult(
+            gitSyncResult,
+            (err && err.message) || "Sync failed — try again.",
+            "is-error",
+          );
+        })
+        .then(function () {
+          gitSyncBtn.disabled = false;
+          gitSyncBtn.textContent = label;
+        });
+    });
+  }
+
+  // Export: scaffold a standalone game repo. Shows the repo URL (link) or a
+  // needsGh setup message — all strings escaped via textContent.
+  if (gitExportBtn) {
+    gitExportBtn.addEventListener("click", function () {
+      if (gitExportBtn.disabled) return;
+      var name = gitExportInput ? gitExportInput.value.trim() : "";
+      if (!name) {
+        setGitResult(gitExportResult, "Enter a repo name first.", "is-error");
+        return;
+      }
+      gitExportBtn.disabled = true;
+      var label = gitExportBtn.textContent;
+      gitExportBtn.textContent = "Exporting…";
+      setGitResult(gitExportResult, "");
+      fetch("/api/studio/git/export-game", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: name }),
+      })
+        .then(function (res) {
+          return res.json().then(function (data) {
+            return { status: res.status, ok: res.ok, data: data || {} };
+          });
+        })
+        .then(function (result) {
+          if (result.status === 401) {
+            setGitResult(
+              gitExportResult,
+              "Owner sign-in required",
+              "is-error",
+            );
+            return;
+          }
+          if (!result.ok) {
+            throw new Error(result.data.error || "export failed");
+          }
+          var url = safeHttpUrl(result.data.repoUrl || result.data.url);
+          if (url && gitExportResult) {
+            gitExportResult.classList.remove("is-error");
+            gitExportResult.classList.add("is-ok");
+            gitExportResult.textContent = "";
+            gitExportResult.appendChild(document.createTextNode("Repo: "));
+            var a = document.createElement("a");
+            a.href = url;
+            a.target = "_blank";
+            a.rel = "noreferrer";
+            a.textContent = url;
+            gitExportResult.appendChild(a);
+          } else if (result.data.needsGh) {
+            setGitResult(
+              gitExportResult,
+              String(result.data.needsGh),
+              "is-error",
+            );
+          } else {
+            setGitResult(
+              gitExportResult,
+              result.data.message || "Exported ✓",
+              "is-ok",
+            );
+          }
+        })
+        .catch(function (err) {
+          setGitResult(
+            gitExportResult,
+            (err && err.message) || "Export failed — try again.",
+            "is-error",
+          );
+        })
+        .then(function () {
+          gitExportBtn.disabled = false;
+          gitExportBtn.textContent = label;
+        });
+    });
+  }
+
+  // Live header state: refresh on load, on drawer open, and every 30s.
+  refreshGitStatus();
+  setInterval(refreshGitStatus, 30000);
 
   // Save the current live-preview game to the persistent library.
   // Calls POST /api/studio/publish (same logic as src/tools/publish-game.js),
