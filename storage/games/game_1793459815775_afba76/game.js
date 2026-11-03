@@ -50,9 +50,22 @@
 
   var scene = new THREE.Scene();
   var camera = new THREE.PerspectiveCamera(68, 1, 0.1, 3000);
+  var cam = camera;
 
   function boot() {
     var save = G.Save.load();
+    var masterpiece =
+      window.WorldRealism &&
+      typeof window.WorldRealism.enableMasterpieceRendering === "function"
+        ? window.WorldRealism.enableMasterpieceRendering(renderer, scene, cam, {
+            bloom: { strength: 0.25, radius: 0.35, threshold: 0.85 },
+            grade: {
+              shadow: [0.03, 0.06, 0.12],
+              highlight: [1.0, 0.92, 0.78],
+              vignette: 0.25,
+            },
+          })
+        : null;
     var world = G.buildWorld(scene, renderer);
     world.scene = scene;
     G.VFX.init(scene);
@@ -101,13 +114,16 @@
     function applyQuality(q) {
       save.quality = q;
       var dpr = window.devicePixelRatio || 1;
-      renderer.setPixelRatio(
+      var pr =
         q === 0
           ? Math.min(dpr, 1)
           : q === 1
             ? Math.min(dpr, 1.5)
-            : Math.min(dpr, 2),
-      );
+            : Math.min(dpr, 2);
+      renderer.setPixelRatio(pr);
+      if (masterpiece && typeof masterpiece.setPixelRatio === "function") {
+        masterpiece.setPixelRatio(pr);
+      }
       world.setQuality(q);
       G.VFX.setAmbient(q > 0);
       onResize();
@@ -693,7 +709,11 @@
         world.update(raw, now / 1000, player.mesh.position);
         G.VFX.update(raw, now / 1000, player.x, player.z);
         updateCamera(raw);
-        renderer.render(scene, camera);
+        if (save.quality > 0 && masterpiece && masterpiece.composer) {
+          masterpiece.composer.render();
+        } else {
+          renderer.render(scene, camera);
+        }
       }
     }
 
@@ -703,6 +723,9 @@
       camera.aspect = w / h;
       camera.updateProjectionMatrix();
       renderer.setSize(w, h);
+      if (masterpiece && typeof masterpiece.setSize === "function") {
+        masterpiece.setSize(w, h);
+      }
     }
     window.addEventListener("resize", onResize);
     onResize();

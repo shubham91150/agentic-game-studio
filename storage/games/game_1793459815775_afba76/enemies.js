@@ -12,7 +12,7 @@
       lane: -2.6,
       skill: 0.97,
       num: 11,
-      modelUrl: "/studio/assets/polyhaven/supercar_highpoly.glb",
+      modelUrl: "/studio/assets/custom/jdm_skyline_gtr.glb",
     },
     {
       name: "BOLT",
@@ -20,15 +20,15 @@
       lane: 2.6,
       skill: 0.94,
       num: 23,
-      modelUrl: "/studio/assets/polyhaven/supercar_highpoly.glb",
+      modelUrl: "/studio/assets/custom/jdm_skyline_gtr.glb",
     },
     {
       name: "VEX",
-      color: "232,232,232",
+      color: "38,84,196",
       lane: 0.2,
       skill: 0.91,
       num: 5,
-      modelUrl: "/studio/assets/polyhaven/ToyCar.glb",
+      modelUrl: "/studio/assets/custom/jdm_skyline_gtr.glb",
     },
   ];
 

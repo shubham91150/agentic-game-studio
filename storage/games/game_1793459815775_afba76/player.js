@@ -6,11 +6,11 @@
   window.G = window.G || {};
   var G = window.G;
 
-  var PLAYER_MODEL_URL = "/studio/assets/polyhaven/supercar_highpoly.glb";
+  var PLAYER_MODEL_URL = "/studio/assets/custom/jdm_skyline_gtr.glb";
   var AI_MODEL_URLS = [
-    "/studio/assets/polyhaven/supercar_highpoly.glb",
-    "/studio/assets/polyhaven/ToyCar.glb",
-    "/studio/assets/polyhaven/supercar_highpoly.glb",
+    "/studio/assets/custom/jdm_skyline_gtr.glb",
+    "/studio/assets/custom/jdm_skyline_gtr.glb",
+    "/studio/assets/custom/jdm_skyline_gtr.glb",
   ];
   var CB_COLORS = ["0,114,178", "230,159,0", "240,228,66"];
 
@@ -37,53 +37,107 @@
     return FLAMETEX;
   }
 
-  var ROUNDEL = {};
-  function roundelTex(num) {
-    if (ROUNDEL[num]) return ROUNDEL[num];
+  var AOTEX = null;
+  function ensureAoTex() {
+    if (AOTEX) return AOTEX;
     var c = document.createElement("canvas");
-    c.width = c.height = 128;
+    c.width = 128;
+    c.height = 256;
     var x = c.getContext("2d");
-    x.clearRect(0, 0, 128, 128);
-    x.fillStyle = "#f4f4f4";
-    x.beginPath();
-    x.arc(64, 64, 58, 0, 7);
-    x.fill();
-    x.lineWidth = 5;
-    x.strokeStyle = "#141414";
-    x.stroke();
-    x.fillStyle = "#141414";
-    x.font = "italic 900 64px Arial";
-    x.textAlign = "center";
-    x.textBaseline = "middle";
-    x.fillText(String(num), 64, 68);
-    var t = new THREE.CanvasTexture(c);
-    t.encoding = THREE.sRGBEncoding;
-    ROUNDEL[num] = t;
-    return t;
+    x.clearRect(0, 0, 128, 256);
+    x.save();
+    x.scale(1, 2);
+    var g = x.createRadialGradient(64, 64, 10, 64, 64, 62);
+    g.addColorStop(0, "rgba(0,0,0,0.88)");
+    g.addColorStop(0.55, "rgba(0,0,0,0.58)");
+    g.addColorStop(0.82, "rgba(0,0,0,0.22)");
+    g.addColorStop(1, "rgba(0,0,0,0)");
+    x.fillStyle = g;
+    x.fillRect(0, 0, 128, 128);
+    x.restore();
+    AOTEX = new THREE.CanvasTexture(c);
+    return AOTEX;
+  }
+
+  function rgb(rgbStr) {
+    return "rgb(" + (rgbStr || "210,31,38") + ")";
   }
 
   G.createCarMesh = function (rgbStr, num, modelUrl) {
     ensureFlameTex();
+    ensureAoTex();
+    // Forza Metallic Clearcoat Paint
     var paint = new THREE.MeshStandardMaterial({
-      color: "rgb(" + (rgbStr || "210,31,38") + ")",
-      roughness: 0.2,
-      metalness: 0.75,
-      envMapIntensity: 1.5,
+      color: rgb(rgbStr),
+      roughness: 0.12,
+      metalness: 0.86,
+      envMapIntensity: 2.2,
     });
-    if (G.roughTex) paint.roughnessMap = G.roughTex;
 
+    // Dark reflective window glass
+    var glassMat = new THREE.MeshStandardMaterial({
+      color: 0x0a1018,
+      roughness: 0.04,
+      metalness: 0.92,
+      envMapIntensity: 2.5,
+      transparent: true,
+      opacity: 0.82,
+      side: THREE.DoubleSide,
+    });
+
+    // Bright glowing red LED taillights
     var tailMat = new THREE.MeshStandardMaterial({
       color: 0x550000,
-      emissive: 0xff1a1a,
-      emissiveIntensity: 0.7,
-      roughness: 0.3,
-      metalness: 0.2,
+      emissive: 0xff1818,
+      emissiveIntensity: 2.2,
+      roughness: 0.16,
+      metalness: 0.35,
+      envMapIntensity: 1.5,
+    });
+
+    var rimMat = new THREE.MeshStandardMaterial({
+      color: 0xd8dde4,
+      roughness: 0.16,
+      metalness: 0.9,
+      envMapIntensity: 2.1,
+    });
+
+    var carbonMat = new THREE.MeshStandardMaterial({
+      color: 0x16191e,
+      roughness: 0.22,
+      metalness: 0.48,
+      envMapIntensity: 1.7,
+    });
+
+    var tireMat = new THREE.MeshStandardMaterial({
+      color: 0x15171a,
+      roughness: 0.8,
+      metalness: 0.06,
+      envMapIntensity: 0.65,
     });
 
     var grp = new THREE.Group();
     var steers = [];
     var spinners = [];
     var flames = [];
+
+    // Soft dark Underbody Contact Shadow AO plane grounded at y = 0.03
+    var aoPlane = new THREE.Mesh(
+      new THREE.PlaneGeometry(2.3, 4.7),
+      new THREE.MeshBasicMaterial({
+        map: AOTEX,
+        transparent: true,
+        opacity: 0.82,
+        depthWrite: false,
+        polygonOffset: true,
+        polygonOffsetFactor: -2,
+        polygonOffsetUnits: -2,
+      }),
+    );
+    aoPlane.rotation.x = -Math.PI / 2;
+    aoPlane.position.set(0, 0.03, 0);
+    aoPlane.renderOrder = 2;
+    grp.add(aoPlane);
 
     [-0.45, 0.45].forEach(function (fx) {
       var sm = new THREE.SpriteMaterial({
@@ -99,7 +153,25 @@
       flames.push(s);
     });
 
-    var chosenUrl = modelUrl || PLAYER_MODEL_URL;
+    var chosenUrl =
+      !modelUrl ||
+      modelUrl.indexOf("ToyCar") !== -1 ||
+      modelUrl.indexOf("supercar_highpoly") !== -1
+        ? PLAYER_MODEL_URL
+        : modelUrl;
+
+    var mb = {
+      group: grp,
+      position: grp.position,
+      modelRoot: null,
+      steeringWheel: null,
+      steers: steers,
+      spinners: spinners,
+      tailMat: tailMat,
+      flames: flames,
+      paint: paint,
+    };
+
     if (
       window.WorldRealism &&
       typeof window.WorldRealism.loadGlbModel === "function"
@@ -111,36 +183,42 @@
           modelRoot.traverse(function (node) {
             if (!node) return;
             var nm = (node.name || "").toLowerCase();
+            if (
+              nm === "wheel_fl" ||
+              nm === "wheel_fr" ||
+              nm === "wheel_rl" ||
+              nm === "wheel_rr"
+            ) {
+              wheelNodes.push(node);
+            } else if (nm === "steeringwheel") {
+              mb.steeringWheel = node;
+            }
             if (node.isMesh) {
               node.castShadow = true;
               node.receiveShadow = true;
-              if (nm === "body" || nm === "spoiler") {
+              var mName =
+                node.material && node.material.name
+                  ? node.material.name.toLowerCase()
+                  : "";
+              if (
+                mName === "paint" ||
+                nm === "body" ||
+                nm === "spoiler" ||
+                nm === "jdm_body"
+              ) {
                 node.material = paint;
-              } else if (nm === "toycar" && node.material) {
-                var tcMat = node.material.clone();
-                if (rgbStr) {
-                  var parts = String(rgbStr).split(",");
-                  if (parts.length === 3) {
-                    var r = Math.min(
-                      1.3,
-                      (parseFloat(parts[0]) / 255) * 1.05 + 0.15,
-                    );
-                    var g = Math.min(
-                      1.3,
-                      (parseFloat(parts[1]) / 255) * 1.05 + 0.15,
-                    );
-                    var b = Math.min(
-                      1.3,
-                      (parseFloat(parts[2]) / 255) * 1.05 + 0.15,
-                    );
-                    tcMat.color.setRGB(r, g, b);
-                  }
-                }
-                tcMat.envMapIntensity = 1.65;
-                node.material = tcMat;
-              }
-              if (nm.indexOf("wheel-") === 0) {
-                wheelNodes.push(node);
+              } else if (mName === "glass") {
+                node.material = glassMat;
+              } else if (mName === "taillight") {
+                node.material = tailMat;
+              } else if (mName === "rims") {
+                node.material = rimMat;
+              } else if (mName === "tire") {
+                node.material = tireMat;
+              } else if (mName === "carbon") {
+                node.material = carbonMat;
+              } else if (mName === "mirrors") {
+                node.material = paint;
               }
             }
           });
@@ -148,7 +226,11 @@
           for (var wi = 0; wi < wheelNodes.length; wi++) {
             var wNode = wheelNodes[wi];
             var wName = (wNode.name || "").toLowerCase();
-            if (wName.indexOf("front") !== -1 && wNode.parent) {
+            var isFront =
+              wName === "wheel_fl" ||
+              wName === "wheel_fr" ||
+              wName.indexOf("front") !== -1;
+            if (isFront && wNode.parent) {
               var steerPivot = new THREE.Group();
               steerPivot.position.copy(wNode.position);
               steerPivot.rotation.copy(wNode.rotation);
@@ -165,43 +247,19 @@
             }
           }
 
+          mb.modelRoot = modelRoot;
           grp.add(modelRoot);
-
-          var box = new THREE.Box3().setFromObject(modelRoot);
-          var topY = box.isEmpty() ? 1.35 : box.max.y + 0.01;
-          var rd = new THREE.Mesh(
-            new THREE.PlaneGeometry(0.72, 0.72),
-            new THREE.MeshBasicMaterial({
-              map: roundelTex(num || 7),
-              transparent: true,
-              depthWrite: false,
-              polygonOffset: true,
-              polygonOffsetFactor: -2,
-            }),
-          );
-          rd.rotation.x = -Math.PI / 2;
-          rd.position.set(0, topY, 0.15);
-          rd.renderOrder = 3;
-          grp.add(rd);
         },
         {
           targetLength: 4.4,
-          envMapIntensity: 1.5,
+          envMapIntensity: 2.2,
           castShadow: true,
           receiveShadow: true,
         },
       ).catch(function () {});
     }
 
-    return {
-      group: grp,
-      position: grp.position,
-      steers: steers,
-      spinners: spinners,
-      tailMat: tailMat,
-      flames: flames,
-      paint: paint,
-    };
+    return mb;
   };
 
   var aiCreateCount = 0;
@@ -465,7 +523,10 @@
       mb.steers[i].rotation.y = car.steerVis * 0.5;
     for (i = 0; i < mb.spinners.length; i++)
       mb.spinners[i].rotation.x = car.spinVis;
-    mb.tailMat.emissiveIntensity = inp.throttle < 0 ? 2.2 : 0.7;
+    if (mb.steeringWheel) {
+      mb.steeringWheel.rotation.z = -car.steerVis * 0.65;
+    }
+    mb.tailMat.emissiveIntensity = inp.throttle < 0 ? 3.2 : 2.2;
     car.drifting = inp.hand && spd > 14 && Math.abs(steer) > 0.2;
     var fl = car.nitroActive && spd > 5;
     for (i = 0; i < mb.flames.length; i++) {
@@ -475,10 +536,27 @@
         mb.flames[i].scale.set(0.7 * fs, 1.1 * fs, 1);
       }
     }
+    var rollTarget = -car.steerVis * Math.min(1, spd / 38) * 0.055;
+    var pitchTarget =
+      inp.throttle > 0
+        ? -0.02 * inp.throttle - (car.nitroActive ? 0.014 : 0)
+        : inp.throttle < 0 && car.speed > 2
+          ? 0.03 * -inp.throttle
+          : 0;
+    car.rollVis =
+      (car.rollVis || 0) +
+      (rollTarget - (car.rollVis || 0)) * Math.min(1, 10 * dt);
+    car.pitchVis =
+      (car.pitchVis || 0) +
+      (pitchTarget - (car.pitchVis || 0)) * Math.min(1, 9 * dt);
+    if (mb.modelRoot) {
+      mb.modelRoot.rotation.z = car.rollVis;
+      mb.modelRoot.rotation.x = car.pitchVis;
+    }
     car.y = world.getTerrainHeight ? world.getTerrainHeight(car.x, car.z) : 0;
     car.group.position.set(car.x, car.y, car.z);
     car.group.rotation.y = car.angle;
-    car.group.rotation.z = -car.steerVis * Math.min(1, spd / 40) * 0.06;
+    car.group.rotation.z = 0;
     return ev;
   };
 

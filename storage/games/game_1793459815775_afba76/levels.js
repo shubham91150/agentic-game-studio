@@ -98,22 +98,54 @@
     var world = {};
     var WR = window.WorldRealism;
 
-    // 1. Realistic Shader Sky + PMREM Environment Reflections + 3-Point Shadowed Lighting + ACES Filmic
+    // 1. Realistic Shader Sky + 16-bit Polyhaven Golden-Hour .hdr Sky + PMREM Environment Reflections + 3-Point Shadowed Lighting + ACES Filmic
     var skyInfo = WR.createRealisticSkyAndLighting(scene, renderer, {
-      sunPosition: [120, 95, 60],
-      exposure: 1.05,
-      shadowMapSize: 1024,
+      sunPosition: [120, 72, 60],
+      exposure: 1.08,
+      shadowMapSize: 2048,
       shadowFrustum: 95,
+      fogColor: 0xdca580,
+      fogDensity: 0.00042,
     });
     world.skyInfo = skyInfo;
     world.sun = skyInfo.sunLight;
-    world.sunOffset = new THREE.Vector3(120, 95, 60);
+    world.sunOffset = new THREE.Vector3(120, 72, 60);
     world.rim = skyInfo.rimLight;
     if (!world.rim.target) {
       world.rim.target = new THREE.Object3D();
       scene.add(world.rim.target);
     }
     world.rimOffset = new THREE.Vector3(-80, 40, -90);
+
+    if (renderer && typeof THREE.RGBELoader === "function") {
+      try {
+        var pmremGen = new THREE.PMREMGenerator(renderer);
+        if (typeof pmremGen.compileEquirectangularShader === "function") {
+          pmremGen.compileEquirectangularShader();
+        }
+        new THREE.RGBELoader().setDataType(THREE.HalfFloatType).load(
+          "/studio/assets/polyhaven/kloppenheim_06_puresky/kloppenheim_06_puresky_1k.hdr",
+          function (hdrTex) {
+            hdrTex.mapping = THREE.EquirectangularReflectionMapping;
+            hdrTex.minFilter = THREE.LinearFilter;
+            hdrTex.magFilter = THREE.LinearFilter;
+            var envRT = pmremGen.fromEquirectangular(hdrTex);
+            scene.background = hdrTex;
+            scene.environment = envRT.texture;
+            world.envTexture = envRT.texture;
+            if (skyInfo && skyInfo.skyDome) {
+              skyInfo.skyDome.visible = false;
+            }
+            for (var ci0 = 0; ci0 < clouds.length; ci0++) {
+              clouds[ci0].visible = false;
+            }
+            pmremGen.dispose();
+          },
+          undefined,
+          function () {},
+        );
+      } catch (e) {}
+    }
 
     // 2. Track spline & O(1) distance field lookup grid
     var track = (world.track = computeTrackData());
@@ -247,12 +279,17 @@
 
     var asphaltMat = WR.createProceduralPBRMaterial("asphalt", {
       size: 256,
-      repeatX: 1,
+      repeatX: 2,
       repeatY: 1,
       roadMarkings: true,
-      roughness: 0.86,
-      envMapIntensity: 0.4,
+      roughness: 0.38,
+      metalness: 0.12,
+      envMapIntensity: 1.65,
     });
+    asphaltMat.roughness = 0.38;
+    asphaltMat.metalness = 0.12;
+    asphaltMat.envMapIntensity = 1.65;
+    asphaltMat.normalScale = new THREE.Vector2(1.3, 1.3);
     G.roughTex = asphaltMat.roughnessMap;
 
     var roadMesh = new THREE.Mesh(
@@ -261,6 +298,53 @@
     );
     roadMesh.receiveShadow = true;
     scene.add(roadMesh);
+
+    // Crisp white outer lane lines + dashed yellow/white center line along the spline
+    var laneLineMat = new THREE.MeshStandardMaterial({
+      color: 0xf6f8fc,
+      roughness: 0.34,
+      metalness: 0.08,
+      envMapIntensity: 1.25,
+      polygonOffset: true,
+      polygonOffsetFactor: -1,
+      polygonOffsetUnits: -1,
+    });
+    var outerLineL = new THREE.Mesh(
+      stripGeo(-ROAD_HALF + 0.35, -ROAD_HALF + 0.55, 0.032, 10),
+      laneLineMat,
+    );
+    var outerLineR = new THREE.Mesh(
+      stripGeo(ROAD_HALF - 0.55, ROAD_HALF - 0.35, 0.032, 10),
+      laneLineMat,
+    );
+    outerLineL.receiveShadow = outerLineR.receiveShadow = true;
+    scene.add(outerLineL);
+    scene.add(outerLineR);
+
+    var centerDashTex = canvasTex(64, 256, function (x, W, H) {
+      x.clearRect(0, 0, W, H);
+      x.fillStyle = "#ffc82c";
+      x.fillRect(6, 0, 20, 148);
+      x.fillStyle = "#f7f9fc";
+      x.fillRect(38, 0, 20, 148);
+    });
+    var centerLineMat = new THREE.MeshStandardMaterial({
+      map: centerDashTex,
+      transparent: true,
+      alphaTest: 0.35,
+      roughness: 0.36,
+      metalness: 0.08,
+      envMapIntensity: 1.2,
+      polygonOffset: true,
+      polygonOffsetFactor: -2,
+      polygonOffsetUnits: -2,
+    });
+    var centerLineMesh = new THREE.Mesh(
+      stripGeo(-0.18, 0.18, 0.033, 9),
+      centerLineMat,
+    );
+    centerLineMesh.receiveShadow = true;
+    scene.add(centerLineMesh);
 
     var kerbMat = WR.createProceduralPBRMaterial("kerb", {
       size: 256,
@@ -299,12 +383,12 @@
     });
 
     var texLoader = new THREE.TextureLoader();
-    // Real Polyhaven 1K PBR asphalt_02 textures on road
+    // Real Polyhaven 1K PBR asphalt_02 textures on road (wet specular Forza look)
     texLoader.load(
       "/studio/assets/polyhaven/asphalt_02/asphalt_02_diff_1k.jpg",
       function (diffTex) {
         diffTex.wrapS = diffTex.wrapT = THREE.RepeatWrapping;
-        diffTex.repeat.set(1, 1);
+        diffTex.repeat.set(2, 1);
         diffTex.anisotropy = 8;
         if (THREE.sRGBEncoding !== undefined)
           diffTex.encoding = THREE.sRGBEncoding;
@@ -318,9 +402,23 @@
       "/studio/assets/polyhaven/asphalt_02/asphalt_02_nor_gl_1k.jpg",
       function (norTex) {
         norTex.wrapS = norTex.wrapT = THREE.RepeatWrapping;
-        norTex.repeat.set(1, 1);
+        norTex.repeat.set(2, 1);
         norTex.anisotropy = 8;
         asphaltMat.normalMap = norTex;
+        asphaltMat.normalScale.set(1.3, 1.3);
+        asphaltMat.needsUpdate = true;
+      },
+      undefined,
+      function () {},
+    );
+    texLoader.load(
+      "/studio/assets/polyhaven/asphalt_02/asphalt_02_arm_1k.jpg",
+      function (armTex) {
+        armTex.wrapS = armTex.wrapT = THREE.RepeatWrapping;
+        armTex.repeat.set(2, 1);
+        armTex.anisotropy = 8;
+        asphaltMat.roughnessMap = armTex;
+        asphaltMat.aoMap = armTex;
         asphaltMat.needsUpdate = true;
       },
       undefined,
@@ -477,75 +575,6 @@
       world.water = waterSurface;
     }
 
-    // 5c. Realistic Multi-Material PBR Buildings along the Start/Finish Village
-    if (typeof WR.createRealisticBuilding === "function") {
-      var buildingDefs = [
-        {
-          idx: S - 38,
-          lat: 23.5,
-          width: 14,
-          depth: 10,
-          floors: 3,
-          style: "brick",
-          yawOffset: -Math.PI / 2,
-        },
-        {
-          idx: S - 18,
-          lat: -23.0,
-          width: 12,
-          depth: 9.5,
-          floors: 2,
-          style: "concrete",
-          yawOffset: Math.PI / 2,
-        },
-        {
-          idx: 6,
-          lat: 24.0,
-          width: 15,
-          depth: 11,
-          floors: 4,
-          style: "concrete",
-          yawOffset: -Math.PI / 2,
-        },
-        {
-          idx: 30,
-          lat: 25.5,
-          width: 13,
-          depth: 10,
-          floors: 3,
-          style: "brick",
-          yawOffset: -Math.PI / 2,
-        },
-        {
-          idx: 72,
-          lat: 27.0,
-          width: 12,
-          depth: 9,
-          floors: 2,
-          style: "brick",
-          yawOffset: -Math.PI / 2,
-        },
-      ];
-      for (var bi = 0; bi < buildingDefs.length; bi++) {
-        var bd = buildingDefs[bi];
-        var bIdx = ((bd.idx % S) + S) % S;
-        var bP = pts[bIdx],
-          bSd = side[bIdx],
-          bT = tan[bIdx];
-        var bx = bP.x + bSd.x * bd.lat;
-        var bz = bP.z + bSd.z * bd.lat;
-        var by = Math.max(0, getTerrainHeight(bx, bz) - 0.15);
-        WR.createRealisticBuilding(scene, {
-          width: bd.width,
-          depth: bd.depth,
-          floors: bd.floors,
-          style: bd.style,
-          position: [bx, by, bz],
-          rotationY: Math.atan2(bT.x, bT.z) + bd.yawOffset,
-        });
-      }
-    }
-
     // 6. Corner rubber-mark decals on asphalt
     (function rubberDecals() {
       function curveAt(i) {
@@ -576,7 +605,7 @@
           quads.push([si, 2.3]);
         }
       });
-      if (!quads.length) return;
+      return; // skip boxy rubber decal rectangles on photogrammetry asphalt
       var smudge = canvasTex(
         64,
         128,
@@ -706,7 +735,7 @@
     lh.add(startLine);
     scene.add(lh);
 
-    // 8. Real .glb Trackside Scenery (Barriers, Streetlights, Trees, Palms, Rocks, Boulders, Buildings, Tents)
+    // 8. Real .glb Trackside Scenery (Cliffs, Boulders, Jacaranda, Quiver, Pine, Barriers, Streetlights)
     function placeAlongTrack(proto, spotList, disableShadow) {
       for (var i = 0; i < spotList.length; i++) {
         var sp = spotList[i];
@@ -716,7 +745,7 @@
           T = tan[idx];
         var wx = P.x + Sd.x * sp.lat;
         var wz = P.z + Sd.z * sp.lat;
-        var wy = getTerrainHeight(wx, wz);
+        var wy = getTerrainHeight(wx, wz) + (sp.yOffset || 0);
         var inst = proto.clone(true);
         if (disableShadow) {
           inst.traverse(function (n) {
@@ -732,6 +761,138 @@
     }
 
     setTimeout(function () {
+      // Polyhaven photogrammetry coastal cliffs along the start/finish straight and circuit corners: /studio/assets/polyhaven/coastal_cliff_02/coastal_cliff_02_1k.glb
+      WR.loadGlbModel(
+        "/studio/assets/polyhaven/coastal_cliff_02/coastal_cliff_02_1k.glb",
+        function (cliffProto) {
+          var cliffSpots = [
+            {
+              idx: S - 36,
+              lat: 22.5,
+              yawOffset: -Math.PI / 2,
+              scale: 1.05,
+              yOffset: -0.6,
+            },
+            {
+              idx: S - 14,
+              lat: -23.0,
+              yawOffset: Math.PI / 2,
+              scale: 1.0,
+              yOffset: -0.6,
+            },
+            {
+              idx: 10,
+              lat: 24.0,
+              yawOffset: -Math.PI / 2,
+              scale: 1.1,
+              yOffset: -0.6,
+            },
+            {
+              idx: 36,
+              lat: 25.5,
+              yawOffset: -Math.PI / 2 + 0.3,
+              scale: 1.05,
+              yOffset: -0.6,
+            },
+            {
+              idx: 68,
+              lat: -24.5,
+              yawOffset: Math.PI / 2 - 0.2,
+              scale: 1.15,
+              yOffset: -0.6,
+            },
+            {
+              idx: 135,
+              lat: 26.0,
+              yawOffset: -Math.PI / 2,
+              scale: 1.1,
+              yOffset: -0.6,
+            },
+            {
+              idx: 220,
+              lat: -25.0,
+              yawOffset: Math.PI / 2,
+              scale: 1.08,
+              yOffset: -0.6,
+            },
+            {
+              idx: 315,
+              lat: 25.0,
+              yawOffset: -Math.PI / 2,
+              scale: 1.12,
+              yOffset: -0.6,
+            },
+            {
+              idx: 420,
+              lat: -26.0,
+              yawOffset: Math.PI / 2,
+              scale: 1.05,
+              yOffset: -0.6,
+            },
+            {
+              idx: 500,
+              lat: 24.0,
+              yawOffset: -Math.PI / 2,
+              scale: 1.1,
+              yOffset: -0.6,
+            },
+          ];
+          placeAlongTrack(cliffProto, cliffSpots, true);
+        },
+        { targetLength: 28, envMapIntensity: 1.25, castShadow: false },
+      ).catch(function () {});
+
+      // Polyhaven photogrammetry Jacaranda trees along start/finish straight and corners: /studio/assets/polyhaven/jacaranda_tree/jacaranda_tree_1k.glb
+      WR.loadGlbModel(
+        "/studio/assets/polyhaven/jacaranda_tree/jacaranda_tree_1k.glb",
+        function (jacProto) {
+          var jacSpots = [
+            { idx: S - 42, lat: 14.5, yawOffset: 0.5, scale: 1.12 },
+            { idx: S - 26, lat: -14.5, yawOffset: 1.8, scale: 1.18 },
+            { idx: S - 8, lat: 15.0, yawOffset: 2.7, scale: 1.1 },
+            { idx: 12, lat: -15.0, yawOffset: 0.9, scale: 1.16 },
+            { idx: 28, lat: 15.5, yawOffset: 2.1, scale: 1.2 },
+            { idx: 46, lat: -16.0, yawOffset: 1.4, scale: 1.14 },
+          ];
+          for (var i = 70; i < S - 55; i += 40) {
+            var sideSign = i % 80 === 0 ? 1 : -1;
+            jacSpots.push({
+              idx: i,
+              lat: sideSign * (14.5 + (i % 10)),
+              yawOffset: (i * 1.1) % 6.28,
+              scale: 1.0 + (i % 5) * 0.08,
+            });
+          }
+          placeAlongTrack(jacProto, jacSpots, true);
+        },
+        { targetLength: 13.5, envMapIntensity: 1.2, castShadow: false },
+      ).catch(function () {});
+
+      // Polyhaven photogrammetry Quiver trees along start/finish straight and corners: /studio/assets/polyhaven/quiver_tree_02/quiver_tree_02_1k.glb
+      WR.loadGlbModel(
+        "/studio/assets/polyhaven/quiver_tree_02/quiver_tree_02_1k.glb",
+        function (quiverProto) {
+          var quiverSpots = [
+            { idx: S - 38, lat: -13.5, yawOffset: 0.3, scale: 1.1 },
+            { idx: S - 20, lat: 13.8, yawOffset: 1.9, scale: 1.15 },
+            { idx: 4, lat: 14.0, yawOffset: 0.8, scale: 1.12 },
+            { idx: 19, lat: 14.5, yawOffset: 2.5, scale: 1.08 },
+            { idx: 34, lat: -14.2, yawOffset: 1.2, scale: 1.15 },
+          ];
+          for (var i = 52; i < S - 48; i += 42) {
+            var sideSign = i % 84 < 42 ? -1 : 1;
+            quiverSpots.push({
+              idx: i,
+              lat: sideSign * (13.5 + (i % 10)),
+              yawOffset: (i * 1.5) % 6.28,
+              scale: 0.95 + (i % 4) * 0.1,
+            });
+          }
+          placeAlongTrack(quiverProto, quiverSpots, true);
+        },
+        { targetLength: 8.5, envMapIntensity: 1.2, castShadow: false },
+      ).catch(function () {});
+
       // Polyhaven photogrammetry concrete road barriers: /studio/assets/polyhaven/concrete_road_barrier_02/concrete_road_barrier_02_1k.glb
       WR.loadGlbModel(
         "/studio/assets/polyhaven/concrete_road_barrier_02/concrete_road_barrier_02_1k.glb",
@@ -780,37 +941,9 @@
               yawOffset: sideSign > 0 ? -Math.PI / 2 : Math.PI / 2,
             });
           }
-          placeAlongTrack(lightProto, lightSpots, false);
+          placeAlongTrack(lightProto, lightSpots, true);
         },
-        { targetLength: 6.8, envMapIntensity: 1.25 },
-      ).catch(function () {});
-
-      // Polyhaven photogrammetry lush broadleaf canopy trees: /studio/assets/polyhaven/lush_tree_1k.glb
-      WR.loadGlbModel(
-        "/studio/assets/polyhaven/lush_tree_1k.glb",
-        function (treeProto) {
-          var treeSpots = [
-            { idx: S - 36, lat: -15, yawOffset: 0.4, scale: 1.15 },
-            { idx: S - 24, lat: 15.5, yawOffset: 1.9, scale: 1.2 },
-            { idx: S - 10, lat: -16, yawOffset: 3.1, scale: 1.1 },
-            { idx: 8, lat: 16, yawOffset: 0.8, scale: 1.15 },
-            { idx: 22, lat: -16.5, yawOffset: 2.4, scale: 1.25 },
-            { idx: 36, lat: 17, yawOffset: 1.2, scale: 1.18 },
-          ];
-          for (var i = 55; i < S - 50; i += 45) {
-            var sideSign = i % 90 === 0 ? 1 : -1;
-            var dist = 15 + ((i * 37) % 16);
-            var sc = 0.95 + ((i * 19) % 8) * 0.08;
-            treeSpots.push({
-              idx: i,
-              lat: sideSign * dist,
-              yawOffset: (i * 1.3) % 6.28,
-              scale: sc,
-            });
-          }
-          placeAlongTrack(treeProto, treeSpots, false);
-        },
-        { targetLength: 13.5, envMapIntensity: 1.15, castShadow: true },
+        { targetLength: 6.8, envMapIntensity: 1.25, castShadow: false },
       ).catch(function () {});
 
       // Polyhaven photogrammetry lush conifer pine trees: /studio/assets/polyhaven/pine_tree_1k.glb
@@ -818,11 +951,11 @@
         "/studio/assets/polyhaven/pine_tree_1k.glb",
         function (pineProto) {
           var pineSpots = [
-            { idx: S - 30, lat: 18.5, yawOffset: 0.7, scale: 1.12 },
-            { idx: S - 16, lat: 17.5, yawOffset: 2.2, scale: 1.08 },
-            { idx: 2, lat: -17.5, yawOffset: 1.5, scale: 1.15 },
-            { idx: 16, lat: 18.0, yawOffset: 2.9, scale: 1.1 },
-            { idx: 30, lat: -18.0, yawOffset: 0.5, scale: 1.18 },
+            { idx: S - 30, lat: 17.5, yawOffset: 0.7, scale: 1.12 },
+            { idx: S - 16, lat: -16.5, yawOffset: 2.2, scale: 1.08 },
+            { idx: 2, lat: -16.5, yawOffset: 1.5, scale: 1.15 },
+            { idx: 16, lat: 17.0, yawOffset: 2.9, scale: 1.1 },
+            { idx: 30, lat: -17.0, yawOffset: 0.5, scale: 1.18 },
           ];
           for (var i = 12; i < S; i += 38) {
             var sideSign = i % 76 < 38 ? -1 : 1;
@@ -834,9 +967,57 @@
               scale: 0.96 + ((i * 11) % 5) * 0.08,
             });
           }
-          placeAlongTrack(pineProto, pineSpots, false);
+          placeAlongTrack(pineProto, pineSpots, true);
         },
-        { targetLength: 13.8, envMapIntensity: 1.15, castShadow: true },
+        { targetLength: 13.8, envMapIntensity: 1.15, castShadow: false },
+      ).catch(function () {});
+
+      // Polyhaven photogrammetry Namaqualand boulder clusters: /studio/assets/polyhaven/namaqualand_boulders_01/namaqualand_boulders_01_1k.glb
+      WR.loadGlbModel(
+        "/studio/assets/polyhaven/namaqualand_boulders_01/namaqualand_boulders_01_1k.glb",
+        function (boulderClusterProto) {
+          var clusterSpots = [
+            { idx: S - 40, lat: 18.5, yawOffset: 0.4, scale: 1.15 },
+            { idx: S - 22, lat: -19.0, yawOffset: 1.7, scale: 1.2 },
+            { idx: 6, lat: 19.5, yawOffset: 2.3, scale: 1.15 },
+            { idx: 24, lat: -18.5, yawOffset: 0.9, scale: 1.25 },
+          ];
+          for (var i = 15; i < S; i += 36) {
+            var sideSign = i % 72 < 36 ? 1 : -1;
+            clusterSpots.push({
+              idx: i,
+              lat: sideSign * (20 + (i % 16)),
+              yawOffset: i * 0.7,
+              scale: 1.0 + (i % 4) * 0.25,
+            });
+          }
+          placeAlongTrack(boulderClusterProto, clusterSpots, true);
+        },
+        { targetLength: 8.5, envMapIntensity: 1.2, castShadow: false },
+      ).catch(function () {});
+
+      // Polyhaven photogrammetry boulders: /studio/assets/polyhaven/boulder_01/boulder_01_1k.glb
+      WR.loadGlbModel(
+        "/studio/assets/polyhaven/boulder_01/boulder_01_1k.glb",
+        function (boulderProto) {
+          var boulderSpots = [
+            { idx: S - 34, lat: -17.5, yawOffset: 0.6, scale: 1.2 },
+            { idx: S - 12, lat: 18.0, yawOffset: 1.9, scale: 1.15 },
+            { idx: 14, lat: 17.5, yawOffset: 2.6, scale: 1.2 },
+            { idx: 32, lat: -19.0, yawOffset: 1.1, scale: 1.25 },
+          ];
+          for (var i = 28; i < S; i += 45) {
+            var sideSign = i % 90 < 45 ? -1 : 1;
+            boulderSpots.push({
+              idx: i,
+              lat: sideSign * (24 + (i % 14)),
+              yawOffset: i * 1.1,
+              scale: 1.1 + (i % 3) * 0.3,
+            });
+          }
+          placeAlongTrack(boulderProto, boulderSpots, true);
+        },
+        { targetLength: 6.8, envMapIntensity: 1.2, castShadow: false },
       ).catch(function () {});
 
       // Polyhaven photogrammetry shrubs: /studio/assets/polyhaven/shrub_03/shrub_03_1k.glb
@@ -875,44 +1056,6 @@
           placeAlongTrack(fernProto, fernSpots, true);
         },
         { targetLength: 1.9, envMapIntensity: 1.1, castShadow: false },
-      ).catch(function () {});
-
-      // Polyhaven photogrammetry Namaqualand boulder clusters: /studio/assets/polyhaven/namaqualand_boulders_01/namaqualand_boulders_01_1k.glb
-      WR.loadGlbModel(
-        "/studio/assets/polyhaven/namaqualand_boulders_01/namaqualand_boulders_01_1k.glb",
-        function (boulderClusterProto) {
-          var clusterSpots = [];
-          for (var i = 15; i < S; i += 36) {
-            var sideSign = i % 72 < 36 ? 1 : -1;
-            clusterSpots.push({
-              idx: i,
-              lat: sideSign * (20 + (i % 16)),
-              yawOffset: i * 0.7,
-              scale: 1.0 + (i % 4) * 0.25,
-            });
-          }
-          placeAlongTrack(boulderClusterProto, clusterSpots, true);
-        },
-        { targetLength: 7.5, envMapIntensity: 1.1, castShadow: false },
-      ).catch(function () {});
-
-      // Polyhaven photogrammetry boulders: /studio/assets/polyhaven/boulder_01/boulder_01_1k.glb
-      WR.loadGlbModel(
-        "/studio/assets/polyhaven/boulder_01/boulder_01_1k.glb",
-        function (boulderProto) {
-          var boulderSpots = [];
-          for (var i = 28; i < S; i += 45) {
-            var sideSign = i % 90 < 45 ? -1 : 1;
-            boulderSpots.push({
-              idx: i,
-              lat: sideSign * (24 + (i % 14)),
-              yawOffset: i * 1.1,
-              scale: 1.1 + (i % 3) * 0.3,
-            });
-          }
-          placeAlongTrack(boulderProto, boulderSpots, true);
-        },
-        { targetLength: 6.4, envMapIntensity: 1.1, castShadow: false },
       ).catch(function () {});
 
       // Polyhaven photogrammetry CoffeeCart_01 near Start/Finish Village: /studio/assets/polyhaven/CoffeeCart_01/CoffeeCart_01_1k.glb
