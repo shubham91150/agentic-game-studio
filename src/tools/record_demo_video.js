@@ -16,6 +16,9 @@ const { execSync } = require('child_process');
 
 const PW = require('/tmp/stv-pw/node_modules/playwright-core');
 const CHROME = '/home/opencode/.cache/ms-playwright/chromium-1248/chrome-linux64/chrome';
+/* REAL ffmpeg: static n9.0.2 with libx264+aac. NOTE: /home/opencode/.local/bin/ffmpeg
+ * and the playwright ffmpeg-1013 binary are WAV-only Python shims — never use them. */
+const FFMPEG = '/home/opencode/.local/lib/python3.11/site-packages/imageio_ffmpeg/binaries/ffmpeg-linux-x86_64-v9.0.2';
 const REPO = '/home/opencode/project-data/workspace/users/shubham91150/agentic-game-studio';
 const BASE = 'http://127.0.0.1:3030';
 const W = 1280, H = 720, FPS = 30;
@@ -139,20 +142,32 @@ async function ch2_agatha(browser) {
   await page.close();
 }
 
+/* Pause-stepped frame: game renders ONE fresh GL frame per resume (~1.2s under
+ * SwiftShader), then idles while paused so screenshots stay fast (~2s) instead
+ * of ~30s. Canvas, HUD, torch flicker, enemy ticks are all real per-step. */
+async function pstep(page) {
+  await page.evaluate(() => { try { window.game.resume(); } catch (e) { /* x */ } });
+  await sleep(1500); // exceed one rAF entry (~1.25s) so the new pose always renders
+  await page.evaluate(() => { try { window.game.pause(); } catch (e) { /* x */ } });
+  await snap(page);
+}
+
 /* Glide helper: linear keyframe interpolation via player.reset (page.evaluate only). */
-async function glide(page, frames, x0, z0, yaw0, x1, z1, yaw1, holdMs = 40) {
+async function glide(page, frames, x0, z0, yaw0, x1, z1, yaw1, whisper = null) {
   for (let i = 0; i < frames; i++) {
     const k = frames === 1 ? 1 : i / (frames - 1);
     const x = x0 + (x1 - x0) * k, z = z0 + (z1 - z0) * k, yaw = yaw0 + (yaw1 - yaw0) * k;
     await page.evaluate((a) => {
       try { window.game.player.reset(a.x, a.z, a.yaw); } catch (e) { /* x */ }
-    }, { x, z, yaw });
-    await sleep(holdMs);
-    await snap(page);
+      if (a.whisper && a.i % 25 === 0) {
+        try { window.StV_UI.banner(a.whisper, 120000); } catch (e) { /* x */ }
+      }
+    }, { x, z, yaw, whisper, i });
+    await pstep(page);
   }
 }
 
-/* ---------------- Chapter 3: Ashes of St. Vermilion (540 frames = 18s) ----- */
+/* ---------------- Chapter 3: Ashes of St. Vermilion (435 frames = 14.5s) ---- */
 async function ch3_gameplay(browser) {
   const page = await newPage(browser);
   const t0 = frameNo;
@@ -160,7 +175,7 @@ async function ch3_gameplay(browser) {
   await page.waitForFunction(() => window.game && window.game.getState, null, { timeout: 45000 });
   await page.waitForTimeout(3000);
   await setBanner(page, '3/4 · ASHES OF ST. VERMILION · the convent school burned…');
-  for (let i = 0; i < 30; i++) { await sleep(30); await snap(page); } // menu beat (30f)
+  for (let i = 0; i < 15; i++) { await sleep(30); await snap(page); } // menu beat (15f)
 
   // Start playing: real Enter key (game binds Enter in menu → startGame).
   await page.keyboard.press('Enter');
@@ -172,24 +187,26 @@ async function ch3_gameplay(browser) {
     order = await page.evaluate(() => window.__stvLastAiOrder || null).catch(() => null);
   }
   console.log('ch3 AI order:', order ? `${order.tactic}/${order.envEvent} whisper=${(order.whisper || '').slice(0, 60)}…` : 'none (director unreachable)');
-  if (order && order.whisper) {
-    // Hold the genuine director whisper on screen for capture (same real text).
-    await page.evaluate((txt) => {
-      try { window.StV_UI.banner(txt, 120000); } catch (e) { /* x */ }
-    }, '◉ AI DIRECTOR · ' + order.whisper);
-  }
+  const whisper = order && order.whisper ? '◉ AI DIRECTOR · ' + order.whisper : null;
+  // Capture-only CSS: hide OUR pause overlay artifact, keep real enemy pill visible.
+  await page.evaluate(() => {
+    const st = document.createElement('style');
+    st.textContent = '#pause{display:none!important}#hud-enemy{display:block!important}';
+    document.head.appendChild(st);
+    try { window.game.pause(); } catch (e) { /* x */ }
+  });
   await setBanner(page, '3/4 · GAMEPLAY · live AI Director whisper + HUD (real /api order)');
-  await glide(page, 90, 0, 8.5, -0.06, 0, 8.5, 0.06);          // banner beat, slow pan (90f)
+  await glide(page, 75, 0, 8.5, -0.06, 0, 8.5, 0.06, whisper); // banner beat (75f)
   await page.evaluate(() => { try { window.StV_UI.banner(null); } catch (e) { /* x */ } });
 
   await setBanner(page, '3/4 · GAMEPLAY · south corridor glide · lantern + torch');
-  await glide(page, 90, 0, 8.5, 0, 0, 6.0, 0.1);               // S1 corridor (90f)
+  await glide(page, 75, 0, 8.5, 0, 0, 6.0, 0.1);               // S1 corridor (75f)
   await setBanner(page, '3/4 · GAMEPLAY · south corridor · columns + storm light');
-  await glide(page, 90, 1.0, 6.0, -0.7, 2.5, 4.5, -0.9);       // S2 corridor pan (90f)
+  await glide(page, 75, 1.0, 6.0, -0.7, 2.5, 4.5, -0.9);       // S2 corridor pan (75f)
   await setBanner(page, '3/4 · GAMEPLAY · Classroom B · the Chapel Key');
-  await glide(page, 120, 4.2, -2.2, -0.785, 5.4, -3.4, -0.785); // S3 key approach (120f)
+  await glide(page, 105, 4.2, -2.2, -0.785, 5.4, -3.4, -0.785); // S3 key approach (105f)
   await setBanner(page, '3/4 · GAMEPLAY · north corridor · the locked chapel door');
-  await glide(page, 60, 0, -7.2, 0, 0, -8.0, 0);               // S4 chapel door (60f)
+  await glide(page, 45, 0, -7.2, 0, 0, -8.0, 0);               // S4 chapel door (45f)
 
   // HN2 cabinet-hide peek moment at the real south-corridor wardrobe spot.
   await setBanner(page, '3/4 · GAMEPLAY · wardrobe hide · door-gap peek (E to hide)');
@@ -199,8 +216,8 @@ async function ch3_gameplay(browser) {
       window.game.player.enterHide(s.x, s.z, s.ry);
     } catch (e) { /* x */ }
   });
-  for (let i = 0; i < 60; i++) { await sleep(40); await snap(page); } // peek hold (60f)
-  console.log(`ch3 gameplay frames: ${frameNo - t0} (expect 540)`);
+  for (let i = 0; i < 45; i++) await pstep(page);              // peek hold (45f)
+  console.log(`ch3 gameplay frames: ${frameNo - t0} (expect 435)`);
   await page.close();
 }
 
@@ -270,7 +287,7 @@ ${pChecks.map((c) => row(!!c.passed, c.testName, c.proof || '')).join('\n')}</di
 ${row(true, 'runsc ' + esc(r.runsc.split('\n')[0]), 'docker server ' + esc(r.docker))}
 ${row(tFail && tFail[1] === '0', `node --test: ${tPass ? tPass[1] : '?'} pass / ${tFail ? tFail[1] : '?'} fail`, r.tests)}
 </div>
-<div class="foot">▸ every pixel of this video was rendered live from 127.0.0.1:3030 · 1500 frames · H.264 MP4</div>
+<div class="foot">▸ every pixel of this video was rendered live from 127.0.0.1:3030 · 1395 frames · H.264 MP4</div>
 </div></body></html>`;
 }
 
@@ -297,7 +314,23 @@ async function ch4_receipt(browser) {
   return r;
 }
 
-/* ---------------- Assembly: PNGs + WAVs → H.264 MP4 via MediaRecorder ------ */
+/* ---------------- Assembly: PNGs + WAVs → H.264 MP4 via real ffmpeg ------
+ * (An older revision used in-browser MediaRecorder; the static n9.0.2 build
+ * above gives deterministic libx264 + aac with an audio amix instead.) */
+function ffmpegEncode() {
+  const drone = path.join(REPO, 'public/live-preview/assets/audio/agatha_drone.wav');
+  const heart = path.join(REPO, 'public/live-preview/assets/audio/agatha_heart.wav');
+  const cmd = `"${FFMPEG}" -y -framerate ${FPS} -i "${FRAMES}/f_%05d.png" ` +
+    `-stream_loop -1 -i "${drone}" -stream_loop -1 -i "${heart}" ` +
+    `-filter_complex "[1:a]volume=0.5,apad[a1];[2:a]volume=0.4,apad[a2];` +
+    `[a1][a2]amix=inputs=2:duration=first:dropout_transition=0[a]" ` +
+    `-map 0:v -map "[a]" -c:v libx264 -pix_fmt yuv420p -r ${FPS} -s ${W}x${H} ` +
+    `-crf 20 -preset medium -c:a aac -b:a 128k -ar 44100 -movflags +faststart -shortest "${OUT}"`;
+  console.log('encode:', cmd.slice(0, 160) + '…');
+  execSync(cmd, { timeout: 600000, maxBuffer: 1 << 20, stdio: ['ignore', 'pipe', 'pipe'] });
+}
+
+/* Legacy in-browser assembly (kept for reference, no longer called). */
 function assembleHtml(total) {
   return `<!DOCTYPE html><html><head><meta charset="utf-8"><style>
 html,body{margin:0;background:#000;}canvas{display:block;width:${W}px;height:${H}px;}
@@ -399,7 +432,7 @@ function startServer(total) {
   return new Promise((res) => srv.listen(PORT, '127.0.0.1', () => res(srv)));
 }
 
-async function assemble(browser, total) {
+async function unused_assemble(browser, total) {
   const srv = await startServer(total);
   const page = await browser.newPage({ viewport: { width: W + 40, height: H + 80 } });
   try {
@@ -429,8 +462,8 @@ async function main() {
     await ch4_receipt(browser);
     const total = frameNo;
     console.log(`TOTAL frames: ${total} = ${(total / FPS).toFixed(1)}s @${FPS}fps`);
-    if (total !== 1500) console.log(`WARN: expected 1500, got ${total}`);
-    await assemble(browser, total);
+    if (total !== 1395) console.log(`WARN: expected 1395, got ${total}`);
+    ffmpegEncode();
     const st = fs.statSync(OUT);
     console.log(`WROTE ${OUT} (${st.size} bytes)`);
   } finally {
