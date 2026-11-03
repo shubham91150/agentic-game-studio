@@ -1,5 +1,6 @@
 # Project Memory Index
 
+- [Elite Imagination Engine & Master Reference Bible (Hitman, Resident Evil, Hello Neighbor 2 & All Genres)](elite-imagination-and-goosebumps-engine.md) — Supreme reference bible + `node src/tools/elite_imagination_engine.js` for clockwork stealth/distraction sandboxes, multi-step Resident Evil puzzle chains, Hello Neighbor 2 adaptive AI & wardrobe peek-hide, and 12 mandatory goosebump micro-detail layers.
 - [First-Principles Craftsmanship & Zero-Garbage Law](first-principles-craftsmanship-law.md) — SUPREME RULE: Know how every shader/material/mesh works from first principles before coding; zero square particles, zero untextured plastic meshes, zero fake checkbox ticking; always apply real 1K PBR textures, UVs, soft radial sprites, and ruthless pixel-level critique.
 - [3D Asset and World Tools](3d-asset-and-world-tools.md) — MCP tools & CLI builders for PartNet/ShapeNet multi-part CAD assets, Blender Sapling/Archimesh/ANT/AutoRig, 3D Gaussian Splatting, Meta SceneScript+WFC, VGGT-1B, OpenStreetMap 3D cities, Objaverse, BlenderKit, PolyHaven, ambientCG, and MusicGen audio.
 - [Blender Armature Rigging](blender-armature-rigging.md) — Blender 3.4 (`bpy`) humanoid 20-bone Armature rigging, analytical vertex group skinning (`SkinnedMesh`), NLA `Idle`/`Walk` action baking, and `THREE.AnimationMixer` integration.
