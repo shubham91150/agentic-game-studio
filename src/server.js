@@ -2048,7 +2048,7 @@ const server = http.createServer(async (req, res) => {
         createdAt: new Date().toISOString(),
         playUrl: `/studio/games/${gameId}/index.html`,
         imageUrl: hasConcept
-          ? `/studio/games/${gameId}/assets/${copied.find((f) => f.startsWith("assets/concept"))}`
+          ? `/studio/games/${gameId}/${copied.find((f) => f.startsWith("assets/concept"))}`
           : null,
         files: {
           html: "index.html",
