@@ -1218,7 +1218,7 @@
             stepAcc = 0;
             try {
               var A = window.StV_Audio;
-              if (A && A.agathaStep) A.agathaStep(st === "CHASE");
+              if (A && A.agathaStep) A.agathaStep(st === "CHASE", ax, az);
             } catch (err) {
               /* silent when audio is down */
             }

@@ -770,9 +770,9 @@
         } catch (err) {
           /* x */
         }
-        if (Audio8 && Audio8.pickup) {
+        if (Audio8 && Audio8.doorCreak) {
           try {
-            Audio8.pickup();
+            Audio8.doorCreak();
           } catch (err) {
             /* x */
           }
@@ -1004,6 +1004,42 @@
     if (Audio8 && Audio8.setAlert01) {
       try {
         Audio8.setAlert01(alert);
+      } catch (err) {
+        /* x */
+      }
+    }
+    /* Master sound overhaul: spatial listener/Agatha poses, adaptive
+     * threat tier + heartbeat, and lantern crackle (4Hz director tick). */
+    if (Audio8) {
+      try {
+        if (Audio8.setListener) {
+          var yawNow = 0;
+          try {
+            yawNow = camera && camera.rotation ? camera.rotation.y || 0 : 0;
+          } catch (e) {
+            /* x */
+          }
+          Audio8.setListener(psState.x, psState.z, yawNow);
+        }
+      } catch (err) {
+        /* x */
+      }
+      try {
+        if (Audio8.setAgatha && window.__stvAgathaXZ) {
+          Audio8.setAgatha(window.__stvAgathaXZ[0], window.__stvAgathaXZ[1]);
+        }
+      } catch (err) {
+        /* x */
+      }
+      try {
+        if (Audio8.setEnemyState && es) {
+          Audio8.setEnemyState(es.state, es.dist);
+        }
+      } catch (err) {
+        /* x */
+      }
+      try {
+        if (Audio8.lanternTick) Audio8.lanternTick();
       } catch (err) {
         /* x */
       }
@@ -1475,7 +1511,13 @@
         player.onStep = function (run) {
           if (Audio8 && Audio8.footstep) {
             try {
-              Audio8.footstep(run);
+              var crouchNow = false;
+              try {
+                crouchNow = player && player.isCrouch ? !!player.isCrouch() : false;
+              } catch (e) {
+                /* x */
+              }
+              Audio8.footstep(run, crouchNow);
             } catch (err) {
               /* x */
             }

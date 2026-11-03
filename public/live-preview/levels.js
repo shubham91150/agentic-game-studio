@@ -490,6 +490,34 @@
         });
       } catch (eGlow) { /* model variant without named glass */ }
     }
+    /* Weathered convent wood for crates/chests (prop-polish).
+     * First principles: a GLB material's .color is a linear multiplier
+     * over its albedo map, so stamping dark walnut drags cartoon-orange
+     * wood to aged convent timber while keeping grain detail; roughness
+     * 0.85 kills the plastic sheen. Runs ONLY on crate/chest roots via
+     * onRoot (lantern glass/flames never pass through here); unmapped
+     * materials are kept and tinted the same way. Idempotent setHex, so
+     * shared clone materials can't double-darken. */
+    var WALNUT_HEX = 0x3a2a1d;
+    function weatherWood(root) {
+      try {
+        root.traverse(function (o) {
+          var mats = o && o.material;
+          if (!mats) { return; }
+          if (!mats.length) { mats = [mats]; }
+          for (var k = 0; k < mats.length; k++) {
+            var m = mats[k];
+            if (!m) { continue; }
+            var nm = (typeof m.name === "string") ? m.name.toLowerCase() : "";
+            if (nm.indexOf("lantern") >= 0 || nm.indexOf("glass") >= 0 ||
+                nm.indexOf("flame") >= 0) { continue; }
+            if (m.color) { m.color.setHex(WALNUT_HEX); }
+            if (typeof m.roughness === "number") { m.roughness = 0.85; }
+            m.needsUpdate = true;
+          }
+        });
+      } catch (eWood) { /* cosmetic only */ }
+    }
     function placeProp(def) {
       if (def.hw) {
         colliders.push({
@@ -533,7 +561,8 @@
     for (i = 0; i < CHESTS.length; i++) {
       placeProp({
         url: U_CHEST, x: CHESTS[i][0], y: 0, z: CHESTS[i][1],
-        len: 0.95, hw: 0.48, hd: 0.3, fb: [0.8, 0.6, 0x7a5a34]
+        len: 0.95, hw: 0.48, hd: 0.3, fb: [0.8, 0.6, 0x7a5a34],
+        onRoot: weatherWood
       });
     }
     // 5 crates: 2-high stack at H1, 1 key-desk under K1, 2 at H5.
@@ -544,7 +573,8 @@
     for (i = 0; i < CRATES.length; i++) {
       placeProp({
         url: U_CRATE, x: CRATES[i][0], y: CRATES[i][1], z: CRATES[i][2],
-        len: 0.62, hw: CRATES[i][3] ? 0.31 : 0, hd: 0.31, fb: [0.55, 0.55, 0x8a6a42]
+        len: 0.62, hw: CRATES[i][3] ? 0.31 : 0, hd: 0.31, fb: [0.55, 0.55, 0x8a6a42],
+        onRoot: weatherWood
       });
     }
     var BARRELS = [[7.3, 0.3], [7.8, 0.6], [7.4, 0.9], [-6.2, 7.8], [-5.6, 8.1]];

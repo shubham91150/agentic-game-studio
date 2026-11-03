@@ -129,6 +129,70 @@
     }
   }
 
+  /* LIVE room readout (prop-polish): a small second line under #hud-obj
+   * (e.g. '◉ Classroom A') so the static objective is never misread as
+   * the current room. Polls window.game.player.pos() every 500ms, fully
+   * guarded: missing DOM/player/menu/pause states all pass silently.
+   * Rects mirror the levels.js SEGS layout (x/z, meters). */
+  var ROOM_TICK_MS = 500;
+  var roomTimer = 0;
+  var roomLast = '';
+  function resolveRoom(x, z) {
+    if (!isFinite(x) || !isFinite(z)) return '';
+    if (x >= -3 && x <= 3 && z >= -9 && z <= -6) return 'Chapel Approach';
+    if (z >= -9 && z <= -6) return 'North Corridor';
+    if (x >= -9 && x <= -1 && z >= -6 && z <= 2) return 'Classroom A';
+    if (x >= 1 && x <= 9 && z >= -6 && z <= 2) return 'Classroom B';
+    if (z >= 2 && z <= 5) return 'South Corridor';
+    if (z >= 5 && z <= 9) {
+      if (x >= -4 && x <= 4) return 'Entrance Hall';
+      if (x < -4) return 'West Store';
+      if (x > 4) return 'East Store';
+    }
+    /* W/E side passages (x +-9..12, z -6..2): north/south half. */
+    if ((x < -9 || x > 9) && z > -6 && z < 2) {
+      return (z < -2) ? 'North Corridor' : 'South Corridor';
+    }
+    return '';
+  }
+  function roomEl() {
+    var el = $('hud-room');
+    if (el) return el;
+    var obj = $('hud-obj');
+    if (!obj || !obj.parentNode) return null;
+    try {
+      el = document.createElement('div');
+      el.id = 'hud-room';
+      el.style.display = 'block';
+      el.style.fontSize = '12px';
+      el.style.opacity = '0.85';
+      if (obj.nextSibling) obj.parentNode.insertBefore(el, obj.nextSibling);
+      else obj.parentNode.appendChild(el);
+      return el;
+    } catch (err) { return null; }
+  }
+  function roomTick() {
+    var pos = null;
+    try {
+      var g = (typeof window !== 'undefined') ? window.game : null;
+      var p = g && g.player;
+      if (p && typeof p.pos === 'function') pos = p.pos();
+    } catch (err) { pos = null; }
+    if (!pos) return;
+    var room = resolveRoom(+pos.x, +pos.z);
+    if (!room || room === roomLast) return;
+    roomLast = room;
+    var el = roomEl();
+    if (el) {
+      try { el.textContent = '\u25C9 ' + room; } catch (err) { /* x */ }
+    }
+  }
+  function startRoomPoll() {
+    if (roomTimer) return;
+    try { roomTimer = setInterval(roomTick, ROOM_TICK_MS); }
+    catch (err) { roomTimer = 0; }
+  }
+
   var api = {
     show: function (name) {
       var menu = $('menu');
@@ -567,6 +631,8 @@
       } catch (err) { /* x */ }
     }
   }
+
+  startRoomPoll();
 
   window.StV_UI = api;
 })();
