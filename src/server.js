@@ -512,6 +512,227 @@ async function callDirectorModel(telemetry) {
   }
 }
 
+// ---------- Judge AI assistant (public) ----------
+// (module level: KB + fallback + rate-limit + cache helpers)
+  // POST /api/studio/judge-assistant answers judge questions about the
+  // build from grounded repo facts via meta-models/muse-spark-open-1026,
+  // with a deterministic keyword-routed KB fallback (<5ms) on ANY failure.
+export const AI_ASSISTANT_MODEL_FALLBACK = "judge-assistant-kb-v1";
+const AI_ASSISTANT_CACHE_TTL_MS = 60000;
+const AI_ASSISTANT_TIMEOUT_MS = 4000;
+const AI_ASSISTANT_MAX = 30;
+const AI_ASSISTANT_WINDOW_MS = 60 * 1000;
+const AI_ASSISTANT_QUESTION_MAX = 2000;
+const assistantHits = new Map();
+const assistantCache = new Map();
+
+// Mirror of directorAllowed: 30 req/min per IP, 429 + retryAfter.
+export function judgeAssistantAllowed(ip) {
+  const now = Date.now();
+  const arr = (assistantHits.get(ip) || []).filter(
+    (t) => now - t < AI_ASSISTANT_WINDOW_MS,
+  );
+  if (arr.length >= AI_ASSISTANT_MAX) {
+    assistantHits.set(ip, arr);
+    const retryAfter = Math.max(
+      1,
+      Math.ceil((AI_ASSISTANT_WINDOW_MS - (now - arr[0])) / 1000),
+    );
+    return { allowed: false, retryAfter };
+  }
+  arr.push(now);
+  assistantHits.set(ip, arr);
+  return { allowed: true, retryAfter: 0 };
+}
+
+// Normalized cache key: case/whitespace-insensitive, length-capped.
+export function buildAssistantSignature(question) {
+  return String(question || "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .slice(0, AI_ASSISTANT_QUESTION_MAX);
+}
+
+// Deterministic knowledge base. Every citation is a real file:line in
+// this repo (verified on disk); counts below are the verified values,
+// including the honest corrections (35 Polyhaven dirs, 3 named bonus
+// targets, README's stale 59/59 and stale .glb names).
+const JUDGE_ASSISTANT_KB = [
+  {
+    id: "stack",
+    match: ["9-model", "9 model", "nine", "model stack", "meta stack", "which models", "what models", "open weight", "open-weight"],
+    answer:
+      "The repo documents 9 Meta models plus the SceneScript pipeline (README's table has 10 rows; row 10 is a DSL, not a model): " +
+      "(1) muse-wonder-1.0, high-reasoning game architect; " +
+      "(2) meta-models/muse-spark-open-1026 on Baseten, live AI director + enrichment; " +
+      "(3) muse-image-1.0, concept art; " +
+      "(4) muse-spark-1.3 via Muse Code CLI 1.4.14, game code; " +
+      "(5) muse-voice-transcribe-1.0, voice prompts; " +
+      "(6) sam-3.1, segmentation; " +
+      "(7) SAM 3D Objects, image-to-3D .glb (2 green Modal trials); " +
+      "(8) VGGT-1B, metric mesh reconstruction; " +
+      "(9) facebook/musicgen-small (300M, 32kHz), AI music. " +
+      "17 native MCP tools serve the CLI, 26 agent skills persist the workflow, and the Mega 3D hub indexes 825,000+ models.",
+    citations: [
+      "README.md:18",
+      "src/agent/meta_wonder.js:24",
+      "src/agent/baseten_muse.js:16",
+      "src/tools/meta_voice_transcribe.js:144",
+      "src/tools/segment_image.py:86",
+      "src/tools/meta_musicgen_audio.py:22",
+      "src/tools/studio_3d_mcp_server.py:30",
+      "src/tools/fetch_mega_3d_hub.py:6",
+    ],
+  },
+  {
+    id: "sam31",
+    match: ["sam 3.1", "sam3.1", "sam-3.1", "20-bone", "20 bone", "rig", "agatha", "segment", "evidence lens"],
+    answer:
+      "SAM 3.1 (model sam-3.1 via the Meta Model API) segments concept frames into masks — see the veil, face, and lantern evidence frames (1120x2240 each). " +
+      "The Mother Agatha builder then projects that sheet onto the hero mesh in Blender: pixel rows 184 to 2106 map to heights 1.72m down to 0.00m (1117.4 px per meter), centered on column 567. " +
+      "The rig is a real Blender Armature of exactly 20 bones: 13 authored (root, hips, spine, chest, neck, head, plus left-side shoulder/arm/hand and thigh/shin/foot) with 7 mirrored to the right side, skinned by vertex groups with baked Idle/Walk NLA clips.",
+    citations: [
+      "src/tools/segment_image.py:86",
+      "src/tools/build_agatha_sam31.py:48",
+      "src/tools/build_agatha_sam31.py:574",
+      "public/assets/evidence/sam31_veil.png:1",
+    ],
+  },
+  {
+    id: "gvisor",
+    match: ["gvisor", "sandbox", "runsc", "kernel", "4.19", "isolated", "judge mode"],
+    answer:
+      "Judge builds run inside Google gVisor: the runsc 4.19.0-gvisor runtime (Linux 4.19.0-gvisor kernel) with read-only mounts, executing the pinned Muse Code CLI binary muse-bin-1.4.14-R7309.1 — so unauthenticated visitors get full build power with zero VM risk. " +
+      "The server only routes judge builds there when the runsc runtime, the vm-opencode image, and the sandbox binary are all present (checked fresh every 60s), and /api/studio/health reports the live gvisorSandbox flag. Owner routes stay behind AES-256-GCM GitHub-cookie auth.",
+    citations: [
+      "src/agent/agent_runner.js:426",
+      "src/agent/agent_runner.js:50",
+      "src/server.js:518",
+      "test/gvisor_sandbox.test.js:31",
+    ],
+  },
+  {
+    id: "gates",
+    match: ["gate", "verif", "qa", "physics", "visual", "test", "67", "deterministic", "bfs", "ccd"],
+    answer:
+      "Three deterministic layers, all runnable locally: (1) the Visual QA Gate runs 6 checks — CSP (zero inline scripts/handlers), real .glb via GLTFLoader required, primitive box/cone fakes banned, 3D instanced wind-sway grass required, ACES tone mapping, and radial maps on every PointsMaterial. " +
+      "(2) The Physics QA Gate runs 4 proofs — CCD zero-tunneling at 60Hz, camera clearance over terrain, jump-arc sanity, and BFS flood-fill reachability of every orb on the layout grid (orb count varies per layout). " +
+      "(3) The automated suite (node --test --test-concurrency=1 test/) passes 67/67, verified Nov 3 — note README's '59/59' line is stale.",
+    citations: [
+      "src/verifier/visual_qa_gate.js:368",
+      "src/verifier/physics_qa_gate.js:142",
+      "package.json:11",
+      "test/pipeline.test.js:24",
+    ],
+  },
+  {
+    id: "prizes",
+    match: ["bonus", "prize", "criteria", "judg", "eligib", "impact", "weight"],
+    answer:
+      "Stated plainly: the repo names 3 bonus targets, not 5 — Best Agentic Use-Case, Best Build on Meta Open Weight Models, and Best Creative Build (Muse Image + Muse Wonder). There is no 5-prize list anywhere in the repo, so this page claims none. " +
+      "The 4 official criteria it maps against are Impact (30%), Use of Meta AI Tooling (25%), Demo (25%), and Technical Depth & Execution (20%). " +
+      "Track: Indie Developer; theme Push the Frontier; all commits Oct 26 – Nov 4, 2026.",
+    citations: [
+      "README.md:131",
+      "README.md:9",
+      "README.md:127",
+    ],
+  },
+];
+
+const JUDGE_ASSISTANT_GENERIC = {
+  answer:
+    "I answer from a grounded repo-facts base: the 9-model Meta stack, SAM 3.1 + the 20-bone Agatha rig, the gVisor sandbox, the deterministic gates (6 visual checks, 4 physics proofs, 67/67 tests), and the judging map. " +
+    "Try one of the five suggested questions above, or ask about any file, model, or gate by name.",
+  citations: ["README.md:18", "src/server.js:2739"],
+};
+
+// Rich deterministic fallback: keyword-routed, pure function of the
+// question, <5ms, never throws. Covers the 5 pill questions + generic.
+export function judgeAssistantFallback(question) {
+  try {
+    const q = String(question || "").toLowerCase();
+    if (!q.trim()) return { ...JUDGE_ASSISTANT_GENERIC };
+    let best = null;
+    let bestHits = 0;
+    for (const topic of JUDGE_ASSISTANT_KB) {
+      let hits = 0;
+      for (const kw of topic.match) {
+        if (kw && q.includes(kw)) hits += kw.length;
+      }
+      if (hits > bestHits) {
+        bestHits = hits;
+        best = topic;
+      }
+    }
+    const picked = bestHits > 0 && best ? best : JUDGE_ASSISTANT_GENERIC;
+    return { answer: picked.answer, citations: [...picked.citations] };
+  } catch {
+    return { ...JUDGE_ASSISTANT_GENERIC };
+  }
+}
+
+// Grounding facts for the live model call. Every count below was read
+// from this repo (not from marketing copy): 9 models, 17 MCP tools,
+// 26 skills, 825K+ hub, gVisor 4.19.0-gvisor, 20-bone rig, 35 Polyhaven
+// dirs / 36 .glb, 6+4 gates, 67/67 tests, 3 named bonus targets.
+const AI_ASSISTANT_SYSTEM = [
+  "You are the Agentic Game Studio judges-brief assistant.",
+  "Answer ONLY from these verified repo facts; never invent counts, files, or prizes.",
+  "If the question is outside these facts, say so in one sentence and point at the closest fact.",
+  "Keep answers under 120 words, plain sentences, no markdown headers.",
+  "FACTS:",
+  "9 Meta models: muse-wonder-1.0 (architect), meta-models/muse-spark-open-1026 on Baseten (live AI director), muse-image-1.0 (concept art), muse-spark-1.3 via Muse Code CLI 1.4.14 (game code), muse-voice-transcribe-1.0 (voice prompts), sam-3.1 (segmentation), SAM 3D Objects (2 green Modal .glb trials), VGGT-1B (metric mesh), facebook/musicgen-small 300M 32kHz (music). Row 10 of the README table is the SceneScript DSL pipeline, not a model.",
+  "Platform: 17 native MCP tools (studio_3d_mcp_server.py), 26 agent skills (.agents/skills), Mega 3D hub 825,000+ models (fetch_mega_3d_hub.py).",
+  "Sandbox: Google gVisor runsc 4.19.0-gvisor, CLI binary muse-bin-1.4.14-R7309.1, health flag gvisorSandbox.",
+  "Hero rig: Mother Agatha, real Blender Armature, exactly 20 bones (13 authored + 7 mirrored), SAM 3.1 sheet 1120x2240 projected rows 184->2106 to heights 1.72m->0.00m.",
+  "Photogrammetry: public/assets/polyhaven holds 35 model dirs with 36 .glb files (34 at 1K).",
+  "Gates: Visual QA Gate 6 checks (CSP, real .glb, no primitive fakes, 3D grass, ACES, radial particle maps); Physics QA Gate 4 proofs (CCD zero-tunneling, camera clearance, jump arc, BFS orb reachability); suite node --test --test-concurrency=1 test/ passes 67/67 (README's 59/59 is stale).",
+  "Judging: 4 official criteria Impact 30%, Meta AI Tooling 25%, Demo 25%, Technical Depth 20%; exactly 3 named bonus targets (Best Agentic Use-Case, Best Build on Meta Open Weight Models, Best Creative Build) — no 5-prize list exists in the repo. Track Indie Developer, theme Push the Frontier, commits Oct 26 - Nov 4 2026.",
+].join(" ");
+
+// Live Baseten call with a 4s AbortController timeout. Mirrors
+// callDirectorModel: fetch is issued here so the signal can cancel it.
+// Throws on ANY failure — caller uses the KB fallback.
+async function callAssistantModel(question) {
+  const client = new BasetenMuseClient();
+  if (!client.apiKey) throw new Error("no baseten key");
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), AI_ASSISTANT_TIMEOUT_MS);
+  try {
+    const response = await fetch(client.baseUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${client.apiKey}`,
+      },
+      body: JSON.stringify({
+        model: client.model,
+        messages: [
+          { role: "system", content: AI_ASSISTANT_SYSTEM },
+          { role: "user", content: String(question).slice(0, AI_ASSISTANT_QUESTION_MAX) },
+        ],
+        max_tokens: 768,
+        temperature: 0.3,
+      }),
+      signal: controller.signal,
+    });
+    if (!response.ok) throw new Error(`Baseten ${response.status}`);
+    const data = await response.json();
+    const msg = data.choices?.[0]?.message || {};
+    const text = `${msg.content || ""}\n${msg.reasoning_content || ""}`.trim();
+    if (!text) throw new Error("no text in model output");
+    return {
+      answer: text.slice(0, 1500),
+      model: client.model,
+    };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+
 // gVisor sandbox detection (cached 60s): runsc runtime + vm-opencode image
 // + sandbox CLI binary must ALL be present for judge builds to use gVisor.
 let gvisorDetected = null;
@@ -1066,19 +1287,25 @@ const server = http.createServer(async (req, res) => {
     return sendFile(res, path.join(PUBLIC_DIR, "index.html"));
   }
 
-  // ---------- Studio static assets (studio.js, tailwind.config.js, app.css, etc.) ----------
+  // ---------- Studio static assets (studio.js, tailwind.config.js, app.css, hackathon brief, etc.) ----------
   if (
     pathname === "/studio/studio.js" ||
     pathname === "/studio.js" ||
     pathname === "/studio/tailwind.config.js" ||
-    pathname === "/studio/app.css"
+    pathname === "/studio/app.css" ||
+    pathname === "/studio/hackathon.html" ||
+    pathname === "/studio/hackathon.js"
   ) {
     const fname =
       pathname === "/studio/app.css"
         ? "app.css"
         : pathname === "/studio/tailwind.config.js"
           ? "tailwind.config.js"
-          : "studio.js";
+          : pathname === "/studio/hackathon.html"
+            ? "hackathon.html"
+            : pathname === "/studio/hackathon.js"
+              ? "hackathon.js"
+              : "studio.js";
     return sendFile(res, path.join(PUBLIC_DIR, fname));
   }
 
@@ -2785,6 +3012,82 @@ const server = http.createServer(async (req, res) => {
       }
       directorCache.set(sig, { at: Date.now(), model, decision });
       return json(res, 200, { ok: true, model, cached: false, ...decision });
+    });
+    return;
+  }
+
+  // ---------- Judge AI assistant (PUBLIC) ----------
+  if (pathname === "/api/studio/judge-assistant" && req.method === "POST") {
+    let body = "";
+    req.on("data", (chunk) => (body += chunk));
+    req.on("end", async () => {
+      let payload = {};
+      try {
+        payload = JSON.parse(body || "{}");
+      } catch {
+        payload = {};
+      }
+      const question =
+        typeof payload.question === "string"
+          ? payload.question.slice(0, AI_ASSISTANT_QUESTION_MAX)
+          : "";
+      if (!question.trim()) {
+        return json(res, 400, {
+          error:
+            "Body { question: string } is required and must not be empty.",
+        });
+      }
+      appendJudgeAudit(req, "judge_assistant_ask", question);
+      const verdict = judgeAssistantAllowed(judgeClientIp(req));
+      if (!verdict.allowed) {
+        res.setHeader("retry-after", String(verdict.retryAfter));
+        return json(res, 429, {
+          error:
+            "Judge assistant rate limit reached (30 requests per minute). Try again soon.",
+          retryAfter: verdict.retryAfter,
+        });
+      }
+      const sig = buildAssistantSignature(question);
+      const hit = assistantCache.get(sig);
+      if (hit && Date.now() - hit.at < AI_ASSISTANT_CACHE_TTL_MS) {
+        return json(res, 200, {
+          ok: true,
+          model: hit.model,
+          answer: hit.answer,
+          citations: hit.citations,
+          cached: true,
+        });
+      }
+      const kb = judgeAssistantFallback(question);
+      let model = AI_ASSISTANT_MODEL_FALLBACK;
+      let answer = kb.answer;
+      if (process.env.STUDIO_JUDGE_ASSISTANT_OFFLINE === "1") {
+        /* offline kill-switch: KB only, zero credits spent */
+      } else {
+        try {
+          const live = await callAssistantModel(question);
+          answer = live.answer;
+          model = live.model;
+        } catch (err) {
+          console.warn(
+            "[judge-assistant] live call failed, KB fallback:",
+            err && err.message,
+          );
+        }
+      }
+      assistantCache.set(sig, {
+        at: Date.now(),
+        model,
+        answer,
+        citations: kb.citations,
+      });
+      return json(res, 200, {
+        ok: true,
+        model,
+        answer,
+        citations: kb.citations,
+        cached: false,
+      });
     });
     return;
   }

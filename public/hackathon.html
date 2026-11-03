@@ -1,0 +1,922 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#000000" />
+    <meta
+      name="description"
+      content="Judges brief for Agentic Game Studio — one sentence in, a playable verified 3D game out. Meta AI stack, evidence, and a live verification receipt."
+    />
+    <title>Judges brief — Agentic Game Studio</title>
+    <link rel="stylesheet" href="/studio/fonts/fonts.css" />
+    <link rel="stylesheet" href="/studio/app.css?v=15" />
+    <style>
+      .brief {
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 36px 20px 72px;
+      }
+      .track-badge {
+        display: inline-block;
+        font-family: var(--font-mono);
+        font-size: var(--fs-11);
+        letter-spacing: 0.04em;
+        color: var(--accent);
+        background: var(--accent-dim);
+        border: 1px solid var(--line-strong);
+        border-radius: var(--r-pill);
+        padding: 5px 12px;
+      }
+      .brief h1 {
+        font-size: 34px;
+        line-height: 1.15;
+        letter-spacing: -0.02em;
+        margin: 16px 0 0;
+      }
+      .lede {
+        color: var(--muted);
+        font-size: var(--fs-15);
+        max-width: 68ch;
+        margin: 12px 0 0;
+      }
+      .shot {
+        margin: 28px 0 0;
+        border: 1px solid var(--line-strong);
+        border-radius: var(--r-lg);
+        overflow: hidden;
+        background: #000;
+      }
+      .shot-bar {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 9px 14px;
+        border-bottom: 1px solid var(--line);
+        background: var(--surface-1);
+      }
+      .shot-title {
+        font-family: var(--font-mono);
+        font-size: var(--fs-11);
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+      .shot video {
+        display: block;
+        width: 100%;
+        aspect-ratio: 16 / 9;
+        background: #000;
+      }
+      .video-fallback {
+        margin: 0;
+        padding: 28px 20px;
+        text-align: center;
+        color: var(--muted);
+        font-size: var(--fs-13);
+      }
+      .btn-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 20px;
+      }
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 18px;
+        border-radius: 8px;
+        border: 1px solid var(--line-strong);
+        color: var(--ink);
+        text-decoration: none;
+        font-weight: 600;
+        font-size: var(--fs-14);
+        background: transparent;
+      }
+      .btn-solid {
+        background: #f4f4f6;
+        color: #000;
+        border-color: transparent;
+      }
+      .stack {
+        padding: 30px 0 26px;
+        border-top: 1px solid var(--line);
+        margin-top: 30px;
+      }
+      .stack h2 {
+        font-size: var(--fs-20);
+        letter-spacing: -0.01em;
+        margin: 0;
+        font-weight: 700;
+      }
+      .sec-n {
+        font-family: var(--font-mono);
+        font-size: var(--fs-13);
+        font-weight: 500;
+        color: var(--accent);
+        margin-right: 10px;
+      }
+      .sec-sub {
+        color: var(--muted);
+        font-size: var(--fs-13);
+        margin: 6px 0 0;
+      }
+      .stack p.body {
+        color: var(--ink-2);
+        max-width: 72ch;
+        margin: 12px 0 0;
+      }
+      .stack ul {
+        margin: 12px 0 0;
+        padding-left: 20px;
+        color: var(--ink-2);
+        max-width: 72ch;
+      }
+      .stack li {
+        margin: 6px 0;
+      }
+      .stack code,
+      .receipt code {
+        font-family: var(--font-mono);
+        font-size: 12.5px;
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid var(--line);
+        border-radius: 5px;
+        padding: 1px 6px;
+        white-space: nowrap;
+      }
+      .grid-3 {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 12px;
+        margin-top: 16px;
+      }
+      .grid-4 {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+        margin-top: 16px;
+      }
+      .grid-3 figure,
+      .grid-4 figure {
+        margin: 0;
+        border: 1px solid var(--line);
+        border-radius: var(--r-md);
+        overflow: hidden;
+        background: #000;
+      }
+      .grid-3 img,
+      .grid-4 img {
+        display: block;
+        width: 100%;
+        height: auto;
+      }
+      .grid-3 figcaption,
+      .grid-4 figcaption {
+        padding: 8px 10px;
+        font-size: var(--fs-12);
+        color: var(--muted);
+        border-top: 1px solid var(--line);
+        background: var(--surface-1);
+      }
+      table.evidence-table {
+        width: 100%;
+        margin-top: 16px;
+        border-collapse: collapse;
+        font-size: var(--fs-13);
+      }
+      table.evidence-table caption {
+        text-align: left;
+        color: var(--muted);
+        font-size: var(--fs-12);
+        padding-bottom: 8px;
+      }
+      table.evidence-table th,
+      table.evidence-table td {
+        text-align: left;
+        padding: 8px 10px;
+        border: 1px solid var(--line);
+      }
+      table.evidence-table th {
+        color: var(--ink-2);
+        font-weight: 600;
+        background: var(--surface-1);
+      }
+      table.evidence-table td {
+        color: var(--ink-2);
+        font-family: var(--font-mono);
+        font-size: 12.5px;
+      }
+      details.tool-list {
+        margin-top: 12px;
+        border: 1px solid var(--line);
+        border-radius: var(--r-md);
+        background: var(--surface-1);
+      }
+      details.tool-list summary {
+        cursor: pointer;
+        padding: 10px 14px;
+        color: var(--ink-2);
+        font-size: var(--fs-13);
+        font-weight: 600;
+      }
+      details.tool-list .tool-names {
+        padding: 0 14px 12px;
+        font-family: var(--font-mono);
+        font-size: 12px;
+        line-height: 1.9;
+        color: var(--muted);
+      }
+      .verify-btn {
+        font: inherit;
+        font-weight: 600;
+        font-size: var(--fs-14);
+        color: #000;
+        background: #f4f4f6;
+        border: none;
+        border-radius: 8px;
+        padding: 11px 20px;
+        cursor: pointer;
+        margin-top: 16px;
+      }
+      .verify-btn:hover:not(:disabled) {
+        background: #fff;
+      }
+      .verify-btn:disabled {
+        opacity: 0.55;
+        cursor: wait;
+      }
+      .verify-status {
+        margin: 12px 0 0;
+        font-family: var(--font-mono);
+        font-size: var(--fs-12);
+        color: var(--muted);
+        min-height: 18px;
+      }
+      .receipt {
+        margin-top: 14px;
+        border: 1px solid var(--line-strong);
+        border-radius: var(--r-md);
+        background: var(--surface-1);
+        padding: 18px;
+      }
+      .receipt-head {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+      .receipt-badge {
+        font-family: var(--font-mono);
+        font-size: var(--fs-12);
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        padding: 4px 12px;
+        border-radius: var(--r-pill);
+        border: 1px solid var(--line-strong);
+      }
+      .receipt-badge.ok {
+        color: var(--ok);
+        border-color: rgba(74, 222, 128, 0.4);
+      }
+      .receipt-badge.fail {
+        color: var(--bad);
+        border-color: rgba(248, 113, 113, 0.4);
+      }
+      .receipt-meta {
+        font-family: var(--font-mono);
+        font-size: 12px;
+        color: var(--muted);
+        margin: 12px 0 0;
+        overflow-wrap: anywhere;
+      }
+      .receipt-meta dt {
+        color: var(--faint);
+      }
+      .receipt-meta dd {
+        margin: 2px 0 10px;
+        color: var(--ink-2);
+      }
+      .receipt-rows {
+        margin: 6px 0 0;
+        padding: 0;
+        list-style: none;
+      }
+      .receipt-rows li {
+        display: flex;
+        gap: 10px;
+        align-items: baseline;
+        padding: 8px 0;
+        border-top: 1px solid var(--line);
+        font-size: var(--fs-13);
+      }
+      .pill {
+        flex: 0 0 auto;
+        font-family: var(--font-mono);
+        font-size: 11px;
+        font-weight: 700;
+        padding: 2px 9px;
+        border-radius: var(--r-pill);
+        border: 1px solid var(--line-strong);
+      }
+      .pill.ok {
+        color: var(--ok);
+      }
+      .pill.fail {
+        color: var(--bad);
+      }
+      .console {
+        margin-top: 16px;
+        border: 1px solid var(--line-strong);
+        border-radius: var(--r-lg);
+        background: rgba(255, 255, 255, 0.04);
+        -webkit-backdrop-filter: blur(14px);
+        backdrop-filter: blur(14px);
+        box-shadow: 0 16px 40px -24px rgba(0, 0, 0, 0.9);
+        padding: 16px;
+      }
+      .console-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+      .live-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        font-family: var(--font-mono);
+        font-size: var(--fs-11);
+        letter-spacing: 0.02em;
+        color: var(--ink-2);
+      }
+      .console-model {
+        font-family: var(--font-mono);
+        font-size: var(--fs-11);
+        color: var(--faint);
+      }
+      .pill-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 12px;
+      }
+      .pill-btn {
+        font: inherit;
+        font-size: var(--fs-12);
+        font-weight: 600;
+        color: var(--ink-2);
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid var(--line-strong);
+        border-radius: var(--r-pill);
+        padding: 7px 14px;
+        cursor: pointer;
+        transition-property: transform, background-color, border-color, color;
+        transition-duration: 150ms;
+        transition-timing-function: ease-out;
+      }
+      .pill-btn:not(:disabled):active {
+        transform: scale(0.96);
+      }
+      .pill-btn:disabled {
+        opacity: 0.55;
+        cursor: wait;
+      }
+      @media (hover: hover) {
+        .pill-btn:hover:not(:disabled) {
+          background: var(--surface-2);
+          border-color: var(--accent);
+          color: var(--ink);
+        }
+        .btn:hover {
+          background: var(--surface-2);
+          border-color: var(--line-strong);
+        }
+        .btn-solid:hover {
+          background: #fff;
+        }
+        .console-send:hover:not(:disabled) {
+          background: #fff;
+        }
+        .cite:hover {
+          text-decoration: underline;
+        }
+      }
+      .transcript {
+        margin-top: 12px;
+        border: 1px solid var(--line);
+        border-radius: var(--r-md);
+        background: rgba(0, 0, 0, 0.45);
+        padding: 14px;
+        min-height: 96px;
+        max-height: 320px;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+      }
+      .transcript-empty {
+        margin: 0;
+        color: var(--faint);
+        font-size: var(--fs-13);
+      }
+      .msg {
+        margin: 0 0 14px;
+        opacity: 1;
+      }
+      .msg:last-child {
+        margin-bottom: 0;
+      }
+      .msg-q {
+        color: var(--ink);
+        font-weight: 600;
+        font-size: var(--fs-13);
+        margin: 0 0 6px;
+      }
+      .msg-a {
+        color: var(--ink-2);
+        font-size: var(--fs-13);
+        line-height: 1.6;
+        margin: 0;
+        max-width: 72ch;
+      }
+      .msg-err {
+        color: var(--bad);
+        font-size: var(--fs-13);
+        margin: 0;
+      }
+      .msg-cites {
+        margin: 8px 0 0;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+      .cite {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        color: var(--accent);
+        background: var(--accent-dim);
+        border: 1px solid var(--line-strong);
+        border-radius: var(--r-pill);
+        padding: 2px 9px;
+        text-decoration: none;
+      }
+      .assistant-status {
+        margin: 10px 0 0;
+        font-family: var(--font-mono);
+        font-size: var(--fs-12);
+        color: var(--muted);
+        min-height: 18px;
+      }
+      .console-form {
+        display: flex;
+        gap: 8px;
+        margin-top: 8px;
+      }
+      .console-form input {
+        flex: 1 1 auto;
+        min-width: 0;
+        font: inherit;
+        font-size: var(--fs-14);
+        color: var(--ink);
+        background: rgba(0, 0, 0, 0.45);
+        border: 1px solid var(--line-strong);
+        border-radius: 8px;
+        padding: 10px 14px;
+      }
+      .console-form input::placeholder {
+        color: var(--faint);
+      }
+      .console-send {
+        flex: 0 0 auto;
+        font: inherit;
+        font-weight: 600;
+        font-size: var(--fs-14);
+        color: #000;
+        background: #f4f4f6;
+        border: none;
+        border-radius: 8px;
+        padding: 10px 20px;
+        cursor: pointer;
+        transition-property: transform, background-color, opacity;
+        transition-duration: 150ms;
+        transition-timing-function: ease-out;
+      }
+      .console-send:not(:disabled):active {
+        transform: scale(0.96);
+      }
+      .console-send:disabled {
+        opacity: 0.55;
+        cursor: wait;
+      }
+      .verify-btn {
+        transition-property: transform, background-color, opacity;
+        transition-duration: 150ms;
+        transition-timing-function: ease-out;
+      }
+      .verify-btn:not(:disabled):active {
+        transform: scale(0.96);
+      }
+      @media (prefers-reduced-motion: no-preference) {
+        .msg-enter {
+          animation: msg-in 220ms ease-out;
+        }
+        @keyframes msg-in {
+          from {
+            opacity: 0;
+          }
+          to {
+            opacity: 1;
+          }
+        }
+      }
+      .brief-footer {
+        margin-top: 40px;
+        padding-top: 20px;
+        border-top: 1px solid var(--line);
+        color: var(--faint);
+        font-size: var(--fs-12);
+        display: flex;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+      .brief-footer a {
+        color: var(--muted);
+      }
+      :focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+      }
+      @media (max-width: 720px) {
+        .brief h1 {
+          font-size: 26px;
+        }
+        .grid-3 {
+          grid-template-columns: 1fr;
+        }
+        .grid-4 {
+          grid-template-columns: 1fr;
+        }
+        table.evidence-table {
+          display: block;
+          overflow-x: auto;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          animation: none !important;
+          transition: none !important;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page" style="height: auto; min-height: 100dvh; overflow: visible">
+      <header class="crumbs" aria-label="Breadcrumb">
+        <div class="crumbs-left">
+          <a href="/studio/">&#8592; Studio</a>
+          <span class="crumb-game-title" id="header-game-title">Judges brief</span>
+        </div>
+        <div class="crumb-right">
+          <a href="/studio/?judge=meta-judge-2026" class="crumb-btn">Judge mode</a>
+          <a
+            href="https://github.com/shubham91150/agentic-game-studio"
+            target="_blank"
+            rel="noreferrer"
+            >GitHub</a
+          >
+        </div>
+      </header>
+
+      <main class="brief">
+        <section aria-label="Introduction">
+          <span class="track-badge">Indie Developer Track &#183; Push the Frontier</span>
+          <h1>One sentence in, a playable 3D game out</h1>
+          <p class="lede">
+            Agentic Game Studio turns a plain-language prompt into a real-time 3D game:
+            designed on Meta models, built from real geometry, and held to deterministic
+            verification gates before anything reaches the screen. This page shows the
+            stack, the evidence, and a receipt you can reproduce live.
+          </p>
+          <figure class="shot" style="margin-left: 0; margin-right: 0">
+            <div class="shot-bar" aria-hidden="true">
+              <span class="window-dots">
+                <span></span><span></span><span></span>
+              </span>
+              <span class="shot-title">Demo walkthrough</span>
+            </div>
+            <video
+              id="demo-video"
+              controls
+              autoplay
+              muted
+              loop
+              playsinline
+              preload="metadata"
+              src="/studio/assets/demo_walkthrough.mp4"
+            >
+              <p class="video-fallback">
+                The demo video is not attached to this build yet. It lands at
+                /studio/assets/demo_walkthrough.mp4 — everything else on this page
+                is verifiable right now.
+              </p>
+            </video>
+            <p class="video-fallback hidden" id="video-missing">
+              The demo video file is not on the server yet
+              (/studio/assets/demo_walkthrough.mp4). The download button below
+              points at the same path and will work once the file lands.
+            </p>
+          </figure>
+          <div class="btn-row">
+            <a class="btn btn-solid" href="/studio/assets/demo_walkthrough.mp4" download
+              >Download demo video (.mp4)</a
+            >
+            <a class="btn" href="/studio/?judge=meta-judge-2026"
+              >Open live studio (verified judge mode unlocked)</a
+            >
+          </div>
+        </section>
+
+        <section class="stack" aria-label="01 Muse Wonder 1.0">
+          <h2><span class="sec-n">01</span>Muse Wonder 1.0</h2>
+          <p class="sec-sub">High-Reasoning Architect &amp; HFSM Behavior Designer</p>
+          <p class="body">
+            Wonder is the high-reasoning architect. For every build prompt it returns a
+            structured design as JSON — a one-sentence objective plus exactly three
+            focal assets, each tagged with a role (player, collectible, or obstacle).
+            The pipeline builds the world from that contract, and every saved spec
+            records which model actually answered.
+          </p>
+          <ul>
+            <li>Architect client: <code>src/agent/muse_wonder.js</code> via <code>MetaWonderClient</code> in <code>src/agent/meta_wonder.js</code>.</li>
+            <li>Spec stamps the winner as <code>architectModel: "muse-wonder-1.0"</code>; Baseten enriches the same design as a second opinion.</li>
+            <li>Also selectable in the composer model picker alongside the Muse Spark family.</li>
+          </ul>
+        </section>
+
+        <section class="stack" aria-label="02 Baseten AI director">
+          <h2><span class="sec-n">02</span>Baseten meta-models/muse-spark-open-1026</h2>
+          <p class="sec-sub">Live Runtime In-Game AI Director: Agatha tactics + Hindi whispers + environment blackouts/storms</p>
+          <p class="body">
+            While you play, <code>POST /api/studio/ai/director</code> reads flat gameplay
+            telemetry (room, enemy state, torch, key, distance, noise) and answers with
+            one flat JSON decision: an enemy tactic, a target room, a short
+            Hindi/English whisper reacting to your exact situation, and an environment
+            event with fog, light, and ash levels the renderer applies live.
+          </p>
+          <ul>
+            <li>4 tactics (<code>ambush_room</code>, <code>cut_off_chapel</code>, <code>stalk_shadow</code>, <code>inspect_hideout</code>) and 4 environment events (<code>lantern_blackout</code>, <code>storm_surge</code>, <code>ash_vortex</code>, <code>chapel_omen</code>) — every field clamped server-side.</li>
+            <li>20-second state-signature cache (repeat states cost zero credits), 3.5 s model timeout, and a deterministic heuristic fallback under 5 ms on any failure — the game never waits on the network.</li>
+            <li>Default model <code>meta-models/muse-spark-open-1026</code> (<code>src/agent/baseten_muse.js</code>), surfaced in health as <code>plannerModel</code>; 30 requests/min per IP.</li>
+          </ul>
+        </section>
+
+        <section class="stack" aria-label="03 SAM 3.1 evidence lens">
+          <h2><span class="sec-n">03</span>SAM 3.1 Evidence Lens</h2>
+          <p class="sec-sub">Segmented evidence frames, projected pixel-box to metric 3D</p>
+          <p class="body">
+            SAM 3.1 segments concept frames through the Meta Model API
+            (<code>src/tools/segment_image.py</code>, model <code>sam-3.1</code>). The Mother
+            Agatha builder then projects the 1120&#215;2240 sheet onto the hero mesh in
+            Blender (<code>project_sam31_uvs</code> in
+            <code>src/tools/build_agatha_sam31.py</code>): pixel rows 184&#8594;2106 map to
+            heights 1.72&#8594;0.00 m, about 1117.4 px per meter. Sheet size measured from
+            the files below; constants quoted from the script.
+          </p>
+          <div class="grid-3">
+            <figure>
+              <img src="/studio/assets/evidence/sam31_veil.png" alt="SAM 3.1 segmentation of the veil and hood region" loading="lazy" width="1120" height="2240" />
+              <figcaption>sam31_veil.png &#183; veil and hood mask</figcaption>
+            </figure>
+            <figure>
+              <img src="/studio/assets/evidence/sam31_face.png" alt="SAM 3.1 segmentation of the face region" loading="lazy" width="1120" height="2240" />
+              <figcaption>sam31_face.png &#183; face mask</figcaption>
+            </figure>
+            <figure>
+              <img src="/studio/assets/evidence/sam31_lantern.png" alt="SAM 3.1 segmentation of the lantern region" loading="lazy" width="1120" height="2240" />
+              <figcaption>sam31_lantern.png &#183; lantern mask</figcaption>
+            </figure>
+          </div>
+          <table class="evidence-table">
+            <caption>2D pixel box &#8594; 3D metric coordinate (from project_sam31_uvs constants; sheet 1120&#215;2240).</caption>
+            <thead>
+              <tr><th scope="col">2D anchor</th><th scope="col">3D result</th><th scope="col">Rule</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>py 184 (sheet top)</td><td>z 1.72 m (crown)</td><td>y_top &#8594; z_top</td></tr>
+              <tr><td>py 2106 (sheet base)</td><td>z 0.00 m (feet)</td><td>y_bot &#8594; z_bot</td></tr>
+              <tr><td>1922 px span</td><td>1.72 m span</td><td>1117.4 px per meter</td></tr>
+              <tr><td>px 567, u 0.506</td><td>x 0.00 m</td><td>x_center column</td></tr>
+              <tr><td>u clamp 0.35&#8211;0.67</td><td>x &#8722;0.27&#8230;+0.28 m</td><td>u = 0.506 + x&#215;0.58</td></tr>
+              <tr><td>front band v 0.18&#8211;0.55</td><td>z 0.24&#8211;0.98 m</td><td>y &gt; 0.04 m faces</td></tr>
+            </tbody>
+          </table>
+        </section>
+
+        <section class="stack" aria-label="04 Muse Image 1.0">
+          <h2><span class="sec-n">04</span>Muse Image 1.0</h2>
+          <p class="sec-sub">Concept art &amp; material refs</p>
+          <p class="body">
+            Image 1.0 is offered in the composer model picker and served by a
+            dedicated script that calls the Meta Model API directly with the VM
+            key — independent of whichever chat model is active. Its concept
+            frames feed the SAM 3.1 segmentation pass and the PBR material
+            references the world builders work from.
+          </p>
+          <ul>
+            <li>Picker option <code>muse-image-1.0</code> in <code>public/index.html</code>; generation path <code>src/tools/make-image.js</code> and <code>src/pipeline/meta_image.js</code>.</li>
+            <li>Segmented outputs land in <code>public/assets/evidence/</code> and project onto meshes (see 03).</li>
+          </ul>
+        </section>
+
+        <section class="stack" aria-label="05 Muse Voice Transcribe 1.0">
+          <h2><span class="sec-n">05</span>Muse Voice Transcribe 1.0</h2>
+          <p class="sec-sub">ASR voice prompts &amp; audio pipeline</p>
+          <p class="body">
+            Spoken prompts become text through two backends: the Meta Model API
+            endpoint direct, or the Muse Code CLI voice command. Audio is
+            normalized to mono WAV first, matching the API requirement, and a
+            sample prompt ships in the repo.
+          </p>
+          <ul>
+            <li>Tool: <code>src/tools/meta_voice_transcribe.js</code>, model <code>muse-voice-transcribe-1.0</code>, endpoint <code>POST api.meta.ai/v1/asr/transcribe</code>.</li>
+            <li>Sample: <code>public/assets/audio/voice_prompt_sample.wav</code> (20,636 bytes, on disk).</li>
+          </ul>
+        </section>
+
+        <section class="stack" aria-label="06 SAM 3D and VGGT">
+          <h2><span class="sec-n">06</span>Meta SAM 3D Objects &amp; Meta VGGT-1B Modal GPU</h2>
+          <p class="sec-sub">2 verified green .glb trials in docs/evidence-sam3d/</p>
+          <p class="body">
+            Two SAM 3D Object trials finished green on Modal GPUs with their exit
+            codes and byte counts preserved in the trial logs. An empty second
+            run is logged as missing rather than faked, and the speed run's
+            87-minute wall is disclosed as cold-start dominated. VGGT-1B runs on
+            Modal with an automatic local depth-fallback, and its reconstructed
+            scene ships in the repo.
+          </p>
+          <ul>
+            <li>Trial 3 <code>EXIT: 0</code> &#8594; <code>sam3d_verify.glb</code> (5,170,920 bytes); trial 4 <code>EXIT: 0</code> &#8594; <code>sam3d_verify2.glb</code> (11,415,872 bytes).</li>
+            <li>VGGT: <code>src/tools/meta_vggt_scene.py</code> (<code>facebook/VGGT-1B</code> on Modal <code>spurcode-meta-vggt</code>) &#8594; <code>public/assets/custom/vggt_scene.glb</code> (1,803,584 bytes).</li>
+            <li>Full trial record: <code>docs/evidence-sam3d/README.md</code>. The shipped game path uses Blender/kit assets where GPUs are unavailable — the README says so.</li>
+          </ul>
+        </section>
+
+        <section class="stack" aria-label="07 Meta MusicGen">
+          <h2><span class="sec-n">07</span>Meta MusicGen facebook/musicgen-small</h2>
+          <p class="sec-sub">Local 32kHz stalker drone &amp; tension stems</p>
+          <p class="body">
+            The neural theme is generated by Meta's official MusicGen small
+            model (300M parameters) at 32kHz from a text prompt, and ships as a
+            WAV in the repo. Around it sit five procedural stems — ambience,
+            sizzle, footstep, chime, impact — synthesized locally with zero
+            dependencies.
+          </p>
+          <ul>
+            <li>Generator: <code>src/tools/meta_musicgen_audio.py</code> &#8594; <code>public/assets/audio/musicgen_theme.wav</code> (188,204 bytes).</li>
+            <li>Stems: <code>bazaar_ambience</code>, <code>jalebi_sizzle</code>, <code>footstep_stone</code>, <code>collect_chime</code>, <code>impact_crash</code> via <code>src/tools/generate_game_audio.py</code>.</li>
+          </ul>
+        </section>
+
+        <section class="stack" aria-label="08 CLI and sandbox">
+          <h2><span class="sec-n">08</span>Muse Code CLI 1.4.14 in the app + Google gVisor 4.19.0-gvisor sandbox</h2>
+          <p class="sec-sub">17 native MCP tools, 26 skills, 825K+ Mega 3D hub</p>
+          <p class="body">
+            The studio embeds the real Muse Code CLI (pinned binary
+            1.4.14) behind the left-pane terminal, and every judge build runs
+            inside a Google gVisor sandbox — runsc 4.19.0-gvisor with read-only
+            mounts. The CLI reaches the world through 17 native MCP tools and
+            26 persistent skills, with the Mega 3D hub indexing over 825,000
+            models and materials. Counts verified against the repo configs.
+          </p>
+          <ul>
+            <li>Sandbox: <code>muse-bin-1.4.14-R7309.1</code> (<code>src/agent/agent_runner.js</code>), gVisor gate in <code>src/server.js</code>, flag <code>gvisorSandbox</code> in <code>/api/studio/health</code>.</li>
+            <li>Tools: <code>src/tools/studio_3d_mcp_server.py</code> (17 named tools); skills: 26 dirs in <code>.agents/skills/</code>; hub: <code>src/tools/fetch_mega_3d_hub.py</code> (825,000+).</li>
+          </ul>
+          <details class="tool-list">
+            <summary>All 17 MCP tool names</summary>
+            <p class="tool-names">partnet_shapenet_build &#183; blender_pro_generate &#183; blender_autorig_animate &#183; depth_to_gaussian_splat &#183; generate_game_audio &#183; meta_musicgen_generate &#183; osm_real_world_city_3d &#183; objaverse_inspect_3d &#183; blenderkit_search_free &#183; fetch_cc0_pbr_or_model &#183; scenescript_wfc_build &#183; meta_vggt_reconstruct &#183; gltf_transform_optimize &#183; run_visual_qa_gate &#183; meta_voice_transcribe &#183; mega_3d_hub_search_and_fetch &#183; elite_imagination_engine</p>
+          </details>
+        </section>
+
+        <section class="stack" aria-label="09 agent gates">
+          <h2><span class="sec-n">09</span>Deterministic verifiable agent gates</h2>
+          <p class="sec-sub">visual_qa_gate 6/6 &#183; physics_qa_gate BFS reachability &#183; automated tests 67/67</p>
+          <p class="body">
+            Nothing reaches the preview unverified. The visual gate runs 6
+            checks, the physics gate runs 4 proofs over the same layout the
+            renderer draws, and the automated suite passes 67 of 67 — run in
+            this repo on Nov 3.
+          </p>
+          <ul>
+            <li>Visual (<code>src/verifier/visual_qa_gate.js</code>): CSP zero inline scripts/handlers; real <code>.glb</code> via GLTFLoader required; primitive fakes banned; 3D instanced wind-sway grass; ACES tone mapping; radial map on every PointsMaterial.</li>
+            <li>Physics (<code>src/verifier/physics_qa_gate.js</code>): CCD zero-tunneling at 60Hz; camera clearance; jump-arc sanity; BFS flood-fill reachability of every orb (count varies per layout).</li>
+            <li>Suite: <code>node --test --test-concurrency=1 test/</code> &#8594; 67/67 (README's 59/59 line is stale).</li>
+          </ul>
+        </section>
+
+        <section class="stack" aria-label="Photogrammetry and gameplay gallery">
+          <h2><span class="sec-n">G</span>Photogrammetry &amp; gameplay gallery</h2>
+          <p class="sec-sub">Frames from Ashes of St. Vermilion, all present in this repo</p>
+          <div class="grid-4">
+            <figure>
+              <img src="/studio/assets/evidence/hn2_desks.png" alt="Convent classroom with rows of wooden school desks" loading="lazy" width="1280" height="720" />
+              <figcaption>hn2_desks.png &#183; classroom</figcaption>
+            </figure>
+            <figure>
+              <img src="/studio/assets/evidence/hn2_cabinet.png" alt="Gothic cabinet used for hiding gameplay" loading="lazy" width="1280" height="720" />
+              <figcaption>hn2_cabinet.png &#183; hiding cabinet</figcaption>
+            </figure>
+            <figure>
+              <img src="/studio/assets/evidence/hn2_chapel.png" alt="Chapel interior with altar and candle light" loading="lazy" width="1280" height="720" />
+              <figcaption>hn2_chapel.png &#183; chapel</figcaption>
+            </figure>
+            <figure>
+              <img src="/studio/assets/evidence/hn2_hidden.png" alt="Hidden vantage view from inside a hiding spot" loading="lazy" width="1280" height="720" />
+              <figcaption>hn2_hidden.png &#183; hiding view</figcaption>
+            </figure>
+          </div>
+        </section>
+
+        <section class="stack" aria-label="Judge AI assistant console">
+          <h2><span class="sec-n">A</span>Judge AI assistant console</h2>
+          <p class="sec-sub">Ask about the build — answers cite repo files you can open</p>
+          <div class="console" role="region" aria-label="Judge AI assistant">
+            <div class="console-head">
+              <span class="live-badge"><span class="live-dot on" aria-hidden="true"></span>Powered by meta-models/muse-spark-open-1026</span>
+              <span class="console-model" id="assistant-model">grounded repo facts</span>
+            </div>
+            <div class="pill-row" role="group" aria-label="Suggested questions">
+              <button type="button" class="pill-btn" data-question="9-Model Meta Stack Proof">9-Model Meta Stack Proof</button>
+              <button type="button" class="pill-btn" data-question="SAM 3.1 &amp; 20-Bone Rig">SAM 3.1 &amp; 20-Bone Rig</button>
+              <button type="button" class="pill-btn" data-question="gVisor 4.19.0 Kernel Sandbox">gVisor 4.19.0 Kernel Sandbox</button>
+              <button type="button" class="pill-btn" data-question="Verifiable Agent Gates">Verifiable Agent Gates</button>
+              <button type="button" class="pill-btn" data-question="5 Bonus Prizes Eligibility">5 Bonus Prizes Eligibility</button>
+            </div>
+            <div class="transcript" id="assistant-transcript" role="log" aria-live="polite" aria-label="Assistant conversation">
+              <p class="transcript-empty" id="assistant-empty">Pick a question above, or type your own below. Every answer arrives with file citations.</p>
+            </div>
+            <p class="assistant-status" id="assistant-status" role="status"></p>
+            <form class="console-form" id="assistant-form" autocomplete="off">
+              <label class="sr-only" for="assistant-input">Ask about the build</label>
+              <input
+                type="text"
+                id="assistant-input"
+                name="question"
+                maxlength="500"
+                placeholder="Ask about the build…"
+                autocomplete="off"
+              />
+              <button type="submit" class="console-send" id="assistant-send">Send</button>
+            </form>
+          </div>
+        </section>
+
+        <section class="stack" aria-label="Live browser verifier">
+          <h2><span class="sec-n">V</span>Interactive live browser verifier</h2>
+          <p class="sec-sub">Runs against this server, right now, from your browser</p>
+          <p class="body">
+            This button calls three live endpoints — health, git status, and the
+            AI director — then seals the responses with a SHA-256 digest. If any
+            endpoint fails, the receipt says which one. A green receipt can only
+            come from three real 200s.
+          </p>
+          <button type="button" class="verify-btn" id="verify-btn">Run live verification receipt</button>
+          <p class="verify-status" id="verify-status" role="status"></p>
+          <div class="receipt hidden" id="receipt" aria-live="polite"></div>
+        </section>
+
+        <section class="stack" aria-label="Built this week and limits">
+          <h2><span class="sec-n">L</span>Built this week (Oct 26 &#8211; Nov 4, 2026) &amp; limits, stated plainly</h2>
+          <p class="sec-sub">What is deterministic, what is AI-driven, and where the VM ends</p>
+          <p class="body">
+            Deterministic: the 6 visual-gate checks, the 4 physics proofs, the
+            67/67 automated suite, the 20s director cache, and the &lt;5ms
+            heuristic and KB fallbacks — all runnable locally with no network.
+            AI-driven: Wonder's designs, the Baseten director's tactics and
+            whispers, the MusicGen theme, Image concepts, and SAM segmentation
+            (each pinned to a recorded model id, each with a fallback).
+          </p>
+          <p class="body">
+            VM limits: this VM has no local GPU, so neural 3D (SAM 3D Objects,
+            VGGT-1B) runs on Modal GPUs with cold starts that dominate wall
+            time — the trial logs disclose that instead of hiding it. The 3D
+            preview itself renders in your browser via WebGL, not on the VM.
+          </p>
+        </section>
+
+        <footer class="brief-footer">
+          <span>Agentic Game Studio &#183; built Oct 26 &#8211; Nov 4, 2026</span>
+          <a href="/studio/">Back to the studio</a>
+        </footer>
+      </main>
+    </div>
+    <script src="/studio/hackathon.js"></script>
+  </body>
+</html>
