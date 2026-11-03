@@ -212,6 +212,21 @@
       var stuckT = 0;
       var tier = "pending";
       var dbgTick = 0;
+      var headScanYaw = 0;
+      var prevAx = ax;
+      var prevAz = az;
+      var walkPhase = 0;
+      var walkBlend = 0;
+      var legLNode = null;
+      var legRNode = null;
+      var armLNode = null;
+      var armRNode = null;
+      var torsoNode = null;
+      var headNode = null;
+      var legLY0 = 0.8;
+      var legRY0 = 0.8;
+      var torsoY0 = 0.88;
+      var headY0 = 1.4;
 
       /* ---------- collision + grid ---------- */
       function segHitsAABB(x0, z0, x1, z1, rx0, rz0, rx1, rz1) {
@@ -740,23 +755,30 @@
         searchI = 0;
       }
 
-      /* Follow the smoothed path; returns true while legs remain. */
+      /* Follow the smoothed path; returns true while legs remain.
+       * Advances across arrived waypoints in the SAME tick so Agatha never
+       * stutters for 1 frame every 0.5m along the corridor. */
       function followPath(dt, speed) {
-        if (pathI >= pathN) return false;
-        var tx = pathX[pathI];
-        var tz = pathZ[pathI];
-        if (sideT > 0) {
-          tx += sideX;
-          tz += sideZ;
-          sideT -= dt;
-        }
-        var dx = tx - ax;
-        var dz = tz - az;
-        var d = Math.sqrt(dx * dx + dz * dz);
-        if (d <= ARRIVE_R) {
+        var tx = 0;
+        var tz = 0;
+        var dx = 0;
+        var dz = 0;
+        var d = 0;
+        while (pathI < pathN) {
+          tx = pathX[pathI];
+          tz = pathZ[pathI];
+          if (sideT > 0) {
+            tx += sideX;
+            tz += sideZ;
+          }
+          dx = tx - ax;
+          dz = tz - az;
+          d = Math.sqrt(dx * dx + dz * dz);
+          if (d > ARRIVE_R) break;
           pathI++;
-          return pathI < pathN;
         }
+        if (sideT > 0) sideT -= dt;
+        if (pathI >= pathN) return false;
         var step = speed * dt;
         if (step > d) step = d;
         ax += (dx / d) * step;
@@ -764,7 +786,7 @@
         ax = clampNum(ax, bounds.x0 + BODY_R, bounds.x1 - BODY_R);
         az = clampNum(az, bounds.z0 + BODY_R, bounds.z1 - BODY_R);
         var want = Math.atan2(dx, dz);
-        yaw += angDiff(want, yaw) * Math.min(1, 10 * dt);
+        yaw += angDiff(want, yaw) * Math.min(1, 7.5 * dt);
         return true;
       }
 
@@ -1037,8 +1059,12 @@
         if (st === "PATROL") {
           if (dwellT > 0) {
             dwellT -= dt;
-            yaw = dwellYaw + Math.sin(stateT * 6) * 0.5;
-            if (dwellT <= 0) advanceRoute();
+            yaw = dwellYaw;
+            headScanYaw = Math.sin(stateT * 2.4) * 0.48;
+            if (dwellT <= 0) {
+              headScanYaw = 0;
+              advanceRoute();
+            }
           } else if (pathFailT > 0) {
             /* Failed route cooling down (timer ticks globally). */
           } else if (!followPath(dt, speed)) {
@@ -1054,6 +1080,8 @@
             } else if (!maybeSpur()) {
               advanceRoute();
             }
+          } else {
+            headScanYaw *= Math.max(0, 1 - dt * 6);
           }
         } else if (st === "SUSPICIOUS") {
           repathT -= dt;
@@ -1067,13 +1095,20 @@
               scanBase = Math.atan2(stimX - ax, stimZ - az);
               scanPhase = 0;
             }
-            scanPhase += dt * 2.2;
-            yaw = scanBase + Math.sin(scanPhase) * 1.22;
+            scanPhase += dt * 1.8;
+            yaw +=
+              angDiff(scanBase + Math.sin(scanPhase) * 0.35, yaw) *
+              Math.min(1, 4 * dt);
+            headScanYaw = Math.sin(scanPhase) * 0.55;
           } else if (repathT <= 0) {
+            headScanYaw *= Math.max(0, 1 - dt * 6);
             repathT = 1.0;
             goto(stimX, stimZ);
+          } else {
+            headScanYaw *= Math.max(0, 1 - dt * 6);
           }
         } else if (st === "CHASE") {
+          headScanYaw *= Math.max(0, 1 - dt * 8);
           repathT -= dt;
           if (repathT <= 0) {
             repathT = 0.5;
@@ -1101,8 +1136,11 @@
           }
           if (legPause > 0) {
             legPause -= dt;
-            scanPhase += dt * 2.2;
-            yaw = scanBase + Math.sin(scanPhase) * 1.22;
+            scanPhase += dt * 1.8;
+            yaw +=
+              angDiff(scanBase + Math.sin(scanPhase) * 0.3, yaw) *
+              Math.min(1, 4 * dt);
+            headScanYaw = Math.sin(scanPhase) * 0.55;
           } else if (!followPath(dt, speed)) {
             if (pathN === 0 && searchLegs && searchI < searchLegs.length) {
               if (pathFailT <= 0) {
@@ -1120,10 +1158,15 @@
                 scanPhase = 0;
               }
               if (scanning && !(searchLegs && searchI < searchLegs.length)) {
-                scanPhase += dt * 2.2;
-                yaw = scanBase + Math.sin(scanPhase) * 1.22;
+                scanPhase += dt * 1.8;
+                yaw +=
+                  angDiff(scanBase + Math.sin(scanPhase) * 0.35, yaw) *
+                  Math.min(1, 4 * dt);
+                headScanYaw = Math.sin(scanPhase) * 0.55;
               }
             }
+          } else {
+            headScanYaw *= Math.max(0, 1 - dt * 6);
           }
         }
 
@@ -1204,16 +1247,65 @@
       }
 
       function animate(dt, speed) {
-        bobPhase += dt * (2 + (speed || 0) * 1.2);
+        var stepDx = ax - prevAx;
+        var stepDz = az - prevAz;
+        prevAx = ax;
+        prevAz = az;
+        var movedDist = Math.sqrt(stepDx * stepDx + stepDz * stepDz);
+        var actualSpd = dt > 0.0001 ? movedDist / dt : 0;
+        var targetBlend =
+          actualSpd > 0.08 ? Math.min(1.35, actualSpd / 2.1) : 0;
+        walkBlend += (targetBlend - walkBlend) * Math.min(1, dt * 10);
+        walkPhase += movedDist * 3.5;
+        bobPhase += dt * (1.6 + actualSpd * 1.1);
+
         try {
           group.position.x = ax;
           group.position.z = az;
-          group.position.y = Math.abs(Math.sin(bobPhase)) * 0.05;
           group.rotation.y = yaw;
-          group.rotation.z = Math.sin(bobPhase * 0.5) * 0.02;
+
+          var s = Math.sin(walkPhase);
+          var c = Math.cos(walkPhase);
+
+          if (legLNode && legRNode) {
+            /* Articulated human bipedal walk: opposite leg stride + foot lift + contrapposto */
+            group.position.y = 0;
+            group.rotation.z = 0;
+            legLNode.rotation.x = 0.42 * s * walkBlend;
+            legRNode.rotation.x = -0.42 * s * walkBlend;
+            legLNode.position.y = legLY0 + Math.max(0, c) * 0.04 * walkBlend;
+            legRNode.position.y = legRY0 + Math.max(0, -c) * 0.04 * walkBlend;
+            if (armLNode) {
+              armLNode.rotation.x = -0.32 * s * walkBlend;
+            }
+            if (armRNode) {
+              armRNode.rotation.x = 0.1 * s * walkBlend;
+            }
+            var bobY =
+              Math.abs(s) * 0.024 * walkBlend +
+              Math.sin(bobPhase) * 0.004 * (1 - walkBlend);
+            if (torsoNode) {
+              torsoNode.position.y = torsoY0 + bobY;
+              torsoNode.rotation.x = 0.05 * walkBlend;
+              torsoNode.rotation.y = 0.045 * s * walkBlend;
+              torsoNode.rotation.z = 0.02 * s * walkBlend;
+            }
+            if (headNode) {
+              headNode.position.y = headY0 + bobY;
+              headNode.rotation.y = headScanYaw - 0.03 * s * walkBlend;
+              headNode.rotation.x = -0.02 * walkBlend;
+            }
+          } else {
+            /* Fallback for single-mesh or sprite tier */
+            group.position.y =
+              Math.abs(Math.sin(walkPhase)) * 0.035 * walkBlend;
+            group.rotation.z = Math.sin(walkPhase) * 0.015 * walkBlend;
+          }
+
           if (lanternNode) {
-            lanternNode.rotation.x = Math.sin(bobPhase * 1.1) * 0.16;
-            lanternNode.rotation.z = Math.sin(bobPhase * 0.9 + 1) * 0.16;
+            lanternNode.rotation.x =
+              Math.sin(walkPhase * 1.0) * 0.12 * walkBlend;
+            lanternNode.rotation.z = Math.sin(bobPhase * 0.9 + 1) * 0.08;
           }
           if (glowSprite && glowSprite.material) {
             var fl = 0.85 + 0.15 * Math.sin(bobPhase * 3.1);
@@ -1376,7 +1468,25 @@
           group.add(root);
           try {
             root.traverse(function (o) {
-              if (o && o.name === "LanternAnchor") lanternNode = o;
+              if (!o || !o.name) return;
+              if (o.name === "LanternAnchor") lanternNode = o;
+              else if (o.name === "Agatha_Leg_L") {
+                legLNode = o;
+                legLY0 = o.position.y;
+              } else if (o.name === "Agatha_Leg_R") {
+                legRNode = o;
+                legRY0 = o.position.y;
+              } else if (o.name === "Agatha_Arm_L") {
+                armLNode = o;
+              } else if (o.name === "Agatha_Arm_R") {
+                armRNode = o;
+              } else if (o.name === "Agatha_Torso") {
+                torsoNode = o;
+                torsoY0 = o.position.y;
+              } else if (o.name === "Agatha_Head_Group") {
+                headNode = o;
+                headY0 = o.position.y;
+              }
             });
           } catch (err) {
             lanternNode = null;

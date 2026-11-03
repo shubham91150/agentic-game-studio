@@ -26,7 +26,7 @@
   var camPitch = 0.08;
   var camDist = 2.45;
   var targetY = 0.88;
-  var autoSpin = true;
+  var autoSpin = false;
 
   var hemi = new THREE.HemisphereLight(0xcbd5e1, 0x1e293b, 1.35);
   scene.add(hemi);
@@ -46,28 +46,55 @@
   var pivot = new THREE.Group();
   scene.add(pivot);
 
+  var legL = null;
+  var legR = null;
+  var armL = null;
+  var armR = null;
+  var torso = null;
+  var head = null;
+  var legLY0 = 0.8;
+  var legRY0 = 0.8;
+  var torsoY0 = 0.88;
+  var headY0 = 1.4;
+  var walkOn = true;
+  var walkPhase = 0;
+
+  if (spinBtn) {
+    spinBtn.textContent = "Walk Cycle: ON";
+    spinBtn.addEventListener("click", function () {
+      walkOn = !walkOn;
+      spinBtn.textContent = walkOn ? "Walk Cycle: ON" : "Walk Cycle: OFF";
+    });
+  }
+
   var loader = new THREE.GLTFLoader();
   loader.load(
     "./assets/agatha.glb?v=" + Date.now(),
     function (gltf) {
       var root = gltf.scene || gltf.scenes[0];
-      var box = new THREE.Box3().setFromObject(root);
-      var size = new THREE.Vector3();
-      box.getSize(size);
-      var h = Math.max(0.01, size.y);
-      var scale = 1.72 / h;
-      root.scale.set(scale, scale, scale);
-      box.setFromObject(root);
-      var center = new THREE.Vector3();
-      box.getCenter(center);
-      root.position.x -= center.x;
-      root.position.z -= center.z;
-      root.position.y -= box.min.y;
       pivot.add(root);
 
       var meshCount = 0;
       var vertCount = 0;
       root.traverse(function (o) {
+        if (!o) return;
+        if (o.name === "Agatha_Leg_L") {
+          legL = o;
+          legLY0 = o.position.y;
+        } else if (o.name === "Agatha_Leg_R") {
+          legR = o;
+          legRY0 = o.position.y;
+        } else if (o.name === "Agatha_Arm_L") {
+          armL = o;
+        } else if (o.name === "Agatha_Arm_R") {
+          armR = o;
+        } else if (o.name === "Agatha_Torso") {
+          torso = o;
+          torsoY0 = o.position.y;
+        } else if (o.name === "Agatha_Head_Group") {
+          head = o;
+          headY0 = o.position.y;
+        }
         if (o.isMesh && o.geometry) {
           meshCount++;
           var pos = o.geometry.attributes && o.geometry.attributes.position;
@@ -76,11 +103,11 @@
       });
       if (statusEl) {
         statusEl.textContent =
-          "Loaded agatha.glb · " +
+          "Loaded agatha.glb · Human Lady Face + Red Glowing Eyes · " +
           meshCount +
-          " meshes · " +
+          " articulated limbs · " +
           vertCount.toLocaleString() +
-          " vertices · 1.72m tall · Drag to rotate / Scroll to zoom";
+          " verts";
       }
     },
     undefined,
@@ -97,8 +124,6 @@
   var lastY = 0;
   canvas.addEventListener("pointerdown", function (e) {
     dragging = true;
-    autoSpin = false;
-    if (spinBtn) spinBtn.textContent = "Auto-Spin: OFF";
     lastX = e.clientX;
     lastY = e.clientY;
     canvas.setPointerCapture(e.pointerId);
@@ -119,17 +144,10 @@
     "wheel",
     function (e) {
       e.preventDefault();
-      camDist = Math.max(0.85, Math.min(4.5, camDist + e.deltaY * 0.002));
+      camDist = Math.max(0.75, Math.min(4.5, camDist + e.deltaY * 0.002));
     },
     { passive: false },
   );
-
-  if (spinBtn) {
-    spinBtn.addEventListener("click", function () {
-      autoSpin = !autoSpin;
-      spinBtn.textContent = autoSpin ? "Auto-Spin: ON" : "Auto-Spin: OFF";
-    });
-  }
 
   window.addEventListener("resize", function () {
     camera.aspect = window.innerWidth / window.innerHeight;
@@ -137,14 +155,42 @@
     renderer.setSize(window.innerWidth, window.innerHeight);
   });
 
-  function animate() {
+  var lastT = performance.now();
+  function animate(now) {
     requestAnimationFrame(animate);
-    if (autoSpin) camYaw += 0.007;
+    var dt = Math.min(0.05, Math.max(0.001, (now - lastT) * 0.001));
+    lastT = now;
+
+    if (walkOn) {
+      walkPhase += dt * 5.2;
+      var s = Math.sin(walkPhase);
+      var c = Math.cos(walkPhase);
+      if (legL && legR) {
+        legL.rotation.x = 0.42 * s;
+        legR.rotation.x = -0.42 * s;
+        legL.position.y = legLY0 + Math.max(0, c) * 0.04;
+        legR.position.y = legRY0 + Math.max(0, -c) * 0.04;
+      }
+      if (armL) armL.rotation.x = -0.32 * s;
+      if (armR) armR.rotation.x = 0.1 * s;
+      var bob = Math.abs(s) * 0.024;
+      if (torso) {
+        torso.position.y = torsoY0 + bob;
+        torso.rotation.x = 0.04;
+        torso.rotation.y = 0.045 * s;
+      }
+      if (head) {
+        head.position.y = headY0 + bob;
+        head.rotation.y = -0.03 * s;
+      }
+    }
+
+    if (autoSpin) camYaw += 0.006;
     camera.position.x = Math.sin(camYaw) * Math.cos(camPitch) * camDist;
     camera.position.z = Math.cos(camYaw) * Math.cos(camPitch) * camDist;
     camera.position.y = targetY + Math.sin(camPitch) * camDist;
     camera.lookAt(0, targetY, 0);
     renderer.render(scene, camera);
   }
-  animate();
+  requestAnimationFrame(animate);
 })();
