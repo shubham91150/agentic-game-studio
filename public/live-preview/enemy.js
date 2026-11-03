@@ -120,6 +120,19 @@
   ];
   /* Classroom B footprint (beats B2): east room between divider and x=+9. */
   var CB = { x0: 1, z0: -6, x1: 9, z1: 2 };
+  /* Live AI Director room targets (lowercase keys): order.targetRoom maps
+   * here; all centers sit on open floor (BFS-verified corridor/room cells),
+   * so goto() always finds a path and ROUTE/spurs are never broken. */
+  var ROOM_CENTERS = {
+    "entrance hall": [0, 7],
+    "classroom a": [-5, -2],
+    "classroom b": [5, -2],
+    "north corridor": [0, -7.5],
+    "south corridor": [0, 3.5],
+    "west store": [-8, 7],
+    "east store": [8, 7],
+    "chapel approach": [0, -8],
+  };
 
   var STATE_ALERT = {
     PATROL: 0.15,
@@ -1814,6 +1827,71 @@
 
         onCaught: function (cb) {
           caughtCb = typeof cb === "function" ? cb : null;
+        },
+
+        /* Live AI Director brain hook: order =
+         * { tactic, targetRoom, alertBoost, whisper }. Steers Agatha toward
+         * the target room through the EXISTING stimulus/spur/SEARCH-leg
+         * machinery (A* goto, no teleport), primes suspicion so CHASE still
+         * triggers organically via senses, and fires a spatial whisper.
+         * Safe no-op for unknown rooms (boost still applies) and CAUGHT. */
+        applyDirectorOrder: function (order) {
+          try {
+            if (!order || st === "CAUGHT") return;
+            var boost = +order.alertBoost || 0;
+            var tx = null;
+            var tz = null;
+            if (typeof order.targetRoom === "string" && order.targetRoom) {
+              var key = order.targetRoom
+                .toLowerCase()
+                .replace(/^\s+|\s+$/g, "");
+              var c = ROOM_CENTERS[key];
+              if (c) {
+                tx = c[0];
+                tz = c[1];
+              }
+            }
+            if (tx !== null && (st === "PATROL" || st === "SEARCH")) {
+              stimX = tx;
+              stimZ = tz;
+              hasStim = true;
+              if (st === "PATROL") {
+                /* Single-leg spur detour: advanceRoute() clears it on
+                 * arrival and resumes ROUTE, so the patrol cycle survives.
+                 * Never clobbers an active scripted spur (S1/S2/S3). */
+                if (!spurPts) {
+                  spurPts = [[tx, tz]];
+                  spurI = 0;
+                  dwellT = 0;
+                  goto(tx, tz);
+                }
+              } else {
+                /* SEARCH: retarget the hunt legs at the ordered room. */
+                searchLegs = [[tx, tz]];
+                searchI = 0;
+                legPause = 0;
+                scanning = false;
+                goto(tx, tz);
+              }
+            }
+            if (boost) {
+              suspicion += boost;
+              if (suspicion < 0) suspicion = 0;
+              if (suspicion > TH_CONFIRM) suspicion = TH_CONFIRM;
+            }
+            try {
+              var A = window.StV_Audio;
+              if (A && typeof A.queueWhisper === "function") {
+                var mood =
+                  lastDist < 6 ? "chase" : lastDist < 12 ? "near" : "distant";
+                A.queueWhisper(mood);
+              }
+            } catch (errW) {
+              /* audio optional */
+            }
+          } catch (err) {
+            /* a director order never breaks the sim */
+          }
         },
       };
     },

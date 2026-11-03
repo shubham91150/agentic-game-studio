@@ -109,6 +109,9 @@
   var bounds = { x0: -12, z0: -9, x1: 12, z1: 9 };
   var spawn = { x: 0, z: 8.5, ry: 0 };
   var keyFound = false;
+  var aiLastPoll = 0;
+  var aiPollBusy = false;
+  var aiKeyFlip = false;
   var timerMs = 0;
   var elapsed = 0;
   var keys = {};
@@ -757,6 +760,7 @@
       }
       toast("Chapel Key mila! Darwaza kholo — jaldi!");
       lastPrompt = "force-refresh";
+      aiKeyFlip = true; // immediate AI Director re-plan on key pickup
       updatePrompt();
       return;
     }
@@ -889,6 +893,66 @@
     }
   }
 
+  /* LIVE AI DIRECTOR poll (~14s + instant on key flip): POSTs telemetry
+   * to /api/studio/ai/director and applies the order to BOTH Agatha's
+   * brain (enemy.applyDirectorOrder) and the 3D environment
+   * (world.applyAiEnvironment), plus whisper banner + HUD pill. Fully
+   * guarded: AI down/rate-limited => silent skip, gameplay unaffected. */
+  function pollAiDirector() {
+    if (aiPollBusy || state !== "playing") return;
+    if (typeof fetch !== "function") return;
+    var room = "";
+    try {
+      var hr = document.querySelector("#hud-room");
+      room = hr ? String(hr.textContent || "").replace(/^◉\s*/, "") : "";
+    } catch (eRoom) { room = ""; }
+    var body = {
+      room: room,
+      noise: psState.noise || 0,
+      torchOn: !!psState.torchOn,
+      crouch: !!psState.crouch,
+      hasKey: !!keyFound,
+      enemyState: (typeof esCache !== "undefined" && esCache.state) || "PATROL",
+      dist: (typeof esCache !== "undefined" && esCache.dist) || 99,
+      survivalSec: Math.round(timerMs / 1000)
+    };
+    aiPollBusy = true;
+    fetch("/api/studio/ai/director", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body)
+    }).then(function (r) {
+      if (!r || !r.ok) throw new Error("http " + (r && r.status));
+      return r.json();
+    }).then(function (order) {
+      aiPollBusy = false;
+      if (!order || order.ok !== true) return;
+      try {
+        if (enemy && typeof enemy.applyDirectorOrder === "function") {
+          enemy.applyDirectorOrder(order);
+        }
+      } catch (eBrain) { /* AI steer cosmetic */ }
+      try {
+        if (world && typeof world.applyAiEnvironment === "function") {
+          world.applyAiEnvironment(order);
+        }
+      } catch (eEnv) { /* AI env cosmetic */ }
+      try {
+        if (UI && typeof UI.aiPill === "function") {
+          UI.aiPill(order.tactic || "stalk_shadow", order.envEvent || "storm_surge");
+        }
+      } catch (ePill) { /* x */ }
+      try {
+        if (order.whisper && UI && UI.banner) {
+          UI.banner(order.whisper, 6000);
+        }
+      } catch (eWh) { /* x */ }
+      try { window.__stvLastAiOrder = order; } catch (eDbg) { /* x */ }
+    }).catch(function () {
+      aiPollBusy = false; // offline/rate-limited: play on silently
+    });
+  }
+
   /* Stage 2+3: 4Hz director tick — alert fades, HUD, beats, rumble. */
   function directorTick() {
     var es = null;
@@ -906,6 +970,25 @@
         esCache.suspicion = es.suspicion;
         esCache.dist = es.dist;
         esCache.alert01 = es.alert01;
+      }
+    } catch (err) {
+      /* x */
+    }
+    /* LIVE AI DIRECTOR cadence: wall-clock 14s (tick counts drift when
+     * fps sags, so timestamps keep it honest). Key flip forces an
+     * immediate re-plan on the next tick. */
+    try {
+      if (state === "playing") {
+        var aiNow = Date.now();
+        if (aiLastPoll === 0) { aiLastPoll = aiNow; }
+        if (aiKeyFlip || aiNow - aiLastPoll >= 14000) {
+          aiLastPoll = aiNow;
+          aiKeyFlip = false;
+          pollAiDirector();
+        }
+      } else {
+        aiLastPoll = 0;
+        aiKeyFlip = false;
       }
     } catch (err) {
       /* x */
@@ -1716,6 +1799,7 @@
       scene: scene,
       player: player,
       enemy: enemy,
+      world: world,
       getState: function () {
         return state;
       },

@@ -295,6 +295,28 @@
       else el.classList.remove('has-key');
     },
 
+    /* AI DIRECTOR pill (live Meta AI): subtle line under the room readout
+     * showing the latest tactic + environment event, e.g.
+     * 'AI DIRECTOR · ambush_room · lantern_blackout'. Created lazily,
+     * updated only on new orders. */
+    aiPill: function (tactic, envEvent) {
+      try {
+        var el = $('hud-ai');
+        if (!el) {
+          var anchor = $('hud-room') || $('hud-obj');
+          if (!anchor || !anchor.parentNode) return;
+          el = document.createElement('div');
+          el.id = 'hud-ai';
+          el.style.display = 'block';
+          el.style.fontSize = '11px';
+          el.style.opacity = '0.75';
+          el.style.letterSpacing = '0.08em';
+          if (anchor.nextSibling) anchor.parentNode.insertBefore(el, anchor.nextSibling);
+          else anchor.parentNode.appendChild(el);
+        }
+        el.textContent = 'AI DIRECTOR · ' + tactic + ' · ' + envEvent;
+      } catch (err) { /* HUD cosmetic */ }
+    },
     banner: function (txt, ms) {
       var el = $('banner');
       if (!el) return;

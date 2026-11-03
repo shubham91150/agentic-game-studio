@@ -775,16 +775,33 @@
     var ash = new THREE.Points(ashGeo, ashMat);
     ash.frustumCulled = false;
     scene.add(ash);
+    /* ---------- live AI Environment Director state ----------
+     * Memory: ai-npc-and-environment-director.md section 2. Armed by
+     * applyAiEnvironment(order) below; every timer ticks inside the
+     * existing update(dt,t). Zero colliders, zero BFS/route impact. */
+    var aiAshTurb = 1.0;      // ash_vortex swirl/drift multiplier, decays to 1
+    var aiAshPeak = 1.0;      // armed vortex peak (linear 8s ramp reference)
+    var aiBlackoutT = 0;      // lantern_blackout seconds remaining
+    var aiBlackoutDim = 0.25; // lantern_blackout dim multiplier
+    var aiOmenT = 0;          // chapel_omen seconds remaining
+    var omenCrimson = new THREE.Color(0xff2a1a);
+    var omenAmber = new THREE.Color(0xff9a3c);
+    var chapelSet = [P5, altarA, altarB];
+    var chapelBase = [];
+    for (var cb = 0; cb < chapelSet.length; cb++) {
+      chapelBase.push(chapelSet[cb].color.getHex());
+    }
     function updateAsh(t) {
+      var turb = (typeof aiAshTurb === "number") ? aiAshTurb : 1.0;
       for (var a = 0; a < ASH_N; a++) {
         var ph = ashSeed[a * 2], sp = ashSeed[a * 2 + 1];
-        var ax = ashBase[a * 3] + t * 0.12 * sp + Math.sin(t * 0.4 * sp + ph) * 0.6;
-        var az = ashBase[a * 3 + 2] + t * 0.05 * sp + Math.cos(t * 0.3 * sp + ph * 1.7) * 0.6;
+        var ax = ashBase[a * 3] + t * 0.12 * sp * turb + Math.sin(t * 0.4 * sp + ph) * 0.6 * turb;
+        var az = ashBase[a * 3 + 2] + t * 0.05 * sp * turb + Math.cos(t * 0.3 * sp + ph * 1.7) * 0.6 * turb;
         // Wrap into the hall without branching on sign of t.
         ax = ((ax + ASH_X) % (ASH_X * 2) + ASH_X * 2) % (ASH_X * 2) - ASH_X;
         az = ((az + ASH_Z) % (ASH_Z * 2) + ASH_Z * 2) % (ASH_Z * 2) - ASH_Z;
         ashPos[a * 3] = ax;
-        ashPos[a * 3 + 1] = ashBase[a * 3 + 1] + Math.sin(t * 0.5 * sp + ph) * 0.25;
+        ashPos[a * 3 + 1] = ashBase[a * 3 + 1] + Math.sin(t * 0.5 * sp + ph) * 0.25 * turb;
         ashPos[a * 3 + 2] = az;
       }
       ashGeo.attributes.position.needsUpdate = true;
@@ -856,7 +873,16 @@
             fl.mat.emissiveIntensity = base + n * span;
           }
         }
-        fl.light.intensity = fl.base * (1 + n * 0.18);
+        // AI Director lantern_blackout: scale the stored base by the armed
+        // dim factor plus a fast guttering flicker; bases stay untouched so
+        // restore is automatic when aiBlackoutT hits zero.
+        var dim = 1.0;
+        if (aiBlackoutT > 0) {
+          var bf = Math.sin(t * 31.0 + fl.phase * 2.0) * Math.sin(t * 17.0 + fl.phase);
+          dim = aiBlackoutDim * (0.75 + 0.25 * bf);
+          if (dim < 0.02) { dim = 0.02; }
+        }
+        fl.light.intensity = fl.base * dim * (1 + n * 0.18);
       }
       var env = 0;
       if (strikeT < 0) {
@@ -888,9 +914,77 @@
         gm.emissiveIntensity = gm.userData.baseEmissive + glow * 1.5;
       }
       scene.userData.stvFlash = glow;
+      // AI Director timers: blackout countdown, ash turbulence decay back
+      // to 1.0 (~8s exponential), chapel omen crimson-amber pulse + restore.
+      try {
+        if (aiBlackoutT > 0) {
+          aiBlackoutT -= dt;
+          if (aiBlackoutT <= 0) { aiBlackoutT = 0; }
+        }
+        if (aiAshTurb > 1.0) {
+          var span = aiAshPeak - 1.0;
+          if (!(span > 0)) { span = 1.5; }
+          aiAshTurb -= dt * span / 8;
+          if (aiAshTurb <= 1.0) { aiAshTurb = 1.0; }
+        }
+        if (aiOmenT > 0) {
+          aiOmenT -= dt;
+          var om = 0.5 + 0.5 * Math.sin(t * 2.4);
+          for (var oc = 0; oc < chapelSet.length; oc++) {
+            chapelSet[oc].color.copy(omenCrimson).lerp(omenAmber, om);
+          }
+          if (aiOmenT <= 0) {
+            aiOmenT = 0;
+            for (var oj = 0; oj < chapelSet.length; oj++) {
+              chapelSet[oj].color.setHex(chapelBase[oj]);
+            }
+          }
+        }
+      } catch (eAiTick) { /* cosmetic timers never break the frame */ }
       keyMesh.rotation.y += dt * 1.4;
       keyMesh.position.y = KEY_POS.y + Math.sin(t * 2.2) * 0.06;
       updateAsh(t);
+    }
+
+    /* ---------- live AI Environment Director entry point ----------
+     * order = { envEvent, fogDensity, lightDim, ashTurbulence } from
+     * POST /api/studio/ai/director (see ai-npc-and-environment-director
+     * memory section 2). Fog density is ALWAYS applied (clamped); the
+     * envEvent arms a time-driven effect consumed by update(dt,t). */
+    function applyAiEnvironment(order) {
+      try {
+        if (!order) { return; }
+        if (typeof order.fogDensity === "number") {
+          var fd = order.fogDensity;
+          if (fd < 0.038) { fd = 0.038; }
+          else if (fd > 0.065) { fd = 0.065; }
+          if (scene.fog) { scene.fog.density = fd; }
+        }
+        var ev = order.envEvent;
+        if (ev === "lantern_blackout") {
+          var ld = (typeof order.lightDim === "number") ? order.lightDim : 0.25;
+          if (ld < 0.05) { ld = 0.05; } else if (ld > 1) { ld = 1; }
+          aiBlackoutDim = ld;
+          aiBlackoutT = 5;
+        } else if (ev === "storm_surge") {
+          strikeT = 0;
+          try { callThunder(); } catch (eTh) { /* audio not ready */ }
+          try {
+            if (scene.fog) {
+              var sd = scene.fog.density + 0.008;
+              if (sd > 0.065) { sd = 0.065; }
+              scene.fog.density = sd;
+            }
+          } catch (eFg) { /* fog shift is cosmetic */ }
+        } else if (ev === "ash_vortex") {
+          var tb = (typeof order.ashTurbulence === "number") ? order.ashTurbulence : 2.5;
+          if (tb < 1) { tb = 1; } else if (tb > 4) { tb = 4; }
+          aiAshTurb = tb;
+          aiAshPeak = tb;
+        } else if (ev === "chapel_omen") {
+          aiOmenT = 6;
+        }
+      } catch (eAi) { /* director orders never break the world */ }
     }
 
     return {
@@ -898,6 +992,7 @@
       spawn: { x: 0, z: 8.5, ry: 0 },
       bounds: { x0: -12, z0: -9, x1: 12, z1: 9 },
       update: update,
+      applyAiEnvironment: applyAiEnvironment,
       keyMesh: keyMesh,
       chapelDoor: chapelDoor
     };

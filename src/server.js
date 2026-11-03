@@ -29,6 +29,7 @@ import {
   resolveMetaApiKey,
 } from "./agent/agent_runner.js";
 import { GameStorageManager } from "./storage/game_store.js";
+import { BasetenMuseClient } from "./agent/baseten_muse.js";
 import AdmZip from "adm-zip";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -217,6 +218,212 @@ function judgeBuildAllowed(ip) {
   arr.push(now);
   judgeBuildHits.set(ip, arr);
   return { allowed: true, retryAfter: 0 };
+}
+
+// ---------- Live AI Director (public judges route) ----------
+// POST /api/studio/ai/director drives enemy tactics + live 3D environment
+// mutation from real gameplay telemetry via meta-models/muse-spark-open-1026,
+// with a 20s state-signature cache (0 credits on repeat states) and an
+// instant deterministic heuristic fallback (<5ms) on ANY failure.
+export const AI_DIRECTOR_TACTICS = [
+  "ambush_room",
+  "cut_off_chapel",
+  "stalk_shadow",
+  "inspect_hideout",
+];
+export const AI_DIRECTOR_ENV_EVENTS = [
+  "lantern_blackout",
+  "storm_surge",
+  "ash_vortex",
+  "chapel_omen",
+];
+export const AI_DIRECTOR_MODEL_FALLBACK = "heuristic-fallback-v1";
+const AI_DIRECTOR_CACHE_TTL_MS = 20000;
+const AI_DIRECTOR_TIMEOUT_MS = 3500;
+const AI_DIRECTOR_MAX = 30;
+const AI_DIRECTOR_WINDOW_MS = 60 * 1000;
+const directorHits = new Map();
+const directorCache = new Map();
+
+// Mirror of judgeBuildAllowed: 30 req/min per IP, 429 + retryAfter.
+export function directorAllowed(ip) {
+  const now = Date.now();
+  const arr = (directorHits.get(ip) || []).filter(
+    (t) => now - t < AI_DIRECTOR_WINDOW_MS,
+  );
+  if (arr.length >= AI_DIRECTOR_MAX) {
+    directorHits.set(ip, arr);
+    const retryAfter = Math.max(
+      1,
+      Math.ceil((AI_DIRECTOR_WINDOW_MS - (now - arr[0])) / 1000),
+    );
+    return { allowed: false, retryAfter };
+  }
+  arr.push(now);
+  directorHits.set(ip, arr);
+  return { allowed: true, retryAfter: 0 };
+}
+
+// Rounded state signature: repeat states hit the cache, near-identical
+// numeric telemetry (dist/noise buckets) collapses to one signature.
+export function buildDirectorSignature(t) {
+  const s = t && typeof t === "object" ? t : {};
+  const room = String(s.room ?? "unknown").trim() || "unknown";
+  const enemyState = String(s.enemyState ?? "unknown").trim() || "unknown";
+  const hasKey = s.hasKey ? 1 : 0;
+  const torchOn = s.torchOn ? 1 : 0;
+  const dist = Number(s.dist);
+  const noise = Number(s.noise);
+  const distBucket = Number.isFinite(dist)
+    ? Math.floor(Math.max(0, dist) / 2)
+    : 0;
+  const noiseBucket = Number.isFinite(noise)
+    ? Math.floor(Math.max(0, noise) / 10)
+    : 0;
+  return `${room}|${enemyState}|${hasKey}|${torchOn}|${distBucket}|${noiseBucket}`;
+}
+
+function clampNum(v, lo, hi, dflt) {
+  const n = Number(v);
+  if (!Number.isFinite(n)) return dflt;
+  return Math.min(hi, Math.max(lo, n));
+}
+
+// Defensive validation: clamp numbers, validate enums, coerce strings.
+export function clampDirector(d) {
+  const o = d && typeof d === "object" ? d : {};
+  return {
+    tactic: AI_DIRECTOR_TACTICS.includes(o.tactic) ? o.tactic : "stalk_shadow",
+    targetRoom:
+      typeof o.targetRoom === "string" && o.targetRoom.trim()
+        ? o.targetRoom.trim().slice(0, 64)
+        : "Chapel",
+    alertBoost: Math.round(clampNum(o.alertBoost, 0, 25, 5)),
+    whisper:
+      typeof o.whisper === "string" && o.whisper.trim()
+        ? o.whisper.trim().slice(0, 280)
+        : "It watches from the dark...",
+    envEvent: AI_DIRECTOR_ENV_EVENTS.includes(o.envEvent)
+      ? o.envEvent
+      : "storm_surge",
+    fogDensity: clampNum(o.fogDensity, 0.038, 0.065, 0.05),
+    lightDim: clampNum(o.lightDim, 0.25, 1.0, 0.8),
+    ashTurbulence: clampNum(o.ashTurbulence, 1.0, 2.8, 1.4),
+  };
+}
+
+// Deterministic heuristic fallback: pure function of telemetry, <5ms.
+export function heuristicDirector(t) {
+  const s = t && typeof t === "object" ? t : {};
+  const room = String(s.room ?? "unknown").trim() || "unknown";
+  const dist = Number(s.dist);
+  const d = Number.isFinite(dist) ? Math.max(0, dist) : 99;
+  const noise = Number(s.noise);
+  const n = Number.isFinite(noise) ? Math.max(0, noise) : 0;
+  const torch = Boolean(s.torchOn);
+  const key = Boolean(s.hasKey);
+  const crouch = Boolean(s.crouch);
+  let tactic;
+  let envEvent;
+  let whisper;
+  if (key) {
+    tactic = "cut_off_chapel";
+    envEvent = "chapel_omen";
+    whisper =
+      `The Chapel Key burns in your fist — it is already waiting in the ` +
+      `Chapel, and ${room} means nothing now. Bhaag sakte ho to bhaago.`;
+  } else if (torch && d < 6) {
+    tactic = "ambush_room";
+    envEvent = "lantern_blackout";
+    whisper =
+      `That torch in ${room} paints you like a target — snuff it out, ` +
+      `it is already inside the room with you.`;
+  } else if (crouch && d < 8) {
+    tactic = "inspect_hideout";
+    envEvent = "ash_vortex";
+    whisper =
+      `Crouching in the dark of ${room}? It heard your breath stop — ` +
+      `the ash is curling toward your hiding place.`;
+  } else {
+    tactic = "stalk_shadow";
+    envEvent = "storm_surge";
+    whisper = torch
+      ? `Your torch gutters in ${room} — something paces you between the lightning strikes.`
+      : `Darkness in ${room}... the storm sees what you cannot. It is circling closer.`;
+  }
+  const alertBoost = Math.round(
+    Math.min(25, Math.max(0, n / 4 + (d < 6 ? 10 : d < 12 ? 5 : 2) + (key ? 5 : 0))),
+  );
+  const atmos = {
+    lantern_blackout: { fogDensity: 0.06, lightDim: 0.25, ashTurbulence: 1.2 },
+    storm_surge: { fogDensity: 0.05, lightDim: 0.8, ashTurbulence: 1.6 },
+    ash_vortex: { fogDensity: 0.055, lightDim: 0.6, ashTurbulence: 2.5 },
+    chapel_omen: { fogDensity: 0.065, lightDim: 0.45, ashTurbulence: 1.8 },
+  }[envEvent];
+  return clampDirector({
+    tactic,
+    targetRoom: key ? "Chapel" : room,
+    alertBoost,
+    whisper,
+    envEvent,
+    ...atmos,
+  });
+}
+
+const AI_DIRECTOR_SYSTEM = [
+  "Horror game AI Director. Decide in ONE step, no deliberation.",
+  "Output the JSON object FIRST and stop. Keys:",
+  'tactic ambush_room|cut_off_chapel|stalk_shadow|inspect_hideout,',
+  "targetRoom (room name), alertBoost 0..25,",
+  "whisper (one short Hindi/English horror line reacting to the player's",
+  "exact room, torch and key state),",
+  "envEvent lantern_blackout|storm_surge|ash_vortex|chapel_omen,",
+  "fogDensity 0.038..0.065, lightDim 0.25..1.0, ashTurbulence 1.0..2.8.",
+].join(" ");
+
+// Live Baseten call with a 3.5s AbortController timeout. Uses the
+// BasetenMuseClient for key/baseUrl/model config; fetch is issued here so
+// the abort signal can actually cancel the request (generateCompletion has
+// no signal parameter). Throws on ANY failure — caller falls back.
+async function callDirectorModel(telemetry) {
+  const client = new BasetenMuseClient();
+  if (!client.apiKey) throw new Error("no baseten key");
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), AI_DIRECTOR_TIMEOUT_MS);
+  try {
+    const response = await fetch(client.baseUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${client.apiKey}`,
+      },
+      body: JSON.stringify({
+        model: client.model,
+        messages: [
+          { role: "system", content: AI_DIRECTOR_SYSTEM },
+          { role: "user", content: JSON.stringify(telemetry) },
+        ],
+        max_tokens: 768,
+        temperature: 0.3,
+      }),
+      signal: controller.signal,
+    });
+    if (!response.ok) throw new Error(`Baseten ${response.status}`);
+    const data = await response.json();
+    const msg = data.choices?.[0]?.message || {};
+    // Reasoning model: final JSON may sit in reasoning_content with
+    // content null. The director schema is FLAT (no nested objects),
+    // so take the LAST flat {...} block (the concluded answer).
+    const combined = `${msg.content || ""}\n${msg.reasoning_content || ""}`;
+    const blocks = String(combined).match(/\{[^{}]*\}/g);
+    if (!blocks || !blocks.length) throw new Error("no JSON in model output");
+    return {
+      decision: clampDirector(JSON.parse(blocks[blocks.length - 1])),
+      model: client.model,
+    };
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 // gVisor sandbox detection (cached 60s): runsc runtime + vm-opencode image
@@ -2231,6 +2438,60 @@ async function activateStoredGame(gameId) {
         clearInterval(heartbeat);
         if (!res.writableEnded) res.end();
       }
+    });
+    return;
+  }
+
+  // ---------- Live AI Director (PUBLIC judges route — NO owner guard) ----------
+  if (pathname === "/api/studio/ai/director" && req.method === "POST") {
+    let body = "";
+    req.on("data", (chunk) => (body += chunk));
+    req.on("end", async () => {
+      const verdict = directorAllowed(judgeClientIp(req));
+      if (!verdict.allowed) {
+        res.setHeader("retry-after", String(verdict.retryAfter));
+        return json(res, 429, {
+          error:
+            "AI Director rate limit reached (30 requests per minute). Try again soon.",
+          retryAfter: verdict.retryAfter,
+        });
+      }
+      let telemetry = {};
+      try {
+        telemetry = JSON.parse(body || "{}");
+      } catch {
+        telemetry = {};
+      }
+      if (!telemetry || typeof telemetry !== "object") telemetry = {};
+      const sig = buildDirectorSignature(telemetry);
+      const hit = directorCache.get(sig);
+      if (hit && Date.now() - hit.at < AI_DIRECTOR_CACHE_TTL_MS) {
+        return json(res, 200, {
+          ok: true,
+          model: hit.model,
+          cached: true,
+          ...hit.decision,
+        });
+      }
+      let model = AI_DIRECTOR_MODEL_FALLBACK;
+      let decision;
+      if (process.env.STUDIO_AI_DIRECTOR_OFFLINE === "1") {
+        decision = heuristicDirector(telemetry);
+      } else {
+        try {
+          const live = await callDirectorModel(telemetry);
+          decision = live.decision;
+          model = live.model;
+        } catch (err) {
+          console.warn(
+            "[ai-director] live call failed, heuristic fallback:",
+            err && err.message,
+          );
+          decision = heuristicDirector(telemetry);
+        }
+      }
+      directorCache.set(sig, { at: Date.now(), model, decision });
+      return json(res, 200, { ok: true, model, cached: false, ...decision });
     });
     return;
   }
