@@ -1,0 +1,13 @@
+{
+  "assetId": "wooden_bookshelf_worn",
+  "type": "model",
+  "resolution": "1k",
+  "license": "CC0 1.0 Universal (Polyhaven)",
+  "files": [
+    {
+      "file": "wooden_bookshelf_worn_1k.glb",
+      "url": "/studio/assets/polyhaven/wooden_bookshelf_worn/wooden_bookshelf_worn_1k.glb",
+      "bytes": 2776164
+    }
+  ]
+}

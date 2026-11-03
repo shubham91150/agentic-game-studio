@@ -1,0 +1,13 @@
+{
+  "assetId": "SchoolDesk_01",
+  "type": "model",
+  "resolution": "1k",
+  "license": "CC0 1.0 Universal (Polyhaven)",
+  "files": [
+    {
+      "file": "SchoolDesk_01_1k.glb",
+      "url": "/studio/assets/polyhaven/SchoolDesk_01/SchoolDesk_01_1k.glb",
+      "bytes": 420656
+    }
+  ]
+}

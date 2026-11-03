@@ -1,0 +1,13 @@
+{
+  "assetId": "wheelchair_01",
+  "type": "model",
+  "resolution": "1k",
+  "license": "CC0 1.0 Universal (Polyhaven)",
+  "files": [
+    {
+      "file": "wheelchair_01_1k.glb",
+      "url": "/studio/assets/polyhaven/wheelchair_01/wheelchair_01_1k.glb",
+      "bytes": 1747428
+    }
+  ]
+}

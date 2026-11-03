@@ -1,0 +1,13 @@
+{
+  "assetId": "book_encyclopedia_set_01",
+  "type": "model",
+  "resolution": "1k",
+  "license": "CC0 1.0 Universal (Polyhaven)",
+  "files": [
+    {
+      "file": "book_encyclopedia_set_01_1k.glb",
+      "url": "/studio/assets/polyhaven/book_encyclopedia_set_01/book_encyclopedia_set_01_1k.glb",
+      "bytes": 3238308
+    }
+  ]
+}

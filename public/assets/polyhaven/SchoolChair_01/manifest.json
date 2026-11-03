@@ -1,0 +1,13 @@
+{
+  "assetId": "SchoolChair_01",
+  "type": "model",
+  "resolution": "1k",
+  "license": "CC0 1.0 Universal (Polyhaven)",
+  "files": [
+    {
+      "file": "SchoolChair_01_1k.glb",
+      "url": "/studio/assets/polyhaven/SchoolChair_01/SchoolChair_01_1k.glb",
+      "bytes": 483748
+    }
+  ]
+}

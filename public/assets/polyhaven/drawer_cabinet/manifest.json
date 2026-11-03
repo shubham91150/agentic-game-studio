@@ -1,0 +1,13 @@
+{
+  "assetId": "drawer_cabinet",
+  "type": "model",
+  "resolution": "1k",
+  "license": "CC0 1.0 Universal (Polyhaven)",
+  "files": [
+    {
+      "file": "drawer_cabinet_1k.glb",
+      "url": "/studio/assets/polyhaven/drawer_cabinet/drawer_cabinet_1k.glb",
+      "bytes": 1140212
+    }
+  ]
+}

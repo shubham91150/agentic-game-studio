@@ -1,0 +1,13 @@
+{
+  "assetId": "vintage_oil_lamp",
+  "type": "model",
+  "resolution": "1k",
+  "license": "CC0 1.0 Universal (Polyhaven)",
+  "files": [
+    {
+      "file": "vintage_oil_lamp_1k.glb",
+      "url": "/studio/assets/polyhaven/vintage_oil_lamp/vintage_oil_lamp_1k.glb",
+      "bytes": 2610976
+    }
+  ]
+}

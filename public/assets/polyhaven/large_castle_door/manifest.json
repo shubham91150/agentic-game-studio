@@ -1,0 +1,13 @@
+{
+  "assetId": "large_castle_door",
+  "type": "model",
+  "resolution": "1k",
+  "license": "CC0 1.0 Universal (Polyhaven)",
+  "files": [
+    {
+      "file": "large_castle_door_1k.glb",
+      "url": "/studio/assets/polyhaven/large_castle_door/large_castle_door_1k.glb",
+      "bytes": 3268624
+    }
+  ]
+}

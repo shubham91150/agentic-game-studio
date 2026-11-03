@@ -1,0 +1,13 @@
+{
+  "assetId": "lantern_chandelier_01",
+  "type": "model",
+  "resolution": "1k",
+  "license": "CC0 1.0 Universal (Polyhaven)",
+  "files": [
+    {
+      "file": "lantern_chandelier_01_1k.glb",
+      "url": "/studio/assets/polyhaven/lantern_chandelier_01/lantern_chandelier_01_1k.glb",
+      "bytes": 1545832
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "assetId": "treasure_chest",
+  "type": "model",
+  "resolution": "1k",
+  "license": "CC0 1.0 Universal (Polyhaven)",
+  "files": [
+    {
+      "file": "treasure_chest_1k.glb",
+      "url": "/studio/assets/polyhaven/treasure_chest/treasure_chest_1k.glb",
+      "bytes": 5480324
+    }
+  ]
+}

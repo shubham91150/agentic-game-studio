@@ -1,0 +1,13 @@
+{
+  "assetId": "painted_wooden_bench",
+  "type": "model",
+  "resolution": "1k",
+  "license": "CC0 1.0 Universal (Polyhaven)",
+  "files": [
+    {
+      "file": "painted_wooden_bench_1k.glb",
+      "url": "/studio/assets/polyhaven/painted_wooden_bench/painted_wooden_bench_1k.glb",
+      "bytes": 1988600
+    }
+  ]
+}
