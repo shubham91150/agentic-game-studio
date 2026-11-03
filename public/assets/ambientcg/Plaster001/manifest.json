@@ -1,0 +1,45 @@
+{
+  "query": "Plaster",
+  "assetId": "Plaster001",
+  "attribute": "1K-JPG",
+  "license": "CC0 1.0 Universal (ambientCG)",
+  "matchingCandidates": [
+    "Concrete034",
+    "Plaster001",
+    "PaintedPlaster017",
+    "Plaster007",
+    "Plaster002"
+  ],
+  "maps": {
+    "Color": "/studio/assets/ambientcg/Plaster001/Plaster001_1K-JPG_Color.jpg",
+    "Displacement": "/studio/assets/ambientcg/Plaster001/Plaster001_1K-JPG_Displacement.jpg",
+    "NormalGL": "/studio/assets/ambientcg/Plaster001/Plaster001_1K-JPG_NormalGL.jpg",
+    "Roughness": "/studio/assets/ambientcg/Plaster001/Plaster001_1K-JPG_Roughness.jpg"
+  },
+  "files": [
+    {
+      "map": "Color",
+      "file": "Plaster001_1K-JPG_Color.jpg",
+      "url": "/studio/assets/ambientcg/Plaster001/Plaster001_1K-JPG_Color.jpg",
+      "bytes": 828790
+    },
+    {
+      "map": "Displacement",
+      "file": "Plaster001_1K-JPG_Displacement.jpg",
+      "url": "/studio/assets/ambientcg/Plaster001/Plaster001_1K-JPG_Displacement.jpg",
+      "bytes": 601909
+    },
+    {
+      "map": "NormalGL",
+      "file": "Plaster001_1K-JPG_NormalGL.jpg",
+      "url": "/studio/assets/ambientcg/Plaster001/Plaster001_1K-JPG_NormalGL.jpg",
+      "bytes": 2091491
+    },
+    {
+      "map": "Roughness",
+      "file": "Plaster001_1K-JPG_Roughness.jpg",
+      "url": "/studio/assets/ambientcg/Plaster001/Plaster001_1K-JPG_Roughness.jpg",
+      "bytes": 367391
+    }
+  ]
+}

@@ -7,7 +7,13 @@
  * Collision: circle (r=0.35m) vs AABB list in XZ + bounds clamp.
  * Look: pointer-lock mouse + drag fallback + touch via setLookDelta.
  * Torch: SpotLight(0xffd9a0, 1.6, 18m, 0.5rad, decay 1.5), 1024 shadow.
- * NOTE: game.js must scene.add(camera) so the torch child renders.
+ * Held lantern viewmodel: real CC0 Lantern_01_1k.glb (same cached URL the
+ *   world lanterns use, so no extra download) attached as a camera child at
+ *   lower-right (0.28, -0.26, -0.45), with subtle walk-bob, crouch offset,
+ *   smoothed look-delta inertia sway, and torch-driven amber glass glow.
+ *   Photogrammetry PBR materials are kept as-authored (cloned per-instance
+ *   so scene lanterns are never affected); only glass emissive animates.
+ * NOTE: game.js must scene.add(camera) so camera children render (done there).
  * Zero allocations in update(): all temps preallocated below.
  */
 (function () {
@@ -27,6 +33,14 @@
   var STRIDE_WALK = 1.9;
   var STRIDE_RUN = 2.3;
   var TORCH_BASE = 1.6;
+  var LANTERN_URL = '/studio/assets/polyhaven/Lantern_01/Lantern_01_1k.glb';
+  var LANTERN_BASE_X = 0.28;
+  var LANTERN_BASE_Y = -0.26;
+  var LANTERN_BASE_Z = -0.45;
+  var LANTERN_LEN = 0.22;
+  var SWAY_MAX = 0.03;
+  var GLASS_HEX = 0xffa63e;
+  var GLASS_EI = 1.6;
 
   window.StV_Player = {
     create: function (camera, colliders, bounds) {
@@ -54,6 +68,15 @@
       var lastDX = 0;
       var lastDY = 0;
       var reducedMotion = false;
+      /* Held-lantern viewmodel state (all preallocated; update() stays GC-free). */
+      var lanternRig = null;
+      var lanternLoaded = false;
+      var glassMats = [];
+      var accYaw = 0;
+      var accPitch = 0;
+      var smYawV = 0;
+      var smPitchV = 0;
+      var crouchK = 0;
 
       try {
         reducedMotion = window.matchMedia &&
@@ -75,14 +98,142 @@
       torch.target = torchTarget;
       camera.add(torch);
 
+      /* Lower-right first-person hand rig; the .glb docks here on load. */
+      lanternRig = new THREE.Group();
+      lanternRig.position.set(LANTERN_BASE_X, LANTERN_BASE_Y, LANTERN_BASE_Z);
+      camera.add(lanternRig);
+      loadLanternViewmodel();
+
+      /* Glass material entries {m, offH, offI}; mesh materials are cloned
+       * first so the world lanterns sharing the cached .glb keep their own. */
+      function pushGlassMat(mesh, mat, idx) {
+        if (!mat || !mat.emissive || typeof mat.name !== 'string') return;
+        if (mat.name.toLowerCase().indexOf('glass') < 0) return;
+        try {
+          var own = mat.clone();
+          if (typeof idx === 'number') mesh.material[idx] = own;
+          else mesh.material = own;
+          glassMats.push({
+            m: own,
+            offH: own.emissive.getHex(),
+            offI: own.emissiveIntensity
+          });
+        } catch (eGlass) { /* keep shared material, skip glow control */ }
+      }
+
+      function collectGlassMats(root) {
+        glassMats = [];
+        try {
+          root.traverse(function (o) {
+            var m = o && o.material;
+            if (!m) return;
+            var i;
+            if (m.length !== undefined && typeof m !== 'string') {
+              for (i = 0; i < m.length; i++) pushGlassMat(o, m[i], i);
+            } else {
+              pushGlassMat(o, m);
+            }
+          });
+        } catch (eTrav) { /* model variant without named glass */ }
+      }
+
+      function applyGlassTorch() {
+        for (var i = 0; i < glassMats.length; i++) {
+          var g = glassMats[i];
+          try {
+            if (torchOn) {
+              g.m.emissive.setHex(GLASS_HEX);
+              g.m.emissiveIntensity = GLASS_EI;
+            } else {
+              g.m.emissive.setHex(g.offH);
+              g.m.emissiveIntensity = g.offI;
+            }
+          } catch (eApply) { /* ignore */ }
+        }
+      }
+
+      function onLanternLoaded(root) {
+        if (!root || lanternLoaded) return;
+        try {
+          /* Recenter geometry centroid on the rig so vendor grounding
+           * offsets never shift the hand placement. */
+          root.updateMatrixWorld(true);
+          var box = new THREE.Box3().setFromObject(root);
+          var c = box.getCenter(new THREE.Vector3());
+          root.position.x -= c.x;
+          root.position.y -= c.y;
+          root.position.z -= c.z;
+          /* A hand prop must never cast/receive scene shadows. */
+          root.traverse(function (o) {
+            if (o && o.isMesh) {
+              o.castShadow = false;
+              o.receiveShadow = false;
+            }
+          });
+        } catch (eFit) { /* keep vendor placement */ }
+        collectGlassMats(root);
+        applyGlassTorch();
+        lanternRig.add(root);
+        lanternLoaded = true;
+      }
+
+      function loadLanternViewmodel() {
+        function ok(root) { onLanternLoaded(root); }
+        function fail(err) {
+          try {
+            if (window.console && console.warn) {
+              console.warn('[StV_Player] lantern viewmodel unavailable: ' +
+                ((err && err.message) || err));
+            }
+          } catch (eLog) { /* ignore */ }
+        }
+        try {
+          var WR = window.WorldRealism;
+          if (WR && typeof WR.loadGlbModel === 'function') {
+            var pr = WR.loadGlbModel(LANTERN_URL, ok, {
+              targetLength: LANTERN_LEN,
+              onError: fail
+            });
+            if (pr && typeof pr.catch === 'function') {
+              pr.catch(function () { /* handled through onError */ });
+            }
+            return;
+          }
+          if (window.THREE && window.THREE.GLTFLoader) {
+            new window.THREE.GLTFLoader().load(LANTERN_URL, function (gltf) {
+              if (gltf && gltf.scene) {
+                try {
+                  var b = new THREE.Box3().setFromObject(gltf.scene);
+                  var s = b.getSize(new THREE.Vector3());
+                  var longest = Math.max(s.x, Math.max(s.y, s.z));
+                  if (longest > 1e-6) {
+                    gltf.scene.scale.setScalar(LANTERN_LEN / longest);
+                  }
+                } catch (eS) { /* keep author scale */ }
+                ok(gltf.scene);
+              } else {
+                fail(new Error('empty gltf'));
+              }
+            }, undefined, fail);
+            return;
+          }
+          fail(new Error('no loader'));
+        } catch (eLoad) { fail(eLoad); }
+      }
+
       function clampLook() {
         if (pitch > PITCH_MAX) pitch = PITCH_MAX;
         if (pitch < -PITCH_MAX) pitch = -PITCH_MAX;
       }
 
       function applyLook(dx, dy, scale) {
-        yaw -= dx * sensitivity * scale;
-        pitch -= dy * sensitivity * scale;
+        var ax = dx * sensitivity * scale;
+        var ay = dy * sensitivity * scale;
+        yaw -= ax;
+        pitch -= ay;
+        /* Feed the viewmodel inertia sway (consumed + zeroed in update). */
+        accYaw -= ax;
+        accPitch -= ay;
         clampLook();
       }
 
@@ -175,6 +326,7 @@
         setTorch: function (on) {
           torchOn = !!on;
           torch.visible = torchOn;
+          applyGlassTorch();
         },
         isTorchOn: function () { return torchOn; },
 
@@ -214,6 +366,16 @@
           noise = 0;
           stepAcc = 0;
           bobPhase = 0;
+          accYaw = 0;
+          accPitch = 0;
+          smYawV = 0;
+          smPitchV = 0;
+          crouchK = 0;
+          if (lanternRig) {
+            lanternRig.position.set(
+              LANTERN_BASE_X, LANTERN_BASE_Y, LANTERN_BASE_Z);
+            lanternRig.rotation.set(0, 0, 0);
+          }
           touchX = 0;
           touchZ = 0;
           dragging = false;
@@ -268,6 +430,54 @@
           if (torchOn) {
             torch.intensity = TORCH_BASE *
               (1 + 0.05 * Math.sin(flickT * 13.7) + 0.03 * Math.sin(flickT * 31.3 + 1.7));
+          }
+
+          /* Held-lantern viewmodel: smoothed look inertia + subtle physical
+           * walk drift + crouch dip. Amplitudes stay millimetric (no cartoon
+           * bob); reduced-motion users get a static hand prop. */
+          if (lanternRig) {
+            var idt = dt > 1e-4 ? 1 / dt : 0;
+            var yawV = accYaw * idt;
+            var pitchV = accPitch * idt;
+            accYaw = 0;
+            accPitch = 0;
+            var sk = 1 - Math.exp(-8 * dt);
+            smYawV += (yawV - smYawV) * sk;
+            smPitchV += (pitchV - smPitchV) * sk;
+            var ckT = crouch ? 1 : 0;
+            crouchK += (ckT - crouchK) * (1 - Math.exp(-10 * dt));
+            var amp = reducedMotion ? 0 : 1;
+            var spdK = Math.min(1, planar / WALK);
+            var swayX = -smYawV * 0.012 * amp;
+            var swayY = smPitchV * 0.010 * amp;
+            if (swayX > SWAY_MAX) swayX = SWAY_MAX;
+            else if (swayX < -SWAY_MAX) swayX = -SWAY_MAX;
+            if (swayY > SWAY_MAX) swayY = SWAY_MAX;
+            else if (swayY < -SWAY_MAX) swayY = -SWAY_MAX;
+            var walkX = 0;
+            var walkY = 0;
+            if (planar > 0.3 && amp) {
+              walkX = Math.cos(bobPhase * 0.5) * 0.005 * spdK;
+              walkY = Math.sin(bobPhase + 0.6) * 0.006 * spdK;
+            }
+            lanternRig.position.set(
+              LANTERN_BASE_X + swayX + walkX,
+              LANTERN_BASE_Y + swayY + walkY - 0.05 * crouchK,
+              LANTERN_BASE_Z + 0.02 * crouchK
+            );
+            lanternRig.rotation.set(
+              swayY * 1.5,
+              swayX * 2.0,
+              swayX * 1.2 + walkX * 0.8
+            );
+            /* Glass breathes with the same flame flicker as the spotlight. */
+            if (lanternLoaded && torchOn && glassMats.length) {
+              var fl = 1 + 0.05 * Math.sin(flickT * 13.7) +
+                0.03 * Math.sin(flickT * 31.3 + 1.7);
+              for (var gi = 0; gi < glassMats.length; gi++) {
+                glassMats[gi].m.emissiveIntensity = GLASS_EI * fl;
+              }
+            }
           }
 
           var nTarget = 0;
