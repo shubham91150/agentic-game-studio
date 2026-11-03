@@ -200,6 +200,21 @@
     updateSendStopButton();
   }
 
+  // Abort only the composer's in-flight request (used by New chat, which
+  // must NOT disturb the old terminal — its agent keeps running there).
+  function stopComposerRequest() {
+    if (sendAbortController) {
+      try {
+        sendAbortController.abort();
+      } catch (e) {
+        /* ignore */
+      }
+      sendAbortController = null;
+    }
+    running = false;
+    setAgentWorking(false, 0);
+  }
+
   function stopAgentRun() {
     if (sendAbortController) {
       try {
@@ -611,9 +626,9 @@
     }
   });
 
-  // Chat history sidebar (LEFT slide-over): archived tmux transcripts.
-  // The live terminal is a ttyd iframe, so resume = view transcript +
-  // seed the fresh live terminal with context. Never claim full restore.
+  // Chat history sidebar (LEFT slide-over): archived tmux transcripts +
+  // live tmux windows. Continue switches straight to a still-live window;
+  // only dead chats fall back to transcript + context seeding.
   var sidebarBtn = document.getElementById("sidebar-history-btn");
   var sidebar = document.getElementById("sidebar-history");
   var sidebarOverlay = document.getElementById("sidebar-overlay");
@@ -629,6 +644,7 @@
   var activeChatContent = "";
   var activeGameId = null;
   var activeGameTitle = "";
+  var activeWindowId = null;
 
   function fmtChatSize(bytes) {
     var n = Number(bytes) || 0;
@@ -652,6 +668,7 @@
     activeChatContent = "";
     activeGameId = null;
     activeGameTitle = "";
+    activeWindowId = null;
     if (sidebarView) sidebarView.classList.add("hidden");
     if (sidebarList) sidebarList.classList.remove("hidden");
     if (sidebarSub)
@@ -677,7 +694,10 @@
       item.className = "sidebar-item";
       var title = document.createElement("p");
       title.className = "sidebar-item-title";
-      title.textContent = c.id || "chat";
+      title.textContent =
+        c.transcript === false
+          ? "Live terminal " + (c.windowId || "")
+          : c.id || "chat";
       item.appendChild(title);
       var meta = document.createElement("p");
       meta.className = "sidebar-item-meta";
@@ -686,6 +706,13 @@
           .filter(Boolean)
           .join(" · ") || "archived chat";
       item.appendChild(meta);
+      if (c.live) {
+        var live = document.createElement("p");
+        live.className = "sidebar-item-meta";
+        live.textContent =
+          "● LIVE " + (c.windowId || "") + (c.windowActive ? " · active" : "");
+        item.appendChild(live);
+      }
       if (c.preview) {
         var prev = document.createElement("p");
         prev.className = "sidebar-item-preview";
@@ -700,7 +727,8 @@
       }
       var view = document.createElement("span");
       view.className = "sidebar-item-view";
-      view.textContent = "View transcript →";
+      view.textContent =
+        c.transcript === false ? "Open →" : "View transcript →";
       item.appendChild(view);
       item.addEventListener(
         "click",
@@ -733,11 +761,15 @@
         activeGameId = data && data.gameId ? data.gameId : null;
         activeGameTitle =
           data && data.gameTitle ? String(data.gameTitle) : "";
+        activeWindowId = data && data.windowId ? data.windowId : null;
         if (sidebarMeta)
           sidebarMeta.textContent =
             activeChatId + (activeGameTitle ? " · " + activeGameTitle : "");
         if (sidebarTranscript)
-          sidebarTranscript.textContent = activeChatContent || "(empty)";
+          sidebarTranscript.textContent =
+            data && data.transcript === false
+              ? "(Live terminal — no archived transcript yet. Continue switches straight to it.)"
+              : activeChatContent || "(empty)";
         if (sidebarTranscript) sidebarTranscript.scrollTop = 0;
       })
       .catch(function () {
@@ -803,6 +835,10 @@
     sidebarContinue.addEventListener("click", function () {
       if (!activeChatId || sidebarContinue.disabled) return;
       sidebarContinue.disabled = true;
+      // Fast path first: the chat's tmux window may still be alive — the
+      // server switches straight to it (and activates its linked game).
+      // Only dead/unlinked chats use the legacy context-seeding flow below.
+      var legacyContinue = function () {
       var prompt =
         "Continuing from a previous chat (archived " +
         activeChatId +
@@ -865,6 +901,40 @@
         })
         .then(function () {
           sidebarContinue.disabled = false;
+        });
+      };
+      fetch(
+        "/api/studio/chats/" + encodeURIComponent(activeChatId) + "/continue",
+        { method: "POST" },
+      )
+        .then(function (res) {
+          if (!res.ok) throw new Error("continue failed: " + res.status);
+          return res.json();
+        })
+        .then(function (data) {
+          if (data && data.switched) {
+            if (data.gameActivated) {
+              playPreview(
+                data.url || "/studio/live-preview/index.html",
+                data.title || activeGameTitle || "Game Preview",
+              );
+              refreshLibraryCount();
+            }
+            loadTerminalInline();
+            closeSidebar();
+            setStatus(
+              "Switched to live terminal " +
+                (data.windowId || "") +
+                " — your agent is still there.",
+              "ok",
+            );
+            sidebarContinue.disabled = false;
+            return;
+          }
+          legacyContinue();
+        })
+        .catch(function () {
+          legacyContinue();
         });
     });
 
@@ -1845,12 +1915,12 @@
       });
   });
 
-  // New chat: reset UI conversation state, archive via backend (which kills
-  // and recreates the tmux session), then cleanly reattach the terminal
-  // iframe to the NEW session. The reload is delayed so ttyd settles, and a
-  // quiet black veil covers the box meanwhile — this bypasses ttyd's
-  // built-in "Press Enter to Reconnect" overlay entirely (ui-taste: no
-  // light box, no manual keypress, no spinner; muted text on black).
+  // New chat: reset UI conversation state; the backend snapshots the current
+  // tmux window and opens a FRESH window beside it (never kills the
+  // session). The new window is auto-active so ttyd follows by itself.
+  // Manual reattach (veil + delayed reload) survives below for the rare
+  // dead-socket case via the reconnect button (ui-taste: no light box, no
+  // manual keypress, no spinner; muted text on black).
   var newchatBtn = document.getElementById("newchat-btn");
   var TERMINAL_URL = "https://spurcode.duckdns.org/terminal/?v=14";
   var reconnectTimer = null;
@@ -1962,14 +2032,15 @@
       var proceed = false;
       try {
         proceed = window.confirm(
-          "The agent is still working. Stop it and start a new chat? " +
-            "Your current game and chat will be archived first.",
+          "The agent is still working in this terminal. It will KEEP " +
+            "running there. Start a new chat alongside it? " +
+            "Your current game and a chat snapshot will be archived first.",
         );
       } catch (e) {
         proceed = false;
       }
       if (!proceed) return;
-      stopAgentRun();
+      stopComposerRequest();
     }
     if (sendAbortController) {
       try {
@@ -2025,11 +2096,14 @@
               ? 'Game "' + data.savedGame.title + '" saved to library. '
               : "";
           setStatus(
-            saved + "Previous chat archived. Fresh terminal starting…",
+            saved +
+              "Previous chat archived — old terminal kept alive. " +
+              "Fresh terminal ready.",
             "ok",
           );
           refreshLibraryCount();
-          reconnectTerminalFresh();
+          // No iframe reload: the session was never killed, and the new
+          // window is already active, so ttyd shows it by itself.
         })
         .catch(function () {
           setStatus(

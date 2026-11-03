@@ -40,7 +40,7 @@ const execFileAsync = promisify(execFileCb);
 
 const PORT = Number(process.env.STUDIO_PORT || 3030);
 const gameStore = new GameStorageManager(STORAGE_DIR);
-const TMUX_SESSION = "muse-studio";
+const TMUX_SESSION = process.env.STUDIO_TMUX_SESSION || "muse-studio";
 let activeTerminalModel = "muse-spark-1.3";
 
 // ---------- Library auto-save (Task 1) ----------
@@ -180,16 +180,70 @@ function autoSaveLivePreviewToLibrary() {
 }
 
 // Parses the "[ags-meta ...]" first line written by session/new archives.
+// windowId links the archive to its still-live tmux window (@0/@1/...);
+// old logs without it return windowId null.
 function parseChatMeta(text) {
   const m = String(text || "").match(
-    /^\[ags-meta gameId="([^"]+)" gameTitle="([^"]*)"\]/m,
+    /^\[ags-meta gameId="([^"]*)" gameTitle="([^"]*)"[^\]]*\]/m,
   );
-  if (!m) return { gameId: null, gameTitle: null };
-  return { gameId: m[1], gameTitle: m[2] || null };
+  if (!m) return { gameId: null, gameTitle: null, windowId: null };
+  const w = String(text || "").match(/\[ags-meta[^\]]*windowId="([^"]+)"\]/);
+  return {
+    gameId: m[1] || null,
+    gameTitle: m[2] || null,
+    windowId: w ? w[1] : null,
+  };
 }
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+// Agent loop command shared by session + window creation (single source).
+function tmuxAgentLoopCmd() {
+  const museBin = path.join(
+    process.env.HOME || "/home/opencode",
+    ".local",
+    "bin",
+    "muse",
+  );
+  return `bash -lc 'while true; do ${museBin} --trust-workspace --yolo --model ${activeTerminalModel}; sleep 1; done'`;
+}
+
+// ---------- tmux multi-window helpers ----------
+// New chat NEVER kills the session: the current window is snapshotted and a
+// fresh window opens beside it. A chat ends only when its window ends.
+function listTmuxWindows() {
+  try {
+    const out = execFileSync(
+      "tmux",
+      [
+        "list-windows",
+        "-t",
+        TMUX_SESSION,
+        "-F",
+        "#{window_id}|#{window_active}|#{window_name}",
+      ],
+      { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"], timeout: 5000 },
+    );
+    return String(out || "")
+      .split("\n")
+      .map((l) => l.trim())
+      .filter(Boolean)
+      .map((l) => {
+        const [id, active, name] = l.split("|");
+        return { id, active: active === "1", name: name || "" };
+      })
+      .filter((w) => w.id);
+  } catch {
+    return [];
+  }
+}
+
+function getActiveTmuxWindowId() {
+  const wins = listTmuxWindows();
+  const a = wins.find((w) => w.active);
+  return a ? a.id : null;
 }
 
 function ensureTmuxSession() {
@@ -198,12 +252,6 @@ function ensureTmuxSession() {
       stdio: "ignore",
     });
   } catch {
-    const museBin = path.join(
-      process.env.HOME || "/home/opencode",
-      ".local",
-      "bin",
-      "muse",
-    );
     execFileSync("tmux", [
       "new-session",
       "-d",
@@ -215,7 +263,7 @@ function ensureTmuxSession() {
       "32",
       "-c",
       ROOT_DIR,
-      `bash -lc 'while true; do ${museBin} --trust-workspace --yolo --model muse-spark-1.3; sleep 1; done'`,
+      tmuxAgentLoopCmd(),
     ]);
     try {
       execFileSync("tmux", ["set-option", "-t", TMUX_SESSION, "status", "off"]);
@@ -628,68 +676,87 @@ const server = http.createServer(async (req, res) => {
   // live-preview game, then copies storage/games/:id/ files (all of them,
   // not just index.html + game.js) into public/live-preview/ so multi-file
   // library games play 100% and can be continued/edited from the composer.
+function copyStoredGameIntoLivePreview(gameId) {
+  const gameDir = path.join(STORAGE_DIR, gameId);
+  fs.mkdirSync(LIVE_PREVIEW_DIR, { recursive: true });
+  for (const entry of fs.readdirSync(LIVE_PREVIEW_DIR)) {
+    fs.rmSync(path.join(LIVE_PREVIEW_DIR, entry), {
+      recursive: true,
+      force: true,
+    });
+  }
+  const copyTree = (src, dest) => {
+    fs.mkdirSync(dest, { recursive: true });
+    for (const ent of fs.readdirSync(src, { withFileTypes: true })) {
+      if (ent.isDirectory()) {
+        copyTree(path.join(src, ent.name), path.join(dest, ent.name));
+      } else if (ent.isFile()) {
+        fs.copyFileSync(path.join(src, ent.name), path.join(dest, ent.name));
+      }
+    }
+  };
+  for (const ent of fs.readdirSync(gameDir, { withFileTypes: true })) {
+    if (ent.name === "manifest.json" || ent.name === "unity") continue;
+    const src = path.join(gameDir, ent.name);
+    const dest = path.join(LIVE_PREVIEW_DIR, ent.name);
+    if (ent.isDirectory()) copyTree(src, dest);
+    else if (ent.isFile()) fs.copyFileSync(src, dest);
+  }
+  if (!fs.existsSync(path.join(LIVE_PREVIEW_DIR, "index.html"))) {
+    throw new Error("Stored game has no index.html.");
+  }
+  // Fresh mtimes -> refresh the auto-save stamp so the next
+  // preview-state poll treats this activation as already saved.
+  let stamp = 0;
+  try {
+    for (const f of fs.readdirSync(LIVE_PREVIEW_DIR)) {
+      const st = fs.statSync(path.join(LIVE_PREVIEW_DIR, f));
+      if (st.mtimeMs > stamp) stamp = Math.floor(st.mtimeMs);
+    }
+  } catch {
+    /* ignore */
+  }
+  lastAutoSaveStamp = stamp;
+}
+
+// Shared by the activate route and chat-continue: auto-save current work,
+// then copy the stored game into the live preview. Throws with .statusCode.
+async function activateStoredGame(gameId) {
+  const found = await gameStore.getGame(gameId);
+  if (!found) {
+    const err = new Error("Game not found");
+    err.statusCode = 404;
+    throw err;
+  }
+  let saved = null;
+  try {
+    saved = autoSaveLivePreviewToLibrary();
+  } catch {
+    saved = null;
+  }
+  try {
+    copyStoredGameIntoLivePreview(gameId);
+  } catch (e) {
+    if (e && e.message === "Stored game has no index.html.") throw e;
+    throw new Error("Could not activate this game.");
+  }
+  return { found, saved };
+}
+
   const activateMatch = pathname.match(
     /^\/api\/studio\/games\/([\w-]+)\/activate$/,
   );
   if (activateMatch && req.method === "POST") {
     req.resume();
     const gameId = activateMatch[1];
-    const found = await gameStore.getGame(gameId);
-    if (!found) return json(res, 404, { ok: false, error: "Game not found" });
-    let saved = null;
+    let found;
+    let saved;
     try {
-      saved = autoSaveLivePreviewToLibrary();
-    } catch {
-      saved = null;
-    }
-    try {
-      const gameDir = path.join(STORAGE_DIR, gameId);
-      fs.mkdirSync(LIVE_PREVIEW_DIR, { recursive: true });
-      for (const entry of fs.readdirSync(LIVE_PREVIEW_DIR)) {
-        fs.rmSync(path.join(LIVE_PREVIEW_DIR, entry), {
-          recursive: true,
-          force: true,
-        });
-      }
-      const copyTree = (src, dest) => {
-        fs.mkdirSync(dest, { recursive: true });
-        for (const ent of fs.readdirSync(src, { withFileTypes: true })) {
-          if (ent.isDirectory()) {
-            copyTree(path.join(src, ent.name), path.join(dest, ent.name));
-          } else if (ent.isFile()) {
-            fs.copyFileSync(path.join(src, ent.name), path.join(dest, ent.name));
-          }
-        }
-      };
-      for (const ent of fs.readdirSync(gameDir, { withFileTypes: true })) {
-        if (ent.name === "manifest.json" || ent.name === "unity") continue;
-        const src = path.join(gameDir, ent.name);
-        const dest = path.join(LIVE_PREVIEW_DIR, ent.name);
-        if (ent.isDirectory()) copyTree(src, dest);
-        else if (ent.isFile()) fs.copyFileSync(src, dest);
-      }
-      if (!fs.existsSync(path.join(LIVE_PREVIEW_DIR, "index.html"))) {
-        return json(res, 500, {
-          ok: false,
-          error: "Stored game has no index.html.",
-        });
-      }
-      // Fresh mtimes -> refresh the auto-save stamp so the next
-      // preview-state poll treats this activation as already saved.
-      let stamp = 0;
-      try {
-        for (const f of fs.readdirSync(LIVE_PREVIEW_DIR)) {
-          const st = fs.statSync(path.join(LIVE_PREVIEW_DIR, f));
-          if (st.mtimeMs > stamp) stamp = Math.floor(st.mtimeMs);
-        }
-      } catch {
-        /* ignore */
-      }
-      lastAutoSaveStamp = stamp;
-    } catch {
-      return json(res, 500, {
+      ({ found, saved } = await activateStoredGame(gameId));
+    } catch (e) {
+      return json(res, (e && e.statusCode) || 500, {
         ok: false,
-        error: "Could not activate this game.",
+        error: (e && e.message) || "Could not activate this game.",
       });
     }
     return json(res, 200, {
@@ -1353,25 +1420,36 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  // ---------- Fresh terminal session (new chat) ----------
-  // Archive the live pane, kill the session, recreate it fresh exactly
-  // like the launcher script. ttyd clients auto-reconnect; no ttyd restart.
+  // ---------- Fresh terminal window (new chat, multi-window) ----------
+  // NEVER kill the session: snapshot the current window into storage/chats/
+  // (linked by windowId + gameId), then open a FRESH window beside it in the
+  // same session. The new window becomes active automatically, so ttyd shows
+  // it with no reconnect; old windows (and their agents) keep running.
   if (pathname === "/api/studio/session/new" && req.method === "POST") {
     // Drain any request body; nothing in it is used or logged.
     req.resume();
-    // Auto-save the current game FIRST (Task 1+3), then link it into the
-    // archived chat log so History continue can restore game + context.
+    // Auto-save the current game FIRST, then link it into the archived
+    // chat log so History continue can restore game + terminal together.
     let savedGame = null;
     try {
       savedGame = autoSaveLivePreviewToLibrary();
     } catch {
       savedGame = null;
     }
-    const chatMetaLine = savedGame
-      ? `[ags-meta gameId="${savedGame.id}" gameTitle="${String(
-          savedGame.title || "",
-        ).replace(/[\r\n"]/g, "")}"]\n`
-      : "";
+    try {
+      ensureTmuxSession();
+    } catch {
+      return json(res, 500, { ok: false, error: "Could not start terminal." });
+    }
+    const prevWindowId = getActiveTmuxWindowId();
+    const safeTitle = String(
+      (savedGame && savedGame.title) || "",
+    ).replace(/[\r\n"]/g, "");
+    const chatMetaLine =
+      `[ags-meta gameId="${(savedGame && savedGame.id) || ""}" ` +
+      `gameTitle="${safeTitle}"` +
+      (prevWindowId ? ` windowId="${prevWindowId}"` : "") +
+      `]\n`;
     let archived = null;
     let note = null;
     try {
@@ -1380,18 +1458,21 @@ const server = http.createServer(async (req, res) => {
       fs.mkdirSync(CHATS_DIR, { recursive: true });
       const dest = path.join(CHATS_DIR, fileName);
       try {
+        const target = prevWindowId
+          ? `${TMUX_SESSION}:${prevWindowId}`
+          : TMUX_SESSION;
         const { stdout } = await execFileAsync(
           "tmux",
-          ["capture-pane", "-t", TMUX_SESSION, "-p", "-S", "-"],
+          ["capture-pane", "-t", target, "-p", "-S", "-"],
           { timeout: 15000 },
         );
         fs.writeFileSync(dest, chatMetaLine + (stdout || ""), "utf8");
       } catch {
-        note = "previous session missing; nothing to archive";
+        note = "previous window missing; nothing to archive";
         fs.writeFileSync(
           dest,
           chatMetaLine +
-            `No previous tmux session '${TMUX_SESSION}' to archive.\n`,
+            `No previous tmux window in '${TMUX_SESSION}' to archive.\n`,
           "utf8",
         );
       }
@@ -1399,67 +1480,38 @@ const server = http.createServer(async (req, res) => {
     } catch {
       return json(res, 500, { ok: false, error: "Could not archive session." });
     }
+    activeTerminalModel = "muse-spark-1.3";
+    let newWindowId = null;
     try {
-      await execFileAsync("tmux", ["kill-session", "-t", TMUX_SESSION], {
-        timeout: 15000,
-      });
-    } catch {
-      /* ignore missing session */
-    }
-    try {
-      const museBin = path.join(
-        process.env.HOME || "/home/opencode",
-        ".local",
-        "bin",
-        "muse",
-      );
-      await execFileAsync(
+      const { stdout } = await execFileAsync(
         "tmux",
         [
-          "new-session",
-          "-d",
-          "-s",
+          "new-window",
+          "-P",
+          "-F",
+          "#{window_id}",
+          "-t",
           TMUX_SESSION,
-          "-x",
-          "120",
-          "-y",
-          "32",
           "-c",
           ROOT_DIR,
-          `bash -lc 'while true; do ${museBin} --trust-workspace --yolo --model muse-spark-1.3; sleep 1; done'`,
+          tmuxAgentLoopCmd(),
         ],
         { timeout: 15000 },
       );
-      try {
-        await execFileAsync(
-          "tmux",
-          ["set-option", "-t", TMUX_SESSION, "status", "off"],
-          {
-            timeout: 15000,
-          },
-        );
-        await execFileAsync(
-          "tmux",
-          ["set-option", "-t", TMUX_SESSION, "mouse", "on"],
-          {
-            timeout: 15000,
-          },
-        );
-      } catch {
-        /* best-effort */
-      }
+      newWindowId = String(stdout || "").trim() || null;
     } catch {
       return json(res, 500, {
         ok: false,
-        error: "Could not start a fresh session.",
+        error: "Could not open a new terminal window.",
         archived,
       });
     }
-    activeTerminalModel = "muse-spark-1.3";
     return json(res, 200, {
       ok: true,
       archived,
       session: TMUX_SESSION,
+      windowId: newWindowId,
+      previousWindowId: prevWindowId,
       savedGame: savedGame
         ? { id: savedGame.id, title: savedGame.title }
         : null,
@@ -1477,6 +1529,8 @@ const server = http.createServer(async (req, res) => {
     } catch {
       files = [];
     }
+    const liveWins = listTmuxWindows();
+    const liveIds = new Set(liveWins.map((w) => w.id));
     const list = files
       .map((f) => {
         const abs = path.join(CHATS_DIR, f);
@@ -1490,11 +1544,13 @@ const server = http.createServer(async (req, res) => {
         let preview = "";
         let gameId = null;
         let gameTitle = null;
+        let windowId = null;
         try {
           const text = fs.readFileSync(abs, "utf8");
           const meta = parseChatMeta(text);
           gameId = meta.gameId;
           gameTitle = meta.gameTitle;
+          windowId = meta.windowId;
           preview = text
             .split("\n")
             .map((l) => l.trim())
@@ -1505,6 +1561,10 @@ const server = http.createServer(async (req, res) => {
         } catch {
           preview = "";
         }
+        const live = Boolean(windowId && liveIds.has(windowId));
+        const liveWin = live
+          ? liveWins.find((w) => w.id === windowId)
+          : null;
         return {
           id: f,
           createdAt: stat.mtime.toISOString(),
@@ -1512,16 +1572,40 @@ const server = http.createServer(async (req, res) => {
           preview,
           gameId,
           gameTitle,
+          windowId,
+          live,
+          windowActive: Boolean(liveWin && liveWin.active),
+          transcript: true,
         };
       })
       .filter(Boolean)
       .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
-    return json(res, 200, list);
+    // Live windows with no archived chat yet (e.g. the current one) are
+    // listed first as switchable entries without transcripts.
+    const linked = new Set(
+      list.filter((e) => e.windowId).map((e) => e.windowId),
+    );
+    const liveOnly = liveWins
+      .filter((w) => !linked.has(w.id))
+      .map((w) => ({
+        id: `live:${w.id}`,
+        createdAt: new Date().toISOString(),
+        size: 0,
+        preview: "",
+        gameId: null,
+        gameTitle: null,
+        windowId: w.id,
+        live: true,
+        windowActive: w.active,
+        transcript: false,
+        windowName: w.name,
+      }));
+    return json(res, 200, [...liveOnly, ...list]);
   }
 
   // GET /api/studio/chats/:id -> {id, content} capped at 200KB.
-  // The live terminal is a ttyd iframe (static files cannot render there),
-  // so "resume" = view transcript + seed fresh terminal with context.
+  // The live terminal is a ttyd iframe; "resume" = switch to the still-live
+  // window when possible, else view transcript + seed with context.
   const chatMatch = pathname.match(/^\/api\/studio\/chats\/(.+)$/);
   if (chatMatch && req.method === "GET") {
     const raw = chatMatch[1] || "";
@@ -1530,6 +1614,24 @@ const server = http.createServer(async (req, res) => {
       id = decodeURIComponent(raw);
     } catch {
       return json(res, 400, { error: "Invalid chat id." });
+    }
+    if (id.startsWith("live:")) {
+      const wid = id.slice("live:".length);
+      if (!/^@\d+$/.test(wid)) {
+        return json(res, 400, { error: "Invalid chat id." });
+      }
+      const w = listTmuxWindows().find((x) => x.id === wid);
+      if (!w) return json(res, 404, { error: "Window no longer live." });
+      return json(res, 200, {
+        id,
+        content: "",
+        gameId: null,
+        gameTitle: null,
+        windowId: wid,
+        live: true,
+        windowActive: w.active,
+        transcript: false,
+      });
     }
     if (!/^[a-zA-Z0-9._-]+$/.test(id)) {
       return json(res, 400, { error: "Invalid chat id." });
@@ -1565,11 +1667,118 @@ const server = http.createServer(async (req, res) => {
         .slice(0, MAX_BYTES)
         .toString("utf8");
     }
+    const wins = listTmuxWindows();
+    const liveWin = meta.windowId
+      ? wins.find((w) => w.id === meta.windowId)
+      : null;
     return json(res, 200, {
       id,
       content,
       gameId: meta.gameId,
       gameTitle: meta.gameTitle,
+      windowId: meta.windowId,
+      live: Boolean(liveWin),
+      windowActive: Boolean(liveWin && liveWin.active),
+      transcript: true,
+    });
+  }
+
+  // POST /api/studio/chats/:id/continue -> switch back to a live window.
+  // If the chat's tmux window is still alive, select it (the ttyd client
+  // follows automatically) and activate its linked game — no new prompt is
+  // sent. Dead/unlinked chats return switched:false so the UI can fall back
+  // to transcript + context seeding.
+  const continueMatch = pathname.match(
+    /^\/api\/studio\/chats\/(.+)\/continue$/,
+  );
+  if (continueMatch && req.method === "POST") {
+    req.resume();
+    let id = "";
+    try {
+      id = decodeURIComponent(continueMatch[1] || "");
+    } catch {
+      return json(res, 400, { ok: false, error: "Invalid chat id." });
+    }
+    let windowId = null;
+    let gameId = null;
+    let gameTitle = null;
+    if (id.startsWith("live:")) {
+      windowId = id.slice("live:".length);
+      if (!/^@\d+$/.test(windowId)) {
+        return json(res, 400, { ok: false, error: "Invalid chat id." });
+      }
+    } else {
+      if (!/^[a-zA-Z0-9._-]+$/.test(id)) {
+        return json(res, 400, { ok: false, error: "Invalid chat id." });
+      }
+      const dir = path.resolve(CHATS_DIR);
+      const target = path.resolve(dir, id);
+      if (
+        target !== path.join(dir, id) ||
+        !target.startsWith(dir + path.sep)
+      ) {
+        return json(res, 400, { ok: false, error: "Invalid chat id." });
+      }
+      let text = "";
+      try {
+        text = fs.readFileSync(target, "utf8");
+      } catch {
+        return json(res, 404, { ok: false, error: "Chat not found." });
+      }
+      const meta = parseChatMeta(text);
+      windowId = meta.windowId;
+      gameId = meta.gameId;
+      gameTitle = meta.gameTitle;
+    }
+    const live = Boolean(
+      windowId && listTmuxWindows().some((w) => w.id === windowId),
+    );
+    if (!live) {
+      return json(res, 200, {
+        ok: true,
+        switched: false,
+        reason: windowId ? "window-gone" : "no-linked-window",
+        gameId,
+        gameTitle,
+      });
+    }
+    try {
+      await execFileAsync(
+        "tmux",
+        ["select-window", "-t", `${TMUX_SESSION}:${windowId}`],
+        { timeout: 15000 },
+      );
+    } catch {
+      return json(res, 200, {
+        ok: true,
+        switched: false,
+        reason: "select-failed",
+        gameId,
+        gameTitle,
+      });
+    }
+    let gameActivated = null;
+    if (gameId) {
+      try {
+        const { found } = await activateStoredGame(gameId);
+        gameActivated = {
+          id: gameId,
+          title:
+            (found.manifest && found.manifest.title) ||
+            gameTitle ||
+            "Game Preview",
+        };
+      } catch {
+        gameActivated = null;
+      }
+    }
+    return json(res, 200, {
+      ok: true,
+      switched: true,
+      windowId,
+      url: "/studio/live-preview/index.html",
+      title: (gameActivated && gameActivated.title) || "Game Preview",
+      gameActivated,
     });
   }
 
