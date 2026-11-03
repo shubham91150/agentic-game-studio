@@ -17,10 +17,14 @@ type: project
   - `GET /api/studio/chats`, `GET /api/studio/chats/:id`, `POST /api/studio/chats/:id/continue`
   - `POST /api/studio/mcp`, `DELETE /api/studio/mcp/:name` (also restricted to allowlisted commands `npx`, `node`, `python3`, `uvx` with shell metacharacters blocked and secrets redacted on `GET /api/studio/mcp`)
   - `POST /api/studio/upload`, `POST /api/studio/publish`
-- **Full-Power Judge Sandbox via Google gVisor (`POST /api/studio/generate` with `useGvisor: true`)**:
+- **Full-Power Judge Sandbox via Google gVisor (`POST /api/studio/generate` with `useGvisor: true`, `ephemeralJudgeRun: true`, & `?judge=meta-judge-2026`)**:
   - Host Docker daemon has Google's official `runsc` (`release-20261102.0`, kernel `Linux 4.19.0-gvisor`) registered in `/etc/docker/daemon.json`.
-  - When a public Judge submits a prompt in the Studio UI (`terminal/send` returns `401`), `public/studio.js` automatically falls back to `POST /api/studio/generate`.
-  - For non-owner requests, `AgentRunner.runMuseCLI` spawns `docker run --rm -i --runtime=runsc --read-only --cap-drop=ALL --security-opt=no-new-privileges` with `/data/opencode/.gvisor-sandbox/bin/muse-bin-1.4.14-R7309.1`, mounting studio `src/`, `.agents/`, and `public/assets/` read-only (`:ro`) and ONLY the per-run work directory (`storage/.work/run_<id>`) read-write (`:rw`). Vault secrets and host filesystem are completely invisible inside gVisor.
+  - **Judge Token Gate (`?judge=meta-judge-2026`)**: Uncached live AI builds from non-owners require `x-judge-token: meta-judge-2026` (captured automatically from `?judge=meta-judge-2026` in the Cerebral Valley submission URL and stored in `localStorage.ags_judge_token`). Cached demo prompts and all 3D Library games work for all visitors at 0 credit cost.
+  - **Ephemeral Judge Storage (`storage/.judge-runs/`)**: Judge builds save to `storage/.judge-runs/` and serve from `/studio/judge-games/:id/*` (with `activeJudgeBuildCount` max-1 mutex), so public/judge runs NEVER pollute `storage/games/index.json` or `public/live-preview/`.
+  - **Judge Visit Audit Trail (`GET/POST /api/studio/judge-audit`)**: Logs every judge visit and sandbox build in `storage/.judge-runs/judge_audit.json` so the owner can verify when judges tested the project.
+  - **Gateway Root & Owner Username Lock**: Unauthenticated requests to `/` or `/vault` on `spurcode.duckdns.org` redirect (`302`) straight to `/studio/`, and `verifyOpenCodeGitHubCookie` strictly requires `username === "shubham91150"`.
+  - **In-App Git & GitHub Integration (`#git-btn` + `#git-drawer`)**: Live branch/HEAD/dirty status (`GET /api/studio/git/status`), 1-click Commit & Push (`POST /api/studio/git/sync`), and 1-click Standalone Game Repo Export (`POST /api/studio/git/export-game`).
+  - **17 Native MCP Tools + 825K+ Mega 3D Hub (`src/tools/fetch_mega_3d_hub.py`) + Elite Imagination Engine (`src/tools/elite_imagination_engine.js`)**: Connects Smithsonian Open Access 3D Laser Scans, Khronos Official AAA glTF Showcase, Polyhaven (19+ photogrammetry interior/gothic models), BlenderKit, ambientCG, Objaverse, and `WorldRealism.enableMasterpieceRendering` (`EffectComposer` + `UnrealBloomPass` + `PMREM IBL` + `Contact Shadow AO`).
 
 ## 2. Non-Destructive Multi-Window Terminal (`tmux new-window` + `select-window`)
 
