@@ -39,6 +39,68 @@ import { GameStorageManager } from "../storage/game_store.js";
 export { resolveMetaApiKey };
 
 const MUSE_BIN = path.join(os.homedir(), ".local", "bin", "muse");
+
+// ---------- Google gVisor (runsc) agent sandbox ----------
+// Judge builds run the REAL Muse Code CLI with full powers inside a
+// locked-down runsc container: read-only rootfs, no capabilities,
+// no-new-privileges, bounded pids/memory/cpus, exec tmpfs for /tmp + HOME,
+// and exactly five bind mounts (sandbox bin + three read-only source dirs
+// + one read-write run dir). The CLI can never touch the host VM.
+export const GVISOR_IMAGE = "vm-opencode";
+export const GVISOR_CLI_BIN = "/sandbox-bin/muse-bin-1.4.14-R7309.1";
+export const GVISOR_HOST_BIN =
+  "/home/opencode/project-data/.gvisor-sandbox/bin/muse-bin-1.4.14-R7309.1";
+
+export function shouldUseGvisor(useGvisor) {
+  return Boolean(useGvisor) || process.env.MUSE_GVISOR_SANDBOX === "1";
+}
+
+// Docker runs on the host, where this workspace is /data/opencode (here it
+// is visible as /home/opencode/project-data). Map run dirs for -v mounts.
+export function mapRunDirToHost(runDir) {
+  return String(runDir || "").replace(
+    "/home/opencode/project-data",
+    "/data/opencode",
+  );
+}
+
+export function buildGvisorDockerArgs(hostRunDir, cliArgs) {
+  return [
+    "run",
+    "--rm",
+    "-i",
+    "--runtime=runsc",
+    "--read-only",
+    "--cap-drop=ALL",
+    "--security-opt=no-new-privileges",
+    "--pids-limit=256",
+    "--memory=3g",
+    "--cpus=2",
+    "--tmpfs",
+    "/tmp:rw,exec,size=512m",
+    "--tmpfs",
+    "/home/opencode:rw,exec,size=128m",
+    "-e",
+    "HOME=/home/opencode",
+    "-e",
+    "MUSE_NO_MODIFY_PATH=1",
+    "-v",
+    "/data/opencode/.gvisor-sandbox/bin:/sandbox-bin:ro",
+    "-v",
+    "/data/opencode/workspace/users/shubham91150/agentic-game-studio/src:/studio/src:ro",
+    "-v",
+    "/data/opencode/workspace/users/shubham91150/agentic-game-studio/.agents:/workspace/.agents:ro",
+    "-v",
+    "/data/opencode/workspace/users/shubham91150/agentic-game-studio/public/assets:/studio/public/assets:ro",
+    "-v",
+    `${hostRunDir}:/workspace:rw`,
+    "-w",
+    "/workspace",
+    GVISOR_IMAGE,
+    GVISOR_CLI_BIN,
+    ...cliArgs,
+  ];
+}
 const BASETEN_MODEL_LABEL = "meta-models/muse-spark-open-1026";
 const CLI_MODEL_LABEL = process.env.MUSE_CLI_MODEL || "muse-spark-1.3";
 // Only models verified live on this VM may be selected in the UI.
@@ -304,9 +366,14 @@ export class AgentRunner {
    * @param {string} taskPrompt
    * @returns {Promise<{ok: boolean, output: string, live: boolean, reason?: string}>}
    */
-  runMuseCLI(runDir, taskPrompt, { timeoutMs = 180000, model } = {}) {
+  runMuseCLI(
+    runDir,
+    taskPrompt,
+    { timeoutMs = 180000, model, useGvisor = false } = {},
+  ) {
     return new Promise((resolve) => {
-      if (!this.museAvailable()) {
+      const gvisor = shouldUseGvisor(useGvisor);
+      if (!gvisor && !this.museAvailable()) {
         this.log("warn", "Muse Code CLI binary not found on this host.");
         return resolve({
           ok: false,
@@ -340,16 +407,35 @@ export class AgentRunner {
           ]
         : ["exec", "--provider", "echo", "--trust-workspace", taskPrompt];
 
-      this.log(
-        "info",
-        live
-          ? `Spawning Muse Code CLI on VM (live Meta provider, model ${cliModel})`
-          : "Spawning Muse Code CLI on VM (offline echo provider — no Meta key found)",
-      );
-
-      fs.mkdirSync(runDir, { recursive: true });
-      const child = spawn(MUSE_BIN, args, {
-        cwd: runDir,
+      let cmd = MUSE_BIN;
+      let cmdArgs = args;
+      let cmdCwd = runDir;
+      if (gvisor) {
+        const hostRunDir = mapRunDirToHost(runDir);
+        fs.mkdirSync(runDir, { recursive: true });
+        try {
+          fs.chmodSync(runDir, 0o777);
+        } catch {
+          /* best-effort: the container may write as a different uid */
+        }
+        cmd = "docker";
+        cmdArgs = buildGvisorDockerArgs(hostRunDir, args);
+        cmdCwd = undefined;
+        this.log(
+          "info",
+          "Spawning Muse Code CLI inside Google gVisor (runsc 4.19.0-gvisor) isolated sandbox",
+        );
+      } else {
+        this.log(
+          "info",
+          live
+            ? `Spawning Muse Code CLI on VM (live Meta provider, model ${cliModel})`
+            : "Spawning Muse Code CLI on VM (offline echo provider — no Meta key found)",
+        );
+        fs.mkdirSync(runDir, { recursive: true });
+      }
+      const child = spawn(cmd, cmdArgs, {
+        cwd: cmdCwd,
         env: { ...process.env, MUSE_NO_MODIFY_PATH: "1" },
         stdio: ["pipe", "pipe", "pipe"],
       });
@@ -439,7 +525,7 @@ export class AgentRunner {
    * @returns {Promise<{ok: boolean, gameId?: string, playUrl?: string, spec?: object}>}
    */
   async run(rawPrompt, opts = {}) {
-    // opts: { model?: string (CLI model id, allowlisted), attachments?: Array<{name, path}> }
+    // opts: { model?: string (CLI model id, allowlisted), attachments?: Array<{name, path}>, useGvisor?: boolean }
     const cliModel = resolveCliModel(opts.model);
     const attachments = Array.isArray(opts.attachments) ? opts.attachments : [];
     const startedAt = Date.now();
@@ -707,6 +793,7 @@ export class AgentRunner {
       cli = await this.runMuseCLI(runDir, cliTask, {
         model: cliModel,
         timeoutMs: 240000,
+        useGvisor: Boolean(opts.useGvisor),
       });
 
       // The run dir is fresh per run, so any file here came from this run.

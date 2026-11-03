@@ -158,6 +158,44 @@ function judgeBuildAllowed(ip) {
   return { allowed: true, retryAfter: 0 };
 }
 
+// gVisor sandbox detection (cached 60s): runsc runtime + vm-opencode image
+// + sandbox CLI binary must ALL be present for judge builds to use gVisor.
+let gvisorDetected = null;
+let gvisorDetectedAt = 0;
+function detectGvisorSandbox() {
+  const now = Date.now();
+  if (gvisorDetected !== null && now - gvisorDetectedAt < 60000) {
+    return gvisorDetected;
+  }
+  let ok = false;
+  try {
+    const runtimes = execFileSync(
+      "docker",
+      ["info", "--format", "{{.Runtimes}}"],
+      { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"], timeout: 15000 },
+    );
+    let hasImage = false;
+    try {
+      execFileSync("docker", ["image", "inspect", "vm-opencode"], {
+        stdio: "ignore",
+        timeout: 15000,
+      });
+      hasImage = true;
+    } catch {
+      hasImage = false;
+    }
+    const hasBin = fs.existsSync(
+      "/home/opencode/project-data/.gvisor-sandbox/bin/muse-bin-1.4.14-R7309.1",
+    );
+    ok = /runsc/.test(String(runtimes || "")) && hasImage && hasBin;
+  } catch {
+    ok = false;
+  }
+  gvisorDetected = ok;
+  gvisorDetectedAt = now;
+  return ok;
+}
+
 // ---------- Library auto-save (Task 1) ----------
 // Upserts the current public/live-preview/ game into storage/games/.
 // Same title reuses its existing gameId (no duplicate cards); a new title
@@ -602,6 +640,7 @@ const server = http.createServer(async (req, res) => {
       service: "agentic-game-studio-backend",
       components: {
         museCodeCLI: musePresent,
+        gvisorSandbox: detectGvisorSandbox(),
         cliModel: process.env.MUSE_CLI_MODEL || "muse-spark-1.3",
         cliProvider: "meta-model-api",
         metaKeyPresent: Boolean(resolveMetaApiKey()),
@@ -2001,9 +2040,10 @@ async function activateStoredGame(gameId) {
   }
 
   // ---------- Live agent run (Server-Sent Events) ----------
-  // Judge Sandbox: public for hackathon judges, but strictly sandboxed
-  // for non-owners — no subprocess CLI, no attachments, no live-preview
-  // writes, rate-limited. Owner keeps the full pipeline.
+  // Judge Sandbox: public for hackathon judges. Non-owners get the REAL
+  // Muse Code CLI at full power, but ONLY inside the locked-down Google
+  // gVisor (runsc) container — no host access, no attachments, no
+  // live-preview writes, rate-limited. Owner keeps the host pipeline.
   if (pathname === "/api/studio/generate" && req.method === "POST") {
     const sandboxed = !isOwnerRequest(req);
     let body = "";
@@ -2043,8 +2083,8 @@ async function activateStoredGame(gameId) {
             })
             .filter(Boolean)
         : [];
-      // Sandbox: judges get zero filesystem/attachment/subprocess access —
-      // only safe HTTPS design APIs + pure-JS compile + library save.
+      // Sandbox: judges get zero host-filesystem/attachment access. The CLI
+      // still runs at full power, but only inside Google gVisor (runsc).
       // (The generate flow never writes public/live-preview/ anyway: the
       // done event's playUrl points at the saved library game.)
       const attachments = sandboxed ? [] : ownerAttachments;
@@ -2104,7 +2144,8 @@ async function activateStoredGame(gameId) {
         const result = await runner.run(prompt, {
           model,
           attachments,
-          skipSubprocessCli: sandboxed || Boolean(payload.skipSubprocessCli),
+          skipSubprocessCli: !sandboxed && Boolean(payload.skipSubprocessCli),
+          useGvisor: sandboxed,
         });
         if (!result.ok) {
           emit({ type: "done", ok: false, at: Date.now() });
