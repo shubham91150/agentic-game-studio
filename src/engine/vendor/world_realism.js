@@ -1020,9 +1020,9 @@
     // Draco support: caller may pass opts.dracoLoader (a THREE.DRACOLoader
     // already configured with setDecoderPath). Wire it so KHR_draco_mesh
     // compressed models (BlenderKit/Objaverse/artist-made .glb) load too.
-    if (opts && opts.dracoLoader) {
+    if (job && job.dracoLoader) {
       try {
-        loader.setDRACOLoader(opts.dracoLoader);
+        loader.setDRACOLoader(job.dracoLoader);
       } catch (e) {
         /* draco optional; load may still fail later if model needs it */
       }
@@ -1215,6 +1215,7 @@
         envMapIntensity: envMapIntensity,
         castShadow: castShadow,
         receiveShadow: receiveShadow,
+        dracoLoader: opts.dracoLoader || null,
         consumers: [consumer],
       };
       _glbCache[url] = {
