@@ -389,6 +389,44 @@
     addPlane(1, -6, 2, -1 - 0.035, 0, 1.02, skirtMat);
     addPlane(1, -6, 2, 1 + 0.035, 0, 1.02, skirtMat);
     addPlane(1, -6, 2, 1 - 0.035, 0, 1.02, skirtMat);
+    /* ---------- AO corner strips (visual only, zero colliders) ----------
+     * Soft dark gradients where walls meet floor/ceiling — fakes the
+     * bounced-light falloff a path tracer gives free, grounding every
+     * wall. Floor strips ride 1cm in FRONT of the wainscot (0.045 vs
+     * 0.035: no z-fight, wainscot base darkens too); ceiling coves hug
+     * the face at 0.025. Unlit MeshBasicMaterial, depthWrite off. */
+    function aoCornerTex(darkTop) {
+      var cv = document.createElement("canvas");
+      cv.width = 2; cv.height = 64;
+      var cx = cv.getContext("2d");
+      var gr = cx.createLinearGradient(0, 0, 0, 64);
+      if (darkTop) {
+        gr.addColorStop(0, "rgba(0,0,0,0.5)");
+        gr.addColorStop(1, "rgba(0,0,0,0)");
+      } else {
+        gr.addColorStop(0, "rgba(0,0,0,0)");
+        gr.addColorStop(1, "rgba(0,0,0,0.55)");
+      }
+      cx.fillStyle = gr;
+      cx.fillRect(0, 0, 2, 64);
+      return new THREE.CanvasTexture(cv);
+    }
+    var aoFloorMat = new THREE.MeshBasicMaterial({
+      map: aoCornerTex(false), transparent: true,
+      depthWrite: false, side: THREE.DoubleSide
+    });
+    var aoCeilMat = new THREE.MeshBasicMaterial({
+      map: aoCornerTex(true), transparent: true,
+      depthWrite: false, side: THREE.DoubleSide
+    });
+    var ao;
+    for (ao = 0; ao < SEGS.length; ao++) {
+      var sg = SEGS[ao];
+      addPlane(sg[0], sg[1], sg[2], sg[3] + 0.045, 0, 0.4, aoFloorMat);
+      addPlane(sg[0], sg[1], sg[2], sg[3] - 0.045, 0, 0.4, aoFloorMat);
+      addPlane(sg[0], sg[1], sg[2], sg[3] + 0.025, WALL_H - 0.35, WALL_H, aoCeilMat);
+      addPlane(sg[0], sg[1], sg[2], sg[3] - 0.025, WALL_H - 0.35, WALL_H, aoCeilMat);
+    }
     function addBeamX(x0, x1, z) {
       var soffit = new THREE.Mesh(unitPlane, beamMat);
       soffit.scale.set(x1 - x0, 0.3, 1);
@@ -922,8 +960,11 @@
         // +0.7 offset second bench floated — deleted by design.
         var tx = deepZ ? px : px - 1.1;
         var tz = deepZ ? pz - 1.1 : pz;
+        // The scan is a LOW table (top ~0.35m) — stretch Y to true
+        // altar height (~0.74m) so it reads as an altar, not a bench.
         placeProp({
           url: U_TABLE, x: tx, y: 0, z: tz, ry: pry, len: 1.3,
+          sxyz: [1.1, 2.1, 1.1],
           hw: phw, hd: phd, fb: PEW_FB,
           shadow: deepZ ? [1.4, 0.9] : [0.9, 1.4]
         });
@@ -961,6 +1002,11 @@
     placeProp({ url: U_CANDLE, x: 3.5, y: 0.46, z: 6.3, ry: -0.2, len: 0.35, fb: CAND_FB });
     placeProp({ url: U_CANDLE, x: 5.0, y: 0.46, z: -8.7, ry: 0.1, len: 0.35, fb: CAND_FB });
     placeProp({ url: U_CANDLE, x: 5.0, y: 0.46, z: -7.8, ry: -0.1, len: 0.35, fb: CAND_FB });
+    // Altar-table candles ride the stretched tabletop (y≈0.70).
+    placeProp({ url: U_CANDLE, x: 2.7, y: 0.70, z: 5.2, ry: 0.3, len: 0.35, fb: CAND_FB });
+    placeProp({ url: U_CANDLE, x: 3.3, y: 0.70, z: 5.2, ry: -0.3, len: 0.35, fb: CAND_FB });
+    placeProp({ url: U_CANDLE, x: 3.9, y: 0.70, z: -8.55, ry: 0.15, len: 0.35, fb: CAND_FB });
+    placeProp({ url: U_CANDLE, x: 3.9, y: 0.70, z: -7.95, ry: -0.15, len: 0.35, fb: CAND_FB });
     var LAMP_FB = [0.25, 0.3, 0xffc06a];
     placeProp({ url: U_LAMP, x: 2.5, y: 0, z: 5.2, len: 0.3, fb: LAMP_FB, shadow: [0.35, 0.35] });
     placeProp({ url: U_LAMP, x: 3.9, y: 0, z: -8.25, len: 0.3, fb: LAMP_FB, shadow: [0.35, 0.35] });

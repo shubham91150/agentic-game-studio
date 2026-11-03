@@ -2158,7 +2158,205 @@
       });
   }
 
+  /**
+   * Universal AAA look in one call (any game, any genre):
+   *   WorldRealism.enableMasterpieceRendering(renderer, scene, camera, {
+   *     bloom: { strength: 0.55, radius: 0.45, threshold: 0.72 },
+   *     grade: { shadow: [0.04,0.10,0.14], highlight: [1.0,0.85,0.63],
+   *              vignette: 0.32 },
+   *     env: { top: 0xffc98a, mid: 0x2a4a58, bottom: 0x050505 },
+   *     contactShadow: { opacity: 0.55 }
+   *   });
+   * Returns { composer, envTexture, render(), setSize(w,h),
+   * setPixelRatio(pr), makeContactShadow(w,d,opacity) }. Every stage is
+   * guarded: missing post scripts / PMREM / WebGL just degrade to plain
+   * renderer.render — never throws, never breaks the game.
+   */
+  var _mpGradeVert = [
+    "varying vec2 vUv;",
+    "void main() {",
+    "  vUv = uv;",
+    "  gl_Position = projectionMatrix * modelViewMatrix *",
+    "    vec4(position, 1.0);",
+    "}",
+  ].join("\n");
+  var _mpGradeFrag = [
+    "uniform sampler2D tDiffuse;",
+    "uniform vec3 uShadow;",
+    "uniform vec3 uHighlight;",
+    "uniform float uVignette;",
+    "varying vec2 vUv;",
+    "void main() {",
+    "  vec4 c = texture2D(tDiffuse, vUv);",
+    "  float lum = dot(c.rgb, vec3(0.299, 0.587, 0.114));",
+    "  c.rgb = mix(c.rgb + uShadow * (1.0 - lum), c.rgb, lum);",
+    "  c.rgb = mix(c.rgb, c.rgb * uHighlight, lum * lum);",
+    "  vec2 d = vUv - 0.5;",
+    "  float v = 1.0 - uVignette * dot(d, d) * 4.0;",
+    "  c.rgb *= clamp(v, 0.0, 1.0);",
+    "  gl_FragColor = c;",
+    "}",
+  ].join("\n");
+  var _mpShadowTex = null;
+  function _mpRadialTex(THREE) {
+    if (_mpShadowTex) return _mpShadowTex;
+    var cv = document.createElement("canvas");
+    cv.width = cv.height = 128;
+    var cx = cv.getContext("2d");
+    var gr = cx.createRadialGradient(64, 64, 4, 64, 64, 64);
+    gr.addColorStop(0, "rgba(0,0,0,1)");
+    gr.addColorStop(0.55, "rgba(0,0,0,0.5)");
+    gr.addColorStop(1, "rgba(0,0,0,0)");
+    cx.fillStyle = gr;
+    cx.fillRect(0, 0, 128, 128);
+    _mpShadowTex = new THREE.CanvasTexture(cv);
+    return _mpShadowTex;
+  }
+  function enableMasterpieceRendering(renderer, scene, camera, options) {
+    var THREE = root.THREE;
+    var opts = options || {};
+    var api = {
+      composer: null,
+      envTexture: null,
+      render: function () {
+        try {
+          if (api.composer) api.composer.render();
+          else if (renderer) renderer.render(scene, camera);
+        } catch (err) {
+          try {
+            renderer.render(scene, camera);
+          } catch (err2) {
+            /* without renderer there is no frame */
+          }
+        }
+      },
+      setSize: function (w, h) {
+        try {
+          if (api.composer && api.composer.setSize) api.composer.setSize(w, h);
+        } catch (err) {
+          /* x */
+        }
+      },
+      setPixelRatio: function (pr) {
+        try {
+          if (api.composer && api.composer.setPixelRatio) {
+            api.composer.setPixelRatio(pr);
+          }
+        } catch (err) {
+          /* x */
+        }
+      },
+      makeContactShadow: function (w, d, opacity) {
+        try {
+          var mat = new THREE.MeshBasicMaterial({
+            map: _mpRadialTex(THREE),
+            transparent: true,
+            opacity:
+              typeof opacity === "number" ? opacity : 0.55,
+            depthWrite: false,
+          });
+          var m = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), mat);
+          m.rotation.x = -Math.PI / 2;
+          m.scale.set(w || 1, d || 1, 1);
+          m.renderOrder = 2;
+          return m;
+        } catch (err) {
+          return null;
+        }
+      },
+    };
+    if (!THREE || !renderer || !scene || !camera) return api;
+    // 1. PMREM IBL: tiny gradient room baked to scene.environment.
+    try {
+      var env = (opts && opts.env) || {};
+      var room = new THREE.Scene();
+      var topC = new THREE.Color(
+        typeof env.top === "number" ? env.top : 0xffc98a,
+      );
+      var midC = new THREE.Color(
+        typeof env.mid === "number" ? env.mid : 0x2a4a58,
+      );
+      var botC = new THREE.Color(
+        typeof env.bottom === "number" ? env.bottom : 0x050505,
+      );
+      function mpPanel(color, w, h, x, y, z, rx, ry) {
+        var p = new THREE.Mesh(
+          new THREE.PlaneGeometry(w, h),
+          new THREE.MeshBasicMaterial({ color: color, side: THREE.DoubleSide }),
+        );
+        p.position.set(x, y, z);
+        p.rotation.set(rx || 0, ry || 0, 0);
+        room.add(p);
+      }
+      mpPanel(topC, 10, 10, 0, 5, 0, Math.PI / 2, 0);
+      mpPanel(botC, 10, 10, 0, -5, 0, -Math.PI / 2, 0);
+      mpPanel(midC, 10, 10, 0, 0, -5, 0, 0);
+      mpPanel(midC, 10, 10, 0, 0, 5, 0, Math.PI);
+      mpPanel(topC, 4, 4, -3, 2, -3, 0, Math.PI / 4);
+      var pmrem = new THREE.PMREMGenerator(renderer);
+      var envRT = pmrem.fromScene(room, 0.04);
+      if (envRT && envRT.texture) {
+        scene.environment = envRT.texture;
+        api.envTexture = envRT.texture;
+      }
+      if (pmrem.dispose) pmrem.dispose();
+    } catch (err) {
+      /* IBL is garnish; PBR works without it */
+    }
+    // 2. Post chain: Render + Bloom + stylized grade.
+    try {
+      var T = THREE;
+      if (
+        typeof T.EffectComposer !== "function" ||
+        typeof T.RenderPass !== "function" ||
+        typeof T.UnrealBloomPass !== "function" ||
+        typeof T.ShaderPass !== "function"
+      ) {
+        return api;
+      }
+      var b = (opts && opts.bloom) || {};
+      var g = (opts && opts.grade) || {};
+      var comp = new T.EffectComposer(renderer);
+      comp.addPass(new T.RenderPass(scene, camera));
+      var size =
+        renderer.getDrawingBufferSize instanceof Function
+          ? renderer.getDrawingBufferSize(new T.Vector2())
+          : new T.Vector2(1280, 720);
+      comp.addPass(
+        new T.UnrealBloomPass(
+          size,
+          typeof b.strength === "number" ? b.strength : 0.55,
+          typeof b.radius === "number" ? b.radius : 0.45,
+          typeof b.threshold === "number" ? b.threshold : 0.72,
+        ),
+      );
+      function mpVec(a, fallback) {
+        if (a && a.length === 3) return new T.Vector3(a[0], a[1], a[2]);
+        return new T.Vector3(fallback[0], fallback[1], fallback[2]);
+      }
+      comp.addPass(
+        new T.ShaderPass({
+          uniforms: {
+            tDiffuse: { value: null },
+            uShadow: { value: mpVec(g.shadow, [0.04, 0.1, 0.14]) },
+            uHighlight: { value: mpVec(g.highlight, [1.0, 0.85, 0.63]) },
+            uVignette: {
+              value: typeof g.vignette === "number" ? g.vignette : 0.32,
+            },
+          },
+          vertexShader: _mpGradeVert,
+          fragmentShader: _mpGradeFrag,
+        }),
+      );
+      api.composer = comp;
+    } catch (err) {
+      api.composer = null;
+    }
+    return api;
+  }
+
   var WorldRealism = {
+    enableMasterpieceRendering: enableMasterpieceRendering,
     createRealisticSkyAndLighting: createRealisticSkyAndLighting,
     createProceduralPBRMaterial: createProceduralPBRMaterial,
     create3DGrassField: create3DGrassField,

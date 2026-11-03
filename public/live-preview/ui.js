@@ -317,6 +317,38 @@
         el.textContent = 'AI DIRECTOR · ' + tactic + ' · ' + envEvent;
       } catch (err) { /* HUD cosmetic */ }
     },
+    /* Cabinet door-crack overlay (HN2 hide): fullscreen pointer-dead
+     * layer — near-black door slabs left/right with a clear vertical
+     * slit + warm wood edge lines, so hiding reads as peeking through
+     * the door gap. Idempotent; survives missing DOM. */
+    showHideCrack: function (on) {
+      try {
+        var el = $('hide-crack');
+        if (on) {
+          if (!el) {
+            el = document.createElement('div');
+            el.id = 'hide-crack';
+            el.style.position = 'fixed';
+            el.style.left = '0';
+            el.style.top = '0';
+            el.style.width = '100%';
+            el.style.height = '100%';
+            el.style.pointerEvents = 'none';
+            el.style.zIndex = '5';
+            el.style.background =
+              'linear-gradient(90deg,' +
+              'rgba(8,5,3,0.94) 0%,rgba(8,5,3,0.94) 30%,' +
+              'rgba(58,36,18,0.9) 36%,rgba(0,0,0,0.12) 44%,' +
+              'rgba(0,0,0,0.12) 56%,rgba(58,36,18,0.9) 64%,' +
+              'rgba(8,5,3,0.94) 70%,rgba(8,5,3,0.94) 100%)';
+            document.body.appendChild(el);
+          }
+          el.style.display = 'block';
+        } else if (el) {
+          el.style.display = 'none';
+        }
+      } catch (err) { /* HUD cosmetic */ }
+    },
     banner: function (txt, ms) {
       var el = $('banner');
       if (!el) return;

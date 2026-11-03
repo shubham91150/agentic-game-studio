@@ -703,7 +703,13 @@
        * stage-critical pickup, then hide, then unsearched search. */
       if (isHiddenNow()) {
         txt = "E \u2014 Step out";
+        try {
+          if (UI && UI.showHideCrack) UI.showHideCrack(true);
+        } catch (err) { /* x */ }
       } else {
+        try {
+          if (UI && UI.showHideCrack) UI.showHideCrack(false);
+        } catch (err) { /* x */ }
         var kp = keyPos(tmpV);
         if (!keyFound && kp && distXZ(pp.x, pp.z, kp.x, kp.z) <= KEY_RADIUS) {
           txt = "E \u2014 Chapel Key";
@@ -1129,7 +1135,9 @@
     var hsAct = nearSpot(hideSpots(), pp.x, pp.z, HIDE_RADIUS);
     if (hsAct && player && typeof player.enterHide === "function") {
       try {
-        player.enterHide(hsAct.x, hsAct.z, hsAct.ry);
+        // Spot ry is the MODEL rotation (doors = local +Z); facing yaw
+        // is opposite (ry+PI) so the eye looks OUT of the cabinet.
+        player.enterHide(hsAct.x, hsAct.z, hsAct.ry + Math.PI);
       } catch (err) {
         /* x */
       }

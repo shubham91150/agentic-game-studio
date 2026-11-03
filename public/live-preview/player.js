@@ -42,7 +42,7 @@
   var GLASS_HEX = 0xffa63e;
   var GLASS_EI = 1.6;
   var HIDE_EYE = 1.55;
-  var HIDE_PEEK = 0.35;
+  var HIDE_PEEK = 0.72;
 
   window.StV_Player = {
     create: function (camera, colliders, bounds) {
@@ -408,8 +408,10 @@
           accPitch = 0;
           noise = 0;
           stepAcc = 0;
-          /* Door-gap peek: eye 1.55m, 0.35m out along facing
-           * forward(ry) = (-sin ry, -cos ry). */
+          /* Door-gap peek: eye 1.55m, 0.72m out along facing
+           * (clears the ~0.6m cabinet door plane so the eye looks
+           * INTO the room, not at the mesh interior) forward(ry) =
+           * (-sin ry, -cos ry). CSS crack overlay sells the slit. */
           hidePeekX = x - Math.sin(ry) * HIDE_PEEK;
           hidePeekZ = z - Math.cos(ry) * HIDE_PEEK;
           eyeH = HIDE_EYE;
