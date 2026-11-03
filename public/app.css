@@ -8,9 +8,9 @@
   color-scheme: dark;
 
   /* Canvas & surfaces */
-  --bg: #000;
-  --surface-0: #000;
-  --surface-1: #0e0e13;
+  --bg: #000000;
+  --surface-0: #000000;
+  --surface-1: #000000;
   --surface-2: #15151c;
   --surface-3: #1d1d26;
 
@@ -119,7 +119,7 @@ body {
   font-size: var(--fs-12);
   color: var(--muted);
   border-bottom: 1px solid var(--line);
-  background: rgba(8, 8, 11, 0.86);
+  background: #000000;
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   flex: 0 0 auto;
@@ -887,7 +887,7 @@ body {
 }
 
 .prompt-box {
-  // ui-taste: lifted one step above pure black app/terminal bg
+  /* ui-taste: lifted one step above pure black app/terminal bg */
   width: 100%;
   border: 1px solid rgba(255, 255, 255, 0.09);
   border-radius: 12px;
@@ -1159,7 +1159,7 @@ button.icon-btn {
 
 /* LEFT composer — minimal (ui-taste polish): single soft box, quiet row. */
 .prompt-box {
-  // ui-taste: #121212 sits one step above the pure-black app/terminal bg
+  /* ui-taste: #121212 sits one step above the pure-black app/terminal bg */
   border-color: var(--line);
   border-radius: var(--r-lg);
   background: #121212;
@@ -2612,7 +2612,7 @@ button.icon-btn {
 .preview-box.landscape-fullscreen > .terminal-head {
   min-height: 40px;
   padding: 6px 12px;
-  background: rgba(8, 8, 11, 0.92);
+  background: #000000;
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
 }
@@ -2690,4 +2690,43 @@ button.icon-btn {
   .viewport {
     min-height: 0;
   }
+}
+
+
+/* ==========================================================================
+   Explicit User Theme Lock:
+   - App BG: #000000
+   - Terminal BG (box, header, iframe, connect state): #000000
+   - Prompt Box BG: #121212
+   ========================================================================== */
+html,
+body,
+.page,
+.crumbs,
+.workspace-split,
+.pane-left,
+.pane-right,
+.terminal-section,
+.terminal-box,
+.terminal-section .terminal-box,
+.terminal-head,
+.terminal-frame,
+.terminal-connect,
+.terminal-reconnect,
+.preview-box,
+.viewport,
+.viewport iframe {
+  background: #000000 !important;
+  background-color: #000000 !important;
+  background-image: none !important;
+}
+
+.prompt-box {
+  background: #121212 !important;
+  background-color: #121212 !important;
+}
+
+#prompt,
+.prompt-bar {
+  background: transparent !important;
 }

@@ -1767,7 +1767,7 @@
   // built-in "Press Enter to Reconnect" overlay entirely (ui-taste: no
   // light box, no manual keypress, no spinner; muted text on black).
   var newchatBtn = document.getElementById("newchat-btn");
-  var TERMINAL_URL = "https://spurcode.duckdns.org/terminal/";
+  var TERMINAL_URL = "https://spurcode.duckdns.org/terminal/?v=14";
   var reconnectTimer = null;
   var reconnectSafety = null;
   var reconnectBtn = document.getElementById("terminal-reconnect-btn");
