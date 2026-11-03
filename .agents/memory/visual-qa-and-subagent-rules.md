@@ -1,18 +1,27 @@
 ---
-name: visual-qa-and-subagent-rules
-description: Mandatory multi-subagent orchestration (subagent_spawn), research-first workflow, PartNet part-by-part modeling, and visual_qa_gate.js enforcement.
+name: Visual QA, Tool-First AAA World Richness & Subagent Rules
+description: Mandatory rules requiring deep domain research, 100% tool execution (Blender 3.4 custom GLB kits, ambientCG 1K PBR textures, Polyhaven, SAM 3.1), 3D architectural depth, domain furniture, 3D FP viewmodel, GPU particles, and multi-subagent orchestration.
 type: project
 ---
 
-# Visual QA, Research-First & Multi-Subagent Rules
+# Visual QA, Tool-First AAA World Richness & Subagent Rules
 
-1. **Mandatory Multi-Subagent Orchestration (`subagent_spawn` + `subagent_wait`)**:
-   - Never build or upgrade a game single-threaded. Spawn parallel subagents:
-     - **Subagent A**: Deep Research & System Architecture (`docs/game-system-design/`)
-     - **Subagent B**: World, Terrain, Water, 3D Grass & Buildings (`WorldRealism`, `osm_city_3d.py`, `blender_pro_builder.py`)
-     - **Subagent C**: Multi-Part Vehicles, Characters, Props & Physics (`partnet_shapenet_blueprint.py`, `search_objaverse.py`, `fetch_polyhaven.py`, `fetch_ambientcg.py`)
-     - **Subagent D**: Visual QA Gate (`node src/verifier/visual_qa_gate.js`) & Headless Screenshot Critic
+## 1. Why Mediocre Games Happen (and How to Prevent Them)
 
-2. **Hard Ban on Box/Cone/Sphere Fakes**:
-   - Building cars, trees, buildings, stalls, or grass out of `THREE.BoxGeometry`, `ConeGeometry`, `CylinderGeometry`, `SphereGeometry`, or flat `PlaneGeometry` is STRICTLY BANNED and fails `node src/verifier/visual_qa_gate.js`.
-   - Every object must follow the **PartNet Anatomical Part-by-Part Blueprint** or load real `.glb` assets via `GLTFLoader` / `WorldRealism.loadGlbModel`.
+- **BANNED ANTI-PATTERN**: Building rooms out of bare flat `PlaneGeometry(1, 1)` sheets, pasting flat `MeshBasicMaterial` squares as "windows", and scattering 5 generic crates/barrels in an empty "school" or "city" is **STRICTLY FORBIDDEN**.
+- **MANDATORY TOOL-FIRST EXECUTION**: You have Blender 3.4 (`blender -b -P`), `blender_pro_builder.py`, `partnet_shapenet_blueprint.py --generate-bpy`, `scenescript_wfc_world.py`, `fetch_ambientcg.py`, `fetch_polyhaven.py`, `fetch_blenderkit.py`, `segment_image.py` (SAM 3.1), `meta_musicgen_audio.py`, and 15 MCP tools in `studio-3d-tools`. **USE THEM ON EVERY GAME!**
+
+## 2. Four-Phase AAA Game Build Protocol
+
+1. **Phase 1 — Deep Domain & Asset Matrix Research**:
+   - Before writing code, research the exact real-world architecture, props, lighting, and game feel of the genre.
+   - List 12–20 domain-authentic 3D objects that belong in the scene (e.g., for a Convent School: Gothic stone pillars, pointed arches, timber ceiling beams, wainscot trim, 3D mullioned gothic windows, wooden student desks & chairs, chalkboards, bookshelves, chapel altar, pews, candelabras).
+2. **Phase 2 — Blender 3.4 Custom `.glb` Asset Kit & 1K PBR Texture Generation**:
+   - Fetch real 1K PBR textures (`Bricks`, `Plaster`, `Wood`, `Tiles`) via `python3 src/tools/fetch_ambientcg.py`.
+   - Write and run a headless Blender 3.4 Python script (`blender -b -P ...`) to generate the custom 3D architectural & furniture `.glb` models needed for the scene into `public/live-preview/assets/`.
+3. **Phase 3 — Cinema-Grade Three.js Atmosphere & Tactile Feel**:
+   - Replace flat window squares with real 3D window frames + angled volumetric moonlight shafts (`ConeGeometry`/`CylinderGeometry` or custom beam mesh with additive depth-faded shader/material).
+   - Add a `THREE.Points` atmospheric particle system (floating dust motes / ash / embers drifting in the torch beam).
+   - In first-person games, attach a **real 3D held viewmodel** (e.g., `Lantern_01_1k.glb` held in the bottom-right of the camera) with spring look-sway and walk-bob inertia!
+4. **Phase 4 — Multi-Subagent Verification (`visual_qa_gate.js` + Headless Chromium Critique)**:
+   - Run `node src/verifier/visual_qa_gate.js public/live-preview`, capture in-game screenshots, and verify that rooms look richly furnished, atmospheric, and AAA-crafted.

@@ -1,0 +1,41 @@
+{
+  "query": "Tiles074",
+  "assetId": "Tiles074",
+  "attribute": "1K-JPG",
+  "license": "CC0 1.0 Universal (ambientCG)",
+  "matchingCandidates": [
+    "Tiles074"
+  ],
+  "maps": {
+    "Color": "/studio/assets/ambientcg/Tiles074/Tiles074_1K-JPG_Color.jpg",
+    "Displacement": "/studio/assets/ambientcg/Tiles074/Tiles074_1K-JPG_Displacement.jpg",
+    "NormalGL": "/studio/assets/ambientcg/Tiles074/Tiles074_1K-JPG_NormalGL.jpg",
+    "Roughness": "/studio/assets/ambientcg/Tiles074/Tiles074_1K-JPG_Roughness.jpg"
+  },
+  "files": [
+    {
+      "map": "Color",
+      "file": "Tiles074_1K-JPG_Color.jpg",
+      "url": "/studio/assets/ambientcg/Tiles074/Tiles074_1K-JPG_Color.jpg",
+      "bytes": 1152913
+    },
+    {
+      "map": "Displacement",
+      "file": "Tiles074_1K-JPG_Displacement.jpg",
+      "url": "/studio/assets/ambientcg/Tiles074/Tiles074_1K-JPG_Displacement.jpg",
+      "bytes": 258158
+    },
+    {
+      "map": "NormalGL",
+      "file": "Tiles074_1K-JPG_NormalGL.jpg",
+      "url": "/studio/assets/ambientcg/Tiles074/Tiles074_1K-JPG_NormalGL.jpg",
+      "bytes": 227039
+    },
+    {
+      "map": "Roughness",
+      "file": "Tiles074_1K-JPG_Roughness.jpg",
+      "url": "/studio/assets/ambientcg/Tiles074/Tiles074_1K-JPG_Roughness.jpg",
+      "bytes": 463120
+    }
+  ]
+}

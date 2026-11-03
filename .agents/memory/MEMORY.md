@@ -1,5 +1,6 @@
 # Project Memory Index
 
+- [First-Principles Craftsmanship & Zero-Garbage Law](first-principles-craftsmanship-law.md) — SUPREME RULE: Know how every shader/material/mesh works from first principles before coding; zero square particles, zero untextured plastic meshes, zero fake checkbox ticking; always apply real 1K PBR textures, UVs, soft radial sprites, and ruthless pixel-level critique.
 - [3D Asset and World Tools](3d-asset-and-world-tools.md) — MCP tools & CLI builders for PartNet/ShapeNet multi-part CAD assets, Blender Sapling/Archimesh/ANT/AutoRig, 3D Gaussian Splatting, Meta SceneScript+WFC, VGGT-1B, OpenStreetMap 3D cities, Objaverse, BlenderKit, PolyHaven, ambientCG, and MusicGen audio.
 - [Blender Armature Rigging](blender-armature-rigging.md) — Blender 3.4 (`bpy`) humanoid 20-bone Armature rigging, analytical vertex group skinning (`SkinnedMesh`), NLA `Idle`/`Walk` action baking, and `THREE.AnimationMixer` integration.
 - [Game System Design Blueprints](game-system-design-blueprints.md) — Complete Game System Design Corpus (`docs/game-system-design/01..05.md`): ECS, HFSM, Marco Monster Car Physics, Quake/Celeste Controller, Red Blob / SceneScript World Algorithms, and 6 Genre Blueprints.

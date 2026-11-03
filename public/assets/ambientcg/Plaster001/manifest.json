@@ -1,14 +1,10 @@
 {
-  "query": "Plaster",
+  "query": "Plaster001",
   "assetId": "Plaster001",
   "attribute": "1K-JPG",
   "license": "CC0 1.0 Universal (ambientCG)",
   "matchingCandidates": [
-    "Concrete034",
-    "Plaster001",
-    "PaintedPlaster017",
-    "Plaster007",
-    "Plaster002"
+    "Plaster001"
   ],
   "maps": {
     "Color": "/studio/assets/ambientcg/Plaster001/Plaster001_1K-JPG_Color.jpg",

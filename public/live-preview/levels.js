@@ -38,6 +38,7 @@
   // meter-accurate Blender dims survive (loader still XZ-centers + grounds).
   var U_PILLAR = "./assets/gothic_pillar_arch.glb";
   var U_WINDOW = "./assets/gothic_window_frame.glb";
+  var U_SHAFT = "./assets/moonlight_shaft.glb";
   var U_DESK = "./assets/school_desk_chair.glb";
   var U_FURN = "./assets/classroom_furniture.glb";
   var U_PEW = "./assets/chapel_pew_altar.glb";
@@ -70,20 +71,115 @@
       }
     } catch (toneErr) { /* renderer not up yet; game.js applies it */ }
 
-    /* ---------- shared PBR materials + unit plane ---------- */
+    /* ---------- shared 1K PBR materials + unit plane ----------
+     * First principles: real ambientCG 1K Color+NormalGL+Roughness maps via
+     * THREE.TextureLoader. Albedo JPEGs store gamma-encoded sRGB, so ONLY the
+     * albedo gets texture.encoding=sRGBEncoding (GPU decodes to linear for
+     * lighting math; without it the grade washes out). Normal/roughness are
+     * linear data — tagging them sRGB would corrupt vectors/curves.
+     * RepeatWrapping tiles without clamp streaks; anisotropy 8 keeps
+     * grazing-angle texels (floor running to the horizon) sharp. Meshes still
+     * reuse the one shared unitPlane — zero new geometry of any kind. */
     var unitPlane = new THREE.PlaneGeometry(1, 1);
-    function pbr(kind, rx, ry, tint) {
-      var m = WR.createProceduralPBRMaterial(kind, { size: 256, repeat: [rx, ry] });
-      m.side = THREE.DoubleSide;
+    var texLoader = new THREE.TextureLoader();
+    function pbrTex(set, kind, rx, ry, srgb) {
+      var t = texLoader.load("/studio/assets/ambientcg/" + set + "/" +
+        set + "_1K-JPG_" + kind + ".jpg");
+      t.wrapS = THREE.RepeatWrapping;
+      t.wrapT = THREE.RepeatWrapping;
+      t.repeat.set(rx, ry);
+      t.anisotropy = 8;
+      if (srgb && THREE.sRGBEncoding !== undefined) { t.encoding = THREE.sRGBEncoding; }
+      return t;
+    }
+    function pbr1k(set, rx, ry, tint, normalScale) {
+      var m = new THREE.MeshStandardMaterial({
+        map: pbrTex(set, "Color", rx, ry, true),
+        normalMap: pbrTex(set, "NormalGL", rx, ry, false),
+        roughnessMap: pbrTex(set, "Roughness", rx, ry, false),
+        roughness: 1.0,
+        metalness: 0.0,
+        side: THREE.DoubleSide
+      });
+      if (m.normalScale) {
+        var ns = (typeof normalScale === "number") ? normalScale : 0.9;
+        m.normalScale.set(ns, ns);
+      }
       if (typeof tint === "number") { m.color.setHex(tint); }
       return m;
     }
-    var wallMatLong = pbr("brick", 6, 1, 0x51463c);
-    var wallMatShort = pbr("brick", 2, 1, 0x51463c);
-    var floorMat = pbr("concrete", 8, 6, 0x3c3c44);
-    var ceilMat = pbr("concrete", 4, 3, 0x2b2b31);
-    var doorMat = pbr("brick", 2, 2, 0x4c3520);
-    var trimMat = pbr("concrete", 1, 1, 0x3a3a41);
+    // Convent interior grade: aged damp plaster walls, weathered dark-grey
+    // stone on the chapel face, dark wood wainscot below. NO red brick grid
+    // anywhere indoors — Bricks075A stays on disk, unused by this level.
+    // (Iron/Metal032 stays unused: this stage has no IBL envmap, and bare
+    // metal under point lights alone renders near-black. Revisit with PMREM.)
+    var wallMatLong = pbr1k("Plaster001", 3, 1, 0x453f36, 0.7);
+    var wallMatShort = pbr1k("Plaster001", 2, 1, 0x453f36, 0.7);
+    var wallMatStone = pbr1k("Rock035", 3, 1, 0x615f5a, 1.0);
+    var floorMat = pbr1k("Tiles074", 8, 6, 0x555049);
+    var ceilMat = pbr1k("Plaster001", 4, 3, 0x4a453e, 0.35);
+    var doorMat = pbr1k("Wood096", 1, 1, 0x1c130c);
+    var trimMat = pbr1k("Wood096", 1, 1, 0x38302a);
+    var beamMat = pbr1k("Wood096", 4, 1, 0x4a3a28);
+    var skirtMat = pbr1k("WoodFloor051", 4, 1, 0x3a2e22);
+
+    /* ---------- canvas sprite textures (radial falloff, never squares) ------
+     * WebGL rasterizes every gl.POINTS particle / sprite texel quad as an
+     * axis-aligned SQUARE. A flat-filled map (or no map) = hard ■ edges. A
+     * radial Gaussian-falloff alpha map drives corner fragments to alpha 0,
+     * so only soft round discs / teardrops survive. alphaTest 0.01 discards
+     * the near-zero fringe (no halo bleed, no sort artifacts). */
+    function radialSpriteTex(size, stops) {
+      var cv = document.createElement("canvas");
+      cv.width = cv.height = size;
+      var ctx = cv.getContext("2d");
+      var grad = ctx.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
+      for (var s = 0; s < stops.length; s++) { grad.addColorStop(stops[s][0], stops[s][1]); }
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, size, size);
+      return new THREE.CanvasTexture(cv);
+    }
+    var ashTex = radialSpriteTex(64, [
+      [0, "rgba(255,235,205,1)"],
+      [0.4, "rgba(180,175,170,0.45)"],
+      [1, "rgba(0,0,0,0)"]
+    ]);
+    var haloTex = radialSpriteTex(64, [
+      [0, "rgba(255,170,60,0.9)"],
+      [0.5, "rgba(255,120,30,0.25)"],
+      [1, "rgba(0,0,0,0)"]
+    ]);
+    // Flame teardrop: additive-stacked radial blobs, orange base -> amber
+    // mid -> pale core -> white-hot tip. Additive faint sprites read as
+    // flame because real flame IS emissive gas: bright core, soft falloff,
+    // light summed onto the backdrop instead of occluding it.
+    function makeFlameTex() {
+      var S = 64;
+      var cv = document.createElement("canvas");
+      cv.width = cv.height = S;
+      var ctx = cv.getContext("2d");
+      ctx.globalCompositeOperation = "lighter";
+      function blob(cx, cy, rx, ry, r, g, b, a) {
+        var gr = ctx.createRadialGradient(0, 0, 0, 0, 0, 1);
+        gr.addColorStop(0, "rgba(" + r + "," + g + "," + b + "," + a + ")");
+        gr.addColorStop(0.55, "rgba(" + r + "," + g + "," + b + "," + (a * 0.45) + ")");
+        gr.addColorStop(1, "rgba(0,0,0,0)");
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.scale(rx, ry);
+        ctx.fillStyle = gr;
+        ctx.beginPath();
+        ctx.arc(0, 0, 1, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+      blob(32, 44, 15, 14, 255, 110, 25, 0.75);
+      blob(32, 37, 10, 13, 255, 180, 70, 0.9);
+      blob(32, 31, 6.5, 9.5, 255, 230, 160, 0.95);
+      blob(32, 21, 3.5, 7.5, 255, 244, 214, 1.0);
+      return new THREE.CanvasTexture(cv);
+    }
+    var flameTex = makeFlameTex();
 
     function addPlane(axis, a, b, c, y0, y1, mat) {
       var len = b - a;
@@ -128,7 +224,10 @@
     var ht = WALL_T / 2;
     for (i = 0; i < SEGS.length; i++) {
       var s = SEGS[i];
-      addPlane(s[0], s[1], s[2], s[3], 0, WALL_H, wallMatFor(s[2] - s[1]));
+      // Chapel north face (z=-9): weathered dark-grey stone masonry accent.
+      var segMat = (s[0] === 0 && s[3] === -9) ? wallMatStone :
+        wallMatFor(s[2] - s[1]);
+      addPlane(s[0], s[1], s[2], s[3], 0, WALL_H, segMat);
       if (s[0] === 0) {
         colliders.push({ x0: s[1], z0: s[3] - ht, x1: s[2], z1: s[3] + ht });
       } else {
@@ -154,6 +253,40 @@
       addPlane(L[0], L[1], L[2], L[3], LINTEL_Y0, WALL_H, wallMatFor(L[2] - L[1]));
     }
 
+    /* ---------- wood wainscot + chair rail + ceiling timber (visual only) --
+     * Full-height (1.02m) dark plank wainscot hugs BOTH faces of every wall
+     * segment (3.5cm off the face: no z-fight, no colliders, gaps stay open
+     * because SEGS does), capped by a chair rail. Timber beams hug the
+     * ceiling (soffit at y 3.1 + side cheeks), each spanning inside one room
+     * so no beam pierces a wall. Reuses unitPlane. */
+    var sk;
+    for (sk = 0; sk < SEGS.length; sk++) {
+      var g = SEGS[sk];
+      addPlane(g[0], g[1], g[2], g[3] + 0.035, 0, 1.02, skirtMat);
+      addPlane(g[0], g[1], g[2], g[3] - 0.035, 0, 1.02, skirtMat);
+      addPlane(g[0], g[1], g[2], g[3] + 0.03, 1.02, 1.1, trimMat);
+      addPlane(g[0], g[1], g[2], g[3] - 0.03, 1.02, 1.1, trimMat);
+    }
+    addPlane(1, -6, 2, -1 + 0.035, 0, 1.02, skirtMat);
+    addPlane(1, -6, 2, -1 - 0.035, 0, 1.02, skirtMat);
+    addPlane(1, -6, 2, 1 + 0.035, 0, 1.02, skirtMat);
+    addPlane(1, -6, 2, 1 - 0.035, 0, 1.02, skirtMat);
+    function addBeamX(x0, x1, z) {
+      var soffit = new THREE.Mesh(unitPlane, beamMat);
+      soffit.scale.set(x1 - x0, 0.3, 1);
+      soffit.rotation.x = Math.PI / 2; // face down like the ceiling plane
+      soffit.position.set((x0 + x1) / 2, 3.1, z);
+      scene.add(soffit);
+      addPlane(0, x0, x1, z - 0.15, 2.95, 3.2, beamMat);
+      addPlane(0, x0, x1, z + 0.15, 2.95, 3.2, beamMat);
+    }
+    addBeamX(-4, 4, 7);        // entrance hall (touches x=+-4 walls)
+    addBeamX(-12, 12, -7.5);   // north corridor (clear of divider + D3/D4)
+    addBeamX(-9, -1, -2);       // classroom A (ends kiss x=-9/-1 walls)
+    addBeamX(1, 9, -2);         // classroom B
+    addBeamX(-12, -4, 7);       // south-west store
+    addBeamX(4, 12, 7);         // south-east store
+
     /* ---------- lights per arch section 3 ---------- */
     scene.add(new THREE.AmbientLight(0x1a2b3a, 0.16));
     scene.add(new THREE.HemisphereLight(0x2a4a5a, 0x0a0805, 0.18));
@@ -172,13 +305,16 @@
     bolt.position.set(20, 30, -10);
     scene.add(bolt);
 
-    /* ---------- gothic windows: real .glb frames + MoonShafts (no colliders:
-     * they hug the walls; the shafts are light, Agatha/the player walk
-     * through them). Shaft aims +Z locally, so ry matches the old plane
-     * facings. Loader XZ-centering shifts the frame plane ~1.1m behind the
-     * origin (bounds z -0.21..2.4 incl. shaft), hence the inward offsets.
-     * y=-0.45: 3.77m-tall frame runs sill 0.22 -> crown 3.32 (crown kisses
-     * the 3.2m ceiling; shaft foot pools just under the floor, hidden). */
+    /* ---------- gothic windows: split frame + shaft (no colliders: they hug
+     * the walls; shafts are light, Agatha/the player walk through them).
+     * Frame GLB holds stone+mullions+glass ONLY (x +-1.00, y 0.72->3.82,
+     * z +-0.21) — the old baked diagonal shaft is GONE, so no bbox trick
+     * can drag the window off the wall. Both load raw (autoGround:false):
+     * frame x0.62 at y=0.70 -> sill 1.15 / crown 3.07, flush 10cm inboard
+     * of the wall plane; shaft origin (top mount edge, +Z aim) sits at the
+     * glass head (y 2.6) and stretches (0.42, 1.1, 1.3): 0.8m wide like
+     * the glass, down to the floor and 3m into the room. Shaft aims +Z
+     * locally, so ry matches facings. */
     var moonMats = [];   // unique ConventMoonShaft materials (lightning flash)
     var glassMats = [];  // unique ConventGlass materials (mild flash)
     var flameMats = [];  // unique ConventFlame materials (altar flicker)
@@ -195,7 +331,7 @@
     function softenShaft(mat) {
       if (!mat) { return; }
       mat.transparent = true;
-      mat.opacity = 0.12;
+      mat.opacity = 0.10;
       mat.depthWrite = false;
       mat.blending = THREE.AdditiveBlending;
       mat.needsUpdate = true;
@@ -209,23 +345,45 @@
       try {
         root.traverse(function (o) {
           if (!o || !o.material || typeof o.material.name !== "string") { return; }
-          var nm = o.material.name.toLowerCase();
-          if (nm.indexOf("moonshaft") >= 0) { grabUnique(o.material, moonMats); softenShaft(o.material); }
-          else if (nm.indexOf("glass") >= 0) { grabUnique(o.material, glassMats); }
-          else if (nm.indexOf("flame") >= 0) { grabUnique(o.material, flameMats); }
+          var m = o.material;
+          var nm = m.name.toLowerCase();
+          if (nm.indexOf("moonshaft") >= 0) { grabUnique(m, moonMats); softenShaft(m); }
+          else if (nm.indexOf("glass") >= 0 && nm.indexOf("lantern") < 0) {
+            grabUnique(m, glassMats);
+            // Night moonlit glass: the authored pale diffuse (0x9eb7cc)
+            // blows out baby-blue under the torch. Darken the diffuse,
+            // keep a faint blue emissive so panes read moonlit, and sync
+            // baseEmissive (the flash hook rewrites intensity per frame).
+            m.color.setHex(0x141c26);
+            m.emissive.setHex(0x0b1322);
+            m.emissiveIntensity = 0.6;
+            m.userData.baseEmissive = 0.6;
+          }
+          else if (nm.indexOf("flame") >= 0) { grabUnique(m, flameMats); }
+          else if (nm.indexOf("stone") >= 0 || nm.indexOf("brick") >= 0) {
+            // Amplify the authored relief: plaster-tinted stone normals
+            // are subtle; x1.6 makes carving read under dim torch light.
+            if (m.normalScale) { m.normalScale.set(1.6, 1.6); }
+            // Brick factors were authored near-white for a linear
+            // pipeline, so they wash out under sRGB output — pull to a
+            // mid weathered grade (flagged: materials are shared clones).
+            if (nm.indexOf("brick") >= 0 && !m.userData.stvBrickGrade) {
+              m.color.multiplyScalar(0.5);
+              m.userData.stvBrickGrade = true;
+            }
+          }
         });
       } catch (eTrav) { /* keep whatever the named node gave us */ }
     }
+    // x, z, ry — frame origins 10cm inboard of the wall planes.
     var KIT_WINDOWS = [
-      // x, y, z, ry — N wall (frame plane ~z -8.95, shaft into room)
-      [-6, -0.45, -7.85, 0], [6, -0.45, -7.85, 0],
-      // S wall
-      [-8, -0.45, 7.85, Math.PI], [8, -0.45, 7.85, Math.PI],
-      // W wall (frame plane ~x -11.95)
-      [-10.85, -0.45, -2, Math.PI / 2], [-10.85, -0.45, 3.5, Math.PI / 2],
-      // E wall
-      [10.85, -0.45, -2, -Math.PI / 2], [10.85, -0.45, 3.5, -Math.PI / 2]
+      [-6, -8.90, 0], [6, -8.90, 0],                 // N wall
+      [-8, 8.90, Math.PI], [8, 8.90, Math.PI],       // S wall
+      [-11.90, -2, Math.PI / 2], [-11.90, 3.5, Math.PI / 2],   // W wall
+      [11.90, -2, -Math.PI / 2], [11.90, 3.5, -Math.PI / 2]    // E wall
     ];
+    var WIN_Y = 0.70, WIN_SC = 0.62;      // sill 1.15, crown 3.07
+    var SHAFT_Y = 2.6, SHAFT_IN = 0.13;   // glass head + frame front face
     var WINDOW_FB = [1.6, 2.2, 0x4a6a8a]; // load-failure impostor only
 
     /* ---------- chapel door (locked teaser) at C=(0,-9) ---------- */
@@ -255,23 +413,35 @@
     chapelDoor.add(slit);
     scene.add(chapelDoor);
 
-    /* ---------- lantern flames: emissive crosses + flicker ---------- */
+    /* ---------- lantern flames: soft sprites + halo + flicker ----------
+     * Core = additive teardrop THREE.Sprite (always camera-facing, no hard
+     * plane edges from any angle) + a larger faint halo glow sprite.
+     * Registry contract unchanged: { mat, light, base, phase } drives the
+     * update loop; sprite entries add { sprite, halo } for stretch/breathe.
+     * Altar entries (mat:null -> shared ConventFlame) keep the emissive path. */
     var flickers = [];
+    var FLAME_W = 0.34, FLAME_H = 0.5, HALO_S = 1.1, HALO_A = 0.55;
     function addFlame(x, y, z, light, base) {
-      var fm = new THREE.MeshStandardMaterial({
-        color: 0x1a0d02, emissive: 0xff9a3c, emissiveIntensity: 1.5,
-        roughness: 1, metalness: 0, side: THREE.DoubleSide
+      var coreMat = new THREE.SpriteMaterial({
+        map: flameTex, color: 0xffc37a, transparent: true,
+        blending: THREE.AdditiveBlending, depthWrite: false
       });
-      var f1 = new THREE.Mesh(unitPlane, fm);
-      f1.scale.set(0.2, 0.28, 1);
-      f1.position.set(x, y, z);
-      scene.add(f1);
-      var f2 = new THREE.Mesh(unitPlane, fm);
-      f2.scale.set(0.2, 0.28, 1);
-      f2.position.set(x, y, z);
-      f2.rotation.y = Math.PI / 2;
-      scene.add(f2);
-      flickers.push({ mat: fm, light: light, base: base, phase: x * 2.1 + z * 1.3 });
+      var core = new THREE.Sprite(coreMat);
+      core.scale.set(FLAME_W, FLAME_H, 1);
+      core.position.set(x, y, z);
+      scene.add(core);
+      var haloMat = new THREE.SpriteMaterial({
+        map: haloTex, color: 0xff9a3c, transparent: true, opacity: HALO_A,
+        blending: THREE.AdditiveBlending, depthWrite: false
+      });
+      var halo = new THREE.Sprite(haloMat);
+      halo.scale.set(HALO_S, HALO_S, 1);
+      halo.position.set(x, y, z);
+      scene.add(halo);
+      flickers.push({
+        mat: coreMat, light: light, base: base, phase: x * 2.1 + z * 1.3,
+        sprite: core, halo: halo
+      });
     }
     addFlame(0, 2.42, 7, P1, 1.1);
     addFlame(-8, 2.42, 3.5, P2, 1.0);
@@ -293,10 +463,14 @@
       g.add(p2);
       return g;
     }
-    function loadWithCatch(url, ok, fail, len) {
+    function loadWithCatch(url, ok, fail, len, raw) {
       try {
         if (!WR || typeof WR.loadGlbModel !== "function") { fail(new Error("no loader")); return; }
-        var pr = WR.loadGlbModel(url, ok, { targetLength: len, onError: fail });
+        // raw: autoGround:false — no bbox normalize, GLB author coords used
+        // verbatim (windows/shafts mount at exact wall transforms instead).
+        var lo = raw ? { autoGround: false, onError: fail }
+                     : { targetLength: len, onError: fail };
+        var pr = WR.loadGlbModel(url, ok, lo);
         if (pr && typeof pr.catch === "function") {
           pr.catch(function () { /* handled through onError */ });
         }
@@ -328,17 +502,20 @@
         root.position.x += def.x;
         root.position.y += def.y;
         root.position.z += def.z;
+        if (def.sxyz) { root.scale.set(def.sxyz[0], def.sxyz[1], def.sxyz[2]); }
+        else if (typeof def.sc === "number") { root.scale.multiplyScalar(def.sc); }
         root.rotation.y = def.ry || 0;
         if (def.lean) { root.rotation.z = def.lean; }
         if (def.glow) { lightLanternGlass(root); }
         if (def.onRoot) { try { def.onRoot(root); } catch (eHook) { /* cosmetic */ } }
         scene.add(root);
       }, function () {
+        if (def.noFb) { return; } // shafts are light: silent when missing
         var fb = makeImpostor(def.fb[0], def.fb[1], def.fb[2]);
         fb.position.set(def.x, def.y + def.fb[1] / 2, def.z);
         fb.rotation.y = def.ry || 0;
         scene.add(fb);
-      }, def.len);
+      }, def.len, def.raw);
     }
 
     var LANTERN_FB = [0.34, 0.5, 0xffb14e];
@@ -398,13 +575,22 @@
       len: 0.95, hw: 0.45, hd: 0.45, fb: [0.6, 0.9, 0x5a4a3a]
     });
 
-    /* ---------- gothic kit: windows (collect MoonShaft mats for flash) ---------- */
+    /* ------ gothic kit: windows + separate moonlight shafts (flash hook) ----- */
     for (i = 0; i < KIT_WINDOWS.length; i++) {
-      placeProp({
-        url: U_WINDOW, x: KIT_WINDOWS[i][0], y: KIT_WINDOWS[i][1],
-        z: KIT_WINDOWS[i][2], ry: KIT_WINDOWS[i][3],
-        len: undefined, fb: WINDOW_FB, onRoot: collectWindowMats
-      });
+      (function (wx, wz, wry) {
+        placeProp({
+          url: U_WINDOW, x: wx, y: WIN_Y, z: wz, ry: wry,
+          raw: true, sc: WIN_SC, fb: WINDOW_FB, onRoot: collectWindowMats
+        });
+        // Shaft origin mounts at the glass head, inboard of the frame face.
+        var sdx = Math.sin(wry), sdz = Math.cos(wry);
+        placeProp({
+          url: U_SHAFT, x: wx + sdx * SHAFT_IN, y: SHAFT_Y,
+          z: wz + sdz * SHAFT_IN, ry: wry,
+          raw: true, sxyz: [0.42, 1.1, 1.3],
+          noFb: true, onRoot: collectWindowMats
+        });
+      })(KIT_WINDOWS[i][0], KIT_WINDOWS[i][1], KIT_WINDOWS[i][2]);
     }
 
     /* ---------- gothic kit: pillars + vault springers ----------
@@ -430,7 +616,7 @@
     for (i = 0; i < PILLARS.length; i++) {
       placeProp({
         url: U_PILLAR, x: PILLARS[i][0], y: PILLAR_Y, z: PILLARS[i][1],
-        ry: PILLARS[i][2], len: undefined, fb: PILLAR_FB
+        ry: PILLARS[i][2], len: undefined, fb: PILLAR_FB, onRoot: collectWindowMats
       });
     }
     // Lone free-standing anchor in the north corridor (shaft +/-0.34).
@@ -466,7 +652,7 @@
     for (i = 0; i < DESKS.length; i++) {
       placeProp({
         url: U_DESK, x: DESKS[i][0], y: 0, z: DESKS[i][1], ry: 0,
-        len: undefined, hw: 0.47, hd: 0.63, fb: DESK_FB
+        len: undefined, hw: 0.47, hd: 0.63, fb: DESK_FB, onRoot: collectWindowMats
       });
     }
 
@@ -485,7 +671,8 @@
     for (i = 0; i < FURNS.length; i++) {
       placeProp({
         url: U_FURN, x: FURNS[i][0], y: 0, z: FURNS[i][1], ry: FURNS[i][2],
-        len: undefined, hw: FURNS[i][3], hd: FURNS[i][4], fb: FURN_FB
+        len: undefined, hw: FURNS[i][3], hd: FURNS[i][4], fb: FURN_FB,
+        onRoot: collectWindowMats
       });
     }
 
@@ -538,10 +725,22 @@
     }
     var ashGeo = new THREE.BufferGeometry();
     ashGeo.setAttribute("position", new THREE.BufferAttribute(ashPos, 3));
+    // Per-mote tint: ~80% pale ash flakes, ~20% warm embers. Multiplied by
+    // the radial map, so every mote is a soft round disc — zero ■ squares.
+    var ashCol = new Float32Array(ASH_N * 3);
+    for (i = 0; i < ASH_N; i++) {
+      if (Math.random() < 0.2) {
+        ashCol[i * 3] = 1.0; ashCol[i * 3 + 1] = 0.52; ashCol[i * 3 + 2] = 0.2;
+      } else {
+        var g = 0.62 + Math.random() * 0.2;
+        ashCol[i * 3] = g * 0.92; ashCol[i * 3 + 1] = g * 0.96; ashCol[i * 3 + 2] = g;
+      }
+    }
+    ashGeo.setAttribute("color", new THREE.BufferAttribute(ashCol, 3));
     var ashMat = new THREE.PointsMaterial({
-      color: 0x9aa8b8, size: 0.045, sizeAttenuation: true,
-      transparent: true, opacity: 0.55, blending: THREE.AdditiveBlending,
-      depthWrite: false
+      color: 0xffffff, size: 0.05, sizeAttenuation: true, map: ashTex,
+      vertexColors: true, transparent: true, opacity: 0.55,
+      alphaTest: 0.01, blending: THREE.AdditiveBlending, depthWrite: false
     });
     var ash = new THREE.Points(ashGeo, ashMat);
     ash.frustumCulled = false;
@@ -612,12 +811,20 @@
           Math.sin(t * 29.0 + fl.phase * 1.7) * 0.3 +
           Math.sin(t * 47.0 + fl.phase * 0.6) * 0.2;
         if (fl.mat) {
-          var base = (fl.mat.userData && typeof fl.mat.userData.baseEmissive === "number") ?
-            fl.mat.userData.baseEmissive : 1.5;
-          // Lantern flames pulse around 1.5; altar flames around their own
-          // glTF base (1.0) so the emissive amber never blows out.
-          var span = (base > 1.2) ? 0.45 : 0.25;
-          fl.mat.emissiveIntensity = base + n * span;
+          if (fl.sprite) {
+            // Sprite flame: vertical stretch + counter-squeeze + halo
+            // breathe. Same noise n drives the light below, so core, halo,
+            // and lantern light stay in sync like one flame.
+            fl.sprite.scale.set(FLAME_W * (1 - n * 0.08), FLAME_H * (1 + n * 0.18), 1);
+            if (fl.halo) { fl.halo.material.opacity = HALO_A * (1 + n * 0.22); }
+          } else {
+            var base = (fl.mat.userData && typeof fl.mat.userData.baseEmissive === "number") ?
+              fl.mat.userData.baseEmissive : 1.5;
+            // Lantern flames pulse around 1.5; altar flames around their own
+            // glTF base (1.0) so the emissive amber never blows out.
+            var span = (base > 1.2) ? 0.45 : 0.25;
+            fl.mat.emissiveIntensity = base + n * span;
+          }
         }
         fl.light.intensity = fl.base * (1 + n * 0.18);
       }

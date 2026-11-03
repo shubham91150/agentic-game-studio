@@ -14,6 +14,8 @@
  * 4. Grass is a flat `PlaneGeometry` without `InstancedMesh` 3D blades (`create3DGrassField`
  *    or `InstancedMesh` tapered blade `BufferGeometry` required when grass is present).
  * 5. `ACESFilmicToneMapping` is missing.
+ * 6. Any `new THREE.PointsMaterial` without a `map:` (renders hard square
+ *    particles instead of soft round motes — attach a radial-falloff texture).
  */
 
 import fs from "node:fs";
@@ -315,6 +317,54 @@ export class VisualQualityGate {
     };
   }
 
+  /**
+   * Check 6: every THREE.PointsMaterial has a map (no square particles).
+   * Universal rule for ALL games: unmapped points rasterize as hard ■ squares.
+   */
+  verifyPointsMaterialHasMap(jsFiles) {
+    const issues = [];
+    for (const f of jsFiles) {
+      const clean = this.stripComments(f.content);
+      const re = /new\s+THREE\.PointsMaterial\s*\(\s*\{/g;
+      let m;
+      while ((m = re.exec(clean)) !== null) {
+        let depth = 0;
+        let end = -1;
+        for (
+          let i = m.index + m[0].length - 1;
+          i < clean.length && i < m.index + 4000;
+          i++
+        ) {
+          const ch = clean[i];
+          if (ch === "{") depth++;
+          else if (ch === "}") {
+            depth--;
+            if (depth === 0) {
+              end = i;
+              break;
+            }
+          }
+        }
+        const block = end === -1 ? "" : clean.slice(m.index, end + 1);
+        if (!/(^|[,{\s])map\s*:/.test(block)) {
+          const line = clean.slice(0, m.index).split("\n").length;
+          issues.push(
+            `${f.rel}:${line} new THREE.PointsMaterial without map: renders hard square particles — attach a radial-falloff texture`,
+          );
+        }
+      }
+    }
+    const passed = issues.length === 0;
+    return {
+      testName: "PointsMaterial Has Radial Map (No Square Particles)",
+      passed,
+      issues,
+      proof: passed
+        ? "Every THREE.PointsMaterial has a map: (soft round particles)."
+        : `Square-particle violations: ${issues.join(" | ")}`,
+    };
+  }
+
   runGate(targetDir = "public/live-preview") {
     const { absDir, htmlFiles, jsFiles } = this.collectFiles(targetDir);
     const checks = [
@@ -323,6 +373,7 @@ export class VisualQualityGate {
       this.verifyNoPrimitiveFakes(jsFiles),
       this.verify3DGrassBlades(jsFiles),
       this.verifyToneMapping(jsFiles),
+      this.verifyPointsMaterialHasMap(jsFiles),
     ];
 
     const passedCount = checks.filter((c) => c.passed).length;

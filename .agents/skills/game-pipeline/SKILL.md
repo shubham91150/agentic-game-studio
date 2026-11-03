@@ -20,6 +20,11 @@ metadata:
    - Use `WorldRealism.createRealisticSkyAndLighting(scene, renderer, options)` (ACESFilmicToneMapping + PMREM `scene.environment` + sun-disc sky dome + 3-point shadows), `WorldRealism.createProceduralPBRMaterial(kind, options)` (`asphalt`, `grass`, `rock`, `dirt`, `kerb`, `brick`, `concrete` with 512×512 Sobel normal maps), `WorldRealism.create3DGrassField(scene, options)` (20,000–35,000 3D tapered 5-vertex curved grass blades with `onBeforeCompile` wind-sway vertex shader), `WorldRealism.createRealisticWater(scene, options)` (animated dual-scrolling wave shader with Fresnel `#0a3246` ↔ `#7ab8d6` reflection, sun specular glint, and shoreline foam), and `WorldRealism.createRealisticBuilding(options)` (multi-material PBR facade, recessed reflective glass windows, storefront frame, parapet cornice, and rooftop HVAC/water-tank details).
    - Use real Polyhaven photogrammetry `.glb` props/tools/nature in `public/assets/polyhaven/` (served at `/studio/assets/polyhaven/<id>/<id>_1k.glb`, e.g. `Barrel_01`, `Lantern_01`, `CoffeeCart_01`, `Drill_01`, `modular_street_seating`, `jacaranda_tree`, `quiver_tree_02`, `boulder_01`, `concrete_road_barrier_02`, `street_lamp_01`) or fetch more via `python3 src/tools/fetch_polyhaven.py <id> --type model --res 1k`.
 3. **MANDATORY VISUAL QA GATE**: Every 3D preview build MUST pass `node src/verifier/visual_qa_gate.js public/live-preview`.
+4. **MANDATORY TOOL-FIRST AAA WORLD RICHNESS PROTOCOL (NO EMPTY ROOMS OR CRATE/BARREL SPAM)**:
+   - **NEVER build empty rooms made only of flat `PlaneGeometry` walls and generic crates/barrels, and NEVER use flat `MeshBasicMaterial` squares for windows.**
+   - Before writing any world/level code (`levels.js`), run a **Deep Environment & Asset Matrix Research Pass** listing at least **12–20 domain-authentic 3D objects** for that setting.
+   - Generate any missing domain-specific 3D architectural pieces and furniture (e.g. gothic pillars/arches, 3D window frames, ceiling beams, student desks, chairs, chalkboards, bookshelves, chapel pews, altar, candelabras) as real `.glb` files using headless **Blender 3.4** (`blender -b -P ...`, `src/tools/blender_pro_builder.py`, `src/tools/partnet_shapenet_blueprint.py --generate-bpy`) and fetch real 1K PBR texture maps via `python3 src/tools/fetch_ambientcg.py` / `fetch_polyhaven.py`.
+   - Every 3D game MUST include: (a) real 1K PBR maps on surfaces, (b) 3D architectural depth & domain-authentic furniture `.glb`s, (c) a 3D first-person held viewmodel (e.g. 3D brass lantern/torch in hand with walk-bob & look-sway) or articulated 3rd-person rig, and (d) `THREE.Points` atmospheric dust/ash/rain particles + volumetric window light shafts.
 
 ## PartNet Part-by-Part Modeling Blueprint & Blender Built-in Generators
 
@@ -280,17 +285,9 @@ Complementary gameplay skills (load alongside `game-logic`):
   or unexpected behavior: find root cause before proposing fixes (symptom fixes
   are a fail); see its `root-cause-tracing.md` and `condition-based-waiting.md`.
 
-## Step 1 — Fast Path (OPTIONAL): The Deterministic Pipeline Tool
+## Step 1 — Mandatory Bespoke Multi-Subagent + Tool-First Build (Never Use Template Shortcuts)
 
-For a fresh game from a text prompt, the pipeline tool is ONE optional fast-path — hand-building (Step 2) is equally fine. Pick whichever fits the prompt; never treat the tool as required. It runs safety check → Wonder/Baseten design → terrain + layout → Three.js files → Unity C# → physics QA → library save → copies into `public/live-preview/`:
-
-```bash
-node src/tools/build-game.js --prompt "a desert rover rally with 3 jump ramps and 12 beacons"
-```
-
-- Build time depends on live API calls (Wonder + Baseten + Image); watch each stage in the console. Reuses `storage/cache/` on repeat prompts (0 credits).
-- On success it prints `PREVIEW_READY public/live-preview/index.html` — the right pane picks it up automatically within ~2s. Just tell the user it's ready.
-- If you skip the tool (or it fails — API down), build by hand in Step 2 — a first-class path, not a fallback.
+When the user asks to build a game in the Studio, **NEVER run `node src/tools/build-game.js` to overwrite `public/live-preview/` with a generic orb-collector template.** Always build a bespoke, genre-authentic multi-file 3D game in Step 2 using **Multi-Subagent Orchestration (`subagent_spawn` + `subagent_wait`)** and **100% of the studio's 3D/AI tools** (`Blender 3.4 bpy`, `blender_pro_builder.py`, `partnet_shapenet_blueprint.py`, `scenescript_wfc_world.py`, `osm_city_3d.py`, `blender_autorig_animate.py`, `fetch_ambientcg.py`, `fetch_polyhaven.py`, `make-image.js`, `segment_image.py`, `meta_musicgen_audio.py`, `npc_dialogue.js`). (`build-game.js` is reserved strictly for automated backend regression tests.)
 
 ## Step 1b — Game Images (works with ANY active CLI model)
 

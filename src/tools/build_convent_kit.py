@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 """Ashes of St. Vermilion — Gothic convent asset kit builder (Blender 3.4 headless).
 
-Generates 5 real multi-part, multi-material PBR .glb models into
+Generates 6 real multi-part, multi-material PBR .glb models into
 public/live-preview/assets/ using data-API modeling only (no bpy.ops except
 the glTF exporter, so it runs cleanly with `blender -b`).
+The moonlight beam ships solo (moonlight_shaft.glb); the window file keeps
+only frame + mullions + glass so bounds-based grounding stays correct.
 
 Run:
   blender -b --factory-startup --python-exit-code 1 \\
@@ -16,6 +18,10 @@ PBR sources (CC0, ambientCG, local 1K + aged 512px embed variants):
   public/assets/ambientcg/{Plaster001,Wood096,Bricks075A,Metal032}/
 License: CC0 1.0 Universal (ambientCG).
 
+Weathering: all opaque mats carry scan maps + tint factors; 1K normal for
+wood (512 wood normal is flat), 512 for iron (thin bars); bmesh
+sharp-edge bevels + auto-smooth; COLOR_0 vertex soot gradients.
+
 Constraints honored: meter scale, origin at base (min z = 0), NO Draco, NO
 KTX2 (Three.js r128 GLTFLoader has no decoders), each file < ~2MB.
 """
@@ -25,6 +31,7 @@ import os
 import random
 import sys
 
+import bmesh
 import bpy
 from mathutils import Euler, Matrix, Vector
 
@@ -69,10 +76,54 @@ def load_image(path, non_color=False):
     return img
 
 
+_bake_cache = {}
+
+
+def bake_lifted_variant(src_path, lift, tag):
+    """PIL-bake a brightened albedo variant (deterministic, CC0-derived).
+
+    Mechanism: the exporter clamps baseColorFactor to [0, 1] (verified in
+    source), so bright warm targets (paper/chalk/wax/cloth) can never be
+    reached by multiplying the mid-grey scan with a factor. Instead the
+    lift is baked into a derived 512px JPEG once per build (cached in
+    /tmp, embedded into the .glb as its color map, factor stays white).
+    Falls back to the raw scan if PIL/numpy are unavailable.
+    """
+    if tag in _bake_cache:
+        return _bake_cache[tag]
+    out = os.path.join("/tmp", "convent_bake_%s.jpg" % tag)
+    try:
+        import numpy as np
+        from PIL import Image
+        a = (np.asarray(Image.open(src_path).convert("RGB"))
+             .astype(np.float64) / 255.0)
+        lin = np.where(a <= 0.04045, a / 12.92, ((a + 0.055) / 1.055) ** 2.4)
+        lin = np.clip(lin * np.array(lift, dtype=np.float64)[None, None, :],
+                      0.0, 1.0)
+        srgb = np.where(lin <= 0.0031308, lin * 12.92,
+                        1.055 * (lin ** (1.0 / 2.4)) - 0.055)
+        Image.fromarray((srgb * 255.0 + 0.5).astype(np.uint8)).save(
+            out, quality=88)
+        print("BAKED %s lift=%s (%d bytes)"
+              % (tag, lift, os.path.getsize(out)))
+    except Exception as exc:
+        print("bake fallback %s (%s): using raw scan" % (tag, exc))
+        _bake_cache[tag] = src_path
+        return src_path
+    _bake_cache[tag] = out
+    return out
+
+
 def mat_textured(name, color_path=None, normal_path=None, roughness_path=None,
                  metalness_path=None, base_color=(1, 1, 1, 1), metallic=0.0,
-                 roughness=1.0):
-    """Principled PBR material from ambientCG maps (glTF-safe node setup)."""
+                 roughness=1.0, normal_strength=1.0):
+    """Principled PBR material from ambientCG maps (glTF-safe node setup).
+
+    Mechanism: final pixel = baseColorMap x baseColorFactor x vColor, lit
+    with normal-mapped N. The tint factor multiplies the scan map in-shader,
+    so many materials can share one embedded image (exporter dedupes by
+    datablock) at zero extra byte cost.
+    """
     mat = bpy.data.materials.new(name)
     mat.use_nodes = True
     nodes = mat.node_tree.nodes
@@ -88,7 +139,22 @@ def mat_textured(name, color_path=None, normal_path=None, roughness_path=None,
     if color_path:
         t = nodes.new("ShaderNodeTexImage")
         t.image = load_image(color_path)
-        links.new(t.outputs["Color"], bsdf.inputs["Base Color"])
+        if base_color[0] != 1.0 or base_color[1] != 1.0 or \
+                base_color[2] != 1.0:
+            # This exporter's get_factor_from_socket ONLY extracts a
+            # texture-side factor from a NEW Mix node (type 'MIX',
+            # data_type 'RGBA', blend MULTIPLY), reading inputs[6]/[7]
+            # (verified in io_scene_gltf2 source + socket probe). Direct
+            # links and legacy MixRGB both export factor=None (white).
+            mix = nodes.new("ShaderNodeMix")
+            mix.data_type = "RGBA"
+            mix.blend_type = "MULTIPLY"
+            mix.inputs[0].default_value = 1.0
+            links.new(t.outputs["Color"], mix.inputs[6])
+            mix.inputs[7].default_value = base_color
+            links.new(mix.outputs[0], bsdf.inputs["Base Color"])
+        else:
+            links.new(t.outputs["Color"], bsdf.inputs["Base Color"])
     if roughness_path:
         t = nodes.new("ShaderNodeTexImage")
         t.image = load_image(roughness_path, non_color=True)
@@ -101,7 +167,7 @@ def mat_textured(name, color_path=None, normal_path=None, roughness_path=None,
         t = nodes.new("ShaderNodeTexImage")
         t.image = load_image(normal_path, non_color=True)
         nm = nodes.new("ShaderNodeNormalMap")
-        nm.inputs["Strength"].default_value = 1.0
+        nm.inputs["Strength"].default_value = normal_strength
         links.new(t.outputs["Color"], nm.inputs["Color"])
         links.new(nm.outputs["Normal"], bsdf.inputs["Normal"])
     return mat
@@ -135,25 +201,43 @@ kit_mats = {}
 
 
 def build_kit_materials():
-    """Shared aged-gothic palette. Called fresh per asset (scene is cleared)."""
+    """Shared aged-gothic palette. Called fresh per asset (scene is cleared).
+
+    Weathering mechanism: every opaque material carries real scan maps
+    (color + normal relief + roughness). Tints are baseColorFactor
+    multipliers computed in LINEAR space as target_linear / map_linear
+    (map means measured with numpy: Plaster 0.161/0.181/0.232,
+    Wood 0.070/0.034/0.017, Brick 0.056/0.045/0.037), so no extra image
+    bytes. Wood uses the 1K normal scan (the 512 downscale averaged out
+    to flat blue); iron keeps 512 (thin bars, relief sub-visible either
+    way, saves 342KB/file).
+    """
     kit_mats.clear()
     P = os.path.join(ACG, "Plaster001", "Plaster001_1K-JPG")
     W = os.path.join(ACG, "Wood096", "Wood096_1K-JPG")
     B = os.path.join(ACG, "Bricks075A", "Bricks075A_1K-JPG")
     M = os.path.join(ACG, "Metal032", "Metal032_1K-JPG")
+    P_C, P_N, P_R = (P + "_Color_512.jpg", P + "_NormalGL_512.jpg",
+                     P + "_Roughness_512.jpg")
+    W_C, W_N1K, W_R = (W + "_Color_512.jpg", W + "_NormalGL.jpg",
+                       W + "_Roughness_512.jpg")
+    B_C, B_N, B_R = (B + "_Color_512.jpg", B + "_NormalGL_512.jpg",
+                     B + "_Roughness_512.jpg")
+    M_N, M_R, M_M = (M + "_NormalGL_512.jpg", M + "_Roughness_512.jpg",
+                     M + "_Metalness_512.jpg")
     kit_mats["stone"] = mat_textured(
-        "ConventStone", P + "_Color_512.jpg", P + "_NormalGL_512.jpg",
-        P + "_Roughness_512.jpg")
+        "ConventStone", P_C, P_N, P_R,
+        base_color=(0.59, 0.56, 0.54, 1.0), normal_strength=1.2)
     kit_mats["wood"] = mat_textured(
-        "ConventWood", W + "_Color_512.jpg", W + "_NormalGL_512.jpg",
-        W + "_Roughness_512.jpg")
+        "ConventWood", W_C, W_N1K, W_R, normal_strength=1.5)
     kit_mats["brick"] = mat_textured(
-        "ConventBrick", B + "_Color_512.jpg", B + "_NormalGL_512.jpg",
-        B + "_Roughness_512.jpg")
-    # Wrought iron: dark base factor + real metal scan data maps.
+        "ConventBrick", B_C, B_N, B_R,
+        base_color=(0.84, 0.81, 0.81, 1.0), normal_strength=1.2)
+    # Wrought iron: dark base factor + roughness/metalness variation.
+    # (512 normal: all iron parts are thin bars where normal relief is
+    # sub-visible; the 1K scan costs 342KB for zero visible gain.)
     kit_mats["iron"] = mat_textured(
-        "ConventIron", None, M + "_NormalGL_512.jpg",
-        M + "_Roughness_512.jpg", M + "_Metalness_512.jpg",
+        "ConventIron", None, M_N, M_R, M_M,
         base_color=(0.055, 0.058, 0.065, 1.0), metallic=1.0, roughness=1.0)
     # Moonlit glass + volumetric-look shaft (alpha blend, r128-safe).
     kit_mats["glass"] = mat_plain(
@@ -162,36 +246,60 @@ def build_kit_materials():
     kit_mats["moonshaft"] = mat_plain(
         "ConventMoonShaft", (0.55, 0.66, 0.80), roughness=1.0, alpha=0.13,
         emission=(0.35, 0.46, 0.60), emission_strength=0.9)
-    kit_mats["slate"] = mat_plain("ConventSlate", (0.13, 0.16, 0.17),
-                                  roughness=0.95)
-    kit_mats["chalk"] = mat_plain("ConventChalk", (0.82, 0.83, 0.80),
-                                  roughness=0.9)
-    kit_mats["paper"] = mat_plain("ConventPaper", (0.72, 0.66, 0.55),
-                                  roughness=0.9)
-    kit_mats["brass"] = mat_plain("ConventBrass", (0.42, 0.30, 0.13),
-                                  roughness=0.35, metallic=1.0)
-    kit_mats["wax"] = mat_plain("ConventWax", (0.78, 0.70, 0.55),
-                                roughness=0.6)
+    # Chalk-dust slate: fine plaster relief under a dark blue-grey tint.
+    kit_mats["slate"] = mat_textured(
+        "ConventSlate", P_C, P_N, P_R,
+        base_color=(0.10, 0.12, 0.11, 1.0), normal_strength=0.7)
+    # Bright warm targets: baked lifted variants (exporter clamps
+    # factors to [0,1], so HDR lifts live in the derived albedo maps).
+    chalk_C = bake_lifted_variant(P_C, (3.96, 3.60, 2.60), "chalk")
+    paper_C = bake_lifted_variant(P_C, (2.96, 2.17, 1.13), "paper")
+    wax_C = bake_lifted_variant(P_C, (3.54, 2.48, 1.13), "wax")
+    cloth_C = bake_lifted_variant(P_C, (1.98, 1.57, 0.92), "cloth")
+    kit_mats["chalk"] = mat_textured(
+        "ConventChalk", chalk_C, P_N, None, roughness=0.9,
+        normal_strength=0.4)
+    kit_mats["paper"] = mat_textured(
+        "ConventPaper", paper_C, P_N, P_R, normal_strength=0.3)
+    # Brass: roughness/metalness variation + brass specular tint.
+    kit_mats["brass"] = mat_textured(
+        "ConventBrass", None, M_N, M_R, M_M,
+        base_color=(0.55, 0.38, 0.16, 1.0), metallic=1.0, roughness=1.0)
+    kit_mats["wax"] = mat_textured(
+        "ConventWax", wax_C, None, None, roughness=0.6)
     kit_mats["flame"] = mat_plain(
         "ConventFlame", (1.0, 0.55, 0.16), roughness=1.0,
         emission=(1.0, 0.45, 0.12), emission_strength=1.0)
-    kit_mats["cloth"] = mat_plain("ConventCloth", (0.60, 0.57, 0.50),
-                                  roughness=0.95)
-    kit_mats["wooddark"] = mat_plain("ConventWoodDark", (0.16, 0.11, 0.08),
-                                     roughness=0.8)
-    kit_mats["leather"] = mat_plain("ConventLeather", (0.23, 0.08, 0.07),
-                                    roughness=0.7)
-    # Muted book-cloth palette (no saturated colors).
-    kit_mats["book0"] = mat_plain("ConventBook0", (0.25, 0.10, 0.09),
-                                  roughness=0.85)
-    kit_mats["book1"] = mat_plain("ConventBook1", (0.10, 0.13, 0.20),
-                                  roughness=0.85)
-    kit_mats["book2"] = mat_plain("ConventBook2", (0.20, 0.19, 0.12),
-                                  roughness=0.85)
-    kit_mats["book3"] = mat_plain("ConventBook3", (0.16, 0.16, 0.17),
-                                  roughness=0.85)
-    kit_mats["book4"] = mat_plain("ConventBook4", (0.28, 0.17, 0.10),
-                                  roughness=0.85)
+    kit_mats["cloth"] = mat_textured(
+        "ConventCloth", cloth_C, P_N, P_R, normal_strength=0.5)
+    # Aged dark wood: same wood grain scans, dark stain tint.
+    kit_mats["wooddark"] = mat_textured(
+        "ConventWoodDark", W_C, W_N1K, W_R,
+        base_color=(0.43, 0.45, 0.50, 1.0), normal_strength=1.5)
+    kit_mats["leather"] = mat_textured(
+        "ConventLeather", W_C, W_N1K, W_R,
+        base_color=(0.62, 0.21, 0.35, 1.0), normal_strength=1.0)
+    # Muted book-cloth palette (no saturated colors), fine-grain relief.
+    kit_mats["book0"] = mat_textured(
+        "ConventBook0", P_C, P_N, None,
+        base_color=(0.32, 0.055, 0.037, 1.0), roughness=0.85,
+        normal_strength=0.5)
+    kit_mats["book1"] = mat_textured(
+        "ConventBook1", P_C, P_N, None,
+        base_color=(0.062, 0.085, 0.143, 1.0), roughness=0.85,
+        normal_strength=0.5)
+    kit_mats["book2"] = mat_textured(
+        "ConventBook2", P_C, P_N, None,
+        base_color=(0.206, 0.166, 0.058, 1.0), roughness=0.85,
+        normal_strength=0.5)
+    kit_mats["book3"] = mat_textured(
+        "ConventBook3", P_C, P_N, None,
+        base_color=(0.136, 0.121, 0.106, 1.0), roughness=0.85,
+        normal_strength=0.5)
+    kit_mats["book4"] = mat_textured(
+        "ConventBook4", P_C, P_N, None,
+        base_color=(0.396, 0.136, 0.043, 1.0), roughness=0.85,
+        normal_strength=0.5)
     return kit_mats
 
 
@@ -215,14 +323,56 @@ def box_project_uv(mesh, scale=0.5):
                 uvs[li].uv = (x * scale, y * scale)
 
 
-def part(name, verts, faces, mat, uv_scale=0.5, smooth=False):
+def weld_and_bevel(mesh, bevel=0.0):
+    """Merge doubled verts (sphere poles), then round only sharp edges.
+
+    Mechanism: razor edges have a single-pixel normal discontinuity (CG
+    tell); real worn edges carry mm-scale chamfers that catch specular
+    streaks. bmesh is pure data API (headless-safe, no bpy.ops). Only
+    edges with face angle > 30 deg are beveled, so smooth lathe/tube
+    walls are untouched while box edges and cylinder cap rims round off.
+    Offset clamps to 25% of the thinnest dimension so thin parts survive.
+    Runs BEFORE box_project_uv so new faces get valid UVs.
+    """
+    bm = bmesh.new()
+    bm.from_mesh(mesh)
+    bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=1e-5)
+    if bevel > 0:
+        xs = [v.co.x for v in bm.verts]
+        ys = [v.co.y for v in bm.verts]
+        zs = [v.co.z for v in bm.verts]
+        mindim = min(max(xs) - min(xs), max(ys) - min(ys),
+                     max(zs) - min(zs))
+        off = min(bevel, 0.25 * mindim)
+        if off >= 1e-5 and mindim >= 1e-6:
+            bm.edges.ensure_lookup_table()
+            bm.faces.ensure_lookup_table()
+            sharp = [e for e in bm.edges
+                     if len(e.link_faces) == 2
+                     and e.calc_face_angle() > math.radians(30)]
+            if sharp:
+                try:
+                    bmesh.ops.bevel(bm, geom=sharp, offset=off, segments=2,
+                                    profile=0.5, affect="EDGES")
+                except Exception as exc:  # keep un-beveled, never fail
+                    print("bevel skipped (%s)" % exc)
+    bm.to_mesh(mesh)
+    bm.free()
+    mesh.update()
+
+
+def part(name, verts, faces, mat, uv_scale=0.5, smooth=False, bevel=0.0):
     """Create one named multi-part object (coords baked, origin at asset)."""
     mesh = bpy.data.meshes.new(name + "_mesh")
     mesh.from_pydata([tuple(v) for v in verts], [], [tuple(f) for f in faces])
     mesh.update()
-    if smooth:
+    weld_and_bevel(mesh, bevel=bevel)
+    if smooth or bevel > 0:
         for poly in mesh.polygons:
             poly.use_smooth = True
+        # Flat faces stay flat past 40 deg; bevel bands shade smooth.
+        mesh.use_auto_smooth = True
+        mesh.auto_smooth_angle = math.radians(40)
     box_project_uv(mesh, scale=uv_scale)
     mesh.materials.append(mat)
     obj = bpy.data.objects.new(name, mesh)
@@ -247,9 +397,10 @@ BOX_FACES = [(0, 1, 2, 3), (4, 7, 6, 5), (0, 4, 5, 1),
              (1, 5, 6, 2), (2, 6, 7, 3), (3, 7, 4, 0)]
 
 
-def box_part(name, center, size, mat, euler=(0, 0, 0), uv_scale=0.5):
+def box_part(name, center, size, mat, euler=(0, 0, 0), uv_scale=0.5,
+             bevel=0.008):
     return part(name, box_verts(center, size, euler), BOX_FACES, mat,
-                uv_scale=uv_scale)
+                uv_scale=uv_scale, bevel=bevel)
 
 
 def frustum_box_part(name, center, bot_size, top_size, height, mat,
@@ -262,7 +413,7 @@ def frustum_box_part(name, center, bot_size, top_size, height, mat,
                (-tx, -ty, h), (tx, -ty, h), (tx, ty, h), (-tx, ty, h)]
     m = xf_matrix(center, euler)
     return part(name, [m @ Vector(c) for c in corners], BOX_FACES, mat,
-                uv_scale=uv_scale)
+                uv_scale=uv_scale, bevel=0.008)
 
 
 def cylinder_verts(center, r_bot, r_top, height, sides=16, euler=(0, 0, 0)):
@@ -294,7 +445,7 @@ def cyl_part(name, center, r_bot, r_top, height, mat, sides=16,
     return part(name, cylinder_verts(center, r_bot, r_top, height, sides,
                                      euler),
                 cylinder_faces(sides, cap_bot, cap_top), mat,
-                uv_scale=uv_scale, smooth=(sides > 4))
+                uv_scale=uv_scale, smooth=(sides > 4), bevel=0.006)
 
 
 def sphere_part(name, center, radius, mat, seg=12, rings=8,
@@ -317,7 +468,8 @@ def sphere_part(name, center, radius, mat, seg=12, rings=8,
             c = (j + 1) * seg + (i + 1) % seg
             d = (j + 1) * seg + i
             faces.append((a, b, c, d))
-    return part(name, verts, faces, mat, uv_scale=uv_scale, smooth=True)
+    return part(name, verts, faces, mat, uv_scale=uv_scale, smooth=True,
+                bevel=0.004)
 
 
 def tube_part(name, points, radius, mat, sides=8, uv_scale=0.8, ref=(0, 0, 1),
@@ -351,7 +503,8 @@ def tube_part(name, points, radius, mat, sides=8, uv_scale=0.8, ref=(0, 0, 1),
         faces.append(tuple(reversed(range(sides))))
         base = (len(pts) - 1) * sides
         faces.append(tuple(range(base, base + sides)))
-    return part(name, verts, faces, mat, uv_scale=uv_scale, smooth=True)
+    return part(name, verts, faces, mat, uv_scale=uv_scale, smooth=True,
+                bevel=0.006)
 
 
 def gothic_arch_points(half_w, spring_z, ratio=1.35, n=8):
@@ -375,6 +528,64 @@ def gothic_arch_points(half_w, spring_z, ratio=1.35, n=8):
     return left + right, apex_z
 
 
+# Materials that must NOT receive vertex soot (translucent/emissive FX).
+SOOT_SKIP_MATS = frozenset(
+    {"ConventGlass", "ConventMoonShaft", "ConventFlame"})
+
+# Per-material soot strength: (base_multiplier_at_floor, gradient_height_m).
+SOOT_GRADES = {
+    "ConventStone": (0.52, 1.10), "ConventBrick": (0.55, 1.10),
+    "ConventWood": (0.62, 0.90), "ConventWoodDark": (0.60, 0.90),
+    "ConventLeather": (0.65, 0.80),
+    "ConventIron": (0.70, 1.00), "ConventBrass": (0.72, 1.00),
+    "ConventSlate": (0.70, 1.20),
+    "ConventCloth": (0.75, 0.80), "ConventPaper": (0.80, 0.60),
+    "ConventWax": (0.82, 0.60), "ConventChalk": (0.85, 0.60),
+    "ConventBook0": (0.66, 1.10), "ConventBook1": (0.66, 1.10),
+    "ConventBook2": (0.66, 1.10), "ConventBook3": (0.66, 1.10),
+    "ConventBook4": (0.66, 1.10),
+}
+
+
+def apply_vertex_soot():
+    """Bake soot/age gradients into COLOR_0 (core glTF 2.0, r128-safe).
+
+    Mechanism: procedural Blender nodes are silently DROPPED by the glTF
+    exporter (it only follows Image Texture links), and a texture-space
+    gradient would tile with Repeat wrapping into zebra bands. Object
+    height lives in vertex positions, so the soot gradient rides on the
+    COLOR_0 vertex attribute: smoothstep(z / grade_height) from a dark
+    floor/base multiplier up to 1.0, times a deterministic per-vertex
+    grime mottle (sin-hash noise) and a seeded per-part tonal shift.
+    three.js multiplies vColor into the map albedo in-shader at zero
+    image-byte cost; the vendored GLTFLoader auto-enables vertexColors
+    when COLOR_0 exists (verified) and game code never overrides kit
+    materials (verified).
+    """
+    for obj in bpy.context.scene.objects:
+        if obj.type != "MESH":
+            continue
+        mesh = obj.data
+        if not mesh.materials or mesh.materials[0] is None:
+            continue
+        mat_name = mesh.materials[0].name
+        if mat_name in SOOT_SKIP_MATS:
+            continue
+        base, height = SOOT_GRADES.get(mat_name, (0.75, 1.0))
+        attr = mesh.color_attributes.new("Soot", "FLOAT_COLOR", "POINT")
+        mesh.color_attributes.active_color = attr
+        part_var = RNG.uniform(0.90, 1.0)
+        for i, vert in enumerate(mesh.vertices):
+            t = vert.co.z / height
+            t = 0.0 if t < 0.0 else (1.0 if t > 1.0 else t)
+            s = t * t * (3.0 - 2.0 * t)
+            g = (base + (1.0 - base) * s) * part_var
+            mottle = 0.94 + 0.06 * abs(math.sin(
+                vert.co.x * 37.7 + vert.co.y * 51.3 + vert.co.z * 29.1))
+            v = g * mottle
+            attr.data[i].color = (v, v, v, 1.0)
+
+
 def export_glb(filename):
     path = os.path.join(ASSETS_DIR, filename)
     if os.path.exists(path):
@@ -383,7 +594,7 @@ def export_glb(filename):
                   export_apply=False, export_texcoords=True,
                   export_normals=True, export_tangents=False,
                   export_draco_mesh_compression_enable=False,
-                  export_materials="EXPORT", export_colors=False,
+                  export_materials="EXPORT", export_colors=True,
                   export_cameras=False, export_lights=False,
                   use_selection=False)
     try:
@@ -473,15 +684,30 @@ def build_window_frame(M):
              (0.06, 0.06, apex_z - sill_z - 0.10), iron)
     for j, tz in enumerate((1.60, 2.30)):
         box_part("Transom%d" % j, (0, 0, tz), (2 * half_w, 0.06, 0.06), iron)
-    # Volumetric-look moonlight shaft: closed tapered solid slanting from
-    # the window down into the room. MUST stay named "MoonShaft".
+    # NOTE: the moonlight beam lives in its own file now
+    # (moonlight_shaft.glb): the shaft's long diagonal bounds broke the
+    # consumer's normalize/ground step and dropped windows into the
+    # walkway. This file keeps ONLY frame + mullions + glass.
+
+
+def build_moonlight_shaft(M):
+    """Volumetric-look moonlight beam ONLY (split from the window kit).
+
+    Closed tapered solid slanting from the window down into the room.
+    Origin at the TOP mounting edge (top quad center -> 0,0,0) so the
+    consumer can mount it at the window head; same aim convention as
+    before (beam runs toward -Y and down, hook-compatible). Node MUST
+    stay named "MoonShaft" and material "ConventMoonShaft".
+    """
     ax, az, ay = 0.62, 0.34, -0.10      # top quad half extents at window
     bx, bz, by = 0.95, 0.30, -2.40      # bottom quad half extents at floor
     tzw, tfz = 2.30, 0.35                # top / floor center heights
-    v = [(-ax, ay, tzw - az), (ax, ay, tzw - az),
-         (ax, ay, tzw + az), (-ax, ay, tzw + az),
-         (-bx, by, tfz - bz), (bx, by, tfz - bz),
-         (bx, by, tfz + bz), (-bx, by, tfz + bz)]
+    ox, oy, oz = 0.0, ay, tzw            # top mounting edge -> origin
+    v = [(x - ox, y - oy, z - oz) for (x, y, z) in
+         [(-ax, ay, tzw - az), (ax, ay, tzw - az),
+          (ax, ay, tzw + az), (-ax, ay, tzw + az),
+          (-bx, by, tfz - bz), (bx, by, tfz - bz),
+          (bx, by, tfz + bz), (-bx, by, tfz + bz)]]
     shaft_faces = list(BOX_FACES) + [tuple(reversed(f)) for f in BOX_FACES]
     part("MoonShaft", v, shaft_faces, M["moonshaft"], uv_scale=0.3)
 
@@ -491,7 +717,7 @@ def build_desk_chair(M):
     wood, iron = M["wood"], M["iron"]
     # Desk top with a slight sloped lid + apron + iron legs.
     box_part("DeskTop", (0, 0, 0.74), (0.95, 0.52, 0.05), wood,
-             euler=(math.radians(-4), 0, 0))
+             euler=(math.radians(-4), 0, 0), uv_scale=0.75)
     box_part("DeskApron", (0, 0.10, 0.64), (0.80, 0.30, 0.12), wood)
     box_part("DeskShelf", (0, 0.10, 0.30), (0.72, 0.28, 0.04), wood)
     for i, (lx, ly) in enumerate(((-0.40, -0.18), (0.40, -0.18),
@@ -502,23 +728,23 @@ def build_desk_chair(M):
     cyl_part("Inkwell", (0.32, 0.10, 0.79), 0.035, 0.030, 0.06,
              M["wooddark"], sides=10)
     box_part("BookCover", (-0.12, -0.02, 0.785), (0.26, 0.19, 0.015),
-             M["leather"])
+             M["leather"], uv_scale=3.0)
     box_part("BookPages", (-0.12, -0.02, 0.80), (0.24, 0.17, 0.035),
-             M["paper"])
+             M["paper"], uv_scale=3.0)
     box_part("BookCoverTop", (-0.12, -0.02, 0.822), (0.26, 0.19, 0.012),
-             M["leather"])
+             M["leather"], uv_scale=3.0)
     # Chair facing the desk (seat front edge toward +Y).
     cy = -0.78
     box_part("ChairSeat", (0, cy, 0.45), (0.42, 0.40, 0.05), wood)
     for i, (lx, ly) in enumerate(((-0.17, cy - 0.16), (0.17, cy - 0.16),
                                   (-0.17, cy + 0.16), (0.17, cy + 0.16))):
         box_part("ChairLeg%d" % i, (lx, ly, 0.225), (0.05, 0.05, 0.45),
-                 M["wooddark"])
+                 M["wooddark"], uv_scale=2.0)
     box_part("ChairStretcher", (0, cy - 0.16, 0.15), (0.34, 0.04, 0.04),
              M["wooddark"])
     for i, lx in enumerate((-0.17, 0.17)):
         box_part("ChairPost%d" % i, (lx, cy - 0.185, 0.70),
-                 (0.05, 0.05, 0.55), M["wooddark"])
+                 (0.05, 0.05, 0.55), M["wooddark"], uv_scale=2.0)
     box_part("ChairSlatTop", (0, cy - 0.185, 0.92), (0.39, 0.04, 0.09),
              wood)
     box_part("ChairSlatMid", (0, cy - 0.185, 0.72), (0.39, 0.04, 0.07),
@@ -541,18 +767,21 @@ def build_classroom_furniture(M):
     cyl_part("Chalk1", (bx - 0.18, -0.12, 0.965), 0.009, 0.009, 0.060,
              M["chalk"], sides=8, euler=(0, math.radians(90), 0))
     box_part("Eraser", (bx + 0.45, -0.10, 0.975), (0.13, 0.06, 0.035),
-             M["wooddark"])
+             M["wooddark"], uv_scale=3.0)
     # Tall bookshelf with back panel, plinth, cornice, 4 shelves.
     sx = 1.55
     box_part("ShelfPlinth", (sx, 0, 0.09), (1.20, 0.40, 0.18), wood)
-    box_part("ShelfSideL", (sx - 0.575, 0, 1.14), (0.05, 0.36, 2.10), wood)
-    box_part("ShelfSideR", (sx + 0.575, 0, 1.14), (0.05, 0.36, 2.10), wood)
+    box_part("ShelfSideL", (sx - 0.575, 0, 1.14), (0.05, 0.36, 2.10), wood,
+             uv_scale=0.75)
+    box_part("ShelfSideR", (sx + 0.575, 0, 1.14), (0.05, 0.36, 2.10), wood,
+             uv_scale=0.75)
     box_part("ShelfBack", (sx, 0.155, 1.14), (1.10, 0.03, 2.10),
              M["wooddark"])
     box_part("ShelfCornice", (sx, 0, 2.24), (1.24, 0.40, 0.10), wood)
     shelf_z = (0.24, 0.78, 1.32, 1.86)
     for j, sz in enumerate(shelf_z):
-        box_part("Shelf%d" % j, (sx, 0, sz), (1.10, 0.34, 0.04), wood)
+        box_part("Shelf%d" % j, (sx, 0, sz), (1.10, 0.34, 0.04), wood,
+                 uv_scale=0.75)
     # 3D book rows: varied widths/heights/muted cloth colors + one leaner.
     book_mats = [M["book%d" % k] for k in range(5)]
     for row, sz in enumerate(shelf_z[:3]):
@@ -566,50 +795,55 @@ def build_classroom_furniture(M):
             if lean:
                 box_part("BookR%d_%d" % (row, bi),
                          (x + w / 2.0 + 0.03, 0, sz + 0.02 + h / 2.0 - 0.02),
-                         (w, 0.22, h), mat, euler=(0, 0, math.radians(-12)))
+                         (w, 0.22, h), mat, euler=(0, 0, math.radians(-12)),
+                         uv_scale=6.0)
                 x += w + 0.10
             else:
                 box_part("BookR%d_%d" % (row, bi),
                          (x + w / 2.0, 0, sz + 0.02 + h / 2.0),
-                         (w, 0.22, h), mat)
+                         (w, 0.22, h), mat, uv_scale=6.0)
                 x += w + RNG.uniform(0.002, 0.012)
             bi += 1
     # Horizontal stacked pair on the top shelf.
     box_part("BookStack0", (sx - 0.25, 0, 2.00), (0.30, 0.22, 0.05),
-             M["book1"])
+             M["book1"], uv_scale=6.0)
     box_part("BookStack1", (sx - 0.24, 0, 2.035), (0.28, 0.20, 0.045),
-             M["book4"])
+             M["book4"], uv_scale=6.0)
 
 
 def build_pew_altar(M):
     """Carved wooden pew + gothic altar table with candlesticks + cross."""
     wood, dark = M["wood"], M["wooddark"]
     # Pew bench facing the altar (+Y).
-    box_part("PewSeat", (0, 0, 0.45), (1.80, 0.45, 0.06), wood)
+    box_part("PewSeat", (0, 0, 0.45), (1.80, 0.45, 0.06), wood,
+             uv_scale=1.0)
     box_part("PewBack", (0, -0.26, 0.80), (1.80, 0.06, 0.58), wood,
-             euler=(math.radians(-8), 0, 0))
+             euler=(math.radians(-8), 0, 0), uv_scale=1.0)
     box_part("PewBackRail", (0, -0.30, 1.10), (1.86, 0.09, 0.07), wood)
     for i, ex in enumerate((-0.90, 0.90)):
         box_part("PewEnd%d" % i, (ex, -0.02, 0.50), (0.07, 0.52, 1.00),
                  wood)
         box_part("PewEndCap%d" % i, (ex, -0.02, 1.03), (0.10, 0.56, 0.06),
-                 dark)
+                 dark, uv_scale=2.0)
         sphere_part("PewFinial%d" % i, (ex, -0.02, 1.12), 0.05, dark,
                     seg=10, rings=6)
-    box_part("PewKneeler", (0, 0.55, 0.12), (1.60, 0.25, 0.08), dark)
-    box_part("PewBookBox", (0.30, -0.10, 0.32), (0.50, 0.22, 0.12), dark)
+    box_part("PewKneeler", (0, 0.55, 0.12), (1.60, 0.25, 0.08), dark,
+             uv_scale=2.0)
+    box_part("PewBookBox", (0.30, -0.10, 0.32), (0.50, 0.22, 0.12), dark,
+             uv_scale=2.0)
     # Gothic altar table behind the pew.
     ay = 2.20
-    box_part("AltarTop", (0, ay, 0.95), (1.60, 0.70, 0.08), wood)
+    box_part("AltarTop", (0, ay, 0.95), (1.60, 0.70, 0.08), wood,
+             uv_scale=1.0)
     box_part("AltarLegL", (-0.68, ay, 0.455), (0.10, 0.58, 0.91), wood)
     box_part("AltarLegR", (0.68, ay, 0.455), (0.10, 0.58, 0.91), wood)
     box_part("AltarFrontPanel", (0, ay - 0.26, 0.50), (1.26, 0.06, 0.80),
              dark)
     # Gilt cross relief on the altar front.
     box_part("AltarCrossV", (0, ay - 0.30, 0.52), (0.07, 0.03, 0.42),
-             M["brass"])
+             M["brass"], uv_scale=3.0)
     box_part("AltarCrossH", (0, ay - 0.30, 0.60), (0.26, 0.03, 0.07),
-             M["brass"])
+             M["brass"], uv_scale=3.0)
     box_part("AltarCloth", (0, ay, 1.00), (1.70, 0.45, 0.025), M["cloth"])
     # Pair of brass candlesticks with candles + amber flames.
     for i, cxx in enumerate((-0.55, 0.55)):
@@ -624,15 +858,20 @@ def build_pew_altar(M):
         sphere_part("Flame%d" % i, (cxx, ay, 1.56), 0.016, M["flame"],
                     seg=8, rings=6, scale=(1, 1, 2.2))
     # Standing altar cross on a stepped base.
-    box_part("CrossStep0", (0, ay + 0.15, 1.03), (0.30, 0.24, 0.05), dark)
-    box_part("CrossStep1", (0, ay + 0.15, 1.075), (0.22, 0.18, 0.05), dark)
-    box_part("CrossV", (0, ay + 0.15, 1.35), (0.06, 0.06, 0.50), dark)
-    box_part("CrossH", (0, ay + 0.15, 1.45), (0.30, 0.05, 0.06), dark)
+    box_part("CrossStep0", (0, ay + 0.15, 1.03), (0.30, 0.24, 0.05), dark,
+             uv_scale=2.0)
+    box_part("CrossStep1", (0, ay + 0.15, 1.075), (0.22, 0.18, 0.05), dark,
+             uv_scale=2.0)
+    box_part("CrossV", (0, ay + 0.15, 1.35), (0.06, 0.06, 0.50), dark,
+             uv_scale=2.0)
+    box_part("CrossH", (0, ay + 0.15, 1.45), (0.30, 0.05, 0.06), dark,
+             uv_scale=2.0)
 
 
 KIT = (
     ("gothic_pillar_arch.glb", build_pillar_arch),
     ("gothic_window_frame.glb", build_window_frame),
+    ("moonlight_shaft.glb", build_moonlight_shaft),
     ("school_desk_chair.glb", build_desk_chair),
     ("classroom_furniture.glb", build_classroom_furniture),
     ("chapel_pew_altar.glb", build_pew_altar),
@@ -646,6 +885,7 @@ def main():
         clear_scene()
         M = build_kit_materials()
         builder(M)
+        apply_vertex_soot()
         nobjs = len(bpy.context.scene.objects)
         ntris = sum(len(p.loop_indices) - 2
                     for o in bpy.context.scene.objects
