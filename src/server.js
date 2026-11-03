@@ -43,6 +43,151 @@ const gameStore = new GameStorageManager(STORAGE_DIR);
 const TMUX_SESSION = "muse-studio";
 let activeTerminalModel = "muse-spark-1.3";
 
+// ---------- Library auto-save (Task 1) ----------
+// Upserts the current public/live-preview/ game into storage/games/.
+// Same title reuses its existing gameId (no duplicate cards); a new title
+// creates a new entry. Best-effort: never throws, returns null on no-op.
+const LIVE_PREVIEW_DIR = path.join(PUBLIC_DIR, "live-preview");
+let lastAutoSaveStamp = 0;
+
+function readLivePreviewTitle() {
+  try {
+    const html = fs.readFileSync(
+      path.join(LIVE_PREVIEW_DIR, "index.html"),
+      "utf8",
+    );
+    const m = html.match(/<title>([^<]+)<\/title>/i);
+    if (m && m[1].trim()) return m[1].trim();
+  } catch {
+    /* ignore */
+  }
+  return "Untitled Game";
+}
+
+function copyLivePreviewInto(gameDir) {
+  // Full-fidelity copy: every live-preview file (any extension, including
+  // secondary .html viewers) plus the whole assets/ tree, so a later
+  // activate restores the game bit-for-bit. Manifest schema still matches
+  // publish-game.js exactly.
+  const copied = [];
+  const copyTree = (src, dest, prefix) => {
+    fs.mkdirSync(dest, { recursive: true });
+    for (const entry of fs.readdirSync(src, { withFileTypes: true })) {
+      if (entry.isDirectory()) {
+        copyTree(
+          path.join(src, entry.name),
+          path.join(dest, entry.name),
+          prefix + entry.name + "/",
+        );
+      } else if (entry.isFile()) {
+        fs.copyFileSync(
+          path.join(src, entry.name),
+          path.join(dest, entry.name),
+        );
+        copied.push(prefix + entry.name);
+      }
+    }
+  };
+  for (const entry of fs.readdirSync(LIVE_PREVIEW_DIR, {
+    withFileTypes: true,
+  })) {
+    if (entry.isDirectory()) {
+      copyTree(
+        path.join(LIVE_PREVIEW_DIR, entry.name),
+        path.join(gameDir, entry.name),
+        entry.name + "/",
+      );
+    } else if (entry.isFile()) {
+      fs.copyFileSync(
+        path.join(LIVE_PREVIEW_DIR, entry.name),
+        path.join(gameDir, entry.name),
+      );
+      copied.push(entry.name);
+    }
+  }
+  return copied;
+}
+
+function readGamesIndexSync() {
+  try {
+    const raw =
+      fs.readFileSync(path.join(STORAGE_DIR, "index.json"), "utf8") || "[]";
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function autoSaveLivePreviewToLibrary() {
+  try {
+    if (!fs.existsSync(path.join(LIVE_PREVIEW_DIR, "index.html"))) return null;
+    const title = readLivePreviewTitle() || "Untitled Game";
+    const index = readGamesIndexSync();
+    const existing = index.find((e) => e && e.title === title);
+    const gameId =
+      existing && existing.id
+        ? existing.id
+        : "game_" + Date.now() + "_" + crypto.randomBytes(3).toString("hex");
+    const gameDir = path.join(STORAGE_DIR, gameId);
+    fs.mkdirSync(gameDir, { recursive: true });
+    const copied = copyLivePreviewInto(gameDir);
+    if (!copied.includes("index.html")) return null;
+    const hasJs = copied.some((f) => f.endsWith(".js"));
+    const concept = copied.find((f) => f.startsWith("assets/concept"));
+    const manifest = {
+      id: gameId,
+      title,
+      prompt: (existing && existing.prompt) || "",
+      biome: (existing && existing.biome) || "live-preview",
+      metaModel: (existing && existing.metaModel) || "hand-made",
+      enrichmentModel: (existing && existing.enrichmentModel) || null,
+      objective: (existing && existing.objective) || "",
+      createdAt: (existing && existing.createdAt) || new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      playUrl: `/studio/games/${gameId}/index.html`,
+      imageUrl: concept
+        ? `/studio/games/${gameId}/${concept}`
+        : (existing && existing.imageUrl) || null,
+      files: {
+        html: "index.html",
+        manifest: "manifest.json",
+        unity:
+          (existing && existing.files && existing.files.unity) || [],
+      },
+    };
+    if (hasJs) {
+      manifest.files.js = copied.includes("game.js")
+        ? "game.js"
+        : copied.find((f) => f.endsWith(".js"));
+    }
+    fs.writeFileSync(
+      path.join(gameDir, "manifest.json"),
+      JSON.stringify(manifest, null, 2),
+      "utf8",
+    );
+    const next = index.filter((e) => e && e.id !== gameId);
+    next.unshift(manifest);
+    fs.writeFileSync(
+      path.join(STORAGE_DIR, "index.json"),
+      JSON.stringify(next, null, 2),
+      "utf8",
+    );
+    return { id: gameId, title, updated: Boolean(existing) };
+  } catch {
+    return null;
+  }
+}
+
+// Parses the "[ags-meta ...]" first line written by session/new archives.
+function parseChatMeta(text) {
+  const m = String(text || "").match(
+    /^\[ags-meta gameId="([^"]+)" gameTitle="([^"]*)"\]/m,
+  );
+  if (!m) return { gameId: null, gameTitle: null };
+  return { gameId: m[1], gameTitle: m[2] || null };
+}
+
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -478,6 +623,84 @@ const server = http.createServer(async (req, res) => {
     return json(res, 200, found.manifest);
   }
 
+  // ---------- Activate a library game into the live preview (Task 2) ----------
+  // POST /api/studio/games/:id/activate — first auto-saves the current
+  // live-preview game, then copies storage/games/:id/ files (all of them,
+  // not just index.html + game.js) into public/live-preview/ so multi-file
+  // library games play 100% and can be continued/edited from the composer.
+  const activateMatch = pathname.match(
+    /^\/api\/studio\/games\/([\w-]+)\/activate$/,
+  );
+  if (activateMatch && req.method === "POST") {
+    req.resume();
+    const gameId = activateMatch[1];
+    const found = await gameStore.getGame(gameId);
+    if (!found) return json(res, 404, { ok: false, error: "Game not found" });
+    let saved = null;
+    try {
+      saved = autoSaveLivePreviewToLibrary();
+    } catch {
+      saved = null;
+    }
+    try {
+      const gameDir = path.join(STORAGE_DIR, gameId);
+      fs.mkdirSync(LIVE_PREVIEW_DIR, { recursive: true });
+      for (const entry of fs.readdirSync(LIVE_PREVIEW_DIR)) {
+        fs.rmSync(path.join(LIVE_PREVIEW_DIR, entry), {
+          recursive: true,
+          force: true,
+        });
+      }
+      const copyTree = (src, dest) => {
+        fs.mkdirSync(dest, { recursive: true });
+        for (const ent of fs.readdirSync(src, { withFileTypes: true })) {
+          if (ent.isDirectory()) {
+            copyTree(path.join(src, ent.name), path.join(dest, ent.name));
+          } else if (ent.isFile()) {
+            fs.copyFileSync(path.join(src, ent.name), path.join(dest, ent.name));
+          }
+        }
+      };
+      for (const ent of fs.readdirSync(gameDir, { withFileTypes: true })) {
+        if (ent.name === "manifest.json" || ent.name === "unity") continue;
+        const src = path.join(gameDir, ent.name);
+        const dest = path.join(LIVE_PREVIEW_DIR, ent.name);
+        if (ent.isDirectory()) copyTree(src, dest);
+        else if (ent.isFile()) fs.copyFileSync(src, dest);
+      }
+      if (!fs.existsSync(path.join(LIVE_PREVIEW_DIR, "index.html"))) {
+        return json(res, 500, {
+          ok: false,
+          error: "Stored game has no index.html.",
+        });
+      }
+      // Fresh mtimes -> refresh the auto-save stamp so the next
+      // preview-state poll treats this activation as already saved.
+      let stamp = 0;
+      try {
+        for (const f of fs.readdirSync(LIVE_PREVIEW_DIR)) {
+          const st = fs.statSync(path.join(LIVE_PREVIEW_DIR, f));
+          if (st.mtimeMs > stamp) stamp = Math.floor(st.mtimeMs);
+        }
+      } catch {
+        /* ignore */
+      }
+      lastAutoSaveStamp = stamp;
+    } catch {
+      return json(res, 500, {
+        ok: false,
+        error: "Could not activate this game.",
+      });
+    }
+    return json(res, 200, {
+      ok: true,
+      gameId,
+      title: (found.manifest && found.manifest.title) || "Game Preview",
+      url: "/studio/live-preview/index.html",
+      savedGame: saved ? { id: saved.id, title: saved.title } : null,
+    });
+  }
+
   // ---------- Stored game code (Unity C# written for that game) ----------
   const codeMatch = pathname.match(/^\/api\/studio\/games\/([\w-]+)\/code$/);
   if (codeMatch && req.method === "GET") {
@@ -625,6 +848,16 @@ const server = http.createServer(async (req, res) => {
       if (m && m[1].trim()) title = m[1].trim();
     } catch {
       /* ignore */
+    }
+    // Auto-save (Task 1): stamp changed + index.html ready -> upsert the
+    // library entry. Same title reuses its gameId (no duplicate cards).
+    if (updatedAt > lastAutoSaveStamp) {
+      lastAutoSaveStamp = updatedAt;
+      try {
+        autoSaveLivePreviewToLibrary();
+      } catch {
+        /* best-effort: never break preview-state */
+      }
     }
     return json(res, 200, {
       ready: true,
@@ -1126,6 +1359,19 @@ const server = http.createServer(async (req, res) => {
   if (pathname === "/api/studio/session/new" && req.method === "POST") {
     // Drain any request body; nothing in it is used or logged.
     req.resume();
+    // Auto-save the current game FIRST (Task 1+3), then link it into the
+    // archived chat log so History continue can restore game + context.
+    let savedGame = null;
+    try {
+      savedGame = autoSaveLivePreviewToLibrary();
+    } catch {
+      savedGame = null;
+    }
+    const chatMetaLine = savedGame
+      ? `[ags-meta gameId="${savedGame.id}" gameTitle="${String(
+          savedGame.title || "",
+        ).replace(/[\r\n"]/g, "")}"]\n`
+      : "";
     let archived = null;
     let note = null;
     try {
@@ -1139,12 +1385,13 @@ const server = http.createServer(async (req, res) => {
           ["capture-pane", "-t", TMUX_SESSION, "-p", "-S", "-"],
           { timeout: 15000 },
         );
-        fs.writeFileSync(dest, stdout || "", "utf8");
+        fs.writeFileSync(dest, chatMetaLine + (stdout || ""), "utf8");
       } catch {
         note = "previous session missing; nothing to archive";
         fs.writeFileSync(
           dest,
-          `No previous tmux session '${TMUX_SESSION}' to archive.\n`,
+          chatMetaLine +
+            `No previous tmux session '${TMUX_SESSION}' to archive.\n`,
           "utf8",
         );
       }
@@ -1213,6 +1460,9 @@ const server = http.createServer(async (req, res) => {
       ok: true,
       archived,
       session: TMUX_SESSION,
+      savedGame: savedGame
+        ? { id: savedGame.id, title: savedGame.title }
+        : null,
       ...(note ? { note } : {}),
     });
   }
@@ -1238,12 +1488,17 @@ const server = http.createServer(async (req, res) => {
         }
         if (!stat || !stat.isFile()) return null;
         let preview = "";
+        let gameId = null;
+        let gameTitle = null;
         try {
           const text = fs.readFileSync(abs, "utf8");
+          const meta = parseChatMeta(text);
+          gameId = meta.gameId;
+          gameTitle = meta.gameTitle;
           preview = text
             .split("\n")
             .map((l) => l.trim())
-            .filter(Boolean)
+            .filter((l) => l && !l.startsWith("[ags-meta"))
             .slice(0, 3)
             .join("\n")
             .slice(0, 300);
@@ -1255,6 +1510,8 @@ const server = http.createServer(async (req, res) => {
           createdAt: stat.mtime.toISOString(),
           size: stat.size,
           preview,
+          gameId,
+          gameTitle,
         };
       })
       .filter(Boolean)
@@ -1297,13 +1554,23 @@ const server = http.createServer(async (req, res) => {
     } catch {
       return json(res, 500, { error: "Could not read chat transcript." });
     }
+    const meta = parseChatMeta(content);
+    content = content
+      .split("\n")
+      .filter((l) => !l.startsWith("[ags-meta"))
+      .join("\n");
     const MAX_BYTES = 200 * 1024;
     if (Buffer.byteLength(content, "utf8") > MAX_BYTES) {
       content = Buffer.from(content, "utf8")
         .slice(0, MAX_BYTES)
         .toString("utf8");
     }
-    return json(res, 200, { id, content });
+    return json(res, 200, {
+      id,
+      content,
+      gameId: meta.gameId,
+      gameTitle: meta.gameTitle,
+    });
   }
 
   // ---------- Live agent run (Server-Sent Events) ----------

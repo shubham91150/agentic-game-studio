@@ -1,3 +1,11 @@
+"""Mother Agatha hero builder (SAM 3.1 + Blender): Human Lady head, red glowing
+eyes, black nun habit, Polyhaven brass lantern — with a REAL Blender Armature
+(humanoid bone hierarchy), ARMATURE modifier + vertex-group bone skinning, and
+baked NLA Idle + natural human Walk clips exported as glTF SkinnedMesh.
+
+Research: .agents/memory/blender-armature-rigging.md
+Run: blender --background --python src/tools/build_agatha_sam31.py
+"""
 import sys
 sys.path.insert(0, '/home/opencode/.local/lib/python3.11/site-packages')
 import bpy
@@ -536,62 +544,237 @@ for o in bpy.data.objects:
             p.use_smooth = True
 
 # ---------------------------------------------------------------------------
-# 7. Bake a 30-FPS Looping Human Walk Cycle Animation inside agatha.glb!
+# 7. REAL BLENDER ARMATURE + BONE SKINNING + BAKED Idle/Walk NLA CLIPS!
+# Humanoid hierarchy (bone heads == old joint pivots so the approved look
+# is preserved): root -> hips -> spine -> chest -> neck -> head,
+# thigh.L/R -> shin.L/R -> foot.L/R,
+# shoulder.L/R -> upper_arm.L/R -> forearm.L/R -> hand.L/R.
+# Meshes keep rest transforms; ARMATURE modifiers + vertex groups carry
+# all motion. Exports as glTF SkinnedMesh + Skeleton with Idle + Walk.
 # ---------------------------------------------------------------------------
 scene = bpy.context.scene
-scene.frame_start = 1
-scene.frame_end = 31
 scene.render.fps = 30
 
-for o in (leg_l_obj, leg_r_obj, arm_l_obj, arm_r_obj, torso_obj, head_grp):
-    o.rotation_mode = 'XYZ'
+# Clear any stale object-level animation data from the imported parts so the
+# export carries ONLY the two baked bone clips (no per-object *Action spam).
+for _o in (leg_l_obj, leg_r_obj, arm_l_obj, arm_r_obj, torso_obj, head_grp):
+    try:
+        _o.animation_data_clear()
+    except Exception:
+        pass
 
-for f in range(1, 32):
-    scene.frame_set(f)
-    phase = ((f - 1) / 30.0) * 2.0 * math.pi
+# --- 7A. Build the Armature (edit bones, heads on joint pivots) ---
+arm_data = bpy.data.armatures.new("AgathaArmatureData")
+arm_obj = bpy.data.objects.new("AgathaArmature", arm_data)
+bpy.context.collection.objects.link(arm_obj)
+bpy.context.view_layer.objects.active = arm_obj
+bpy.ops.object.mode_set(mode='EDIT')
+_eb = arm_data.edit_bones
+# (name, head, tail, parent, connect, deform)
+_AG_BONES = [
+    ("root", (0.0, 0.0, 0.0), (0.0, 0.0, 0.80), None, False, False),
+    ("hips", (0.0, 0.0, 0.80), (0.0, 0.0, 0.88), "root", True, True),
+    ("spine", (0.0, 0.0, 0.88), (0.0, 0.0, 1.10), "hips", True, True),
+    ("chest", (0.0, 0.0, 1.10), (0.0, 0.0, 1.38), "spine", True, True),
+    ("neck", (0.0, -0.01, 1.38), (0.0, -0.02, 1.44), "chest", False, True),
+    ("head", (0.0, -0.02, 1.40), (0.0, -0.02, 1.62), "neck", False, True),
+    ("shoulder.L", (0.10, 0.0, 1.34), (0.16, 0.0, 1.36), "chest", False, True),
+    ("upper_arm.L", (0.16, 0.0, 1.36), (0.22, -0.03, 1.08), "shoulder.L", False, True),
+    ("forearm.L", (0.22, -0.03, 1.08), (0.25, -0.08, 0.82), "upper_arm.L", True, True),
+    ("hand.L", (0.25, -0.08, 0.82), (0.25, -0.10, 0.68), "forearm.L", True, True),
+    ("thigh.L", (0.085, 0.0, 0.80), (0.085, 0.0, 0.42), "hips", False, True),
+    ("shin.L", (0.085, 0.0, 0.42), (0.085, 0.0, 0.06), "thigh.L", True, True),
+    ("foot.L", (0.085, 0.0, 0.06), (0.085, -0.16, 0.03), "shin.L", False, True),
+]
+_mir = []
+for _bn, _bh, _bt, _bp, _bc, _bd in list(_AG_BONES):
+    if _bn.endswith(".L"):
+        _rn = _bn[:-2] + ".R"
+        _rh = (-_bh[0], _bh[1], _bh[2])
+        _rt = (-_bt[0], _bt[1], _bt[2])
+        _rp = _bp[:-2] + ".R" if _bp and _bp.endswith(".L") else _bp
+        _mir.append((_rn, _rh, _rt, _rp, _bc, _bd))
+_AG_BONES.extend(_mir)
+_ag_built = {}
+for _bn, _bh, _bt, _bp, _bc, _bd in _AG_BONES:
+    _b = _eb.new(_bn)
+    _b.head = _bh
+    _b.tail = _bt
+    if _bp:
+        _b.parent = _ag_built[_bp]
+        _b.use_connect = _bc
+    _b.use_deform = _bd
+    _ag_built[_bn] = _b
+bpy.ops.object.mode_set(mode='OBJECT')
+_ag_bone_names = [_r[0] for _r in _AG_BONES]
+
+# --- 7B. Vertex-group bone skinning (world-space height bands) ---
+def _band(z, z0, z1):
+    if z <= z0:
+        return 0.0
+    if z >= z1:
+        return 1.0
+    return (z - z0) / (z1 - z0)
+
+def _skin_mesh(obj, weight_fn):
+    for _bn in _ag_bone_names:
+        if _bn not in obj.vertex_groups:
+            obj.vertex_groups.new(name=_bn)
+    _vgs = { _bn: obj.vertex_groups[_bn] for _bn in _ag_bone_names }
+    _mw = obj.matrix_world
+    for _v in obj.data.vertices:
+        _wp = _mw @ _v.co
+        for _bn, _w in weight_fn(_wp.x, _wp.y, _wp.z):
+            if _w > 0.0:
+                _vgs[_bn].add([_v.index], _w, 'REPLACE')
+
+def _leg_weights_L(x, y, z):
+    w_thigh = _band(z, 0.34, 0.60)
+    w_foot = 1.0 - _band(z, 0.04, 0.10)
+    w_shin = max(0.0, 1.0 - w_thigh - w_foot)
+    return (("thigh.L", w_thigh), ("shin.L", w_shin), ("foot.L", w_foot))
+
+def _leg_weights_R(x, y, z):
+    w_thigh = _band(z, 0.34, 0.60)
+    w_foot = 1.0 - _band(z, 0.04, 0.10)
+    w_shin = max(0.0, 1.0 - w_thigh - w_foot)
+    return (("thigh.R", w_thigh), ("shin.R", w_shin), ("foot.R", w_foot))
+
+def _arm_weights_L(x, y, z):
+    w_upper = _band(z, 0.95, 1.10)
+    w_hand = 1.0 - _band(z, 0.70, 0.78)
+    w_fore = max(0.0, 1.0 - w_upper - w_hand)
+    return (("upper_arm.L", w_upper), ("forearm.L", w_fore), ("hand.L", w_hand))
+
+def _arm_weights_R(x, y, z):
+    # Brass lantern cage verts stay 100% upper-arm rigid (never deform!).
+    if y < -0.12 and x < -0.15:
+        return (("upper_arm.R", 1.0),)
+    w_upper = _band(z, 0.95, 1.10)
+    w_hand = 1.0 - _band(z, 0.70, 0.78)
+    w_fore = max(0.0, 1.0 - w_upper - w_hand)
+    return (("upper_arm.R", w_upper), ("forearm.R", w_fore), ("hand.R", w_hand))
+
+def _torso_weights(x, y, z):
+    w_chest = _band(z, 1.04, 1.16)
+    w_hips = 1.0 - _band(z, 0.74, 0.86)
+    w_spine = max(0.0, 1.0 - w_chest - w_hips)
+    return (("hips", w_hips), ("spine", w_spine), ("chest", w_chest))
+
+def _head_weights(x, y, z):
+    return (("head", 1.0),)
+
+bpy.context.view_layer.update()
+_skin_mesh(leg_l_obj, _leg_weights_L)
+_skin_mesh(leg_r_obj, _leg_weights_R)
+_skin_mesh(arm_l_obj, _arm_weights_L)
+_skin_mesh(arm_r_obj, _arm_weights_R)
+_skin_mesh(torso_obj, _torso_weights)
+_skin_mesh(head_grp, _head_weights)
+
+# --- 7C. ARMATURE modifiers (bones carry all motion from here on) ---
+for _o in (leg_l_obj, leg_r_obj, arm_l_obj, arm_r_obj, torso_obj, head_grp):
+    _mod = _o.modifiers.new(name="Armature", type='ARMATURE')
+    _mod.object = arm_obj
+    _mod.use_vertex_groups = True
+
+# --- 7D. Bake Idle (48f) + natural human Walk (32f) NLA bone clips ---
+bpy.context.view_layer.objects.active = arm_obj
+bpy.ops.object.mode_set(mode='POSE')
+_ag_pose = arm_obj.pose.bones
+for _pb in _ag_pose:
+    _pb.rotation_mode = 'XYZ'
+if not arm_obj.animation_data:
+    arm_obj.animation_data_create()
+
+def _ag_reset():
+    for _pb in _ag_pose:
+        _pb.location = (0.0, 0.0, 0.0)
+        _pb.rotation_euler = (0.0, 0.0, 0.0)
+        _pb.scale = (1.0, 1.0, 1.0)
+
+def _ag_bake(action_name, n_frames, pose_fn):
+    _act = bpy.data.actions.new(name=action_name)
+    _act.use_fake_user = True
+    arm_obj.animation_data.action = _act
+    scene.frame_start = 1
+    scene.frame_end = n_frames
+    for _f in range(1, n_frames + 1):
+        scene.frame_set(_f)
+        _ag_reset()
+        _theta = ((_f - 1) / float(n_frames - 1)) * 2.0 * math.pi
+        pose_fn(_theta)
+        for _bn in _ag_bone_names:
+            _pb = _ag_pose[_bn]
+            _pb.keyframe_insert(data_path="location", frame=_f)
+            _pb.keyframe_insert(data_path="rotation_euler", frame=_f)
+    _track = arm_obj.animation_data.nla_tracks.new()
+    _track.name = action_name
+    _strip = _track.strips.new(action_name, 1, _act)
+    _strip.name = action_name
+    return _act
+
+def _ag_pose_idle(theta):
+    s = math.sin(theta)
+    c = math.cos(theta)
+    _ag_pose["hips"].location = (0.0, 0.0, 0.015 * s)
+    _ag_pose["spine"].rotation_euler = (0.045 * s, 0.0, 0.025 * c)
+    _ag_pose["chest"].rotation_euler = (0.03 * s, 0.0, 0.02 * c)
+    _ag_pose["neck"].rotation_euler = (-0.02 * s, 0.0, 0.0)
+    _ag_pose["head"].rotation_euler = (0.035 * c, 0.0, 0.08 * s)
+    for _side, _mir in (("L", 1.0), ("R", -1.0)):
+        _ag_pose["upper_arm.%s" % _side].rotation_euler = (
+            0.06 * s, _mir * 0.05 * (1.0 + c), 0.0)
+        _ag_pose["forearm.%s" % _side].rotation_euler = (0.10 + 0.03 * s, 0.0, 0.0)
+        _ag_pose["shin.%s" % _side].rotation_euler = (0.05, 0.0, 0.0)
+
+def _ag_pose_walk(phase):
+    # Amplitudes match the approved object-walk look; knees/elbows/feet are
+    # pure enhancement from the new joints.
     s = math.sin(phase)
     c = math.cos(phase)
+    _ag_pose["hips"].location = (0.015 * s, 0.0, abs(s) * 0.025)
+    _ag_pose["hips"].rotation_euler = (0.0, 0.0, 0.04 * s)
+    _ag_pose["spine"].rotation_euler = (0.04, 0.025 * s, 0.045 * s)
+    _ag_pose["chest"].rotation_euler = (0.02, -0.02 * s, 0.03 * s)
+    _ag_pose["neck"].rotation_euler = (-0.015, 0.0, 0.0)
+    _ag_pose["head"].rotation_euler = (-0.02, -0.015 * s, -0.04 * s)
+    stride = 0.38 * s
+    _ag_pose["thigh.L"].rotation_euler = (stride, 0.0, 0.0)
+    _ag_pose["thigh.R"].rotation_euler = (-stride, 0.0, 0.0)
+    knee_l = 0.55 * max(0.0, -c)
+    knee_r = 0.55 * max(0.0, c)
+    _ag_pose["shin.L"].rotation_euler = (-knee_l, 0.0, 0.0)
+    _ag_pose["shin.R"].rotation_euler = (-knee_r, 0.0, 0.0)
+    _ag_pose["foot.L"].rotation_euler = (-(stride - knee_l) * 0.45, 0.0, 0.0)
+    _ag_pose["foot.R"].rotation_euler = (-(-stride - knee_r) * 0.45, 0.0, 0.0)
+    _ag_pose["upper_arm.L"].rotation_euler = (-0.30 * s, 0.05, 0.0)
+    _ag_pose["upper_arm.R"].rotation_euler = (0.10 * s, -0.05, 0.0)
+    _ag_pose["forearm.L"].rotation_euler = (-0.20 - 0.12 * max(0.0, -s), 0.0, 0.0)
+    _ag_pose["forearm.R"].rotation_euler = (-0.12 - 0.06 * max(0.0, s), 0.0, 0.0)
+    _ag_pose["hand.L"].rotation_euler = (-0.06 * s, 0.0, 0.0)
+    _ag_pose["hand.R"].rotation_euler = (0.03 * s, 0.0, 0.0)
 
-    # Left & Right Legs swing opposite (forward/back human stride!)
-    leg_l_obj.rotation_euler = (0.38 * s, 0.0, 0.0)
-    leg_r_obj.rotation_euler = (-0.38 * s, 0.0, 0.0)
-    leg_l_obj.location = (0.085, 0.0, 0.80 + max(0.0, c) * 0.038)
-    leg_r_obj.location = (-0.085, 0.0, 0.80 + max(0.0, -c) * 0.038)
-    leg_l_obj.keyframe_insert(data_path="rotation_euler", frame=f)
-    leg_r_obj.keyframe_insert(data_path="rotation_euler", frame=f)
-    leg_l_obj.keyframe_insert(data_path="location", frame=f)
-    leg_r_obj.keyframe_insert(data_path="location", frame=f)
-
-    # Left Arm swings opposite to Left Leg; Right Arm holds lantern steady forward with subtle sway
-    arm_l_obj.rotation_euler = (-0.30 * s, 0.0, 0.0)
-    arm_r_obj.rotation_euler = (0.10 * s, 0.0, 0.0)
-    arm_l_obj.keyframe_insert(data_path="rotation_euler", frame=f)
-    arm_r_obj.keyframe_insert(data_path="rotation_euler", frame=f)
-
-    # Natural human torso double-step vertical bob + contrapposto hip/shoulder sway
-    bob_z = abs(s) * 0.025
-    torso_obj.location = (0.0, 0.0, 0.88 + bob_z)
-    torso_obj.rotation_euler = (0.04, 0.025 * s, 0.045 * s)
-    torso_obj.keyframe_insert(data_path="location", frame=f)
-    torso_obj.keyframe_insert(data_path="rotation_euler", frame=f)
-
-    # Head tracks with torso bob + subtle eerie scan
-    head_grp.location = (0.0, -0.02, 1.40 + bob_z)
-    head_grp.rotation_euler = (-0.02, -0.015 * s, -0.04 * s)
-    head_grp.keyframe_insert(data_path="location", frame=f)
-    head_grp.keyframe_insert(data_path="rotation_euler", frame=f)
-
+_ag_bake("Idle", 48, _ag_pose_idle)
+_ag_bake("Walk", 32, _ag_pose_walk)
+arm_obj.animation_data.action = None
+bpy.ops.object.mode_set(mode='OBJECT')
 scene.frame_set(1)
+scene.frame_start = 1
+scene.frame_end = 32
 
+# --- 7E. Export rigged + skinned + NLA-baked Agatha ---
 out_glb = "public/live-preview/assets/agatha.glb"
 bpy.ops.export_scene.gltf(
     filepath=out_glb,
     export_format='GLB',
     export_draco_mesh_compression_enable=False,
     export_animations=True,
+    export_nla_strips=True,
+    export_skins=True,
     export_apply=False,
 )
-print("EXPORTED ARTICULATED HUMAN WALK GLB:", out_glb)
+print("EXPORTED RIGGED SKINNED AGATHA GLB (Idle + Walk NLA):", out_glb)
 
 # ---------------------------------------------------------------------------
 # 8. Render Close-Up Portrait + 3-View Turnaround (NO use_bloom so Xvfb is fast!)

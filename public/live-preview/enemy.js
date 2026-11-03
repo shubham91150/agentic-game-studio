@@ -15,8 +15,10 @@
  * 8-connected, octile heuristic, no corner-cutting, string-pulled
  * smoothing; CHASE repaths at 2Hz. A BFS flood-fill preflight at boot
  * proves every route/spur/finale/key/door target reachable.
- * Model: ./assets/agatha.glb (in-house Blender nun, ~1.7m, faces +Z)
- * with canvas-sprite silhouette fallback. No lights are added here.
+ * Model: ./assets/agatha.glb (rigged Blender nun: 20-bone Armature +
+ * SkinnedMesh + baked Idle/Walk NLA clips, ~1.7m, faces +Z) driven by
+ * THREE.AnimationMixer weight-blended by speed, with the legacy procedural
+ * limb driver + canvas-sprite silhouette fallback. No lights here.
  * r128 global THREE. No module syntax. No per-frame allocations.
  */
 (function () {
@@ -217,6 +219,13 @@
       var prevAz = az;
       var walkPhase = 0;
       var walkBlend = 0;
+      var mixer = null;
+      var mixerOk = false;
+      var idleAction = null;
+      var walkAction = null;
+      var headBone = null;
+      var scanQ = null;
+      var scanAxisY = null;
       var legLNode = null;
       var legRNode = null;
       var armLNode = null;
@@ -1259,6 +1268,20 @@
         walkPhase += movedDist * 3.5;
         bobPhase += dt * (1.6 + actualSpd * 1.1);
 
+        /* Mixer primary: weight-blend Idle<->Walk by speed, then let the
+         * baked bones carry the stride. Procedural limbs stay parked. */
+        var useMixer = !!mixerOk;
+        if (useMixer) {
+          try {
+            var k = Math.max(0, Math.min(1, walkBlend));
+            if (idleAction) idleAction.setEffectiveWeight(1 - k);
+            if (walkAction) walkAction.setEffectiveWeight(k);
+            mixer.update(dt);
+          } catch (errMix) {
+            useMixer = false;
+          }
+        }
+
         try {
           group.position.x = ax;
           group.position.z = az;
@@ -1267,7 +1290,31 @@
           var s = Math.sin(walkPhase);
           var c = Math.cos(walkPhase);
 
-          if (legLNode && legRNode) {
+          /* Eerie head scan rides ON TOP of the baked clip pose (applied
+           * after mixer.update, which rewrites bone transforms each tick).
+           * Bones carry flipped rest quaternions, so the scan MUST
+           * post-multiply a local-Y (bone long axis = head yaw) rotation
+           * onto the quaternion — Euler-adding would tilt the wrong axis.
+           * Temps are allocated once (no per-frame garbage). */
+          if (useMixer && headBone) {
+            try {
+              if (!scanQ) {
+                scanQ = new THREE.Quaternion();
+                scanAxisY = new THREE.Vector3(0, 1, 0);
+              }
+              headBone.quaternion.multiply(
+                scanQ.setFromAxisAngle(scanAxisY, headScanYaw),
+              );
+              group.position.y = 0;
+              group.rotation.z = 0;
+            } catch (errHB) {
+              /* bone add-on never breaks the sim */
+            }
+          }
+
+          if (useMixer) {
+            /* Baked bones already posed; nothing else to drive. */
+          } else if (legLNode && legRNode) {
             /* Articulated human bipedal walk: opposite leg stride + foot lift + contrapposto */
             group.position.y = 0;
             group.rotation.z = 0;
@@ -1447,7 +1494,61 @@
         }
       }
 
-      function onModelOk(root) {
+      /* THREE.AnimationMixer rig driver: finds the baked Idle/Walk NLA
+       * clips by name (case-insensitive substring; legacy *Action object
+       * clips never match, so old .glb files safely keep the procedural
+       * fallback) and plays both with speed-driven weights. */
+      function setupMixer(root, animations) {
+        mixer = null;
+        mixerOk = false;
+        idleAction = null;
+        walkAction = null;
+        try {
+          if (!root || !window.THREE || !window.THREE.AnimationMixer) return;
+          var clips = animations && animations.length ? animations : null;
+          if (!clips) return;
+          var idleClip = null;
+          var walkClip = null;
+          var i;
+          for (i = 0; i < clips.length; i++) {
+            var nm = (clips[i] && clips[i].name ? clips[i].name : "")
+              .toLowerCase();
+            if (!idleClip && nm.indexOf("idle") >= 0) idleClip = clips[i];
+            if (!walkClip && nm.indexOf("walk") >= 0) walkClip = clips[i];
+          }
+          if (
+            window.THREE.AnimationClip &&
+            window.THREE.AnimationClip.findByName
+          ) {
+            if (!idleClip) {
+              idleClip = window.THREE.AnimationClip.findByName(clips, "Idle");
+            }
+            if (!walkClip) {
+              walkClip = window.THREE.AnimationClip.findByName(clips, "Walk");
+            }
+          }
+          if (!idleClip && !walkClip) return;
+          mixer = new window.THREE.AnimationMixer(root);
+          if (idleClip) {
+            idleAction = mixer.clipAction(idleClip);
+            idleAction.setEffectiveWeight(1);
+            idleAction.play();
+          }
+          if (walkClip) {
+            walkAction = mixer.clipAction(walkClip);
+            walkAction.setEffectiveWeight(0);
+            walkAction.play();
+          }
+          mixerOk = true;
+        } catch (err) {
+          mixer = null;
+          mixerOk = false;
+          idleAction = null;
+          walkAction = null;
+        }
+      }
+
+      function onModelOk(root, animations) {
         if (tier !== "pending" || !root) return;
         loadDone = true;
         try {
@@ -1491,6 +1592,15 @@
           } catch (err) {
             lanternNode = null;
           }
+          try {
+            headBone =
+              root && root.getObjectByName
+                ? root.getObjectByName("head")
+                : null;
+          } catch (errHB) {
+            headBone = null;
+          }
+          setupMixer(root, animations);
           if (lanternNode) {
             attachGlow(lanternNode, 0, 0.05, 0, 0.85);
           } else {
@@ -1562,7 +1672,7 @@
             gl.load(
               AGATHA_URL,
               function (g) {
-                onModelOk(g && (g.scene || g));
+                onModelOk(g && (g.scene || g), g && g.animations);
               },
               undefined,
               onModelFail,

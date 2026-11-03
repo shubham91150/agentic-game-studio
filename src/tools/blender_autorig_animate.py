@@ -3,8 +3,13 @@
 Blender In-House Armature Auto-Rig + Walk/Idle/Wave Keyframe Animation Baker
 (src/tools/blender_autorig_animate.py)
 
-Chat requirement:
-  "Tere 3D mesh pe auto skeleton + walk/idle animation — bina iske 3D model murti jaisa khada rahega."
+Full humanoid rig: root -> hips -> spine -> chest -> neck -> head,
+thigh.L/R -> shin.L/R -> foot.L/R,
+shoulder.L/R -> upper_arm.L/R -> forearm.L/R -> hand.L/R,
+with ARMATURE modifier + vertex-group skinning and baked NLA clips
+(Idle + natural human Walk + Wave) exported as glTF SkinnedMesh + Skeleton.
+
+Research: .agents/memory/blender-armature-rigging.md
 
 Can be invoked directly with python3 (automatically spawns headless Blender)
 or inside `blender --background --python src/tools/blender_autorig_animate.py -- ...`.
@@ -137,7 +142,12 @@ def run_inside_blender():
     )
     mat_shoe = make_pbr_mat("npc_shoe_pbr", shoe_col, roughness=0.52)
 
-    # 1. Build Armature Skeleton (`root`, `spine`, `head`, `arm_L`, `arm_R`, `leg_L`, `leg_R`)
+    # 1. Build full humanoid Armature Skeleton:
+    #     root -> hips -> spine -> chest -> neck -> head
+    #     thigh.L/R -> shin.L/R -> foot.L/R
+    #     shoulder.L/R -> upper_arm.L/R -> forearm.L/R -> hand.L/R
+    # Bone heads sit exactly on joint pivots (waist, hips, shoulders);
+    # a bone rotates around its head, so pivot placement is the whole rig.
     arm_data = bpy.data.armatures.new("NPCArmatureData")
     arm_obj = bpy.data.objects.new("NPCArmature", arm_data)
     bpy.context.collection.objects.link(arm_obj)
@@ -146,49 +156,48 @@ def run_inside_blender():
 
     eb = arm_data.edit_bones
 
-    b_root = eb.new("root")
-    b_root.head = (0.0, 0.0, 0.0)
-    b_root.tail = (0.0, 0.0, 0.88)
+    # (name, head, tail, parent, connect, deform)
+    BONE_TABLE = [
+        ("root", (0.0, 0.0, 0.0), (0.0, 0.0, 0.80), None, False, False),
+        ("hips", (0.0, 0.0, 0.80), (0.0, 0.0, 0.88), "root", True, True),
+        ("spine", (0.0, 0.0, 0.88), (0.0, 0.0, 1.10), "hips", True, True),
+        ("chest", (0.0, 0.0, 1.10), (0.0, 0.0, 1.38), "spine", True, True),
+        ("neck", (0.0, 0.0, 1.38), (0.0, 0.0, 1.46), "chest", True, True),
+        ("head", (0.0, 0.0, 1.46), (0.0, 0.0, 1.78), "neck", True, True),
+        ("shoulder.L", (0.12, 0.0, 1.34), (0.24, 0.0, 1.38), "chest", False, True),
+        ("upper_arm.L", (0.26, 0.0, 1.38), (0.27, 0.0, 1.09), "shoulder.L", False, True),
+        ("forearm.L", (0.27, 0.0, 1.09), (0.28, 0.0, 0.84), "upper_arm.L", True, True),
+        ("hand.L", (0.28, 0.0, 0.84), (0.28, 0.0, 0.72), "forearm.L", True, True),
+        ("thigh.L", (0.12, 0.0, 0.86), (0.12, 0.0, 0.44), "hips", False, True),
+        ("shin.L", (0.12, 0.0, 0.44), (0.12, 0.0, 0.09), "thigh.L", True, True),
+        ("foot.L", (0.12, 0.0, 0.09), (0.12, -0.16, 0.04), "shin.L", False, True),
+    ]
+    # Mirror .L bones to .R (negate x of head/tail, keep hierarchy).
+    _mirrored = []
+    for _name, _head, _tail, _parent, _conn, _deform in list(BONE_TABLE):
+        if _name.endswith(".L"):
+            _r = _name[:-2] + ".R"
+            _rh = (-_head[0], _head[1], _head[2])
+            _rt = (-_tail[0], _tail[1], _tail[2])
+            _rp = _parent[:-2] + ".R" if _parent and _parent.endswith(".L") else _parent
+            _mirrored.append((_r, _rh, _rt, _rp, _conn, _deform))
+    BONE_TABLE.extend(_mirrored)
 
-    b_spine = eb.new("spine")
-    b_spine.head = (0.0, 0.0, 0.88)
-    b_spine.tail = (0.0, 0.0, 1.44)
-    b_spine.parent = b_root
-    b_spine.use_connect = True
-
-    b_head = eb.new("head")
-    b_head.head = (0.0, 0.0, 1.44)
-    b_head.tail = (0.0, 0.0, 1.78)
-    b_head.parent = b_spine
-    b_head.use_connect = True
-
-    b_arm_l = eb.new("arm_L")
-    b_arm_l.head = (0.24, 0.0, 1.38)
-    b_arm_l.tail = (0.28, 0.0, 0.78)
-    b_arm_l.parent = b_spine
-    b_arm_l.use_connect = False
-
-    b_arm_r = eb.new("arm_R")
-    b_arm_r.head = (-0.24, 0.0, 1.38)
-    b_arm_r.tail = (-0.28, 0.0, 0.78)
-    b_arm_r.parent = b_spine
-    b_arm_r.use_connect = False
-
-    b_leg_l = eb.new("leg_L")
-    b_leg_l.head = (0.12, 0.0, 0.88)
-    b_leg_l.tail = (0.12, 0.0, 0.04)
-    b_leg_l.parent = b_root
-    b_leg_l.use_connect = False
-
-    b_leg_r = eb.new("leg_R")
-    b_leg_r.head = (-0.12, 0.0, 0.88)
-    b_leg_r.tail = (-0.12, 0.0, 0.04)
-    b_leg_r.parent = b_root
-    b_leg_r.use_connect = False
+    _built = {}
+    for _name, _head, _tail, _parent, _conn, _deform in BONE_TABLE:
+        _b = eb.new(_name)
+        _b.head = _head
+        _b.tail = _tail
+        if _parent:
+            _b.parent = _built[_parent]
+            _b.use_connect = _conn
+        _b.use_deform = _deform
+        _built[_name] = _b
 
     bpy.ops.object.mode_set(mode="OBJECT")
 
-    bone_names = ["root", "spine", "head", "arm_L", "arm_R", "leg_L", "leg_R"]
+    bone_names = [row[0] for row in BONE_TABLE]
+    deform_bones = [row[0] for row in BONE_TABLE if row[5]]
     created_meshes = []
 
     def add_mesh_with_bone_group(obj, bone_name: str):
@@ -206,16 +215,23 @@ def run_inside_blender():
         imported = [
             o for o in bpy.data.objects if o.type == "MESH" and o not in created_meshes
         ]
-        # Auto-assign vertices of imported mesh(es) to nearest bone in world space
+        # Auto-assign vertices of imported mesh(es) to the nearest DEFORM bone
+        # segment in world space (true point-to-segment distance, not midpoint).
         bone_segments = {
-            "root": (Vector((0.0, 0.0, 0.0)), Vector((0.0, 0.0, 0.88))),
-            "spine": (Vector((0.0, 0.0, 0.88)), Vector((0.0, 0.0, 1.44))),
-            "head": (Vector((0.0, 0.0, 1.44)), Vector((0.0, 0.0, 1.78))),
-            "arm_L": (Vector((0.24, 0.0, 1.38)), Vector((0.28, 0.0, 0.78))),
-            "arm_R": (Vector((-0.24, 0.0, 1.38)), Vector((-0.28, 0.0, 0.78))),
-            "leg_L": (Vector((0.12, 0.0, 0.88)), Vector((0.12, 0.0, 0.04))),
-            "leg_R": (Vector((-0.12, 0.0, 0.88)), Vector((-0.12, 0.0, 0.04))),
+            row[0]: (Vector(row[1]), Vector(row[2]))
+            for row in BONE_TABLE
+            if row[5]
         }
+
+        def _seg_dist(p, a, b):
+            ab = b - a
+            denom = ab.dot(ab)
+            if denom < 1e-12:
+                return (p - a).length
+            t = (p - a).dot(ab) / denom
+            t = 0.0 if t < 0.0 else (1.0 if t > 1.0 else t)
+            return (p - (a + ab * t)).length
+
         for obj in imported:
             for bn in bone_names:
                 if bn not in obj.vertex_groups:
@@ -223,11 +239,10 @@ def run_inside_blender():
             mw = obj.matrix_world
             for v in obj.data.vertices:
                 wp = mw @ v.co
-                best_b = "spine"
+                best_b = "hips"
                 best_d = 1e9
                 for bn, (p0, p1) in bone_segments.items():
-                    mid = (p0 + p1) * 0.5
-                    d = (wp - mid).length
+                    d = _seg_dist(wp, p0, p1)
                     if d < best_d:
                         best_d = d
                         best_b = bn
@@ -261,14 +276,14 @@ def run_inside_blender():
             add_mesh_with_bone_group(obj, bone_name)
             return obj
 
-        # Pelvis / waist (root)
+        # Pelvis / waist (hips)
         make_part(
             "pelvis_waist",
             "cylinder",
             (0.0, 0.0, 0.88),
             (0.34, 0.24, 0.16),
             mat_pants,
-            "root",
+            "hips",
         )
 
         # Torso & vest/collar (spine)
@@ -294,7 +309,7 @@ def run_inside_blender():
             (0.0, 0.0, 1.45),
             (0.14, 0.14, 0.10),
             mat_skin,
-            "spine",
+            "neck",
         )
 
         # Head + headgear/hair + nose (head)
@@ -323,14 +338,14 @@ def run_inside_blender():
             "head",
         )
 
-        # Left Arm: upper arm, lower forearm, hand (arm_L)
+        # Left Arm: upper arm, lower forearm, hand (elbow bends at forearm.L)
         make_part(
             "upper_arm_L",
             "cylinder",
             (0.26, 0.0, 1.24),
             (0.11, 0.11, 0.28),
             mat_tunic,
-            "arm_L",
+            "upper_arm.L",
         )
         make_part(
             "lower_arm_L",
@@ -338,7 +353,7 @@ def run_inside_blender():
             (0.27, 0.0, 0.96),
             (0.095, 0.095, 0.26),
             mat_skin,
-            "arm_L",
+            "forearm.L",
         )
         make_part(
             "hand_L",
@@ -346,17 +361,17 @@ def run_inside_blender():
             (0.28, 0.0, 0.79),
             (0.09, 0.07, 0.11),
             mat_skin,
-            "arm_L",
+            "hand.L",
         )
 
-        # Right Arm: upper arm, lower forearm, hand (arm_R)
+        # Right Arm: upper arm, lower forearm, hand
         make_part(
             "upper_arm_R",
             "cylinder",
             (-0.26, 0.0, 1.24),
             (0.11, 0.11, 0.28),
             mat_tunic,
-            "arm_R",
+            "upper_arm.R",
         )
         make_part(
             "lower_arm_R",
@@ -364,7 +379,7 @@ def run_inside_blender():
             (-0.27, 0.0, 0.96),
             (0.095, 0.095, 0.26),
             mat_skin,
-            "arm_R",
+            "forearm.R",
         )
         make_part(
             "hand_R",
@@ -372,17 +387,17 @@ def run_inside_blender():
             (-0.28, 0.0, 0.79),
             (0.09, 0.07, 0.11),
             mat_skin,
-            "arm_R",
+            "hand.R",
         )
 
-        # Left Leg: upper thigh, lower shin, foot (leg_L)
+        # Left Leg: upper thigh, lower shin, foot (knee bends at shin.L)
         make_part(
             "upper_leg_L",
             "cylinder",
             (0.12, 0.0, 0.65),
             (0.14, 0.14, 0.42),
             mat_pants,
-            "leg_L",
+            "thigh.L",
         )
         make_part(
             "lower_leg_L",
@@ -390,7 +405,7 @@ def run_inside_blender():
             (0.12, 0.0, 0.27),
             (0.11, 0.11, 0.38),
             mat_pants,
-            "leg_L",
+            "shin.L",
         )
         make_part(
             "foot_L",
@@ -398,17 +413,17 @@ def run_inside_blender():
             (0.12, -0.05, 0.05),
             (0.12, 0.22, 0.09),
             mat_shoe,
-            "leg_L",
+            "foot.L",
         )
 
-        # Right Leg: upper thigh, lower shin, foot (leg_R)
+        # Right Leg: upper thigh, lower shin, foot
         make_part(
             "upper_leg_R",
             "cylinder",
             (-0.12, 0.0, 0.65),
             (0.14, 0.14, 0.42),
             mat_pants,
-            "leg_R",
+            "thigh.R",
         )
         make_part(
             "lower_leg_R",
@@ -416,7 +431,7 @@ def run_inside_blender():
             (-0.12, 0.0, 0.27),
             (0.11, 0.11, 0.38),
             mat_pants,
-            "leg_R",
+            "shin.R",
         )
         make_part(
             "foot_R",
@@ -424,7 +439,7 @@ def run_inside_blender():
             (-0.12, -0.05, 0.05),
             (0.12, 0.22, 0.09),
             mat_shoe,
-            "leg_R",
+            "foot.R",
         )
 
     part_names = [o.name for o in created_meshes]
@@ -495,64 +510,106 @@ def run_inside_blender():
         return act
 
     def pose_idle(theta: float):
-        # Gentle breathing + subtle head look + relaxed arm sway
-        pose_bones["root"].location = (0.0, 0.0, 0.015 * math.sin(theta))
-        pose_bones["spine"].rotation_euler = (
-            0.045 * math.sin(theta),
-            0.0,
-            0.025 * math.cos(theta),
-        )
-        pose_bones["head"].rotation_euler = (
-            0.035 * math.cos(theta),
-            0.0,
-            0.08 * math.sin(theta),
-        )
-        pose_bones["arm_L"].rotation_euler = (
-            0.06 * math.sin(theta),
-            0.04 * (1.0 + math.cos(theta)),
-            0.0,
-        )
-        pose_bones["arm_R"].rotation_euler = (
-            -0.06 * math.sin(theta),
-            -0.04 * (1.0 + math.cos(theta)),
-            0.0,
-        )
+        # Gentle breathing + subtle head look + relaxed arm sway + soft knees.
+        # reset_pose() zeroes every bone first, so only set bones that move.
+        s = math.sin(theta)
+        c = math.cos(theta)
+        pose_bones["hips"].location = (0.0, 0.0, 0.015 * s)
+        pose_bones["spine"].rotation_euler = (0.045 * s, 0.0, 0.025 * c)
+        pose_bones["chest"].rotation_euler = (0.03 * s, 0.0, 0.02 * c)
+        pose_bones["neck"].rotation_euler = (-0.02 * s, 0.0, 0.0)
+        pose_bones["head"].rotation_euler = (0.035 * c, 0.0, 0.08 * s)
+        for side, mirror in (("L", 1.0), ("R", -1.0)):
+            pose_bones[f"upper_arm.{side}"].rotation_euler = (
+                0.06 * s,
+                mirror * 0.04 * (1.0 + c),
+                0.0,
+            )
+            pose_bones[f"forearm.{side}"].rotation_euler = (
+                0.10 + 0.03 * s,
+                0.0,
+                0.0,
+            )
+            pose_bones[f"thigh.{side}"].rotation_euler = (0.0, 0.0, 0.0)
+            pose_bones[f"shin.{side}"].rotation_euler = (0.05, 0.0, 0.0)
 
     def pose_walk(theta: float):
-        # Full two-cycle stride over 48 frames (2 * theta)
+        # Natural human Walk: full two-cycle stride over 48 frames (w = 2θ).
+        # Thighs swing opposite, knees flex on swing-through, feet compensate,
+        # hips bob twice per cycle with lateral sway, arms counter-swing.
         w = 2.0 * theta
-        stride = 0.52 * math.sin(w)
-        arm_swing = 0.44 * math.sin(w)
-        bob = 0.035 * abs(math.cos(w))
-        pose_bones["root"].location = (0.0, 0.0, bob)
-        pose_bones["spine"].rotation_euler = (0.08, 0.04 * math.cos(w), -0.06 * math.sin(w))
-        pose_bones["head"].rotation_euler = (-0.04, 0.0, 0.05 * math.sin(w))
-        pose_bones["leg_L"].rotation_euler = (stride, 0.0, 0.0)
-        pose_bones["leg_R"].rotation_euler = (-stride, 0.0, 0.0)
-        pose_bones["arm_L"].rotation_euler = (-arm_swing, 0.05, 0.0)
-        pose_bones["arm_R"].rotation_euler = (arm_swing, -0.05, 0.0)
+        s = math.sin(w)
+        c = math.cos(w)
+        stride = 0.52 * s
+        arm_swing = 0.44 * s
+        bob = 0.035 * abs(c)
+        pose_bones["hips"].location = (0.02 * s, 0.0, bob)
+        pose_bones["hips"].rotation_euler = (0.0, 0.0, 0.05 * s)
+        pose_bones["spine"].rotation_euler = (0.08, 0.04 * c, -0.06 * s)
+        pose_bones["chest"].rotation_euler = (0.02, -0.03 * c, 0.05 * s)
+        pose_bones["neck"].rotation_euler = (-0.03, 0.0, 0.0)
+        pose_bones["head"].rotation_euler = (-0.04, 0.0, 0.03 * s)
+        # Legs: L forward while R back; knee flexes while its leg swings
+        # through (max(0,∓c) gates the flexion to the swing half-cycle).
+        pose_bones["thigh.L"].rotation_euler = (stride, 0.0, 0.0)
+        pose_bones["thigh.R"].rotation_euler = (-stride, 0.0, 0.0)
+        knee_l = 0.60 * max(0.0, -c)
+        knee_r = 0.60 * max(0.0, c)
+        pose_bones["shin.L"].rotation_euler = (-knee_l, 0.0, 0.0)
+        pose_bones["shin.R"].rotation_euler = (-knee_r, 0.0, 0.0)
+        pose_bones["foot.L"].rotation_euler = (
+            -(stride - knee_l) * 0.45,
+            0.0,
+            0.0,
+        )
+        pose_bones["foot.R"].rotation_euler = (
+            -(-stride - knee_r) * 0.45,
+            0.0,
+            0.0,
+        )
+        # Arms counter-swing opposite to same-side leg, elbows trail.
+        pose_bones["upper_arm.L"].rotation_euler = (-arm_swing, 0.05, 0.0)
+        pose_bones["upper_arm.R"].rotation_euler = (arm_swing, -0.05, 0.0)
+        pose_bones["forearm.L"].rotation_euler = (
+            -0.25 - 0.15 * max(0.0, -s),
+            0.0,
+            0.0,
+        )
+        pose_bones["forearm.R"].rotation_euler = (
+            -0.25 - 0.15 * max(0.0, s),
+            0.0,
+            0.0,
+        )
+        pose_bones["hand.L"].rotation_euler = (-0.08 * s, 0.0, 0.0)
+        pose_bones["hand.R"].rotation_euler = (0.08 * s, 0.0, 0.0)
 
     def pose_wave(theta: float):
-        # Enthusiastic shopkeeper/NPC greeting wave with raised right arm
+        # Enthusiastic shopkeeper/NPC greeting wave with raised right arm.
         w = 2.0 * theta
-        pose_bones["root"].location = (0.0, 0.0, 0.018 * math.sin(theta))
-        pose_bones["spine"].rotation_euler = (
-            0.03 * math.sin(theta),
-            0.06 * math.sin(theta),
-            0.04,
-        )
+        s = math.sin(theta)
+        pose_bones["hips"].location = (0.0, 0.0, 0.018 * s)
+        pose_bones["spine"].rotation_euler = (0.03 * s, 0.06 * s, 0.04)
+        pose_bones["chest"].rotation_euler = (0.0, 0.04 * s, 0.03)
         pose_bones["head"].rotation_euler = (
             0.06 * math.sin(w),
             -0.05,
             0.10 * math.cos(theta),
         )
-        # Raise right arm high and oscillate side-to-side
-        pose_bones["arm_R"].rotation_euler = (
-            0.25 * math.cos(w),
-            -2.45 + 0.32 * math.sin(w),
-            0.18 * math.sin(w),
+        # Raise right arm high at the shoulder, oscillate the forearm.
+        pose_bones["shoulder.R"].rotation_euler = (
+            0.0,
+            -2.10 + 0.10 * math.sin(w),
+            0.0,
         )
-        pose_bones["arm_L"].rotation_euler = (0.08 * math.sin(theta), 0.06, 0.0)
+        pose_bones["upper_arm.R"].rotation_euler = (0.20 * math.cos(w), 0.0, 0.0)
+        pose_bones["forearm.R"].rotation_euler = (
+            0.0,
+            0.0,
+            0.50 * math.sin(w),
+        )
+        pose_bones["hand.R"].rotation_euler = (0.0, 0.0, 0.25 * math.sin(w))
+        pose_bones["upper_arm.L"].rotation_euler = (0.08 * s, 0.06, 0.0)
+        pose_bones["forearm.L"].rotation_euler = (0.10, 0.0, 0.0)
 
     bake_clip("Idle", pose_idle)
     bake_clip("Walk", pose_walk)

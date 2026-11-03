@@ -325,9 +325,39 @@
       var play = document.createElement("button");
       play.type = "button";
       play.className = "game-play";
-      play.textContent = "▶ Play this game";
+      play.textContent = "▶ Play in preview";
       play.addEventListener("click", function () {
-        playPreview(g.playUrl, g.title);
+        if (play.disabled) return;
+        play.disabled = true;
+        play.textContent = "Loading…";
+        setStatus('Loading "' + (g.title || g.id) + '" into preview…');
+        fetch("/api/studio/games/" + encodeURIComponent(g.id) + "/activate", {
+          method: "POST",
+        })
+          .then(function (res) {
+            if (!res.ok) throw new Error("activate failed: " + res.status);
+            return res.json();
+          })
+          .then(function (data) {
+            playPreview(
+              (data && data.url) || "/studio/live-preview/index.html",
+              (data && data.title) || g.title,
+            );
+            setStatus(
+              'Playing "' +
+                ((data && data.title) || g.title) +
+                '" — continue editing from the composer.',
+              "ok",
+            );
+            refreshLibraryCount();
+          })
+          .catch(function () {
+            setStatus("Could not load that game into the preview.", "error");
+          })
+          .then(function () {
+            play.disabled = false;
+            play.textContent = "▶ Play in preview";
+          });
       });
       body.appendChild(play);
       card.appendChild(body);
@@ -597,6 +627,8 @@
   var sidebarSub = document.getElementById("sidebar-sub");
   var activeChatId = null;
   var activeChatContent = "";
+  var activeGameId = null;
+  var activeGameTitle = "";
 
   function fmtChatSize(bytes) {
     var n = Number(bytes) || 0;
@@ -618,6 +650,8 @@
   function showSidebarList() {
     activeChatId = null;
     activeChatContent = "";
+    activeGameId = null;
+    activeGameTitle = "";
     if (sidebarView) sidebarView.classList.add("hidden");
     if (sidebarList) sidebarList.classList.remove("hidden");
     if (sidebarSub)
@@ -658,6 +692,12 @@
         prev.textContent = c.preview;
         item.appendChild(prev);
       }
+      if (c.gameId) {
+        var gm = document.createElement("p");
+        gm.className = "sidebar-item-preview";
+        gm.textContent = "Game: " + (c.gameTitle || c.gameId);
+        item.appendChild(gm);
+      }
       var view = document.createElement("span");
       view.className = "sidebar-item-view";
       view.textContent = "View transcript →";
@@ -690,7 +730,12 @@
         activeChatId = data && data.id ? data.id : id;
         activeChatContent =
           data && typeof data.content === "string" ? data.content : "";
-        if (sidebarMeta) sidebarMeta.textContent = activeChatId;
+        activeGameId = data && data.gameId ? data.gameId : null;
+        activeGameTitle =
+          data && data.gameTitle ? String(data.gameTitle) : "";
+        if (sidebarMeta)
+          sidebarMeta.textContent =
+            activeChatId + (activeGameTitle ? " · " + activeGameTitle : "");
         if (sidebarTranscript)
           sidebarTranscript.textContent = activeChatContent || "(empty)";
         if (sidebarTranscript) sidebarTranscript.scrollTop = 0;
@@ -765,18 +810,55 @@
         String(activeChatContent || "").slice(0, 1500) +
         "\n---\nUser will now continue.";
       loadTerminalInline();
-      fetch("/api/studio/terminal/send", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: prompt }),
-      })
-        .then(function (res) {
-          if (!res.ok) throw new Error("send failed: " + res.status);
-          return res.json();
+      // Restore this chat's linked game into the live preview FIRST so
+      // the session continues with the same game + context it archived.
+      var restore = Promise.resolve(false);
+      if (activeGameId) {
+        setStatus(
+          'Restoring "' + (activeGameTitle || activeGameId) + '"…',
+        );
+        restore = fetch(
+          "/api/studio/games/" + encodeURIComponent(activeGameId) + "/activate",
+          { method: "POST" },
+        )
+          .then(function (res) {
+            if (!res.ok) throw new Error("activate failed: " + res.status);
+            return res.json();
+          })
+          .then(function (data) {
+            playPreview(
+              (data && data.url) || "/studio/live-preview/index.html",
+              (data && data.title) || activeGameTitle || "Game Preview",
+            );
+            return true;
+          })
+          .catch(function () {
+            setStatus(
+              "Saved game missing — continuing with chat context only.",
+              "warn",
+            );
+            return false;
+          });
+      }
+      restore
+        .then(function (gameRestored) {
+          return fetch("/api/studio/terminal/send", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ prompt: prompt }),
+          }).then(function (res) {
+            if (!res.ok) throw new Error("send failed: " + res.status);
+            return gameRestored;
+          });
         })
-        .then(function () {
+        .then(function (gameRestored) {
           closeSidebar();
-          setStatus("Context sent — continue in the live terminal.", "ok");
+          setStatus(
+            gameRestored
+              ? "Game + context restored — continue in the live terminal."
+              : "Context sent — continue in the live terminal.",
+            "ok",
+          );
         })
         .catch(function () {
           setStatus("Could not send context to the live terminal.", "error");
@@ -1033,6 +1115,9 @@
         }
         if (data.updatedAt > lastPreviewUpdatedAt) {
           lastPreviewUpdatedAt = data.updatedAt;
+          // The server auto-saved this update into the library — keep the
+          // #library-count badge in sync without opening the drawer.
+          refreshLibraryCount();
           if (titleEl) titleEl.textContent = data.title || "Game Preview";
           if (headerTitleEl) {
             headerTitleEl.textContent = data.title || "Game Preview";
@@ -1870,6 +1955,22 @@
 
   function newChat() {
     pausePreviewGame();
+    // Busy guard: confirm before interrupting, then stop gracefully so the
+    // backend archives a settled game + chat instead of mid-write files.
+    var wasBusy = Boolean(running || agentWorking);
+    if (wasBusy) {
+      var proceed = false;
+      try {
+        proceed = window.confirm(
+          "The agent is still working. Stop it and start a new chat? " +
+            "Your current game and chat will be archived first.",
+        );
+      } catch (e) {
+        proceed = false;
+      }
+      if (!proceed) return;
+      stopAgentRun();
+    }
     if (sendAbortController) {
       try {
         sendAbortController.abort();
@@ -1910,21 +2011,38 @@
     }
     if (emptyEl) emptyEl.classList.remove("hidden");
     if (promptEl && window.innerWidth > 960) promptEl.focus();
-    fetch("/api/studio/session/new", { method: "POST" })
-      .then(function (res) {
-        if (!res.ok) throw new Error("new session failed: " + res.status);
-        return res.json();
-      })
-      .then(function () {
-        setStatus("Previous chat archived. Fresh terminal starting…", "ok");
-        reconnectTerminalFresh();
-      })
-      .catch(function () {
-        setStatus(
-          "UI reset. Fresh terminal unavailable — start failed.",
-          "warn",
-        );
-      });
+    // The backend auto-saves the live game + archives the chat (linked by
+    // gameId). Delay slightly after a busy-stop so the stop lands first.
+    var requestFreshSession = function () {
+      fetch("/api/studio/session/new", { method: "POST" })
+        .then(function (res) {
+          if (!res.ok) throw new Error("new session failed: " + res.status);
+          return res.json();
+        })
+        .then(function (data) {
+          var saved =
+            data && data.savedGame && data.savedGame.title
+              ? 'Game "' + data.savedGame.title + '" saved to library. '
+              : "";
+          setStatus(
+            saved + "Previous chat archived. Fresh terminal starting…",
+            "ok",
+          );
+          refreshLibraryCount();
+          reconnectTerminalFresh();
+        })
+        .catch(function () {
+          setStatus(
+            "UI reset. Fresh terminal unavailable — start failed.",
+            "warn",
+          );
+        });
+    };
+    if (wasBusy) {
+      setTimeout(requestFreshSession, 700);
+    } else {
+      requestFreshSession();
+    }
   }
   if (newchatBtn) newchatBtn.addEventListener("click", newChat);
 

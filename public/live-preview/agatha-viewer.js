@@ -1,4 +1,7 @@
-/* 360° Interactive GLB Inspector for Mother Agatha (public/live-preview/assets/agatha.glb) */
+/* 360° Interactive GLB Inspector for Mother Agatha (public/live-preview/assets/agatha.glb).
+ * Rigged 20-bone Armature + SkinnedMesh driven by THREE.AnimationMixer
+ * (baked Idle/Walk NLA clips); legacy procedural limb driver kept as a
+ * fallback mode. Append ?skeleton=1 for a live SkeletonHelper overlay. */
 (function () {
   "use strict";
   var canvas = document.getElementById("viewer");
@@ -56,15 +59,72 @@
   var legRY0 = 0.8;
   var torsoY0 = 0.88;
   var headY0 = 1.4;
-  var walkOn = true;
   var walkPhase = 0;
+  var mixer = null;
+  var mixerOk = false;
+  var idleAction = null;
+  var walkAction = null;
+  var MODES = ["blend", "walk", "idle", "procedural", "off"];
+  var MODE_LABEL = {
+    blend: "Anim: Blend",
+    walk: "Anim: Walk",
+    idle: "Anim: Idle",
+    procedural: "Anim: Procedural",
+    off: "Anim: Off",
+  };
+  var animMode = 0;
+
+  function modeName() {
+    return MODES[animMode];
+  }
 
   if (spinBtn) {
-    spinBtn.textContent = "Walk Cycle: ON";
+    spinBtn.textContent = MODE_LABEL[modeName()];
     spinBtn.addEventListener("click", function () {
-      walkOn = !walkOn;
-      spinBtn.textContent = walkOn ? "Walk Cycle: ON" : "Walk Cycle: OFF";
+      animMode = (animMode + 1) % MODES.length;
+      spinBtn.textContent = MODE_LABEL[modeName()];
     });
+  }
+
+  function setupMixer(root, clips) {
+    mixer = null;
+    mixerOk = false;
+    idleAction = null;
+    walkAction = null;
+    if (!root || !window.THREE.AnimationMixer || !clips || !clips.length) {
+      return null;
+    }
+    var idleClip = null;
+    var walkClip = null;
+    var i;
+    for (i = 0; i < clips.length; i++) {
+      var nm = (clips[i] && clips[i].name ? clips[i].name : "").toLowerCase();
+      if (!idleClip && nm.indexOf("idle") >= 0) idleClip = clips[i];
+      if (!walkClip && nm.indexOf("walk") >= 0) walkClip = clips[i];
+    }
+    if (window.THREE.AnimationClip && window.THREE.AnimationClip.findByName) {
+      if (!idleClip) {
+        idleClip = window.THREE.AnimationClip.findByName(clips, "Idle");
+      }
+      if (!walkClip) {
+        walkClip = window.THREE.AnimationClip.findByName(clips, "Walk");
+      }
+    }
+    if (!idleClip && !walkClip) return null;
+    mixer = new window.THREE.AnimationMixer(root);
+    if (idleClip) {
+      idleAction = mixer.clipAction(idleClip);
+      idleAction.play();
+    }
+    if (walkClip) {
+      walkAction = mixer.clipAction(walkClip);
+      walkAction.play();
+    }
+    mixerOk = true;
+    var names = [];
+    if (idleClip) names.push(idleClip.name);
+    if (walkClip) names.push(walkClip.name);
+    return names.join(" + ");
   }
 
   var loader = new THREE.GLTFLoader();
@@ -76,8 +136,12 @@
 
       var meshCount = 0;
       var vertCount = 0;
+      var boneCount = 0;
+      var skinnedCount = 0;
       root.traverse(function (o) {
         if (!o) return;
+        if (o.isBone) boneCount++;
+        if (o.isSkinnedMesh) skinnedCount++;
         if (o.name === "Agatha_Leg_L") {
           legL = o;
           legLY0 = o.position.y;
@@ -101,13 +165,31 @@
           if (pos) vertCount += pos.count;
         }
       });
+      var clipText = setupMixer(root, gltf.animations);
+      try {
+        if (
+          window.location &&
+          window.location.search &&
+          window.location.search.indexOf("skeleton=1") >= 0 &&
+          window.THREE.SkeletonHelper
+        ) {
+          scene.add(new window.THREE.SkeletonHelper(root));
+        }
+      } catch (errSkel) {
+        /* overlay optional */
+      }
       if (statusEl) {
         statusEl.textContent =
           "Loaded agatha.glb · Human Lady Face + Red Glowing Eyes · " +
           meshCount +
-          " articulated limbs · " +
+          " meshes (" +
+          skinnedCount +
+          " skinned) · " +
+          boneCount +
+          " bones · " +
           vertCount.toLocaleString() +
-          " verts";
+          " verts" +
+          (clipText ? " · Mixer: " + clipText : " · Mixer: n/a (procedural)");
       }
     },
     undefined,
@@ -161,7 +243,19 @@
     var dt = Math.min(0.05, Math.max(0.001, (now - lastT) * 0.001));
     lastT = now;
 
-    if (walkOn) {
+    var mode = modeName();
+    if (mixerOk && (mode === "blend" || mode === "walk" || mode === "idle")) {
+      /* Baked-bone path: smooth human stride straight from the NLA clips. */
+      var wWalk = mode === "walk" ? 1 : mode === "idle" ? 0 : 0.7;
+      try {
+        if (idleAction) idleAction.setEffectiveWeight(1 - wWalk);
+        if (walkAction) walkAction.setEffectiveWeight(wWalk);
+        mixer.update(dt);
+      } catch (errMix) {
+        /* mixer never breaks the viewer */
+      }
+    } else if (mode === "procedural") {
+      /* Legacy procedural limb driver (fallback / comparison). */
       walkPhase += dt * 5.2;
       var s = Math.sin(walkPhase);
       var c = Math.cos(walkPhase);
