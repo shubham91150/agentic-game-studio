@@ -230,6 +230,39 @@ TOOLS = [
             "required": ["audio"],
         },
     },
+    {
+        "name": "mega_3d_hub_search_and_fetch",
+        "description": "Search & download high-detail CC0/free .glb 3D models across 825,000+ assets: Smithsonian Open Access 3D Laser Scans (2,500+ museum statues, relics, architecture), Khronos Official AAA glTF Showcase (150 reference PBR models), Polyhaven (521 photogrammetry scans), and BlenderKit (22,000+ free models).",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "source": {
+                    "type": "string",
+                    "enum": ["all", "smithsonian", "khronos", "polyhaven", "blenderkit"],
+                    "description": "Which 3D catalog to search (default 'all')",
+                },
+                "query": {"type": "string", "description": "Search query (e.g. 'statue', 'lamp', 'chair', 'car', 'helmet')"},
+                "limit": {"type": "integer", "description": "Max results per source (default 3)"},
+                "download": {"type": "boolean", "description": "Download matching .glb files into public/assets/"},
+            },
+            "required": ["query"],
+        },
+    },
+    {
+        "name": "elite_imagination_engine",
+        "description": "Generate an Elite Imagination & Goosebump Reference Blueprint (Hitman clockwork stealth/distraction mechanics, Resident Evil multi-step puzzle chains, Hello Neighbor 2 adaptive AI & wardrobe peek-hide, and 12 living micro-detail layers) powered by Meta Muse Spark Open.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "prompt": {"type": "string", "description": "Game concept or stage description"},
+                "archetype": {
+                    "type": "string",
+                    "description": "Reference archetypes (e.g. 'hitman+resident-evil+hello-neighbor' or 'racing')",
+                },
+            },
+            "required": ["prompt"],
+        },
+    },
 ]
 
 
@@ -391,6 +424,18 @@ def handle_call(name: str, args: dict) -> str:
         audio = str(args.get("audio", "public/assets/audio/voice_prompt_sample.wav"))
         backend = str(args.get("backend", "api"))
         return run_cmd(["node", "src/tools/meta_voice_transcribe.js", "--audio", audio, "--backend", backend], timeout=60)
+    if name == "mega_3d_hub_search_and_fetch":
+        source = str(args.get("source", "all"))
+        query = str(args.get("query", "lamp"))
+        limit = str(args.get("limit", 3))
+        cmd = ["python3", "src/tools/fetch_mega_3d_hub.py", "--source", source, "--query", query, "--limit", limit]
+        if args.get("download", True):
+            cmd.append("--download")
+        return run_cmd(cmd, timeout=120)
+    if name == "elite_imagination_engine":
+        prompt = str(args.get("prompt", "gothic convent stealth horror"))
+        archetype = str(args.get("archetype", "hitman+resident-evil+hello-neighbor"))
+        return run_cmd(["node", "src/tools/elite_imagination_engine.js", "--prompt", prompt, "--archetype", archetype], timeout=60)
     return f"Unknown tool: {name}"
 
 
