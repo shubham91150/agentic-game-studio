@@ -89,6 +89,9 @@ function verifyOpenCodeGitHubCookie(cookieHeader) {
       typeof parsed.token !== "string"
     )
       return false;
+    const uname = parsed.username.toLowerCase();
+    const allowTestOwner = PORT !== 3030 && uname === "owner";
+    if (uname !== "shubham91150" && !allowTestOwner) return false;
     if (typeof parsed.exp === "number" && parsed.exp < Date.now()) return false;
     return true;
   } catch {
@@ -167,8 +170,7 @@ function sanitizeAttachmentNames(value) {
 }
 
 export function enrichStudioPrompt(prompt, opts) {
-  const raw =
-    prompt === undefined || prompt === null ? "" : String(prompt);
+  const raw = prompt === undefined || prompt === null ? "" : String(prompt);
   const t = raw.trim();
   if (!t) return raw;
   if (t.startsWith("/")) return raw; // slash command: /model, /help, /clear…
@@ -194,9 +196,7 @@ const JUDGE_BUILD_MAX = 6;
 const JUDGE_BUILD_WINDOW_MS = 10 * 60 * 1000;
 const judgeBuildHits = new Map();
 function judgeClientIp(req) {
-  const fwd = String(
-    (req.headers && req.headers["x-forwarded-for"]) || "",
-  )
+  const fwd = String((req.headers && req.headers["x-forwarded-for"]) || "")
     .split(",")[0]
     .trim();
   if (fwd) return fwd;
@@ -352,7 +352,10 @@ export function heuristicDirector(t) {
       : `Darkness in ${room}... the storm sees what you cannot. It is circling closer.`;
   }
   const alertBoost = Math.round(
-    Math.min(25, Math.max(0, n / 4 + (d < 6 ? 10 : d < 12 ? 5 : 2) + (key ? 5 : 0))),
+    Math.min(
+      25,
+      Math.max(0, n / 4 + (d < 6 ? 10 : d < 12 ? 5 : 2) + (key ? 5 : 0)),
+    ),
   );
   const atmos = {
     lantern_blackout: { fogDensity: 0.06, lightDim: 0.25, ashTurbulence: 1.2 },
@@ -373,7 +376,7 @@ export function heuristicDirector(t) {
 const AI_DIRECTOR_SYSTEM = [
   "Horror game AI Director. Decide in ONE step, no deliberation.",
   "Output the JSON object FIRST and stop. Keys:",
-  'tactic ambush_room|cut_off_chapel|stalk_shadow|inspect_hideout,',
+  "tactic ambush_room|cut_off_chapel|stalk_shadow|inspect_hideout,",
   "targetRoom (room name), alertBoost 0..25,",
   "whisper (one short Hindi/English horror line reacting to the player's",
   "exact room, torch and key state),",
@@ -573,8 +576,7 @@ function autoSaveLivePreviewToLibrary() {
       files: {
         html: "index.html",
         manifest: "manifest.json",
-        unity:
-          (existing && existing.files && existing.files.unity) || [],
+        unity: (existing && existing.files && existing.files.unity) || [],
       },
     };
     if (hasJs) {
@@ -945,9 +947,7 @@ function getGitStatusJson() {
   } catch (err) {
     return {
       ok: false,
-      error: scrubSecrets(
-        String((err && err.message) || err).slice(0, 500),
-      ),
+      error: scrubSecrets(String((err && err.message) || err).slice(0, 500)),
     };
   }
 }
@@ -1206,9 +1206,7 @@ const server = http.createServer(async (req, res) => {
         entry = {
           transport: "stdio",
           command,
-          args: Array.isArray(payload.args)
-            ? payload.args.map(String)
-            : [],
+          args: Array.isArray(payload.args) ? payload.args.map(String) : [],
         };
       } else {
         let parsed = null;
@@ -1287,72 +1285,72 @@ const server = http.createServer(async (req, res) => {
   // live-preview game, then copies storage/games/:id/ files (all of them,
   // not just index.html + game.js) into public/live-preview/ so multi-file
   // library games play 100% and can be continued/edited from the composer.
-function copyStoredGameIntoLivePreview(gameId) {
-  const gameDir = path.join(STORAGE_DIR, gameId);
-  fs.mkdirSync(LIVE_PREVIEW_DIR, { recursive: true });
-  for (const entry of fs.readdirSync(LIVE_PREVIEW_DIR)) {
-    fs.rmSync(path.join(LIVE_PREVIEW_DIR, entry), {
-      recursive: true,
-      force: true,
-    });
-  }
-  const copyTree = (src, dest) => {
-    fs.mkdirSync(dest, { recursive: true });
-    for (const ent of fs.readdirSync(src, { withFileTypes: true })) {
-      if (ent.isDirectory()) {
-        copyTree(path.join(src, ent.name), path.join(dest, ent.name));
-      } else if (ent.isFile()) {
-        fs.copyFileSync(path.join(src, ent.name), path.join(dest, ent.name));
+  function copyStoredGameIntoLivePreview(gameId) {
+    const gameDir = path.join(STORAGE_DIR, gameId);
+    fs.mkdirSync(LIVE_PREVIEW_DIR, { recursive: true });
+    for (const entry of fs.readdirSync(LIVE_PREVIEW_DIR)) {
+      fs.rmSync(path.join(LIVE_PREVIEW_DIR, entry), {
+        recursive: true,
+        force: true,
+      });
+    }
+    const copyTree = (src, dest) => {
+      fs.mkdirSync(dest, { recursive: true });
+      for (const ent of fs.readdirSync(src, { withFileTypes: true })) {
+        if (ent.isDirectory()) {
+          copyTree(path.join(src, ent.name), path.join(dest, ent.name));
+        } else if (ent.isFile()) {
+          fs.copyFileSync(path.join(src, ent.name), path.join(dest, ent.name));
+        }
       }
+    };
+    for (const ent of fs.readdirSync(gameDir, { withFileTypes: true })) {
+      if (ent.name === "manifest.json" || ent.name === "unity") continue;
+      const src = path.join(gameDir, ent.name);
+      const dest = path.join(LIVE_PREVIEW_DIR, ent.name);
+      if (ent.isDirectory()) copyTree(src, dest);
+      else if (ent.isFile()) fs.copyFileSync(src, dest);
     }
-  };
-  for (const ent of fs.readdirSync(gameDir, { withFileTypes: true })) {
-    if (ent.name === "manifest.json" || ent.name === "unity") continue;
-    const src = path.join(gameDir, ent.name);
-    const dest = path.join(LIVE_PREVIEW_DIR, ent.name);
-    if (ent.isDirectory()) copyTree(src, dest);
-    else if (ent.isFile()) fs.copyFileSync(src, dest);
-  }
-  if (!fs.existsSync(path.join(LIVE_PREVIEW_DIR, "index.html"))) {
-    throw new Error("Stored game has no index.html.");
-  }
-  // Fresh mtimes -> refresh the auto-save stamp so the next
-  // preview-state poll treats this activation as already saved.
-  let stamp = 0;
-  try {
-    for (const f of fs.readdirSync(LIVE_PREVIEW_DIR)) {
-      const st = fs.statSync(path.join(LIVE_PREVIEW_DIR, f));
-      if (st.mtimeMs > stamp) stamp = Math.floor(st.mtimeMs);
+    if (!fs.existsSync(path.join(LIVE_PREVIEW_DIR, "index.html"))) {
+      throw new Error("Stored game has no index.html.");
     }
-  } catch {
-    /* ignore */
+    // Fresh mtimes -> refresh the auto-save stamp so the next
+    // preview-state poll treats this activation as already saved.
+    let stamp = 0;
+    try {
+      for (const f of fs.readdirSync(LIVE_PREVIEW_DIR)) {
+        const st = fs.statSync(path.join(LIVE_PREVIEW_DIR, f));
+        if (st.mtimeMs > stamp) stamp = Math.floor(st.mtimeMs);
+      }
+    } catch {
+      /* ignore */
+    }
+    lastAutoSaveStamp = stamp;
   }
-  lastAutoSaveStamp = stamp;
-}
 
-// Shared by the activate route and chat-continue: auto-save current work,
-// then copy the stored game into the live preview. Throws with .statusCode.
-async function activateStoredGame(gameId) {
-  const found = await gameStore.getGame(gameId);
-  if (!found) {
-    const err = new Error("Game not found");
-    err.statusCode = 404;
-    throw err;
+  // Shared by the activate route and chat-continue: auto-save current work,
+  // then copy the stored game into the live preview. Throws with .statusCode.
+  async function activateStoredGame(gameId) {
+    const found = await gameStore.getGame(gameId);
+    if (!found) {
+      const err = new Error("Game not found");
+      err.statusCode = 404;
+      throw err;
+    }
+    let saved = null;
+    try {
+      saved = autoSaveLivePreviewToLibrary();
+    } catch {
+      saved = null;
+    }
+    try {
+      copyStoredGameIntoLivePreview(gameId);
+    } catch (e) {
+      if (e && e.message === "Stored game has no index.html.") throw e;
+      throw new Error("Could not activate this game.");
+    }
+    return { found, saved };
   }
-  let saved = null;
-  try {
-    saved = autoSaveLivePreviewToLibrary();
-  } catch {
-    saved = null;
-  }
-  try {
-    copyStoredGameIntoLivePreview(gameId);
-  } catch (e) {
-    if (e && e.message === "Stored game has no index.html.") throw e;
-    throw new Error("Could not activate this game.");
-  }
-  return { found, saved };
-}
 
   const activateMatch = pathname.match(
     /^\/api\/studio\/games\/([\w-]+)\/activate$/,
@@ -2097,9 +2095,10 @@ async function activateStoredGame(gameId) {
       return json(res, 500, { ok: false, error: "Could not start terminal." });
     }
     const prevWindowId = getActiveTmuxWindowId();
-    const safeTitle = String(
-      (savedGame && savedGame.title) || "",
-    ).replace(/[\r\n"]/g, "");
+    const safeTitle = String((savedGame && savedGame.title) || "").replace(
+      /[\r\n"]/g,
+      "",
+    );
     const chatMetaLine =
       `[ags-meta gameId="${(savedGame && savedGame.id) || ""}" ` +
       `gameTitle="${safeTitle}"` +
@@ -2218,9 +2217,7 @@ async function activateStoredGame(gameId) {
           preview = "";
         }
         const live = Boolean(windowId && liveIds.has(windowId));
-        const liveWin = live
-          ? liveWins.find((w) => w.id === windowId)
-          : null;
+        const liveWin = live ? liveWins.find((w) => w.id === windowId) : null;
         return {
           id: f,
           createdAt: stat.mtime.toISOString(),
@@ -2371,10 +2368,7 @@ async function activateStoredGame(gameId) {
       }
       const dir = path.resolve(CHATS_DIR);
       const target = path.resolve(dir, id);
-      if (
-        target !== path.join(dir, id) ||
-        !target.startsWith(dir + path.sep)
-      ) {
+      if (target !== path.join(dir, id) || !target.startsWith(dir + path.sep)) {
         return json(res, 400, { ok: false, error: "Invalid chat id." });
       }
       let text = "";
@@ -2731,7 +2725,8 @@ async function activateStoredGame(gameId) {
         for (const f of GIT_EXPORT_VENDOR_FILES) {
           const src = path.join(ROOT_DIR, "src", "engine", "vendor", f);
           try {
-            if (fs.existsSync(src)) fs.copyFileSync(src, path.join(vendorDir, f));
+            if (fs.existsSync(src))
+              fs.copyFileSync(src, path.join(vendorDir, f));
           } catch {
             /* skip unreadable vendor file */
           }
@@ -2798,9 +2793,10 @@ async function activateStoredGame(gameId) {
         return json(res, 200, {
           ok: false,
           error: scrubSecrets(
-            String(
-              (err && err.stderr) || (err && err.message) || err,
-            ).slice(0, 1000),
+            String((err && err.stderr) || (err && err.message) || err).slice(
+              0,
+              1000,
+            ),
           ),
           stage,
         });
