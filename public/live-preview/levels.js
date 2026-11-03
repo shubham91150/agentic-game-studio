@@ -189,17 +189,28 @@
         mat.emissiveIntensity : 1;
       arr.push(mat);
     }
+    // Soft volumetric look: the Blender shaft reads as an opaque white ramp
+    // unless tamed at load — faint additive beam, no depth writes. The
+    // lightning hook keeps driving emissiveIntensity on top of this.
+    function softenShaft(mat) {
+      if (!mat) { return; }
+      mat.transparent = true;
+      mat.opacity = 0.12;
+      mat.depthWrite = false;
+      mat.blending = THREE.AdditiveBlending;
+      mat.needsUpdate = true;
+    }
     // Named-node fast path (MoonShaft exists per kit contract) + a
     // material-name sweep fallback. Clones share materials, so dedupe.
     function collectWindowMats(root) {
       var shaft = null;
       try { shaft = root.getObjectByName("MoonShaft"); } catch (eShaft) { shaft = null; }
-      if (shaft && shaft.material) { grabUnique(shaft.material, moonMats); }
+      if (shaft && shaft.material) { grabUnique(shaft.material, moonMats); softenShaft(shaft.material); }
       try {
         root.traverse(function (o) {
           if (!o || !o.material || typeof o.material.name !== "string") { return; }
           var nm = o.material.name.toLowerCase();
-          if (nm.indexOf("moonshaft") >= 0) { grabUnique(o.material, moonMats); }
+          if (nm.indexOf("moonshaft") >= 0) { grabUnique(o.material, moonMats); softenShaft(o.material); }
           else if (nm.indexOf("glass") >= 0) { grabUnique(o.material, glassMats); }
           else if (nm.indexOf("flame") >= 0) { grabUnique(o.material, flameMats); }
         });
