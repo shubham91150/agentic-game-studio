@@ -1,0 +1,1245 @@
+{
+  "schemaVersion": "2.0.0",
+  "module": "WorldNav (Meta SAM 3.1 + 2D/3D NavMesh + 5 Trajectory Modes)",
+  "worldBound": 36.0,
+  "cellSize": 3.0,
+  "gridResolution": "24x24",
+  "totalCells": 576,
+  "walkableCells": 556,
+  "blockedCells": 20,
+  "bfsVerification": {
+    "passed": true,
+    "spawnCell": [
+      12,
+      12
+    ],
+    "spawnWorld": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "totalLandmarks": 5,
+    "reachableLandmarks": 5,
+    "reachabilityRatio": 1.0,
+    "proof": "BFS flood fill from spawn [12, 12] reached 556/556 walkable cells and 5/5 semantic landmarks."
+  },
+  "trajectoryModes": [
+    "Regular",
+    "Surrounding",
+    "Reconstruct-Aware",
+    "Wandering",
+    "Aerial"
+  ],
+  "trajectories": {
+    "Regular": [
+      {
+        "step": 0,
+        "mode": "Regular",
+        "position": [
+          1.5,
+          1.7,
+          16.5
+        ],
+        "lookAt": [
+          7.5,
+          1.65,
+          10.5
+        ],
+        "rotationDeg": {
+          "yaw": 135.0,
+          "pitch": -0.34,
+          "roll": 0.0
+        },
+        "collisionFree": true
+      },
+      {
+        "step": 1,
+        "mode": "Regular",
+        "position": [
+          7.5,
+          1.7,
+          10.5
+        ],
+        "lookAt": [
+          10.5,
+          1.65,
+          -1.5
+        ],
+        "rotationDeg": {
+          "yaw": 165.96,
+          "pitch": -0.23,
+          "roll": 0.0
+        },
+        "collisionFree": true
+      },
+      {
+        "step": 2,
+        "mode": "Regular",
+        "position": [
+          10.5,
+          1.7,
+          -1.5
+        ],
+        "lookAt": [
+          4.5,
+          1.65,
+          -13.5
+        ],
+        "rotationDeg": {
+          "yaw": -153.43,
+          "pitch": -0.21,
+          "roll": 0.0
+        },
+        "collisionFree": true
+      },
+      {
+        "step": 3,
+        "mode": "Regular",
+        "position": [
+          4.5,
+          1.7,
+          -13.5
+        ],
+        "lookAt": [
+          1.5,
+          1.65,
+          -16.5
+        ],
+        "rotationDeg": {
+          "yaw": -135.0,
+          "pitch": -0.68,
+          "roll": 0.0
+        },
+        "collisionFree": true
+      },
+      {
+        "step": 4,
+        "mode": "Regular",
+        "position": [
+          1.5,
+          1.7,
+          -16.5
+        ],
+        "lookAt": [
+          -4.5,
+          1.65,
+          -13.5
+        ],
+        "rotationDeg": {
+          "yaw": -63.43,
+          "pitch": -0.43,
+          "roll": 0.0
+        },
+        "collisionFree": true
+      },
+      {
+        "step": 5,
+        "mode": "Regular",
+        "position": [
+          -4.5,
+          1.7,
+          -13.5
+        ],
+        "lookAt": [
+          -10.5,
+          1.65,
+          -1.5
+        ],
+        "rotationDeg": {
+          "yaw": -26.57,
+          "pitch": -0.21,
+          "roll": 0.0
+        },
+        "collisionFree": true
+      },
+      {
+        "step": 6,
+        "mode": "Regular",
+        "position": [
+          -10.5,
+          1.7,
+          -1.5
+        ],
+        "lookAt": [
+          -7.5,
+          1.65,
+          10.5
+        ],
+        "rotationDeg": {
+          "yaw": 14.04,
+          "pitch": -0.23,
+          "roll": 0.0
+        },
+        "collisionFree": true
+      },
+      {
+        "step": 7,
+        "mode": "Regular",
+        "position": [
+          -7.5,
+          1.7,
+          10.5
+        ],
+        "lookAt": [
+          1.5,
+          1.65,
+          16.5
+        ],
+        "rotationDeg": {
+          "yaw": 56.31,
+          "pitch": -0.26,
+          "roll": 0.0
+        },
+        "collisionFree": true
+      },
+      {
+        "step": 8,
+        "mode": "Regular",
+        "position": [
+          1.5,
+          1.7,
+          16.5
+        ],
+        "lookAt": [
+          1.5,
+          1.65,
+          16.5
+        ],
+        "rotationDeg": {
+          "yaw": 0.0,
+          "pitch": -89.89,
+          "roll": 0.0
+        },
+        "collisionFree": true
+      }
+    ],
+    "Surrounding": [
+      {
+        "step": 0,
+        "mode": "Surrounding",
+        "position": [
+          7.5,
+          1.85,
+          -7.5
+        ],
+        "lookAt": [
+          0.0,
+          2.0,
+          -9.0
+        ],
+        "rotationDeg": {
+          "yaw": -101.31,
+          "pitch": 1.12,
+          "roll": 0.0
+        },
+        "collisionFree": true
+      },
+      {
+        "step": 1,
+        "mode": "Surrounding",
+        "position": [
+          7.5,
+          1.85,
+          -4.5
+        ],
+        "lookAt": [
+          0.0,
+          2.0,
+          -9.0
+        ],
+        "rotationDeg": {
+          "yaw": -120.96,
+          "pitch": 0.98,
+          "roll": 0.0
+        },
+        "collisionFree": true
+      },
+      {
+        "step": 2,
+        "mode": "Surrounding",
+        "position": [
+          4.5,
+          1.85,
+          -1.5
+        ],
+        "lookAt": [
+          0.0,
+          2.0,
+          -9.0
+        ],
+        "rotationDeg": {
+          "yaw": -149.04,
+          "pitch": 0.98,
+          "roll": 0.0
+        },
+        "collisionFree": true
+      },
+      {
+        "step": 3,
+        "mode": "Surrounding",
+        "position": [
+          1.5,
+          1.85,
+          -1.5
+        ],
+        "lookAt": [
+          0.0,
+          2.0,
+          -9.0
+        ],
+        "rotationDeg": {
+          "yaw": -168.69,
+          "pitch": 1.12,
+          "roll": 0.0
+        },
+        "collisionFree": true
+      },
+      {
+        "step": 4,
+        "mode": "Surrounding",
+        "position": [
+          -4.5,
+          1.85,
+          -1.5
+        ],
+        "lookAt": [
+          0.0,
+          2.0,
+          -9.0
+        ],
+        "rotationDeg": {
+          "yaw": 149.04,
+          "pitch": 0.98,
+          "roll": 0.0
+        },
+        "collisionFree": true
+      },
+      {
+        "step": 5,
+        "mode": "Surrounding",
+        "position": [
+          -7.5,
+          1.85,
+          -4.5
+        ],
+        "lookAt": [
+          0.0,
+          2.0,
+          -9.0
+        ],
+        "rotationDeg": {
+          "yaw": 120.96,
+          "pitch": 0.98,
+          "roll": 0.0
+        },
+        "collisionFree": true
+      },
+      {
+        "step": 6,
+        "mode": "Surrounding",
+        "position": [
+          -7.5,
+          1.85,
+          -7.5
+        ],
+        "lookAt": [
+          0.0,
+          2.0,
+          -9.0
+        ],
+        "rotationDeg": {
+          "yaw": 101.31,
+          "pitch": 1.12,
+          "roll": 0.0
+        },
+        "collisionFree": true
+      },
+      {
+        "step": 7,
+        "mode": "Surrounding",
+        "position": [
+          -7.5,
+          1.85,
+          -13.5
+        ],
+        "lookAt": [
+          0.0,
+          2.0,
+          -9.0
+        ],
+        "rotationDeg": {
+          "yaw": 59.04,
+          "pitch": 0.98,
+          "roll": 0.0
+        },
+        "collisionFree": true
+      },
+      {
+        "step": 8,
+        "mode": "Surrounding",
+        "position": [
+          -4.5,
+          1.85,
+          -16.5
+        ],
+        "lookAt": [
+          0.0,
+          2.0,
+          -9.0
+        ],
+        "rotationDeg": {
+          "yaw": 30.96,
+          "pitch": 0.98,
+          "roll": 0.0
+        },
+        "collisionFree": true
+      },
+      {
+        "step": 9,
+        "mode": "Surrounding",
+        "position": [
+          1.5,
+          1.85,
+          -16.5
+        ],
+        "lookAt": [
+          0.0,
+          2.0,
+          -9.0
+        ],
+        "rotationDeg": {
+          "yaw": -11.31,
+          "pitch": 1.12,
+          "roll": 0.0
+        },
+        "collisionFree": true
+      },
+      {
+        "step": 10,
+        "mode": "Surrounding",
+        "position": [
+          4.5,
+          1.85,
+          -16.5
+        ],
+        "lookAt": [
+          0.0,
+          2.0,
+          -9.0
+        ],
+        "rotationDeg": {
+          "yaw": -30.96,
+          "pitch": 0.98,
+          "roll": 0.0
+        },
+        "collisionFree": true
+      },
+      {
+        "step": 11,
+        "mode": "Surrounding",
+        "position": [
+          7.5,
+          1.85,
+          -13.5
+        ],
+        "lookAt": [
+          0.0,
+          2.0,
+          -9.0
+        ],
+        "rotationDeg": {
+          "yaw": -59.04,
+          "pitch": 0.98,
+          "roll": 0.0
+        },
+        "collisionFree": true
+      }
+    ],
+    "Reconstruct-Aware": [
+      {
+        "step": 0,
+        "mode": "Reconstruct-Aware",
+        "position": [
+          -4.5,
+          1.75,
+          -1.5
+        ],
+        "lookAt": [
+          0.0,
+          1.8,
+          -9.0
+        ],
+        "rotationDeg": {
+          "yaw": 149.04,
+          "pitch": 0.33,
+          "roll": 0.0
+        },
+        "collisionFree": true
+      },
+      {
+        "step": 1,
+        "mode": "Reconstruct-Aware",
+        "position": [
+          1.5,
+          1.75,
+          -1.5
+        ],
+        "lookAt": [
+          0.0,
+          1.8,
+          -9.0
+        ],
+        "rotationDeg": {
+          "yaw": -168.69,
+          "pitch": 0.37,
+          "roll": 0.0
+        },
+        "collisionFree": true
+      },
+      {
+        "step": 2,
+        "mode": "Reconstruct-Aware",
+        "position": [
+          4.5,
+          1.75,
+          -1.5
+        ],
+        "lookAt": [
+          0.0,
+          1.8,
+          -9.0
+        ],
+        "rotationDeg": {
+          "yaw": -149.04,
+          "pitch": 0.33,
+          "roll": 0.0
+        },
+        "collisionFree": true
+      },
+      {
+        "step": 3,
+        "mode": "Reconstruct-Aware",
+        "position": [
+          -7.5,
+          1.75,
+          -1.5
+        ],
+        "lookAt": [
+          -12.0,
+          1.8,
+          -6.0
+        ],
+        "rotationDeg": {
+          "yaw": -135.0,
+          "pitch": 0.45,
+          "roll": 0.0
+        },
+        "collisionFree": true
+      },
+      {
+        "step": 4,
+        "mode": "Reconstruct-Aware",
+        "position": [
+          -4.5,
+          1.75,
+          -1.5
+        ],
+        "lookAt": [
+          -12.0,
+          1.8,
+          -6.0
+        ],
+        "rotationDeg": {
+          "yaw": -120.96,
+          "pitch": 0.33,
+          "roll": 0.0
+        },
+        "collisionFree": true
+      },
+      {
+        "step": 5,
+        "mode": "Reconstruct-Aware",
+        "position": [
+          -4.5,
+          1.75,
+          -7.5
+        ],
+        "lookAt": [
+          -12.0,
+          1.8,
+          -6.0
+        ],
+        "rotationDeg": {
+          "yaw": -78.69,
+          "pitch": 0.37,
+          "roll": 0.0
+        },
+        "collisionFree": true
+      },
+      {
+        "step": 6,
+        "mode": "Reconstruct-Aware",
+        "position": [
+          4.5,
+          1.75,
+          -7.5
+        ],
+        "lookAt": [
+          12.0,
+          1.8,
+          -6.0
+        ],
+        "rotationDeg": {
+          "yaw": 78.69,
+          "pitch": 0.37,
+          "roll": 0.0
+        },
+        "collisionFree": true
+      },
+      {
+        "step": 7,
+        "mode": "Reconstruct-Aware",
+        "position": [
+          4.5,
+          1.75,
+          -1.5
+        ],
+        "lookAt": [
+          12.0,
+          1.8,
+          -6.0
+        ],
+        "rotationDeg": {
+          "yaw": 120.96,
+          "pitch": 0.33,
+          "roll": 0.0
+        },
+        "collisionFree": true
+      },
+      {
+        "step": 8,
+        "mode": "Reconstruct-Aware",
+        "position": [
+          7.5,
+          1.75,
+          -1.5
+        ],
+        "lookAt": [
+          12.0,
+          1.8,
+          -6.0
+        ],
+        "rotationDeg": {
+          "yaw": 135.0,
+          "pitch": 0.45,
+          "roll": 0.0
+        },
+        "collisionFree": true
+      },
+      {
+        "step": 9,
+        "mode": "Reconstruct-Aware",
+        "position": [
+          -4.5,
+          1.75,
+          7.5
+        ],
+        "lookAt": [
+          -12.0,
+          1.8,
+          9.0
+        ],
+        "rotationDeg": {
+          "yaw": -78.69,
+          "pitch": 0.37,
+          "roll": 0.0
+        },
+        "collisionFree": true
+      },
+      {
+        "step": 10,
+        "mode": "Reconstruct-Aware",
+        "position": [
+          -7.5,
+          1.75,
+          4.5
+        ],
+        "lookAt": [
+          -12.0,
+          1.8,
+          9.0
+        ],
+        "rotationDeg": {
+          "yaw": -45.0,
+          "pitch": 0.45,
+          "roll": 0.0
+        },
+        "collisionFree": true
+      },
+      {
+        "step": 11,
+        "mode": "Reconstruct-Aware",
+        "position": [
+          -10.5,
+          1.75,
+          1.5
+        ],
+        "lookAt": [
+          -12.0,
+          1.8,
+          9.0
+        ],
+        "rotationDeg": {
+          "yaw": -11.31,
+          "pitch": 0.37,
+          "roll": 0.0
+        },
+        "collisionFree": true
+      },
+      {
+        "step": 12,
+        "mode": "Reconstruct-Aware",
+        "position": [
+          10.5,
+          1.75,
+          1.5
+        ],
+        "lookAt": [
+          12.0,
+          1.8,
+          9.0
+        ],
+        "rotationDeg": {
+          "yaw": 11.31,
+          "pitch": 0.37,
+          "roll": 0.0
+        },
+        "collisionFree": true
+      },
+      {
+        "step": 13,
+        "mode": "Reconstruct-Aware",
+        "position": [
+          7.5,
+          1.75,
+          4.5
+        ],
+        "lookAt": [
+          12.0,
+          1.8,
+          9.0
+        ],
+        "rotationDeg": {
+          "yaw": 45.0,
+          "pitch": 0.45,
+          "roll": 0.0
+        },
+        "collisionFree": true
+      },
+      {
+        "step": 14,
+        "mode": "Reconstruct-Aware",
+        "position": [
+          4.5,
+          1.75,
+          7.5
+        ],
+        "lookAt": [
+          12.0,
+          1.8,
+          9.0
+        ],
+        "rotationDeg": {
+          "yaw": 78.69,
+          "pitch": 0.37,
+          "roll": 0.0
+        },
+        "collisionFree": true
+      }
+    ],
+    "Wandering": [
+      {
+        "step": 0,
+        "mode": "Wandering",
+        "position": [
+          1.5,
+          1.7,
+          1.5
+        ],
+        "lookAt": [
+          -16.5,
+          1.7,
+          -16.5
+        ],
+        "rotationDeg": {
+          "yaw": -135.0,
+          "pitch": 0.0,
+          "roll": 0.0
+        },
+        "collisionFree": true
+      },
+      {
+        "step": 1,
+        "mode": "Wandering",
+        "position": [
+          -16.5,
+          1.7,
+          -16.5
+        ],
+        "lookAt": [
+          -28.5,
+          1.7,
+          -28.5
+        ],
+        "rotationDeg": {
+          "yaw": -135.0,
+          "pitch": 0.0,
+          "roll": 0.0
+        },
+        "collisionFree": true
+      },
+      {
+        "step": 2,
+        "mode": "Wandering",
+        "position": [
+          -28.5,
+          1.7,
+          -28.5
+        ],
+        "lookAt": [
+          -10.5,
+          1.7,
+          -10.5
+        ],
+        "rotationDeg": {
+          "yaw": 45.0,
+          "pitch": 0.0,
+          "roll": 0.0
+        },
+        "collisionFree": true
+      },
+      {
+        "step": 3,
+        "mode": "Wandering",
+        "position": [
+          -10.5,
+          1.7,
+          -10.5
+        ],
+        "lookAt": [
+          4.5,
+          1.7,
+          7.5
+        ],
+        "rotationDeg": {
+          "yaw": 39.81,
+          "pitch": 0.0,
+          "roll": 0.0
+        },
+        "collisionFree": true
+      },
+      {
+        "step": 4,
+        "mode": "Wandering",
+        "position": [
+          4.5,
+          1.7,
+          7.5
+        ],
+        "lookAt": [
+          22.5,
+          1.7,
+          22.5
+        ],
+        "rotationDeg": {
+          "yaw": 50.19,
+          "pitch": 0.0,
+          "roll": 0.0
+        },
+        "collisionFree": true
+      },
+      {
+        "step": 5,
+        "mode": "Wandering",
+        "position": [
+          22.5,
+          1.7,
+          22.5
+        ],
+        "lookAt": [
+          22.5,
+          1.7,
+          25.5
+        ],
+        "rotationDeg": {
+          "yaw": 0.0,
+          "pitch": 0.0,
+          "roll": 0.0
+        },
+        "collisionFree": true
+      },
+      {
+        "step": 6,
+        "mode": "Wandering",
+        "position": [
+          22.5,
+          1.7,
+          25.5
+        ],
+        "lookAt": [
+          7.5,
+          1.7,
+          7.5
+        ],
+        "rotationDeg": {
+          "yaw": -140.19,
+          "pitch": 0.0,
+          "roll": 0.0
+        },
+        "collisionFree": true
+      },
+      {
+        "step": 7,
+        "mode": "Wandering",
+        "position": [
+          7.5,
+          1.7,
+          7.5
+        ],
+        "lookAt": [
+          -10.5,
+          1.7,
+          -10.5
+        ],
+        "rotationDeg": {
+          "yaw": -135.0,
+          "pitch": 0.0,
+          "roll": 0.0
+        },
+        "collisionFree": true
+      },
+      {
+        "step": 8,
+        "mode": "Wandering",
+        "position": [
+          -10.5,
+          1.7,
+          -10.5
+        ],
+        "lookAt": [
+          -28.5,
+          1.7,
+          -25.5
+        ],
+        "rotationDeg": {
+          "yaw": -129.81,
+          "pitch": 0.0,
+          "roll": 0.0
+        },
+        "collisionFree": true
+      },
+      {
+        "step": 9,
+        "mode": "Wandering",
+        "position": [
+          -28.5,
+          1.7,
+          -25.5
+        ],
+        "lookAt": [
+          -16.5,
+          1.7,
+          -16.5
+        ],
+        "rotationDeg": {
+          "yaw": 53.13,
+          "pitch": 0.0,
+          "roll": 0.0
+        },
+        "collisionFree": true
+      },
+      {
+        "step": 10,
+        "mode": "Wandering",
+        "position": [
+          -16.5,
+          1.7,
+          -16.5
+        ],
+        "lookAt": [
+          -1.5,
+          1.7,
+          1.5
+        ],
+        "rotationDeg": {
+          "yaw": 39.81,
+          "pitch": 0.0,
+          "roll": 0.0
+        },
+        "collisionFree": true
+      },
+      {
+        "step": 11,
+        "mode": "Wandering",
+        "position": [
+          -1.5,
+          1.7,
+          1.5
+        ],
+        "lookAt": [
+          16.5,
+          1.7,
+          13.5
+        ],
+        "rotationDeg": {
+          "yaw": 56.31,
+          "pitch": 0.0,
+          "roll": 0.0
+        },
+        "collisionFree": true
+      },
+      {
+        "step": 12,
+        "mode": "Wandering",
+        "position": [
+          16.5,
+          1.7,
+          13.5
+        ],
+        "lookAt": [
+          31.5,
+          1.7,
+          28.5
+        ],
+        "rotationDeg": {
+          "yaw": 45.0,
+          "pitch": 0.0,
+          "roll": 0.0
+        },
+        "collisionFree": true
+      },
+      {
+        "step": 13,
+        "mode": "Wandering",
+        "position": [
+          31.5,
+          1.7,
+          28.5
+        ],
+        "lookAt": [
+          1.5,
+          1.7,
+          1.5
+        ],
+        "rotationDeg": {
+          "yaw": -131.99,
+          "pitch": 0.0,
+          "roll": 0.0
+        },
+        "collisionFree": true
+      }
+    ],
+    "Aerial": [
+      {
+        "step": 0,
+        "mode": "Aerial",
+        "position": [
+          0.0,
+          13.5,
+          0.0
+        ],
+        "lookAt": [
+          0.0,
+          1.2,
+          -3.0
+        ],
+        "rotationDeg": {
+          "yaw": 180.0,
+          "pitch": -76.29,
+          "roll": 0.0
+        },
+        "collisionFree": true
+      },
+      {
+        "step": 1,
+        "mode": "Aerial",
+        "position": [
+          13.119,
+          13.118,
+          15.407
+        ],
+        "lookAt": [
+          0.0,
+          1.2,
+          -3.0
+        ],
+        "rotationDeg": {
+          "yaw": -144.52,
+          "pitch": -27.8,
+          "roll": 0.0
+        },
+        "collisionFree": true
+      },
+      {
+        "step": 2,
+        "mode": "Aerial",
+        "position": [
+          21.228,
+          12.118,
+          9.522
+        ],
+        "lookAt": [
+          0.0,
+          1.2,
+          -3.0
+        ],
+        "rotationDeg": {
+          "yaw": -120.54,
+          "pitch": -23.89,
+          "roll": 0.0
+        },
+        "collisionFree": true
+      },
+      {
+        "step": 3,
+        "mode": "Aerial",
+        "position": [
+          21.228,
+          10.882,
+          -9.522
+        ],
+        "lookAt": [
+          0.0,
+          1.2,
+          -3.0
+        ],
+        "rotationDeg": {
+          "yaw": -72.92,
+          "pitch": -23.56,
+          "roll": 0.0
+        },
+        "collisionFree": true
+      },
+      {
+        "step": 4,
+        "mode": "Aerial",
+        "position": [
+          13.119,
+          9.882,
+          -15.407
+        ],
+        "lookAt": [
+          0.0,
+          1.2,
+          -3.0
+        ],
+        "rotationDeg": {
+          "yaw": -46.6,
+          "pitch": -25.68,
+          "roll": 0.0
+        },
+        "collisionFree": true
+      },
+      {
+        "step": 5,
+        "mode": "Aerial",
+        "position": [
+          0.0,
+          9.5,
+          -0.0
+        ],
+        "lookAt": [
+          0.0,
+          1.2,
+          -3.0
+        ],
+        "rotationDeg": {
+          "yaw": -180.0,
+          "pitch": -70.13,
+          "roll": 0.0
+        },
+        "collisionFree": true
+      },
+      {
+        "step": 6,
+        "mode": "Aerial",
+        "position": [
+          -13.119,
+          9.882,
+          15.407
+        ],
+        "lookAt": [
+          0.0,
+          1.2,
+          -3.0
+        ],
+        "rotationDeg": {
+          "yaw": 144.52,
+          "pitch": -21.01,
+          "roll": 0.0
+        },
+        "collisionFree": true
+      },
+      {
+        "step": 7,
+        "mode": "Aerial",
+        "position": [
+          -21.228,
+          10.882,
+          9.522
+        ],
+        "lookAt": [
+          0.0,
+          1.2,
+          -3.0
+        ],
+        "rotationDeg": {
+          "yaw": 120.54,
+          "pitch": -21.45,
+          "roll": 0.0
+        },
+        "collisionFree": true
+      },
+      {
+        "step": 8,
+        "mode": "Aerial",
+        "position": [
+          -21.228,
+          12.118,
+          -9.522
+        ],
+        "lookAt": [
+          0.0,
+          1.2,
+          -3.0
+        ],
+        "rotationDeg": {
+          "yaw": 72.92,
+          "pitch": -26.18,
+          "roll": 0.0
+        },
+        "collisionFree": true
+      },
+      {
+        "step": 9,
+        "mode": "Aerial",
+        "position": [
+          -13.119,
+          13.118,
+          -15.407
+        ],
+        "lookAt": [
+          0.0,
+          1.2,
+          -3.0
+        ],
+        "rotationDeg": {
+          "yaw": 46.6,
+          "pitch": -33.43,
+          "roll": 0.0
+        },
+        "collisionFree": true
+      }
+    ]
+  }
+}

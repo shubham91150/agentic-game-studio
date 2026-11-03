@@ -1,0 +1,204 @@
+{
+  "ok": true,
+  "schemaVersion": "2.0.0",
+  "pipeline": "MetaWorld 2.0 \u2014 4-Stage Navigable 3D World Pipeline",
+  "architectureReference": "HY-World 2.0 4-Stage (Panorama -> WorldNav -> WorldStereo -> WorldMirror/WorldLens), 100% Meta-Compliant",
+  "compliance": {
+    "metaModelsOnly": true,
+    "zeroNonMetaProprietaryModels": true,
+    "modelsUsed": [
+      "muse-image-1.0 (Stage I Panorama/Visual Seed)",
+      "sam-3.1 (Stage II WorldNav Semantic Landmarks)",
+      "facebook/VGGT-1B (Stage IV Metric 3D Surface Reconstruction)",
+      "meta-scenescript (Stage IV CSG Watertight Architectural Proxy)"
+    ]
+  },
+  "title": "St. Vermilion Gothic Cloister Courtyard",
+  "prompt": "gothic convent courtyard",
+  "preset": "gothic",
+  "createdAt": "2026-11-03T14:39:02.682482+00:00",
+  "totalElapsedSec": 2.565,
+  "stages": {
+    "stage1_panorama": {
+      "stage": "I_Panorama_Seed",
+      "model": "muse-image-1.0",
+      "mode": "cached_seed",
+      "sourceImage": "storage/.uploads/ref-stvermilion-world.webp",
+      "panoImage": "public/assets/custom/metaworld2/stage1_seed_pano.png",
+      "panoWebUrl": "/studio/assets/custom/metaworld2/stage1_seed_pano.png",
+      "resolution": "1920x1280",
+      "aspectRatio": 1.5,
+      "hdriLightingSeed": "polyhaven:moonless_golf_1k",
+      "threejsSkybox": {
+        "mapping": "THREE.EquirectangularReflectionMapping",
+        "cubeRenderTargetSize": 512
+      },
+      "elapsedSec": 1.138
+    },
+    "stage2_worldnav": {
+      "stage": "II_WorldNav_Semantics_And_Trajectories",
+      "semanticDetector": "sam-3.1 (Meta Model API + 2D->3D back-projection)",
+      "objectsJson": "public/assets/custom/metaworld2/objects.json",
+      "navmeshJson": "public/assets/custom/metaworld2/navmesh.json",
+      "landmarkCount": 5,
+      "bfsReachabilityPassed": true,
+      "walkableCells": 556,
+      "trajectoryModes": [
+        "Regular",
+        "Surrounding",
+        "Reconstruct-Aware",
+        "Wandering",
+        "Aerial"
+      ],
+      "waypointCounts": {
+        "Regular": 9,
+        "Surrounding": 12,
+        "Reconstruct-Aware": 15,
+        "Wandering": 14,
+        "Aerial": 10
+      },
+      "elapsedSec": 0.031
+    },
+    "stage3_worldstereo": {
+      "stage": "III_WorldStereo_Geometric_And_NovelView_Expansion",
+      "depthBackend": "metric-horizon-disparity-fast",
+      "depthPng": "public/assets/custom/metaworld2/stage3_depth.png",
+      "novelViews": {
+        "leftStereo": "public/assets/custom/metaworld2/stage3_novel_left.png",
+        "rightStereo": "public/assets/custom/metaworld2/stage3_novel_right.png",
+        "inpaintMethod": "cv2-telea"
+      },
+      "pluckerRayConditioning": {
+        "representation": "6D Plucker Rays (m = o x d, d)",
+        "keyframeSampleCount": 4,
+        "samples": [
+          {
+            "step": 0,
+            "direction": [
+              0.7071,
+              -0.0059,
+              -0.7071
+            ],
+            "moment": [
+              -1.1048,
+              12.7277,
+              -1.2109
+            ]
+          },
+          {
+            "step": 1,
+            "direction": [
+              0.2425,
+              -0.004,
+              -0.9701
+            ],
+            "moment": [
+              -1.6068,
+              9.8226,
+              -0.4426
+            ]
+          },
+          {
+            "step": 2,
+            "direction": [
+              -0.4472,
+              -0.0037,
+              -0.8944
+            ],
+            "moment": [
+              -1.5261,
+              10.0622,
+              0.7211
+            ]
+          },
+          {
+            "step": 3,
+            "direction": [
+              -0.7071,
+              -0.0118,
+              -0.7071
+            ],
+            "moment": [
+              -1.3611,
+              12.727,
+              1.149
+            ]
+          }
+        ]
+      },
+      "elapsedSec": 0.819
+    },
+    "stage4_worldmirror": {
+      "stage": "IV_WorldMirror_3D_Composition_And_WorldLens",
+      "vggtSurfaceMesh": {
+        "path": "public/assets/custom/metaworld2/vggt_surface.glb",
+        "webUrl": "/studio/assets/custom/metaworld2/vggt_surface.glb",
+        "backend": "local",
+        "bytes": 436160,
+        "vertices": 11008,
+        "faces": 21590
+      },
+      "gaussianSplatCloud": {
+        "out": "public/assets/custom/metaworld2/world_3dgs.splat",
+        "webUrl": "/studio/assets/custom/metaworld2/world_3dgs.splat",
+        "rawCandidates": 27880,
+        "keptSplats": 22985,
+        "prunedSkyAndOutliers": 4895,
+        "pruningMethod": "MaskGaussian (sky-band disparity + depth-gradient confidence pruning)",
+        "bytesPerSplat": 32,
+        "splatBytes": 735520
+      },
+      "collisionProxyGlb": {
+        "path": "public/assets/custom/metaworld2/collision_proxy.glb",
+        "webUrl": "/studio/assets/custom/metaworld2/collision_proxy.glb",
+        "bytes": 15956,
+        "walls": 4,
+        "csgBooleanOpenings": 8
+      },
+      "wfcCourtyardGlb": {
+        "path": "public/assets/custom/metaworld2/wfc_courtyard_addon.glb",
+        "webUrl": "/studio/assets/custom/metaworld2/wfc_courtyard_addon.glb",
+        "bytes": 56848,
+        "grid": "6x6"
+      },
+      "elapsedSec": 0.573
+    }
+  },
+  "worldLens": {
+    "description": "Ready-to-mount Three.js WorldRealism configuration (WorldLens PBR + IBL + 3DGS + Collision Proxy)",
+    "skyboxPanoramaUrl": "/studio/assets/custom/metaworld2/stage1_seed_pano.png",
+    "gaussianSplatUrl": "/studio/assets/custom/metaworld2/world_3dgs.splat",
+    "vggtSurfaceGlbUrl": "/studio/assets/custom/metaworld2/vggt_surface.glb",
+    "collisionProxyGlbUrl": "/studio/assets/custom/metaworld2/collision_proxy.glb",
+    "wfcCourtyardGlbUrl": "/studio/assets/custom/metaworld2/wfc_courtyard_addon.glb",
+    "navmeshUrl": "/studio/assets/custom/metaworld2/navmesh.json",
+    "masterpieceOptions": {
+      "bloom": {
+        "strength": 0.62,
+        "radius": 0.48,
+        "threshold": 0.68
+      },
+      "grade": {
+        "shadow": [
+          0.03,
+          0.06,
+          0.12
+        ],
+        "highlight": [
+          0.95,
+          0.84,
+          0.68
+        ],
+        "vignette": 0.38
+      },
+      "env": {
+        "top": 3886443,
+        "mid": 1975864,
+        "bottom": 461070
+      },
+      "contactShadow": {
+        "opacity": 0.62
+      }
+    }
+  }
+}

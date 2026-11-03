@@ -1,6 +1,6 @@
 ---
 name: 3d-asset-and-world-tools
-description: Native studio-3d-tools MCP (15 tools) and CLI tools for PartNet/ShapeNet, Blender Pro/AutoRig, 3DGS, OSM 3D City, SceneScript+WFC, VGGT, MusicGen, Muse Voice Transcribe, Objaverse, BlenderKit, PolyHaven, ambientCG, and Visual QA.
+description: Native studio-3d-tools MCP (18 tools) and CLI tools for MetaWorld 2.0 (4-stage 3D world pipeline), PartNet/ShapeNet, Blender Pro/AutoRig, 3DGS, OSM 3D City, SceneScript+WFC, VGGT, MusicGen, Muse Voice Transcribe, Mega 3D Hub, Elite Imagination Engine, and Visual QA.
 type: project
 ---
 
@@ -8,7 +8,7 @@ type: project
 
 ## 1. First-Class MCP Server (`studio-3d-tools`)
 
-Registered in `~/.config/muse/settings.json` (`src/tools/studio_3d_mcp_server.py`), exposing **15 native MCP tools**:
+Registered in `~/.config/muse/settings.json` (`src/tools/studio_3d_mcp_server.py`), exposing **18 native MCP tools**:
 
 - `partnet_shapenet_build`: Inspect or synthesize multi-part CAD-accurate `.glb` assets from PartNet part-hierarchies & ShapeNet metric dimensions (`bazaar_stall`, `sports_car`, `commercial_building`, `streetlamp`).
 - `blender_pro_generate`: Run Blender 3.4 built-in & procedural generators (`sapling_tree` oak/pine/willow, `arch_building` multi-floor Archimesh building, `landscape` canyon/mountain/hills, `jalebi_spiral_stack` Sverchok/Sorcar parametric coiled pyramid on brass platter, `carved_brick_arch` Erindale-style Lucknow/Mughal brick arch).
@@ -25,6 +25,9 @@ Registered in `~/.config/muse/settings.json` (`src/tools/studio_3d_mcp_server.py
 - `gltf_transform_optimize`: Optimize any `.glb` 3D model using `@gltf-transform/core` + `@gltf-transform/functions` (dedup, weld, prune, center pivot).
 - `run_visual_qa_gate`: Run `node src/verifier/visual_qa_gate.js` on `public/live-preview`.
 - `meta_voice_transcribe`: Transcribe spoken voice prompts or game audio clips into text using Meta's official `muse-voice-transcribe-1.0` model (`POST /v1/asr/transcribe` and `muse voice transcribe`).
+- `mega_3d_hub_search_and_fetch`: Search & download CC0/free `.glb` 3D models across 825,000+ assets (Smithsonian Open Access 3D Laser Scans, Khronos Official glTF Showcase, Polyhaven, BlenderKit).
+- `elite_imagination_engine`: Generate Hitman clockwork stealth/distraction + Resident Evil multi-step puzzle + Hello Neighbor 2 adaptive AI & 12 micro-detail layer blueprints via Meta Muse Spark Open.
+- `meta_world_2_generate`: Run the **MetaWorld 2.0 — 4-Stage Navigable 3D World Pipeline** (`src/tools/meta_world_2_pipeline.py`): Stage I Panorama/Seed (`muse-image-1.0`) -> Stage II `WorldNav` (`sam-3.1` landmarks `objects.json` + BFS-verified NavMesh `navmesh.json` + 5 collision-checked trajectory modes: `Regular`, `Surrounding`, `Reconstruct-Aware`, `Wandering` via Dijkstra farthest-node, and `Aerial`) -> Stage III `WorldStereo` depth + 6D Plücker rays + stereo novel views -> Stage IV `WorldMirror` (`facebook/VGGT-1B` surface `.glb` + MaskGaussian-pruned 3DGS `.splat` + SceneScript/WFC watertight collision `.glb` + `metaworld2_manifest.json` for `WorldRealism.enableMasterpieceRendering`).
 
 ## 2. Direct CLI Commands (Equivalents)
 

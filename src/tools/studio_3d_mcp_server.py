@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Studio 3D & World Generation MCP Server (stdio JSON-RPC 2.0).
 
-Exposes Agentic Game Studio's 15 real 3D, World, Audio, Voice, and QA tools:
+Exposes Agentic Game Studio's 18 real 3D, World, Audio, Voice, and QA tools:
   1. partnet_shapenet_build
   2. blender_pro_generate
   3. blender_autorig_animate
@@ -17,6 +17,9 @@ Exposes Agentic Game Studio's 15 real 3D, World, Audio, Voice, and QA tools:
   13. gltf_transform_optimize
   14. run_visual_qa_gate
   15. meta_voice_transcribe
+  16. mega_3d_hub_search_and_fetch
+  17. elite_imagination_engine
+  18. meta_world_2_generate
 """
 import json
 import os
@@ -263,6 +266,35 @@ TOOLS = [
             "required": ["prompt"],
         },
     },
+    {
+        "name": "meta_world_2_generate",
+        "description": "Run the 4-stage MetaWorld 2.0 Navigable 3D World Pipeline (Stage I Muse Image Panorama Seed -> Stage II WorldNav SAM 3.1 Landmarks + NavMesh + 5 Collision-Checked Trajectory Modes [Regular, Surrounding, Reconstruct-Aware, Wandering Dijkstra, Aerial] -> Stage III WorldStereo Depth & Novel Views -> Stage IV WorldMirror Meta VGGT-1B Mesh + MaskGaussian 3DGS .splat + SceneScript/WFC Watertight Collision .glb + WorldLens Three.js Manifest).",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "prompt": {"type": "string", "description": "Text prompt describing the 3D world (e.g. 'gothic convent courtyard')"},
+                "preset": {
+                    "type": "string",
+                    "enum": ["gothic", "bazaar", "cyber", "island"],
+                    "description": "Architectural & lighting preset (default 'gothic')",
+                },
+                "out_dir": {
+                    "type": "string",
+                    "description": "Output directory relative to repo root (default 'public/assets/custom/metaworld2')",
+                },
+                "vggt_backend": {
+                    "type": "string",
+                    "enum": ["local", "modal"],
+                    "description": "Meta VGGT-1B reconstruction backend ('local' or 'modal')",
+                },
+                "fast": {
+                    "type": "boolean",
+                    "description": "Fast mode using cached seed/depth for instant end-to-end 3D world build (default true)",
+                },
+            },
+            "required": ["prompt"],
+        },
+    },
 ]
 
 
@@ -436,6 +468,26 @@ def handle_call(name: str, args: dict) -> str:
         prompt = str(args.get("prompt", "gothic convent stealth horror"))
         archetype = str(args.get("archetype", "hitman+resident-evil+hello-neighbor"))
         return run_cmd(["node", "src/tools/elite_imagination_engine.js", "--prompt", prompt, "--archetype", archetype], timeout=60)
+    if name == "meta_world_2_generate":
+        prompt = str(args.get("prompt", "gothic convent courtyard"))
+        preset = str(args.get("preset", "gothic"))
+        out_dir = str(args.get("out_dir", "public/assets/custom/metaworld2"))
+        vggt_backend = str(args.get("vggt_backend", "local"))
+        cmd = [
+            "python3",
+            "src/tools/meta_world_2_pipeline.py",
+            "--prompt",
+            prompt,
+            "--preset",
+            preset,
+            "--out-dir",
+            out_dir,
+            "--vggt-backend",
+            vggt_backend,
+        ]
+        if args.get("fast", True):
+            cmd.append("--fast")
+        return run_cmd(cmd, timeout=180)
     return f"Unknown tool: {name}"
 
 

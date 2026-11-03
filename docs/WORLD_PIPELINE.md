@@ -146,9 +146,35 @@ loader.load("/studio/uploads/<game>_sky.webp", function (tex) {
 `THREE.TextureLoader` ✅ PRESENT,
 `WebGLCubeRenderTarget.fromEquirectangularTexture` ✅ PRESENT,
 `Scene.background` (texture/cube path) ✅ PRESENT.
-⚠️ The one-liner `texture.mapping = THREE.EquirectangularReflectionMapping;
-scene.background = texture` does **NOT** 360-render on this vendored r128 —
-a plain Texture background draws as a flat fullscreen quad (renderer branch
-verified in the vendor bundle). Use the cube-conversion snippet above for
-the preview; the direct-assignment pattern applies only if the preview ever
-upgrades to the modern three in `node_modules` (^0.186.1).
+
+## 10. MetaWorld 2.0 — Unified 4-Stage Navigable 3D World Pipeline (`src/tools/meta_world_2_pipeline.py` — LIVE)
+
+Inspired by the 4-stage architecture of HY-World 2.0 (arXiv:2604.14268), implemented **100% with Meta AI models and open-source 3D geometry tools** (ZERO non-Meta proprietary models) and exposed as MCP Tool #18 (`meta_world_2_generate`) in `src/tools/studio_3d_mcp_server.py`:
+
+```bash
+python3 src/tools/meta_world_2_pipeline.py \
+    --prompt "gothic convent courtyard" \
+    --preset gothic \
+    --fast \
+    --out-dir public/assets/custom/metaworld2
+```
+
+### The 4 Stages (Verified End-to-End):
+
+1. **Stage I — Panorama & Visual Seed (`HY-Pano` equivalent)**:
+   - Uses **Meta Muse Image 1.0** (`src/tools/make-image.js`) or cached visual/equirectangular seed (`storage/.uploads/ref-stvermilion-world.webp` / `sunrise_valley.jpg`) + Polyhaven HDRI lighting seed (`stage1_seed_pano.png`).
+2. **Stage II — `WorldNav` Semantic Landmarks, 2D/3D NavMesh & 5 Collision-Checked Trajectory Modes**:
+   - Uses **Meta SAM 3.1** (`src/tools/segment_image.py` / cached wire masks) + 2D-to-3D back-projection to emit `objects.json`.
+   - Builds a 2D/3D traversable NavMesh grid (`navmesh.json`) with **BFS flood-fill reachability verification** (`reachabilityRatio: 1.0`) and generates all **5 collision-checked camera/patrol trajectory modes**:
+     - `Regular`: Smooth promenade & grand courtyard loop with tangent-aligned yaw.
+     - `Surrounding`: 360-degree orbital inspection around the primary focal landmark.
+     - `Reconstruct-Aware`: Multi-baseline stereo views weaving around landmark occlusion boundaries.
+     - `Wandering`: **Dijkstra farthest-node graph traversal** across the walkable NavMesh.
+     - `Aerial`: Elevated bird's-eye figure-8 sweep pitched downward toward the courtyard.
+3. **Stage III — `WorldStereo` Geometric & Novel-View World Expansion**:
+   - Runs monocular depth (`src/tools/depth_map.py` -> `stage3_depth.png`), computes **6D Plücker ray camera embeddings** `(m = o x d, d)` along the planned keyframes, and synthesizes left/right disparity-warped stereo novel views (`stage3_novel_left.png`, `stage3_novel_right.png` via `src/tools/novel_view.py`).
+4. **Stage IV — `WorldMirror` 3D Composition & `WorldLens` Manifest**:
+   - **Meta VGGT-1B** metric 3D surface mesh (`vggt_surface.glb` via `src/tools/meta_vggt_scene.py`).
+   - **MaskGaussian-pruned 3D Gaussian Splatting** (`world_3dgs.splat` — 32-byte standard binary splat cloud with sky-band disparity & depth-gradient curtain pruning).
+   - **Meta SceneScript CSG + WFC Watertight Collision Proxy** (`collision_proxy.glb` + `wfc_courtyard_addon.glb` via `src/tools/scenescript_wfc_world.py`).
+   - **Unified `metaworld2_manifest.json`** (`WorldLens` configuration ready for `WorldRealism.enableMasterpieceRendering` + `WorldRealism.loadGaussianSplat` + `WorldRealism.loadGlbModel`).
