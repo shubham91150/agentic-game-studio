@@ -45,6 +45,7 @@ MemoryCaptures/
 Thumbs.db
 
 storage/.work/
+storage/.judge-runs/
 
 # agent skill installs (local tooling, not the product)
 /skills/

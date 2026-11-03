@@ -11,6 +11,7 @@
  *   GET  /api/studio/games/:id            -> single game manifest
  *   POST /api/studio/generate             -> SSE stream of agent events
  *   GET  /studio/games/:id/index.html     -> play a stored game
+ *   GET  /studio/judge-games/:id/*         -> play an ephemeral judge build
  *   GET  /api/studio/export/unity/:id     -> download a Unity C# script
  *   GET  /api/studio/download             -> download the current live-preview game as a .zip
  */
@@ -36,6 +37,9 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT_DIR = path.resolve(__dirname, "..");
 const PUBLIC_DIR = path.join(ROOT_DIR, "public");
 const STORAGE_DIR = path.join(ROOT_DIR, "storage", "games");
+// Ephemeral public-judge builds land here — never in STORAGE_DIR — so the
+// official library stays clean no matter how many test games judges build.
+const JUDGE_RUNS_DIR = path.join(ROOT_DIR, "storage", ".judge-runs");
 const CHATS_DIR = path.join(ROOT_DIR, "storage", "chats");
 const execFileAsync = promisify(execFileCb);
 
@@ -195,6 +199,10 @@ export function enrichStudioPrompt(prompt, opts) {
 const JUDGE_BUILD_MAX = 6;
 const JUDGE_BUILD_WINDOW_MS = 10 * 60 * 1000;
 const judgeBuildHits = new Map();
+// VM RAM/CPU protection: at most 1 concurrent non-owner sandbox build.
+// (Single-instance in-memory mutex; a multi-instance deploy would need a
+// shared store. Decremented in the generate handler's finally block.)
+let activeJudgeBuildCount = 0;
 function judgeClientIp(req) {
   const fwd = String((req.headers && req.headers["x-forwarded-for"]) || "")
     .split(",")[0]
@@ -1787,6 +1795,26 @@ const server = http.createServer(async (req, res) => {
     return sendFile(res, target);
   }
 
+  // ---------- Ephemeral judge builds (zero library pollution) ----------
+  // Serves storage/.judge-runs/<id>/<file> exactly like /studio/games/:
+  // read-only, path-contained, public so judges can play their own build
+  // in #game-frame. The official library is never listed or touched here.
+  const judgeGameMatch = pathname.match(
+    /^\/studio\/judge-games\/([\w-]+)\/(.+)$/,
+  );
+  if (judgeGameMatch && req.method === "GET") {
+    const target = path.resolve(
+      JUDGE_RUNS_DIR,
+      judgeGameMatch[1],
+      judgeGameMatch[2],
+    );
+    if (!target.startsWith(path.resolve(JUDGE_RUNS_DIR) + path.sep)) {
+      res.writeHead(403, { "content-type": "text/plain" });
+      return res.end("Forbidden");
+    }
+    return sendFile(res, target);
+  }
+
   // ---------- File upload for prompt attachments (raw bytes) ----------
   // POST /api/studio/upload?name=foo.png with Content-Type:
   // application/octet-stream. Max 10MB. Files land in storage/.uploads
@@ -2481,13 +2509,15 @@ const server = http.createServer(async (req, res) => {
       // Sandbox: judges get zero host-filesystem/attachment access. The CLI
       // still runs at full power, but only inside Google gVisor (runsc).
       // (The generate flow never writes public/live-preview/ anyway: the
-      // done event's playUrl points at the saved library game.)
+      // done event's playUrl points at the ephemeral judge run, and the
+      // official library is never touched.)
       const attachments = sandboxed ? [] : ownerAttachments;
 
       if (!prompt.trim()) {
         return json(res, 400, { error: "A game prompt is required." });
       }
 
+      let judgeSlotTaken = false;
       if (sandboxed) {
         const verdict = judgeBuildAllowed(judgeClientIp(req));
         if (!verdict.allowed) {
@@ -2498,6 +2528,16 @@ const server = http.createServer(async (req, res) => {
             retryAfter: verdict.retryAfter,
           });
         }
+        // Max 1 concurrent non-owner build: gVisor CLI runs are heavy, and
+        // overlapping builds would thrash the VM's RAM/CPU for judges.
+        if (activeJudgeBuildCount >= 1) {
+          return json(res, 429, {
+            error:
+              "A sandbox build is currently in progress; please retry in a few seconds.",
+          });
+        }
+        activeJudgeBuildCount += 1;
+        judgeSlotTaken = true;
       }
 
       res.writeHead(200, {
@@ -2548,6 +2588,7 @@ const server = http.createServer(async (req, res) => {
           attachments,
           skipSubprocessCli: !sandboxed && Boolean(payload.skipSubprocessCli),
           useGvisor: sandboxed,
+          ephemeralJudgeRun: sandboxed,
         });
         if (!result.ok) {
           emit({ type: "done", ok: false, at: Date.now() });
@@ -2556,6 +2597,9 @@ const server = http.createServer(async (req, res) => {
         emit({ type: "error", message: "Agent run failed.", at: Date.now() });
         emit({ type: "done", ok: false, at: Date.now() });
       } finally {
+        if (judgeSlotTaken) {
+          activeJudgeBuildCount = Math.max(0, activeJudgeBuildCount - 1);
+        }
         clearInterval(heartbeat);
         if (!res.writableEnded) res.end();
       }

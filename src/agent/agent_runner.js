@@ -525,8 +525,13 @@ export class AgentRunner {
    * @returns {Promise<{ok: boolean, gameId?: string, playUrl?: string, spec?: object}>}
    */
   async run(rawPrompt, opts = {}) {
-    // opts: { model?: string (CLI model id, allowlisted), attachments?: Array<{name, path}>, useGvisor?: boolean }
-    const cliModel = resolveCliModel(opts.model);
+    // opts: { model?: string (CLI model id, allowlisted), attachments?: Array<{name, path}>, useGvisor?: boolean, ephemeralJudgeRun?: boolean }
+    // Ephemeral judge runs default to the cheaper contributor model so
+    // judge tests never burn Wonder credits on the flagship default.
+    const cliModel =
+      opts.ephemeralJudgeRun === true && opts.model == null
+        ? "muse-spark-1.3-contributor"
+        : resolveCliModel(opts.model);
     const attachments = Array.isArray(opts.attachments) ? opts.attachments : [];
     const startedAt = Date.now();
     this.emit({ type: "start", prompt: rawPrompt, at: startedAt });
@@ -959,9 +964,22 @@ export class AgentRunner {
       "local math",
     );
 
-    // ---------------- Step 6: Persist to library ----------------
-    this.phase("store", "Persistent game library", "running", "", "vm disk");
-    const saved = await this.gameStore.saveGame(
+    // ---------------- Step 6: Persist (library, or ephemeral judge run) ----
+    // Ephemeral judge runs save into storage/.judge-runs/ — the official
+    // library (storage/games/index.json) is never polluted by judge tests.
+    const ephemeralJudgeRun = opts.ephemeralJudgeRun === true;
+    const store = ephemeralJudgeRun
+      ? new GameStorageManager(
+          path.join(this.workspaceDir, "storage", ".judge-runs"),
+          "/studio/judge-games",
+        )
+      : this.gameStore;
+    const playBase = ephemeralJudgeRun ? "/studio/judge-games" : "/studio/games";
+    const storeLabel = ephemeralJudgeRun
+      ? "Ephemeral judge run (no library write)"
+      : "Persistent game library";
+    this.phase("store", storeLabel, "running", "", "vm disk");
+    const saved = await store.saveGame(
       spec,
       worldData,
       gameHtml,
@@ -970,17 +988,22 @@ export class AgentRunner {
       conceptImage,
       gameJs,
     );
-    this.phase("store", "Persistent game library", "pass", saved.id, "vm disk");
-    this.log("ok", `Game stored in the library: ${saved.id}`);
+    this.phase("store", storeLabel, "pass", saved.id, "vm disk");
+    this.log(
+      "ok",
+      ephemeralJudgeRun
+        ? `Ephemeral judge game stored (library untouched): ${saved.id}`
+        : `Game stored in the library: ${saved.id}`,
+    );
 
     const elapsedMs = Date.now() - startedAt;
     this.emit({
       type: "done",
       ok: true,
       gameId: saved.id,
-      playUrl: `/studio/games/${saved.id}/index.html`,
+      playUrl: `${playBase}/${saved.id}/index.html`,
       imageUrl: conceptImage
-        ? `/studio/games/${saved.id}/assets/concept.webp`
+        ? `${playBase}/${saved.id}/assets/concept.webp`
         : null,
       title: saved.title,
       unitySource,
@@ -991,7 +1014,7 @@ export class AgentRunner {
     return {
       ok: true,
       gameId: saved.id,
-      playUrl: `/studio/games/${saved.id}/index.html`,
+      playUrl: `${playBase}/${saved.id}/index.html`,
       unitySource,
       spec,
     };

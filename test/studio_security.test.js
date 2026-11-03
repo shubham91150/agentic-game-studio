@@ -25,6 +25,7 @@ const SCRATCH = `ags-sec-${process.pid}`;
 const SECRET = "sec-test-only-secret";
 const CHATS = path.join(ROOT, "storage", "chats");
 const GAMES = path.join(ROOT, "storage", "games");
+const JUDGE_RUNS = path.join(ROOT, "storage", ".judge-runs");
 const UPLOADS = path.join(ROOT, "storage", ".uploads");
 const LIVE = path.join(ROOT, "public", "live-preview");
 const LIVE_BACKUP = path.join(os.tmpdir(), `ags-sec-live-${process.pid}`);
@@ -40,6 +41,9 @@ const OWNER_ERR =
 let server = null;
 let beforeChats = new Set();
 let beforeGames = new Set();
+let beforeJudgeRuns = new Set();
+let judgeIndexBackup = null;
+let judgeIndexExisted = false;
 let beforeUploads = new Set();
 let indexBackup = "[]";
 let mcpBackup = null;
@@ -154,6 +158,19 @@ before(async () => {
   }
   beforeChats = new Set(fs.readdirSync(CHATS));
   beforeGames = new Set(fs.readdirSync(GAMES));
+  beforeJudgeRuns = new Set(
+    fs.existsSync(JUDGE_RUNS) ? fs.readdirSync(JUDGE_RUNS) : [],
+  );
+  try {
+    judgeIndexBackup = fs.readFileSync(
+      path.join(JUDGE_RUNS, "index.json"),
+      "utf8",
+    );
+    judgeIndexExisted = true;
+  } catch {
+    judgeIndexBackup = null;
+    judgeIndexExisted = false;
+  }
   beforeUploads = new Set(fs.readdirSync(UPLOADS));
   indexBackup = fs.readFileSync(path.join(GAMES, "index.json"), "utf8");
   try {
@@ -205,6 +222,20 @@ after(async () => {
         }
       }
       fs.writeFileSync(path.join(GAMES, "index.json"), indexBackup);
+    },
+    () => {
+      if (!fs.existsSync(JUDGE_RUNS)) return;
+      for (const f of fs.readdirSync(JUDGE_RUNS)) {
+        if (!beforeJudgeRuns.has(f)) {
+          fs.rmSync(path.join(JUDGE_RUNS, f), {
+            recursive: true,
+            force: true,
+          });
+        }
+      }
+      const idx = path.join(JUDGE_RUNS, "index.json");
+      if (judgeIndexExisted) fs.writeFileSync(idx, judgeIndexBackup);
+      else fs.rmSync(idx, { force: true });
     },
     () => {
       for (const f of fs.readdirSync(UPLOADS)) {
@@ -361,7 +392,7 @@ function readSandboxStream(prompt) {
   });
 }
 
-test("visitor generate → sandboxed SSE build, zero VM writes", async () => {
+test("visitor generate → sandboxed SSE build, zero VM writes, zero library pollution", async () => {
   const fixture = path.join(
     ROOT,
     "storage",
@@ -392,20 +423,55 @@ test("visitor generate → sandboxed SSE build, zero VM writes", async () => {
   assert.ok(done && done.ok, "build completed");
   assert.match(
     String(done.playUrl || ""),
-    /^\/studio\/games\/[\w-]+\/index\.html$/,
+    /^\/studio\/judge-games\/[\w-]+\/index\.html$/,
   );
   assert.deepEqual(liveSnapshot(), before, "sandbox never writes live-preview");
+  assert.equal(
+    fs.readFileSync(path.join(GAMES, "index.json"), "utf8"),
+    indexBackup,
+    "judge builds never pollute the official library index",
+  );
+  assert.deepEqual(
+    new Set(fs.readdirSync(GAMES)),
+    beforeGames,
+    "judge builds add no library dirs",
+  );
+  assert.ok(
+    fs.existsSync(
+      path.join(JUDGE_RUNS, done.gameId || "", "index.html"),
+    ),
+    "judge build saved under storage/.judge-runs/",
+  );
   const play = await forged("GET", done.playUrl);
   assert.equal(play.status, 200, "saved judge game is playable");
 });
 
+test("judge mutex: 2nd concurrent build → 429 in-progress", async () => {
+  // Both builds are cache hits (fast), but the loser's end-handler runs
+  // while the winner still holds the single judge slot → exact 429.
+  const [a, b] = await Promise.all([
+    readSandboxStream(JUDGE_PROMPT),
+    readSandboxStream(JUDGE_PROMPT),
+  ]);
+  const winners = [a, b].filter((r) =>
+    r.events.some((e) => e.type === "done" && e.ok),
+  );
+  const losers = [a, b].filter((r) => r.status === 429);
+  assert.equal(winners.length, 1, "exactly one build wins the slot");
+  assert.equal(losers.length, 1, "exactly one build is rejected");
+  // (The loser body is JSON, not SSE — events stay empty for it.)
+  assert.match(String(losers[0].text), /currently in progress/);
+});
+
 test("judge rate limit: 7th build in 10 min → 429", async () => {
-  // 1 build already consumed above; burn 5 more (cache hits, fast).
-  for (let i = 0; i < 5; i++) {
+  // 3 builds already consumed above (1 sandbox + 2 mutex race); burn 3
+  // more (cache hits, fast). The first burn also proves the mutex slot
+  // was released — a stuck slot would 429 with "currently in progress".
+  for (let i = 0; i < 3; i++) {
     const r = await readSandboxStream(JUDGE_PROMPT);
     assert.ok(
       r.events.some((e) => e.type === "done" && e.ok),
-      `build ${i + 2} completes`,
+      `build ${i + 4} completes`,
     );
   }
   const over = await forged("POST", "/api/studio/generate", {

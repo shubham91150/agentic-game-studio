@@ -10,8 +10,11 @@ import path from "node:path";
 import crypto from "node:crypto";
 
 export class GameStorageManager {
-  constructor(baseDir) {
+  constructor(baseDir, playUrlBase) {
     this.baseDir = baseDir || path.resolve(process.cwd(), "storage", "games");
+    // URL prefix for playUrl/imageUrl. Ephemeral judge runs pass
+    // "/studio/judge-games" so their manifests never point at the library.
+    this.playUrlBase = playUrlBase || "/studio/games";
     this.indexFile = path.join(this.baseDir, "index.json");
     this.ensureInitialized();
   }
@@ -53,9 +56,9 @@ export class GameStorageManager {
       enrichmentModel: spec.enrichmentModel || null,
       objective: spec.objective || "",
       createdAt: new Date().toISOString(),
-      playUrl: `/studio/games/${gameId}/index.html`,
+      playUrl: `${this.playUrlBase}/${gameId}/index.html`,
       imageUrl: conceptImage
-        ? `/studio/games/${gameId}/assets/concept.webp`
+        ? `${this.playUrlBase}/${gameId}/assets/concept.webp`
         : null,
       files: {
         html: "index.html",
