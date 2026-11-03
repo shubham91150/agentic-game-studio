@@ -1,5 +1,24 @@
 [
   {
+    "id": "game_1793679153102_17eff3",
+    "title": "Ashes of St. Vermilion — Stage 3",
+    "prompt": "",
+    "biome": "live-preview",
+    "metaModel": "hand-made",
+    "enrichmentModel": null,
+    "objective": "",
+    "createdAt": "2026-11-03T04:12:33.129Z",
+    "updatedAt": "2026-11-03T12:50:06.126Z",
+    "playUrl": "/studio/games/game_1793679153102_17eff3/index.html",
+    "imageUrl": null,
+    "files": {
+      "html": "index.html",
+      "manifest": "manifest.json",
+      "unity": [],
+      "js": "game.js"
+    }
+  },
+  {
     "id": "game_1793459815775_afba76",
     "title": "Horizon Sprint — 3D Sports Car Racing",
     "prompt": "",
@@ -8,6 +27,7 @@
     "enrichmentModel": null,
     "objective": "",
     "createdAt": "2026-10-31T15:16:55.784Z",
+    "updatedAt": "2026-11-03T10:51:01.553Z",
     "playUrl": "/studio/games/game_1793459815775_afba76/index.html",
     "imageUrl": null,
     "files": {
