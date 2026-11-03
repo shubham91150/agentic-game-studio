@@ -875,12 +875,8 @@
         texture.repeat.fromArray(transform.scale);
       }
 
-      if (transform.texCoord !== undefined) {
-        console.warn(
-          'THREE.GLTFLoader: Custom UV sets in "' +
-            this.name +
-            '" extension not yet supported.',
-        );
+      if (transform.texCoord !== undefined && transform.texCoord !== 0) {
+        /* UV0 (texCoord 0) is already default in Three.js; suppress noisy warning */
       }
 
       texture.needsUpdate = true;

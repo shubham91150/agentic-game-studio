@@ -24,7 +24,12 @@
       "radius": 2.4,
       "height": 4.2,
       "collider": "cylinder_watertight",
-      "standoffRadius": 5.6
+      "standoffRadius": 5.6,
+      "glbUrl": "/studio/assets/polyhaven/large_castle_door/large_castle_door_1k.glb",
+      "modelUrl": "/studio/assets/polyhaven/large_castle_door/large_castle_door_1k.glb",
+      "targetSize": 4.2,
+      "yawDeg": 0.0,
+      "assetSource": "Polyhaven 1K Photogrammetry (large_castle_door_1k.glb)"
     },
     {
       "id": "landmark_1_cloister_pillar",
@@ -45,7 +50,12 @@
       "radius": 2.1,
       "height": 5.0,
       "collider": "cylinder_watertight",
-      "standoffRadius": 5.3
+      "standoffRadius": 5.3,
+      "glbUrl": "/studio/assets/polyhaven/GothicCabinet_01/GothicCabinet_01_1k.glb",
+      "modelUrl": "/studio/assets/polyhaven/GothicCabinet_01/GothicCabinet_01_1k.glb",
+      "targetSize": 3.2,
+      "yawDeg": 90.0,
+      "assetSource": "Polyhaven 1K Photogrammetry (GothicCabinet_01_1k.glb)"
     },
     {
       "id": "landmark_2_stone_altar",
@@ -66,7 +76,12 @@
       "radius": 2.1,
       "height": 5.0,
       "collider": "cylinder_watertight",
-      "standoffRadius": 5.3
+      "standoffRadius": 5.3,
+      "glbUrl": "/studio/assets/polyhaven/SchoolDesk_01/SchoolDesk_01_1k.glb",
+      "modelUrl": "/studio/assets/polyhaven/SchoolDesk_01/SchoolDesk_01_1k.glb",
+      "targetSize": 2.4,
+      "yawDeg": -90.0,
+      "assetSource": "Polyhaven 1K Photogrammetry (SchoolDesk_01_1k.glb)"
     },
     {
       "id": "landmark_3_iron_lantern",
@@ -87,7 +102,12 @@
       "radius": 2.0,
       "height": 3.8,
       "collider": "cylinder_watertight",
-      "standoffRadius": 5.2
+      "standoffRadius": 5.2,
+      "glbUrl": "/studio/assets/polyhaven/Lantern_01/Lantern_01_1k.glb",
+      "modelUrl": "/studio/assets/polyhaven/Lantern_01/Lantern_01_1k.glb",
+      "targetSize": 2.2,
+      "yawDeg": 45.0,
+      "assetSource": "Polyhaven 1K Photogrammetry (Lantern_01_1k.glb)"
     },
     {
       "id": "landmark_4_gargoyle_statue",
@@ -108,7 +128,12 @@
       "radius": 2.0,
       "height": 3.8,
       "collider": "cylinder_watertight",
-      "standoffRadius": 5.2
+      "standoffRadius": 5.2,
+      "glbUrl": "/studio/live-preview/assets/agatha.glb",
+      "modelUrl": "/studio/live-preview/assets/agatha.glb",
+      "targetSize": 2.8,
+      "yawDeg": -135.0,
+      "assetSource": "SAM 3.1 + Blender 20-Bone Rigged Hero (agatha.glb)"
     }
   ]
 }

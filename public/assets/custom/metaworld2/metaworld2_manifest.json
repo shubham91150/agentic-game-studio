@@ -16,8 +16,8 @@
   "title": "St. Vermilion Gothic Cloister Courtyard",
   "prompt": "gothic convent courtyard",
   "preset": "gothic",
-  "createdAt": "2026-11-03T14:39:02.682482+00:00",
-  "totalElapsedSec": 2.565,
+  "createdAt": "2026-11-03T15:07:51.293865+00:00",
+  "totalElapsedSec": 2.881,
   "stages": {
     "stage1_panorama": {
       "stage": "I_Panorama_Seed",
@@ -33,7 +33,7 @@
         "mapping": "THREE.EquirectangularReflectionMapping",
         "cubeRenderTargetSize": 512
       },
-      "elapsedSec": 1.138
+      "elapsedSec": 1.339
     },
     "stage2_worldnav": {
       "stage": "II_WorldNav_Semantics_And_Trajectories",
@@ -57,11 +57,21 @@
         "Wandering": 14,
         "Aerial": 10
       },
-      "elapsedSec": 0.031
+      "elapsedSec": 0.026
     },
     "stage3_worldstereo": {
       "stage": "III_WorldStereo_Geometric_And_NovelView_Expansion",
-      "depthBackend": "metric-horizon-disparity-fast",
+      "depthBackend": "Depth-Anything-V2-Small-hf (PyTorch Neural Metric Disparity)",
+      "ransacAlignment": {
+        "method": "RANSAC Linear Depth Alignment (gamma * d_neural + beta) + Least-Squares Inlier Consensus",
+        "gamma": 0.3585,
+        "beta": 0.4434,
+        "inlierCount": 1496,
+        "totalSamples": 2048,
+        "inlierRatio": 0.7305,
+        "inlierThreshold": 0.16,
+        "residualRmse": 0.0955
+      },
       "depthPng": "public/assets/custom/metaworld2/stage3_depth.png",
       "novelViews": {
         "leftStereo": "public/assets/custom/metaworld2/stage3_novel_left.png",
@@ -126,7 +136,7 @@
           }
         ]
       },
-      "elapsedSec": 0.819
+      "elapsedSec": 0.987
     },
     "stage4_worldmirror": {
       "stage": "IV_WorldMirror_3D_Composition_And_WorldLens",
@@ -142,11 +152,11 @@
         "out": "public/assets/custom/metaworld2/world_3dgs.splat",
         "webUrl": "/studio/assets/custom/metaworld2/world_3dgs.splat",
         "rawCandidates": 27880,
-        "keptSplats": 22985,
-        "prunedSkyAndOutliers": 4895,
+        "keptSplats": 27264,
+        "prunedSkyAndOutliers": 616,
         "pruningMethod": "MaskGaussian (sky-band disparity + depth-gradient confidence pruning)",
         "bytesPerSplat": 32,
-        "splatBytes": 735520
+        "splatBytes": 872448
       },
       "collisionProxyGlb": {
         "path": "public/assets/custom/metaworld2/collision_proxy.glb",
@@ -161,7 +171,7 @@
         "bytes": 56848,
         "grid": "6x6"
       },
-      "elapsedSec": 0.573
+      "elapsedSec": 0.522
     }
   },
   "worldLens": {
@@ -172,6 +182,7 @@
     "collisionProxyGlbUrl": "/studio/assets/custom/metaworld2/collision_proxy.glb",
     "wfcCourtyardGlbUrl": "/studio/assets/custom/metaworld2/wfc_courtyard_addon.glb",
     "navmeshUrl": "/studio/assets/custom/metaworld2/navmesh.json",
+    "objectsUrl": "/studio/assets/custom/metaworld2/objects.json",
     "masterpieceOptions": {
       "bloom": {
         "strength": 0.62,

@@ -76,7 +76,7 @@ def sanity_stats(arr: np.ndarray) -> dict:
 
 def main() -> None:
     ap = argparse.ArgumentParser(description="Depth Anything V2 (small, CPU) depth map tool")
-    ap.add_argument("--image", required=True)
+    ap.add_argument("--image", "--in", dest="image", required=True)
     ap.add_argument("--out", required=True)
     ap.add_argument("--npy", default=None, help="optional path to save raw float32 depth")
     ap.add_argument("--max-side", type=int, default=768)

@@ -214,14 +214,17 @@ let activeJudgeBuildCount = 0;
 // play for everyone; judges with the access link can build anything.
 // The hash MUST match AgentRunner's prompt-only legacy key exactly:
 // sha1(trim(prompt).toLowerCase()).slice(0, 16).
-export const JUDGE_TOKEN =
-  process.env.STUDIO_JUDGE_TOKEN || "meta-judge-2026";
+export const JUDGE_TOKEN = process.env.STUDIO_JUDGE_TOKEN || "meta-judge-2026";
 const JUDGE_AUDIT_FILE = path.join(JUDGE_RUNS_DIR, "judge_audit.json");
 export function judgePromptCacheHit(prompt) {
   try {
     const h = crypto
       .createHash("sha1")
-      .update(String(prompt || "").trim().toLowerCase())
+      .update(
+        String(prompt || "")
+          .trim()
+          .toLowerCase(),
+      )
       .digest("hex")
       .slice(0, 16);
     return fs.existsSync(
@@ -515,9 +518,9 @@ async function callDirectorModel(telemetry) {
 
 // ---------- Judge AI assistant (public) ----------
 // (module level: KB + fallback + rate-limit + cache helpers)
-  // POST /api/studio/judge-assistant answers judge questions about the
-  // build from grounded repo facts via meta-models/muse-spark-open-1026,
-  // with a deterministic keyword-routed KB fallback (<5ms) on ANY failure.
+// POST /api/studio/judge-assistant answers judge questions about the
+// build from grounded repo facts via meta-models/muse-spark-open-1026,
+// with a deterministic keyword-routed KB fallback (<5ms) on ANY failure.
 export const AI_ASSISTANT_MODEL_FALLBACK = "judge-assistant-kb-v1";
 const AI_ASSISTANT_CACHE_TTL_MS = 60000;
 const AI_ASSISTANT_TIMEOUT_MS = 4000;
@@ -562,7 +565,22 @@ export function buildAssistantSignature(question) {
 const JUDGE_ASSISTANT_KB = [
   {
     id: "stack",
-    match: ["9-model", "9 model", "nine", "model stack", "meta stack", "which models", "what models", "meta models", "which meta", "what meta", "models", "powered", "open weight", "open-weight"],
+    match: [
+      "9-model",
+      "9 model",
+      "nine",
+      "model stack",
+      "meta stack",
+      "which models",
+      "what models",
+      "meta models",
+      "which meta",
+      "what meta",
+      "models",
+      "powered",
+      "open weight",
+      "open-weight",
+    ],
     answer:
       "The repo documents 9 Meta models plus the SceneScript pipeline (README's table has 10 rows; row 10 is a DSL, not a model): " +
       "(1) muse-wonder-1.0, high-reasoning game architect; " +
@@ -588,7 +606,17 @@ const JUDGE_ASSISTANT_KB = [
   },
   {
     id: "sam31",
-    match: ["sam 3.1", "sam3.1", "sam-3.1", "20-bone", "20 bone", "rig", "agatha", "segment", "evidence lens"],
+    match: [
+      "sam 3.1",
+      "sam3.1",
+      "sam-3.1",
+      "20-bone",
+      "20 bone",
+      "rig",
+      "agatha",
+      "segment",
+      "evidence lens",
+    ],
     answer:
       "SAM 3.1 (model sam-3.1 via the Meta Model API) segments concept frames into masks — see the veil, face, and lantern evidence frames (1120x2240 each). " +
       "The Mother Agatha builder then projects that sheet onto the hero mesh in Blender: pixel rows 184 to 2106 map to heights 1.72m down to 0.00m (1117.4 px per meter), centered on column 567. " +
@@ -602,7 +630,15 @@ const JUDGE_ASSISTANT_KB = [
   },
   {
     id: "gvisor",
-    match: ["gvisor", "sandbox", "runsc", "kernel", "4.19", "isolated", "judge mode"],
+    match: [
+      "gvisor",
+      "sandbox",
+      "runsc",
+      "kernel",
+      "4.19",
+      "isolated",
+      "judge mode",
+    ],
     answer:
       "Judge builds run inside Google gVisor: the runsc 4.19.0-gvisor runtime (Linux 4.19.0-gvisor kernel) with read-only mounts, executing the pinned Muse Code CLI binary muse-bin-1.4.14-R7309.1 — so unauthenticated visitors get full build power with zero VM risk. " +
       "The server only routes judge builds there when the runsc runtime, the vm-opencode image, and the sandbox binary are all present (checked fresh every 60s), and /api/studio/health reports the live gvisorSandbox flag. Owner routes stay behind AES-256-GCM GitHub-cookie auth.",
@@ -615,7 +651,18 @@ const JUDGE_ASSISTANT_KB = [
   },
   {
     id: "gates",
-    match: ["gate", "verif", "qa", "physics", "visual", "test", "67", "deterministic", "bfs", "ccd"],
+    match: [
+      "gate",
+      "verif",
+      "qa",
+      "physics",
+      "visual",
+      "test",
+      "67",
+      "deterministic",
+      "bfs",
+      "ccd",
+    ],
     answer:
       "Three deterministic layers, all runnable locally: (1) the Visual QA Gate runs 6 checks — CSP (zero inline scripts/handlers), real .glb via GLTFLoader required, primitive box/cone fakes banned, 3D instanced wind-sway grass required, ACES tone mapping, and radial maps on every PointsMaterial. " +
       "(2) The Physics QA Gate runs 4 proofs — CCD zero-tunneling at 60Hz, camera clearance over terrain, jump-arc sanity, and BFS flood-fill reachability of every orb on the layout grid (orb count varies per layout). " +
@@ -634,11 +681,7 @@ const JUDGE_ASSISTANT_KB = [
       "Stated plainly: the repo names 3 bonus targets, not 5 — Best Agentic Use-Case, Best Build on Meta Open Weight Models, and Best Creative Build (Muse Image + Muse Wonder). There is no 5-prize list anywhere in the repo, so this page claims none. " +
       "The 4 official criteria it maps against are Impact (30%), Use of Meta AI Tooling (25%), Demo (25%), and Technical Depth & Execution (20%). " +
       "Track: Indie Developer; theme Push the Frontier; all commits Oct 26 – Nov 4, 2026.",
-    citations: [
-      "README.md:131",
-      "README.md:9",
-      "README.md:127",
-    ],
+    citations: ["README.md:131", "README.md:9", "README.md:127"],
   },
 ];
 
@@ -713,7 +756,10 @@ async function callAssistantModel(question) {
         model: client.model,
         messages: [
           { role: "system", content: AI_ASSISTANT_SYSTEM },
-          { role: "user", content: String(question).slice(0, AI_ASSISTANT_QUESTION_MAX) },
+          {
+            role: "user",
+            content: String(question).slice(0, AI_ASSISTANT_QUESTION_MAX),
+          },
         ],
         max_tokens: 768,
         temperature: 0.3,
@@ -735,7 +781,6 @@ async function callAssistantModel(question) {
     clearTimeout(timer);
   }
 }
-
 
 // gVisor sandbox detection (cached 60s): runsc runtime + vm-opencode image
 // + sandbox CLI binary must ALL be present for judge builds to use gVisor.
@@ -1291,14 +1336,18 @@ const server = http.createServer(async (req, res) => {
     return sendFile(res, path.join(PUBLIC_DIR, "index.html"));
   }
 
-  // ---------- Studio static assets (studio.js, tailwind.config.js, app.css, hackathon brief, etc.) ----------
+  // ---------- Studio static assets (studio.js, tailwind.config.js, app.css, hackathon brief, metaworld viewer, etc.) ----------
   if (
     pathname === "/studio/studio.js" ||
     pathname === "/studio.js" ||
     pathname === "/studio/tailwind.config.js" ||
     pathname === "/studio/app.css" ||
     pathname === "/studio/hackathon.html" ||
-    pathname === "/studio/hackathon.js"
+    pathname === "/studio/hackathon.js" ||
+    pathname === "/studio/metaworld.html" ||
+    pathname === "/studio/metaworld.js" ||
+    pathname === "/metaworld.html" ||
+    pathname === "/metaworld.js"
   ) {
     const fname =
       pathname === "/studio/app.css"
@@ -1309,7 +1358,13 @@ const server = http.createServer(async (req, res) => {
             ? "hackathon.html"
             : pathname === "/studio/hackathon.js"
               ? "hackathon.js"
-              : "studio.js";
+              : pathname === "/studio/metaworld.html" ||
+                  pathname === "/metaworld.html"
+                ? "metaworld.html"
+                : pathname === "/studio/metaworld.js" ||
+                    pathname === "/metaworld.js"
+                  ? "metaworld.js"
+                  : "studio.js";
     return sendFile(res, path.join(PUBLIC_DIR, fname));
   }
 
@@ -2287,8 +2342,7 @@ const server = http.createServer(async (req, res) => {
         // Meta ASR wants 16kHz mono WAV; MediaRecorder sends webm/opus.
         let wavPath = dest;
         const isWav =
-          file.data.length > 12 &&
-          file.data.toString("ascii", 0, 4) === "RIFF";
+          file.data.length > 12 && file.data.toString("ascii", 0, 4) === "RIFF";
         if (!isWav) {
           // NOTE: /home/opencode/.local/bin/ffmpeg is a WAV-only Python
           // shim (tracebacks on webm) — never use it for conversion. The
@@ -2448,9 +2502,40 @@ const server = http.createServer(async (req, res) => {
     if (ownerGuard(req, res)) return;
     req.resume();
     try {
+      execFileSync("tmux", ["send-keys", "-t", TMUX_SESSION, "-X", "cancel"], {
+        stdio: "ignore",
+      });
+    } catch {
+      /* ignore if not in copy-mode */
+    }
+    try {
       execFileSync("tmux", ["send-keys", "-t", TMUX_SESSION, "Escape"]);
-      await sleep(100);
+      await sleep(80);
+      execFileSync("tmux", ["send-keys", "-t", TMUX_SESSION, "Escape"]);
+      await sleep(80);
       execFileSync("tmux", ["send-keys", "-t", TMUX_SESSION, "C-c"]);
+      // Also terminate any hung child processes spawned by muse-bin so background subagent commands stop immediately
+      const panePid = execFileSync(
+        "tmux",
+        ["display-message", "-t", TMUX_SESSION, "-p", "#{pane_pid}"],
+        { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] },
+      ).trim();
+      if (panePid && /^\d+$/.test(panePid)) {
+        const musePids = execFileSync("pgrep", ["-P", panePid], {
+          encoding: "utf8",
+          stdio: ["ignore", "pipe", "ignore"],
+        })
+          .trim()
+          .split(/\s+/)
+          .filter(Boolean);
+        for (const mp of musePids) {
+          try {
+            execFileSync("pkill", ["-TERM", "-P", mp], { stdio: "ignore" });
+          } catch {
+            /* no child procs */
+          }
+        }
+      }
     } catch {
       /* ignore if session not running */
     }
@@ -3222,8 +3307,7 @@ const server = http.createServer(async (req, res) => {
           : "";
       if (!question.trim()) {
         return json(res, 400, {
-          error:
-            "Body { question: string } is required and must not be empty.",
+          error: "Body { question: string } is required and must not be empty.",
         });
       }
       appendJudgeAudit(req, "judge_assistant_ask", question);

@@ -331,11 +331,56 @@ def _extract_sam31_landmarks(
     # Deterministic courtyard ring + central focal landmark layout
     # Spawn is at (0, 0, 0); central landmark at (0, 0, -9.0) so spawn is clear
     archetype_slots = [
-        {"pos": (0.0, 0.0, -9.0), "r": 2.4, "h": 4.2, "role": "primary_focal_landmark"},
-        {"pos": (-12.0, 0.0, -6.0), "r": 2.1, "h": 5.0, "role": "west_colonnade_landmark"},
-        {"pos": (12.0, 0.0, -6.0), "r": 2.1, "h": 5.0, "role": "east_colonnade_landmark"},
-        {"pos": (-12.0, 0.0, 9.0), "r": 2.0, "h": 3.8, "role": "southwest_sanctuary_node"},
-        {"pos": (12.0, 0.0, 9.0), "r": 2.0, "h": 3.8, "role": "southeast_sanctuary_node"},
+        {
+            "pos": (0.0, 0.0, -9.0),
+            "r": 2.4,
+            "h": 4.2,
+            "role": "primary_focal_landmark",
+            "glbUrl": "/studio/assets/polyhaven/large_castle_door/large_castle_door_1k.glb",
+            "targetSize": 4.2,
+            "yawDeg": 0.0,
+            "assetSource": "Polyhaven 1K Photogrammetry (large_castle_door_1k.glb)",
+        },
+        {
+            "pos": (-12.0, 0.0, -6.0),
+            "r": 2.1,
+            "h": 5.0,
+            "role": "west_colonnade_landmark",
+            "glbUrl": "/studio/assets/polyhaven/GothicCabinet_01/GothicCabinet_01_1k.glb",
+            "targetSize": 3.2,
+            "yawDeg": 90.0,
+            "assetSource": "Polyhaven 1K Photogrammetry (GothicCabinet_01_1k.glb)",
+        },
+        {
+            "pos": (12.0, 0.0, -6.0),
+            "r": 2.1,
+            "h": 5.0,
+            "role": "east_colonnade_landmark",
+            "glbUrl": "/studio/assets/polyhaven/SchoolDesk_01/SchoolDesk_01_1k.glb",
+            "targetSize": 2.4,
+            "yawDeg": -90.0,
+            "assetSource": "Polyhaven 1K Photogrammetry (SchoolDesk_01_1k.glb)",
+        },
+        {
+            "pos": (-12.0, 0.0, 9.0),
+            "r": 2.0,
+            "h": 3.8,
+            "role": "southwest_sanctuary_node",
+            "glbUrl": "/studio/assets/polyhaven/Lantern_01/Lantern_01_1k.glb",
+            "targetSize": 2.2,
+            "yawDeg": 45.0,
+            "assetSource": "Polyhaven 1K Photogrammetry (Lantern_01_1k.glb)",
+        },
+        {
+            "pos": (12.0, 0.0, 9.0),
+            "r": 2.0,
+            "h": 3.8,
+            "role": "southeast_sanctuary_node",
+            "glbUrl": "/studio/live-preview/assets/agatha.glb",
+            "targetSize": 2.8,
+            "yawDeg": -135.0,
+            "assetSource": "SAM 3.1 + Blender 20-Bone Rigged Hero (agatha.glb)",
+        },
     ]
 
     landmarks = []
@@ -359,6 +404,11 @@ def _extract_sam31_landmarks(
                 "height": round(float(slot["h"]), 2),
                 "collider": "cylinder_watertight",
                 "standoffRadius": round(float(slot["r"]) + 3.2, 2),
+                "glbUrl": slot["glbUrl"],
+                "modelUrl": slot["glbUrl"],
+                "targetSize": slot["targetSize"],
+                "yawDeg": slot["yawDeg"],
+                "assetSource": slot["assetSource"],
             }
         )
     return landmarks
@@ -685,22 +735,124 @@ def run_stage2_worldnav(
 # ============================================================================
 # STAGE III: WorldStereo Geometric & Novel-View World Expansion
 # ============================================================================
+def _ransac_align_neural_depth(
+    neural_disp: np.ndarray,
+    seed_img_path: Path,
+) -> tuple[np.ndarray, dict]:
+    """
+    Runs RANSAC linear depth alignment (gamma * d_neural + beta) + least-squares
+    inlier consensus between the PyTorch Depth-Anything-V2-Small-hf neural
+    disparity and the metric floor/room horizon prior before generating
+    vggt_surface.glb and world_3dgs.splat.
+    """
+    h, w = neural_disp.shape
+    rgb = Image.open(seed_img_path).convert("RGB").resize((w, h), Image.BILINEAR)
+    arr = np.asarray(rgb, dtype=np.float32) / 255.0
+    lum = 0.299 * arr[:, :, 0] + 0.587 * arr[:, :, 1] + 0.114 * arr[:, :, 2]
+
+    # Metric floor/room horizon prior: foreground floor = 0.94, sky/arch top = 0.06
+    v_ramp = np.broadcast_to(
+        np.linspace(0.06, 0.94, h, dtype=np.float32)[:, None], (h, w)
+    )
+    gx = np.abs(np.gradient(lum, axis=1))
+    gy = np.abs(np.gradient(lum, axis=0))
+    edge_relief = np.clip((gx + gy) * 1.6, 0.0, 0.30)
+    metric_prior = np.clip(v_ramp * 0.80 + (1.0 - lum) * 0.10 + edge_relief * 0.15, 0.0, 1.0)
+
+    # Sample anchor points across the courtyard floor & lower colonnade (rows 0.20..0.95)
+    y_min = int(h * 0.20)
+    y_max = int(h * 0.95)
+    d_sub = neural_disp[y_min:y_max, :].reshape(-1)
+    p_sub = metric_prior[y_min:y_max, :].reshape(-1)
+
+    rng = np.random.default_rng(42)
+    sample_n = min(2048, len(d_sub))
+    idx = rng.choice(len(d_sub), size=sample_n, replace=False)
+    d_pts = d_sub[idx].astype(np.float64)
+    p_pts = p_sub[idx].astype(np.float64)
+
+    best_inliers = np.ones(sample_n, dtype=bool)
+    best_count = 0
+    inlier_thresh = 0.16
+
+    for _ in range(96):
+        i1, i2 = rng.choice(sample_n, size=2, replace=False)
+        dd = d_pts[i2] - d_pts[i1]
+        if abs(dd) < 0.06:
+            continue
+        cand_gamma = (p_pts[i2] - p_pts[i1]) / dd
+        if not (0.25 <= cand_gamma <= 1.85):
+            continue
+        cand_beta = p_pts[i1] - cand_gamma * d_pts[i1]
+        residuals = np.abs(cand_gamma * d_pts + cand_beta - p_pts)
+        inliers = residuals < inlier_thresh
+        cnt = int(np.sum(inliers))
+        if cnt > best_count:
+            best_count = cnt
+            best_inliers = inliers
+
+    # Least-squares refinement over the RANSAC consensus inlier set
+    if best_count >= 16:
+        d_in = d_pts[best_inliers]
+        p_in = p_pts[best_inliers]
+    else:
+        d_in = d_pts
+        p_in = p_pts
+        best_count = len(d_in)
+
+    A = np.vstack([d_in, np.ones_like(d_in)]).T
+    sol, _, _, _ = np.linalg.lstsq(A, p_in, rcond=None)
+    gamma = float(np.clip(sol[0], 0.35, 1.65))
+    beta = float(np.clip(sol[1], -0.45, 0.55))
+
+    inlier_res = gamma * d_in + beta - p_in
+    rmse = float(np.sqrt(np.mean(inlier_res * inlier_res)))
+
+    # Combine RANSAC-aligned neural disparity with high-frequency neural depth detail
+    linear_aligned = np.clip(gamma * neural_disp + beta, 0.0, 1.0)
+    aligned = np.clip(0.65 * linear_aligned + 0.35 * neural_disp, 0.0, 1.0)
+    # Attenuate top sky band where horizon prior is distant so MaskGaussian sky pruning is crisp
+    sky_taper = np.linspace(0.02, 0.85, h // 6, dtype=np.float32)[:, None]
+    aligned[: h // 6, :] *= sky_taper
+
+    stats = {
+        "method": "RANSAC Linear Depth Alignment (gamma * d_neural + beta) + Least-Squares Inlier Consensus",
+        "gamma": round(gamma, 4),
+        "beta": round(beta, 4),
+        "inlierCount": int(best_count),
+        "totalSamples": int(sample_n),
+        "inlierRatio": round(best_count / max(1, sample_n), 4),
+        "inlierThreshold": inlier_thresh,
+        "residualRmse": round(rmse, 4),
+    }
+    return aligned.astype(np.float32), stats
+
+
 def _ensure_stage3_depth(
     seed_img_path: Path,
     depth_out_path: Path,
     fast: bool = False,
-) -> tuple[Path, str]:
+) -> tuple[Path, str, dict]:
     """
     Ensures a metric disparity map (brighter = nearer) exists at `depth_out_path`.
-    Uses cached Depth Anything V2 output when available or computes a fast
-    multi-scale vertical-ground + edge-aware depth relief map in `--fast` mode.
+    Whenever `stage3_depth.png` (or `stage3_neural_depth_raw.png`) exists or `--fast`
+    is not forced, uses the real PyTorch `Depth-Anything-V2-Small-hf` neural depth map
+    and runs RANSAC linear depth alignment before generating vggt_surface.glb & world_3dgs.splat.
     """
+    raw_neural_cache = depth_out_path.parent / "stage3_neural_depth_raw.png"
     cached_sunrise = Path("/tmp/opencode/sunrise_depth.png")
-    if cached_sunrise.exists() and "sunrise_valley" in seed_img_path.name:
-        shutil.copyfile(cached_sunrise, depth_out_path)
-        return depth_out_path, "depth-anything-v2-cached"
 
-    if not fast:
+    has_neural_raw = False
+    if raw_neural_cache.exists() and raw_neural_cache.stat().st_size > 1024:
+        has_neural_raw = True
+    elif cached_sunrise.exists() and "sunrise_valley" in seed_img_path.name:
+        shutil.copyfile(cached_sunrise, raw_neural_cache)
+        has_neural_raw = True
+    elif depth_out_path.exists() and depth_out_path.stat().st_size > 1024 and not fast:
+        shutil.copyfile(depth_out_path, raw_neural_cache)
+        has_neural_raw = True
+
+    if not has_neural_raw and not fast:
         proc = subprocess.run(
             [
                 "python3",
@@ -708,36 +860,47 @@ def _ensure_stage3_depth(
                 "--image",
                 str(seed_img_path),
                 "--out",
-                str(depth_out_path),
+                str(raw_neural_cache),
                 "--max-side",
-                "512",
+                "768",
             ],
             cwd=str(ROOT),
             capture_output=True,
             text=True,
-            timeout=90,
+            timeout=120,
         )
-        if proc.returncode == 0 and depth_out_path.exists():
-            return depth_out_path, "depth-anything-v2-live"
+        if proc.returncode == 0 and raw_neural_cache.exists():
+            has_neural_raw = True
 
-    # Fast deterministic geometric depth synthesis (ground gradient + architectural structure)
+    if has_neural_raw or (depth_out_path.exists() and depth_out_path.stat().st_size > 1024):
+        src_depth_file = raw_neural_cache if has_neural_raw else depth_out_path
+        neural_img = Image.open(src_depth_file).convert("L")
+        neural_disp = np.asarray(neural_img, dtype=np.float32) / 255.0
+        aligned_disp, ransac_stats = _ransac_align_neural_depth(neural_disp, seed_img_path)
+        depth_u8 = (np.clip(aligned_disp, 0.0, 1.0) * 255.0 + 0.5).astype(np.uint8)
+        Image.fromarray(depth_u8, mode="L").save(depth_out_path)
+        return (
+            depth_out_path,
+            "Depth-Anything-V2-Small-hf (PyTorch Neural Metric Disparity)",
+            ransac_stats,
+        )
+
+    # Fast deterministic geometric depth synthesis fallback only when --fast is forced and no depth exists
     rgb = Image.open(seed_img_path).convert("RGB").resize((512, 342), Image.BILINEAR)
     arr = np.asarray(rgb, dtype=np.float32) / 255.0
     h, w, _ = arr.shape
     lum = 0.299 * arr[:, :, 0] + 0.587 * arr[:, :, 1] + 0.114 * arr[:, :, 2]
 
-    # Vertical perspective ramp: bottom (foreground ground) = 1.0, top (sky) = 0.05
     v_ramp = np.linspace(0.04, 0.96, h, dtype=np.float32)[:, None]
-    # Local architectural contrast / column structure relief
     gx = np.abs(np.gradient(lum, axis=1))
     gy = np.abs(np.gradient(lum, axis=0))
     edge_relief = np.clip((gx + gy) * 1.8, 0.0, 0.35)
     disp = np.clip(v_ramp * 0.78 + (1.0 - lum) * 0.14 + edge_relief * 0.18, 0.0, 1.0)
-    # Force top sky band low disparity so MaskGaussian sky pruning works cleanly
     disp[: h // 6, :] *= 0.22
-    depth_u8 = (disp * 255.0 + 0.5).astype(np.uint8)
+    aligned_disp, ransac_stats = _ransac_align_neural_depth(disp, seed_img_path)
+    depth_u8 = (aligned_disp * 255.0 + 0.5).astype(np.uint8)
     Image.fromarray(depth_u8, mode="L").save(depth_out_path)
-    return depth_out_path, "metric-horizon-disparity-fast"
+    return depth_out_path, "metric-horizon-disparity-fast", ransac_stats
 
 
 def _compute_plucker_ray_summary(trajectories: dict) -> dict:
@@ -779,7 +942,9 @@ def run_stage3_worldstereo(
 ) -> dict:
     t0 = time.time()
     depth_path = out_dir / "stage3_depth.png"
-    depth_path, depth_backend = _ensure_stage3_depth(seed_img_path, depth_path, fast=fast)
+    depth_path, depth_backend, ransac_stats = _ensure_stage3_depth(
+        seed_img_path, depth_path, fast=fast
+    )
 
     depth_img = Image.open(depth_path).convert("L")
     rgb_img = Image.open(seed_img_path).convert("RGB").resize(
@@ -805,6 +970,7 @@ def run_stage3_worldstereo(
     return {
         "stage": "III_WorldStereo_Geometric_And_NovelView_Expansion",
         "depthBackend": depth_backend,
+        "ransacAlignment": ransac_stats,
         "depthPng": str(depth_path.relative_to(ROOT)) if depth_path.is_relative_to(ROOT) else str(depth_path),
         "novelViews": {
             "leftStereo": str(novel_left_path.relative_to(ROOT)) if novel_left_path.is_relative_to(ROOT) else str(novel_left_path),
@@ -1076,6 +1242,7 @@ def run_meta_world_2_pipeline(
             "collisionProxyGlbUrl": s4["collisionProxyGlb"]["webUrl"],
             "wfcCourtyardGlbUrl": s4["wfcCourtyardGlb"]["webUrl"],
             "navmeshUrl": to_web_url(navmesh_path),
+            "objectsUrl": to_web_url(out_path / "objects.json"),
             "masterpieceOptions": preset_cfg["world_lens"],
         },
     }

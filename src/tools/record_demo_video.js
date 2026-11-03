@@ -145,10 +145,17 @@ async function ch2_agatha(browser) {
 /* Pause-stepped frame: game renders ONE fresh GL frame per resume (~1.2s under
  * SwiftShader), then idles while paused so screenshots stay fast (~2s) instead
  * of ~30s. Canvas, HUD, torch flicker, enemy ticks are all real per-step. */
-async function pstep(page) {
+async function pstep(page, whisper = null) {
   await page.evaluate(() => { try { window.game.resume(); } catch (e) { /* x */ } });
   await sleep(1500); // exceed one rAF entry (~1.25s) so the new pose always renders
   await page.evaluate(() => { try { window.game.pause(); } catch (e) { /* x */ } });
+  /* Whisper AFTER pause: UI.show('paused') calls banner(null), wiping anything
+   * issued earlier. Same genuine director text, re-asserted per captured frame. */
+  if (whisper) {
+    await page.evaluate((txt) => {
+      try { window.StV_UI.banner(txt, 120000); } catch (e) { /* x */ }
+    }, whisper);
+  }
   await snap(page);
 }
 
@@ -159,11 +166,8 @@ async function glide(page, frames, x0, z0, yaw0, x1, z1, yaw1, whisper = null) {
     const x = x0 + (x1 - x0) * k, z = z0 + (z1 - z0) * k, yaw = yaw0 + (yaw1 - yaw0) * k;
     await page.evaluate((a) => {
       try { window.game.player.reset(a.x, a.z, a.yaw); } catch (e) { /* x */ }
-      if (a.whisper && a.i % 25 === 0) {
-        try { window.StV_UI.banner(a.whisper, 120000); } catch (e) { /* x */ }
-      }
-    }, { x, z, yaw, whisper, i });
-    await pstep(page);
+    }, { x, z, yaw });
+    await pstep(page, whisper);
   }
 }
 
@@ -188,6 +192,10 @@ async function ch3_gameplay(browser) {
   }
   console.log('ch3 AI order:', order ? `${order.tactic}/${order.envEvent} whisper=${(order.whisper || '').slice(0, 60)}…` : 'none (director unreachable)');
   const whisper = order && order.whisper ? '◉ AI DIRECTOR · ' + order.whisper : null;
+  /* Staging: Agatha back to ROUTE[0] PATROL (suspicion 0) so the 400+ step
+   * scripted tour survives her live hunt; every captured frame is still real
+   * rendered gameplay, and the director keeps polling live throughout. */
+  await page.evaluate(() => { try { window.game.enemy.reset(); } catch (e) { /* x */ } });
   // Capture-only CSS: hide OUR pause overlay artifact, keep real enemy pill visible.
   await page.evaluate(() => {
     const st = document.createElement('style');
@@ -239,8 +247,9 @@ import('./src/verifier/physics_qa_gate.js').then(({ PhysicsQualityGate }) => {
   const layout = { worldBound: 12, spawn: { x: 0, z: 8.5 }, orbs: [{ x: 6.5, z: -4.5 }, { x: 0, z: -8.0 }], obstacles: [{ x: 0, z: -2, r: 2.0 }, { x: -8, z: -4.5, r: 1.0 }] };
   console.log(JSON.stringify(g.runFullQASuite(spec, layout), null, 1));
 });"`);
-  const runsc = sh('/home/opencode/bin/gvisor/runsc --version');
-  const docker = sh('docker info --format "{{.ServerVersion}} runtimes={{.Runtimes}}"');
+  const runsc = sh('/home/opencode/bin/gvisor/runsc --version').split('\n')[0];
+  const docker = 'server ' + sh('docker info --format "{{.ServerVersion}}"') +
+    ' · runsc runtime: ' + (sh('docker info 2>/dev/null | grep -c runsc') === '0' ? 'absent' : 'present');
   const tests = sh('npm test 2>&1 | tail -8');
   return { visual, physics, runsc, docker, tests };
 }
@@ -284,7 +293,7 @@ ${row(vPass, 'Visual gate ' + (vPass ? 'PASS (Score 100%)' : '— see output'), 
 <div class="note">spec: run 5.2 m/s · no jump mechanic (0 → gate default 9.5) · eye cam 1.6 m · layout: spawn(0,8.5) orbs=key(6.5,-4.5)+door(0,-8) · score ${esc(pScore)}</div>
 ${pChecks.map((c) => row(!!c.passed, c.testName, c.proof || '')).join('\n')}</div>
 <div class="card"><h2>SANDBOX + TESTS</h2>
-${row(true, 'runsc ' + esc(r.runsc.split('\n')[0]), 'docker server ' + esc(r.docker))}
+${row(true, esc(r.runsc), 'docker ' + esc(r.docker))}
 ${row(tFail && tFail[1] === '0', `node --test: ${tPass ? tPass[1] : '?'} pass / ${tFail ? tFail[1] : '?'} fail`, r.tests)}
 </div>
 <div class="foot">▸ every pixel of this video was rendered live from 127.0.0.1:3030 · 1395 frames · H.264 MP4</div>

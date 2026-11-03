@@ -1,0 +1,586 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#000000" />
+    <meta
+      name="description"
+      content="MetaWorld 2.0 — WorldLens Interactive 3D World Viewer. 4-stage navigable 3D world generation with PyTorch Depth-Anything-V2 RANSAC depth, 3D Gaussian Splatting, Meta VGGT-1B surface mesh, SceneScript CSG + WFC, SAM 3.1 photogrammetry landmarks, and 5 WorldNav trajectories."
+    />
+    <title>MetaWorld 2.0 — WorldLens 3D Viewer</title>
+    <link rel="stylesheet" href="/studio/fonts/fonts.css" />
+    <link rel="stylesheet" href="/studio/app.css?v=15" />
+    <style>
+      .mw-page {
+        position: relative;
+        width: 100vw;
+        height: 100dvh;
+        overflow: hidden;
+        background: #05070b;
+        display: flex;
+        flex-direction: column;
+        user-select: none;
+      }
+      .mw-viewport {
+        position: relative;
+        flex: 1 1 auto;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+      }
+      #mw-canvas {
+        display: block;
+        width: 100%;
+        height: 100%;
+        cursor: grab;
+        touch-action: none;
+      }
+      #mw-canvas:active {
+        cursor: grabbing;
+      }
+      .mw-hud-top {
+        position: absolute;
+        top: 12px;
+        left: 12px;
+        right: 12px;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 10px;
+        pointer-events: none;
+        z-index: 10;
+      }
+      .mw-panel {
+        pointer-events: auto;
+        background: rgba(9, 11, 16, 0.86);
+        border: 1px solid var(--line-strong);
+        border-radius: var(--r-md);
+        padding: 10px 12px;
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        box-shadow: 0 12px 32px rgba(0, 0, 0, 0.65);
+      }
+      .mw-panel-label {
+        font-family: var(--font-mono);
+        font-size: 10px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--muted);
+        margin: 0 0 7px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+      }
+      .mw-panel-label span.mw-accent {
+        color: var(--accent);
+      }
+      .mw-btn-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+      .mw-chip {
+        font-family: var(--font-mono);
+        font-size: 11.5px;
+        font-weight: 500;
+        color: var(--ink-2);
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid var(--line-strong);
+        border-radius: 7px;
+        padding: 5px 10px;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        transition:
+          background-color 140ms ease,
+          border-color 140ms ease,
+          color 140ms ease,
+          transform 140ms ease;
+      }
+      .mw-chip:hover {
+        background: rgba(255, 255, 255, 0.09);
+        color: var(--ink);
+      }
+      .mw-chip:active {
+        transform: scale(0.97);
+      }
+      .mw-chip.active {
+        background: var(--accent-dim);
+        border-color: var(--accent);
+        color: var(--ink);
+      }
+      .mw-chip-check {
+        display: inline-block;
+        width: 13px;
+        text-align: center;
+        color: var(--ok);
+        font-weight: 700;
+      }
+      .mw-chip:not(.active) .mw-chip-check {
+        color: var(--faint);
+      }
+      .mw-dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 999px;
+        display: inline-block;
+      }
+      .mw-dot.reg {
+        background: #38bdf8;
+      }
+      .mw-dot.sur {
+        background: #fbbf24;
+      }
+      .mw-dot.rec {
+        background: #a855f7;
+      }
+      .mw-dot.wan {
+        background: #4ade80;
+      }
+      .mw-dot.aer {
+        background: #f43f5e;
+      }
+      .mw-telemetry-bar {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px;
+        margin-top: 7px;
+        padding-top: 7px;
+        border-top: 1px solid var(--line);
+        font-family: var(--font-mono);
+        font-size: 11px;
+        color: var(--muted);
+      }
+      .mw-stat-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        padding: 2px 8px;
+        border-radius: var(--r-pill);
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid var(--line);
+        color: var(--ink-2);
+      }
+      .mw-stat-pill strong {
+        color: var(--ok);
+        font-weight: 600;
+      }
+      .mw-inspector {
+        position: absolute;
+        left: 12px;
+        right: 12px;
+        bottom: 12px;
+        z-index: 10;
+        pointer-events: none;
+      }
+      .mw-inspector-inner {
+        pointer-events: auto;
+        background: rgba(9, 11, 16, 0.88);
+        border: 1px solid var(--line-strong);
+        border-radius: var(--r-lg);
+        padding: 10px 12px;
+        backdrop-filter: blur(14px);
+        -webkit-backdrop-filter: blur(14px);
+        box-shadow: 0 16px 40px rgba(0, 0, 0, 0.75);
+      }
+      .mw-inspector-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        margin-bottom: 8px;
+      }
+      .mw-inspector-title {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        color: var(--ink-2);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .mw-stage-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 10px;
+      }
+      .mw-stage-card {
+        border: 1px solid var(--line);
+        border-radius: var(--r-sm);
+        background: rgba(0, 0, 0, 0.55);
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+      }
+      .mw-stage-top {
+        padding: 6px 9px;
+        border-bottom: 1px solid var(--line);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 6px;
+        font-family: var(--font-mono);
+        font-size: 10.5px;
+      }
+      .mw-stage-num {
+        color: var(--accent);
+        font-weight: 700;
+      }
+      .mw-stage-model {
+        color: var(--muted);
+        font-size: 10px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .mw-stage-thumb-wrap {
+        position: relative;
+        height: 68px;
+        background: #05070b;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+      }
+      .mw-stage-thumb-wrap.dual {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1px;
+      }
+      .mw-stage-thumb {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+      }
+      .mw-navmesh-canvas {
+        width: 100%;
+        height: 68px;
+        display: block;
+        background: #060a10;
+      }
+      .mw-stage-meta {
+        padding: 6px 9px;
+        font-family: var(--font-mono);
+        font-size: 10.5px;
+        color: var(--ink-2);
+        line-height: 1.4;
+      }
+      .mw-stage-meta .sub {
+        color: var(--muted);
+        font-size: 10px;
+        display: block;
+        margin-top: 2px;
+      }
+      @media (max-width: 980px) {
+        .mw-stage-grid {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+      }
+      @media (max-width: 600px) {
+        .mw-stage-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="mw-page">
+      <header class="crumbs" aria-label="MetaWorld 2.0 Navigation">
+        <div class="crumbs-left">
+          <a href="/studio/" class="crumb-btn">&#8592; Studio</a>
+          <span class="crumb-game-title" id="mw-title"
+            >MetaWorld 2.0 — WorldLens 3D Viewer</span
+          >
+          <span class="live-pill" title="Real Neural ML + Three.js WorldLens">
+            <span class="live-dot on" id="mw-live-dot"></span>
+            <span id="mw-status-text">Loading 5 neural layers…</span>
+          </span>
+        </div>
+        <div class="crumb-right">
+          <button
+            type="button"
+            class="crumb-btn"
+            id="mw-toggle-inspector"
+            title="Toggle 4-Stage Pipeline Inspector"
+          >
+            4-Stage Inspector
+          </button>
+          <a href="/studio/hackathon.html" class="crumb-btn">Judges Brief</a>
+          <a
+            href="/studio/assets/custom/metaworld2/metaworld2_manifest.json"
+            target="_blank"
+            rel="noreferrer"
+            class="crumb-btn"
+            >Manifest JSON</a
+          >
+        </div>
+      </header>
+
+      <div class="mw-viewport">
+        <canvas
+          id="mw-canvas"
+          aria-label="Interactive MetaWorld 2.0 3D WorldLens canvas"
+        ></canvas>
+
+        <div class="mw-hud-top">
+          <!-- Camera Mode Switcher -->
+          <section class="mw-panel" aria-label="Camera Trajectory Modes">
+            <div class="mw-panel-label">
+              <span>WorldNav Camera Mode</span>
+              <span class="mw-accent" id="mw-pose-readout"
+                >Free Orbit + WASD</span
+              >
+            </div>
+            <div class="mw-btn-row" role="group" aria-label="Camera Mode">
+              <button type="button" class="mw-chip active" data-cam-mode="Free">
+                Free Orbit + WASD
+              </button>
+              <button type="button" class="mw-chip" data-cam-mode="Regular">
+                <span class="mw-dot reg"></span>1 · Regular
+              </button>
+              <button type="button" class="mw-chip" data-cam-mode="Surrounding">
+                <span class="mw-dot sur"></span>2 · Surrounding Orbit
+              </button>
+              <button
+                type="button"
+                class="mw-chip"
+                data-cam-mode="Reconstruct-Aware"
+              >
+                <span class="mw-dot rec"></span>3 · Reconstruct-Aware
+              </button>
+              <button type="button" class="mw-chip" data-cam-mode="Wandering">
+                <span class="mw-dot wan"></span>4 · Wandering (Dijkstra)
+              </button>
+              <button type="button" class="mw-chip" data-cam-mode="Aerial">
+                <span class="mw-dot aer"></span>5 · Aerial Flyover
+              </button>
+            </div>
+            <div class="mw-telemetry-bar">
+              <span class="mw-stat-pill"
+                >3DGS: <strong id="mw-stat-splats">…</strong></span
+              >
+              <span class="mw-stat-pill"
+                >VGGT-1B: <strong id="mw-stat-vggt">…</strong></span
+              >
+              <span class="mw-stat-pill"
+                >CSG+WFC: <strong id="mw-stat-csg">…</strong></span
+              >
+              <span class="mw-stat-pill"
+                >SAM 3.1 GLBs: <strong id="mw-stat-landmarks">0/5</strong></span
+              >
+              <span class="mw-stat-pill"
+                >BFS NavMesh: <strong id="mw-stat-bfs">556/556</strong></span
+              >
+            </div>
+          </section>
+
+          <!-- 5-Layer WorldMirror Toggles -->
+          <section class="mw-panel" aria-label="WorldLens 3D Layer Toggles">
+            <div class="mw-panel-label">
+              <span>WorldLens 3D Layers (5/5 Active)</span>
+              <span class="mw-accent">ACES + Bloom + PMREM IBL</span>
+            </div>
+            <div class="mw-btn-row" role="group" aria-label="Layer Toggles">
+              <button
+                type="button"
+                class="mw-chip active"
+                data-layer="splats"
+                aria-pressed="true"
+              >
+                <span class="mw-chip-check">&#10003;</span>3DGS Splats
+              </button>
+              <button
+                type="button"
+                class="mw-chip active"
+                data-layer="vggt"
+                aria-pressed="true"
+              >
+                <span class="mw-chip-check">&#10003;</span>VGGT-1B Mesh
+              </button>
+              <button
+                type="button"
+                class="mw-chip active"
+                data-layer="csg"
+                aria-pressed="true"
+              >
+                <span class="mw-chip-check">&#10003;</span>CSG + WFC World
+              </button>
+              <button
+                type="button"
+                class="mw-chip active"
+                data-layer="landmarks"
+                aria-pressed="true"
+              >
+                <span class="mw-chip-check">&#10003;</span>Photogrammetry
+                Objects
+              </button>
+              <button
+                type="button"
+                class="mw-chip active"
+                data-layer="navmesh"
+                aria-pressed="true"
+              >
+                <span class="mw-chip-check">&#10003;</span>NavMesh &amp; Paths
+              </button>
+              <button
+                type="button"
+                class="mw-chip active"
+                data-layer="bboxes"
+                aria-pressed="true"
+              >
+                <span class="mw-chip-check">&#10003;</span>SAM 3.1 Wireframes
+              </button>
+            </div>
+          </section>
+        </div>
+
+        <!-- 4-Stage Pipeline Inspector Strip -->
+        <aside
+          class="mw-inspector"
+          id="mw-inspector"
+          aria-label="4-Stage MetaWorld 2.0 Pipeline Inspector"
+        >
+          <div class="mw-inspector-inner">
+            <div class="mw-inspector-head">
+              <div class="mw-inspector-title">
+                <span>MetaWorld 2.0 — 4-Stage Neural World Pipeline</span>
+                <span class="mw-stat-pill" id="mw-depth-badge"
+                  >Depth-Anything-V2-Small-hf (PyTorch Neural + RANSAC)</span
+                >
+              </div>
+              <span class="mw-panel-label" style="margin: 0"
+                >Drag canvas to orbit · Scroll to zoom · WASD to fly · 1-5
+                trajectories</span
+              >
+            </div>
+            <div class="mw-stage-grid">
+              <!-- Stage I -->
+              <div class="mw-stage-card">
+                <div class="mw-stage-top">
+                  <span class="mw-stage-num">STAGE I · PANORAMA</span>
+                  <span class="mw-stage-model">muse-image-1.0</span>
+                </div>
+                <div class="mw-stage-thumb-wrap">
+                  <img
+                    class="mw-stage-thumb"
+                    id="mw-thumb-s1"
+                    src="/studio/assets/custom/metaworld2/stage1_seed_pano.png"
+                    alt="Stage I Panorama Seed"
+                  />
+                </div>
+                <div class="mw-stage-meta" id="mw-meta-s1">
+                  1920×1280 Equirectangular Seed
+                  <span class="sub"
+                    >HDRI: polyhaven:moonless_golf_1k · IBL PMREM</span
+                  >
+                </div>
+              </div>
+
+              <!-- Stage II -->
+              <div class="mw-stage-card">
+                <div class="mw-stage-top">
+                  <span class="mw-stage-num">STAGE II · WORLDNAV</span>
+                  <span class="mw-stage-model">sam-3.1 + Dijkstra</span>
+                </div>
+                <div class="mw-stage-thumb-wrap">
+                  <canvas
+                    class="mw-navmesh-canvas"
+                    id="mw-navmesh-minimap"
+                    width="260"
+                    height="68"
+                  ></canvas>
+                </div>
+                <div class="mw-stage-meta" id="mw-meta-s2">
+                  556/556 BFS Walkable Cells · 5 SAM 3.1 Landmarks
+                  <span class="sub"
+                    >5 Collision-Free Trajectories (60 Waypoints)</span
+                  >
+                </div>
+              </div>
+
+              <!-- Stage III -->
+              <div class="mw-stage-card">
+                <div class="mw-stage-top">
+                  <span class="mw-stage-num">STAGE III · WORLDSTEREO</span>
+                  <span class="mw-stage-model"
+                    >Depth-Anything-V2 + Plücker</span
+                  >
+                </div>
+                <div class="mw-stage-thumb-wrap dual">
+                  <img
+                    class="mw-stage-thumb"
+                    id="mw-thumb-s3-depth"
+                    src="/studio/assets/custom/metaworld2/stage3_depth.png"
+                    alt="Stage III PyTorch Neural Depth Map"
+                  />
+                  <img
+                    class="mw-stage-thumb"
+                    id="mw-thumb-s3-stereo"
+                    src="/studio/assets/custom/metaworld2/stage3_novel_left.png"
+                    alt="Stage III Plucker Stereo Novel View"
+                  />
+                </div>
+                <div class="mw-stage-meta" id="mw-meta-s3">
+                  PyTorch Neural Disparity + RANSAC Alignment
+                  <span class="sub" id="mw-meta-s3-sub"
+                    >RANSAC γ=0.3585, β=0.4434 · 6D Plücker Stereo</span
+                  >
+                </div>
+              </div>
+
+              <!-- Stage IV -->
+              <div class="mw-stage-card">
+                <div class="mw-stage-top">
+                  <span class="mw-stage-num">STAGE IV · WORLDMIRROR</span>
+                  <span class="mw-stage-model">VGGT-1B + 3DGS + CSG</span>
+                </div>
+                <div class="mw-stage-thumb-wrap dual">
+                  <img
+                    class="mw-stage-thumb"
+                    src="/studio/assets/custom/metaworld2/stage3_novel_right.png"
+                    alt="Stage IV Right Stereo Reconstruction"
+                  />
+                  <img
+                    class="mw-stage-thumb"
+                    src="/studio/assets/evidence/sam31_lantern.png"
+                    alt="SAM 3.1 Semantic Landmark Evidence"
+                  />
+                </div>
+                <div class="mw-stage-meta" id="mw-meta-s4">
+                  27,264 MaskGaussian 3DGS · VGGT-1B 21,590 Tris
+                  <span class="sub"
+                    >SceneScript 4 Walls / 8 CSG Openings + 6×6 WFC</span
+                  >
+                </div>
+              </div>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </div>
+
+    <script src="/studio/vendor/three.min.js"></script>
+    <script src="/studio/vendor/GLTFLoader.js"></script>
+    <script src="/studio/vendor/DRACOLoader.js"></script>
+    <script src="/studio/vendor/CopyShader.js"></script>
+    <script src="/studio/vendor/LuminosityHighPassShader.js"></script>
+    <script src="/studio/vendor/EffectComposer.js"></script>
+    <script src="/studio/vendor/RenderPass.js"></script>
+    <script src="/studio/vendor/ShaderPass.js"></script>
+    <script src="/studio/vendor/UnrealBloomPass.js"></script>
+    <script src="/studio/vendor/world_realism.js"></script>
+    <script src="/studio/metaworld.js"></script>
+  </body>
+</html>
