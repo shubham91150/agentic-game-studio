@@ -2296,42 +2296,173 @@
       renderPlusMenu();
     });
 
-  // Microphone dictation (only where the browser supports it)
+  // Microphone dictation: real Meta muse-voice-transcribe-1.0 first
+  // (MediaRecorder -> POST /api/studio/voice/transcribe, owner-only),
+  // browser SpeechRecognition as the visitor/offline fallback.
   var SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (SpeechRec && micBtn) {
-    micBtn.classList.remove("hidden");
-    var recognizing = false;
-    var rec = new SpeechRec();
-    rec.lang = "en-US";
-    rec.interimResults = false;
-    rec.addEventListener("result", function (event) {
-      var text = "";
-      for (var i = 0; i < event.results.length; i++) {
-        text += event.results[i][0].transcript;
+  var metaMic = { recording: false, rec: null, chunks: [], stream: null };
+  function insertDictation(text) {
+    if (!text) return;
+    promptEl.value = (promptEl.value ? promptEl.value + " " : "") + text;
+    scheduleDraftSave();
+    promptEl.focus();
+  }
+  function stopMetaTracks() {
+    try {
+      (metaMic.stream ? metaMic.stream.getTracks() : []).forEach(function (t) {
+        t.stop();
+      });
+    } catch (e) {
+      /* ignore */
+    }
+    metaMic.stream = null;
+  }
+  var legacyRec = null;
+  var legacyRecognizing = false;
+  function startLegacyDictation() {
+    if (!SpeechRec) {
+      setStatus("Voice input needs a microphone-capable browser.", "error");
+      return;
+    }
+    if (!legacyRec) {
+      legacyRec = new SpeechRec();
+      legacyRec.lang = "en-US";
+      legacyRec.interimResults = false;
+      legacyRec.addEventListener("result", function (event) {
+        var text = "";
+        for (var i = 0; i < event.results.length; i++) {
+          text += event.results[i][0].transcript;
+        }
+        insertDictation(text);
+      });
+      legacyRec.addEventListener("end", function () {
+        legacyRecognizing = false;
+        micBtn.classList.remove("busy");
+      });
+    }
+    if (legacyRecognizing) {
+      try {
+        legacyRec.stop();
+      } catch (e) {
+        /* ignore */
       }
-      if (text) {
-        promptEl.value = (promptEl.value ? promptEl.value + " " : "") + text;
-        scheduleDraftSave();
-        promptEl.focus();
-      }
-    });
-    rec.addEventListener("end", function () {
-      recognizing = false;
+      return;
+    }
+    legacyRecognizing = true;
+    micBtn.classList.add("busy");
+    try {
+      legacyRec.start();
+    } catch (e) {
+      legacyRecognizing = false;
       micBtn.classList.remove("busy");
-    });
+    }
+  }
+  function sendMetaVoice(blob) {
+    var fd = new FormData();
+    fd.append("audio", blob, "mic.webm");
+    setStatus("Transcribing via muse-voice-transcribe-1.0…", "ok");
+    fetch("/api/studio/voice/transcribe", { method: "POST", body: fd })
+      .then(function (res) {
+        if (res.status === 401) {
+          setStatus("Visitor mode: falling back to browser dictation…", "warn");
+          startLegacyDictation();
+          return null;
+        }
+        if (!res.ok) throw new Error("transcribe failed: " + res.status);
+        return res.json();
+      })
+      .then(function (data) {
+        if (!data) return;
+        insertDictation(data.transcript || "");
+        setStatus("Transcribed via muse-voice-transcribe-1.0.", "ok");
+      })
+      .catch(function () {
+        setStatus("Voice transcription failed — try again.", "error");
+      });
+  }
+  function startMetaDictation() {
+    var gum =
+      navigator.mediaDevices && navigator.mediaDevices.getUserMedia
+        ? navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices)
+        : null;
+    if (!gum || !window.MediaRecorder) {
+      startLegacyDictation();
+      return;
+    }
+    gum({ audio: true })
+      .then(function (stream) {
+        metaMic.stream = stream;
+        metaMic.chunks = [];
+        var mime = "audio/webm;codecs=opus";
+        try {
+          if (!window.MediaRecorder.isTypeSupported(mime)) mime = "";
+        } catch (e) {
+          mime = "";
+        }
+        var rec = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream);
+        metaMic.rec = rec;
+        metaMic.recording = true;
+        micBtn.classList.add("busy");
+        setStatus("Listening… (muse-voice-transcribe-1.0, 5s — click mic to cancel)", "ok");
+        rec.addEventListener("dataavailable", function (ev) {
+          if (ev.data && ev.data.size) metaMic.chunks.push(ev.data);
+        });
+        rec.addEventListener("stop", function () {
+          var wasRecording = metaMic.recording;
+          metaMic.recording = false;
+          metaMic.rec = null;
+          micBtn.classList.remove("busy");
+          stopMetaTracks();
+          if (!wasRecording) return; // cancelled via second click
+          var blob = new Blob(metaMic.chunks, { type: "audio/webm" });
+          metaMic.chunks = [];
+          if (!blob.size) {
+            setStatus("No audio captured — try again.", "error");
+            return;
+          }
+          sendMetaVoice(blob);
+        });
+        rec.start();
+        setTimeout(function () {
+          try {
+            if (metaMic.rec === rec && rec.state !== "inactive") rec.stop();
+          } catch (e) {
+            /* ignore */
+          }
+        }, 5000);
+      })
+      .catch(function () {
+        setStatus("Microphone blocked — using browser dictation…", "warn");
+        startLegacyDictation();
+      });
+  }
+  if (micBtn) {
+    var canMetaMic = Boolean(
+      navigator.mediaDevices &&
+        navigator.mediaDevices.getUserMedia &&
+        window.MediaRecorder,
+    );
+    if (canMetaMic || SpeechRec) micBtn.classList.remove("hidden");
     micBtn.addEventListener("click", function () {
-      if (recognizing) {
-        rec.stop();
+      if (metaMic.recording && metaMic.rec) {
+        metaMic.recording = false; // stop handler sees cancel, sends nothing
+        try {
+          metaMic.rec.stop();
+        } catch (e) {
+          /* ignore */
+        }
+        setStatus("Mic cancelled.", "warn");
         return;
       }
-      recognizing = true;
-      micBtn.classList.add("busy");
-      try {
-        rec.start();
-      } catch (e) {
-        recognizing = false;
-        micBtn.classList.remove("busy");
+      if (legacyRecognizing && legacyRec) {
+        try {
+          legacyRec.stop();
+        } catch (e) {
+          /* ignore */
+        }
+        return;
       }
+      startMetaDictation();
     });
   }
 

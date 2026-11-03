@@ -7,6 +7,8 @@
  * Chapters are pure functions with fixed keyframes/seeds — no randomness.
  * READ-ONLY wrt repo: only writes are /tmp/demo_frames/* and the final mp4.
  */
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
 const fs = require('fs');
 const path = require('path');
 const http = require('http');
@@ -58,13 +60,23 @@ async function ch1_studio(browser) {
   const page = await newPage(browser);
   const t0 = frameNo;
   await page.goto(BASE + '/studio/', { waitUntil: 'load', timeout: 45000 });
-  await page.waitForTimeout(4000);
+  await page.waitForTimeout(6000);
+  // Perf: the preview iframe's live WebGL loop makes screenshots ~11s each;
+  // freeze ONLY the iframe's rAF (same-origin) so the real menu frame stays
+  // visible while main-page drawers/typing animate at ~1.4s/shot.
+  await page.evaluate(() => {
+    try {
+      const f = document.getElementById('game-frame');
+      if (f && f.contentWindow) f.contentWindow.eval('window.requestAnimationFrame=function(){};');
+    } catch (e) { /* x */ }
+  });
+  await page.waitForTimeout(500);
   await setBanner(page, '1/4 · AGENTIC GAME STUDIO · live split-screen: CLI + 3D preview');
   for (let i = 0; i < 90; i++) { await sleep(30); await snap(page); } // idle split view
 
   // Real typing into the prompt box (never submitted — UI demo only).
   await setBanner(page, '1/4 · STUDIO · prompt console (typed live, not sent)');
-  const TEXT = 'Build a haunted convent stealth game…';
+  const TEXT = 'Build a haunted chapel stealth!…'; // 32 chars ×3f = 96 frames exactly
   await page.click('#prompt').catch(() => {});
   for (let c = 0; c < TEXT.length; c++) {
     await page.evaluate((s) => {
@@ -172,8 +184,8 @@ async function ch3_gameplay(browser) {
 
   await setBanner(page, '3/4 · GAMEPLAY · south corridor glide · lantern + torch');
   await glide(page, 90, 0, 8.5, 0, 0, 6.0, 0.1);               // S1 corridor (90f)
-  await setBanner(page, '3/4 · GAMEPLAY · east store · shelves + props');
-  await glide(page, 90, 1.5, 7.0, -0.5, 5.5, 5.5, -0.85);      // S2 east store (90f)
+  await setBanner(page, '3/4 · GAMEPLAY · south corridor · columns + storm light');
+  await glide(page, 90, 1.0, 6.0, -0.7, 2.5, 4.5, -0.9);       // S2 corridor pan (90f)
   await setBanner(page, '3/4 · GAMEPLAY · Classroom B · the Chapel Key');
   await glide(page, 120, 4.2, -2.2, -0.785, 5.4, -3.4, -0.785); // S3 key approach (120f)
   await setBanner(page, '3/4 · GAMEPLAY · north corridor · the locked chapel door');

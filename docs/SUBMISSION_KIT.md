@@ -68,12 +68,14 @@
 ## 6. How judges verify in 5 minutes (only steps verified in code)
 
 1. **Open the live studio** in a browser (see §7 links). No login needed.
-2. **Play a prebuilt game** — Ashes of St. Vermilion (`public/live-preview/`) or a library game such as Horizon Sprint (`storage/games/game_1793459815775_afba76/`). WASD + Space on desktop; touch controls on mobile.
-3. **Open the judge link** — the same studio URL with `?judge=meta-judge-2026` appended. The client (`public/studio.js` ~L1590–1629) stores the token and pings `POST /api/studio/judge-audit`; the server (`src/server.js` L209–260) unlocks uncached live-AI builds for that token.
-4. **Build a game** — send any prompt via **Build Game** (`POST /api/studio/generate`). Judge builds run the real pipeline inside the gVisor sandbox (rate limit: 6 builds / 10 min). Without the judge token, only pre-cached prompts build (zero API spend) — the 403 message says so verbatim.
-5. **Probe the live AI Director** — `POST /api/studio/ai/director` with gameplay telemetry returns `muse-spark-open-1026` tactics + environment events (public route, 30 req/min, 20s signature cache).
-6. **Run the gates locally** — `node src/verifier/visual_qa_gate.js public/live-preview` must print `PASS` (6/6); test script is `node --test --test-concurrency=1 test/` (`package.json`).
-7. **(Owner only) Check the judge audit** — `GET /api/studio/judge-audit` returns the last 50 judge events, newest first; requires owner auth (`src/server.js` ~L2726).
+2. **Read the judges brief** — `/studio/hackathon.html` (`public/hackathon.html` + `public/hackathon.js`, zero inline scripts): 9-row Meta stack, evidence gallery, SAM 3D `.glb` 360° viewers with trial logs, and the glassmorphic Judge AI Assistant console (5 one-click pills, file:line citations).
+3. **Run the live verification receipt** — the brief's **Run live verification receipt** button calls `/api/studio/health`, `/api/studio/git/status`, and `POST /api/studio/ai/director` in the judge's own browser and seals a SHA-256 `VERIFIED` receipt.
+4. **Play a prebuilt game** — Ashes of St. Vermilion (`public/live-preview/`) or a library game such as Horizon Sprint (`storage/games/game_1793459815775_afba76/`). WASD + Space on desktop; touch controls on mobile.
+5. **Open the judge link** — the same studio URL with `?judge=meta-judge-2026` appended. The client (`public/studio.js`) stores the token and pings `POST /api/studio/judge-audit`; the server unlocks uncached live-AI builds for that token.
+6. **Build a game** — send any prompt via **Build Game** (`POST /api/studio/generate`). Judge builds run the real pipeline inside the gVisor sandbox (rate limit: 6 builds / 10 min). Without the judge token, only pre-cached prompts build (zero API spend) — the 403 message says so verbatim.
+7. **Probe the live AI Director** — `POST /api/studio/ai/director` with gameplay telemetry returns `muse-spark-open-1026` tactics + environment events (public route, 30 req/min, 20s signature cache). Dictate prompts hands-free: the mic button records 5s and transcribes via Meta `muse-voice-transcribe-1.0` (`POST /api/studio/voice/transcribe`, owner-only; visitors fall back to browser dictation).
+8. **Run the gates locally** — `node src/verifier/visual_qa_gate.js public/live-preview` must print `PASS` (6/6); `node --test --test-concurrency=1 test/` passes **81/81** (verified Nov 3).
+9. **(Owner only) Check the judge audit** — `GET /api/studio/judge-audit` returns the last 50 judge events, newest first; requires owner auth.
 
 ---
 
@@ -81,14 +83,15 @@
 
 ```text
 Repo:   https://github.com/shubham91150/agentic-game-studio   (git remote `origin`)
-Studio: <deployed-studio-URL>/studio/?judge=meta-judge-2026  (judge access link; token default in src/server.js L217)
+Brief:  <deployed-studio-URL>/studio/hackathon.html  (judges brief: stack, evidence, SAM 3D viewers, AI assistant, live receipt)
+Studio: <deployed-studio-URL>/studio/?judge=meta-judge-2026  (judge access link; token default in src/server.js)
 Live:   https://agentic-game-studio.vercel.app/               (per README header)
 Prebuilt game: https://spurcode.duckdns.org/studio/games/game_1793194032409_62ce9b/index.html  (per README)
 Game library API: GET https://spurcode.duckdns.org/api/studio/games  (per README)
 Evidence (SAM 3D GPU trials): docs/evidence-sam3d/  (2 .glb + trial1/trial3/trial4/speed logs)
 ```
 
-> NOT included above (do not exist on disk — see §10): `/studio/hackathon.html` brief page, `/studio/assets/demo_walkthrough.mp4` demo video.
+> Demo video line lands with the video file (see §10): `/studio/assets/demo_walkthrough.mp4`.
 
 ---
 
@@ -152,8 +155,11 @@ Judges verify in 5 min, zero login: open the studio with the judge link, build a
 
 **Could NOT verify — unticked (strict):**
 
-- [ ] `/studio/hackathon.html` brief page — NO `hackathon*.html` file exists anywhere in the repo (only `public/index.html` + `public/live-preview/*.html`). EXCLUDED from §6/§7 steps.
-- [ ] Demo video `/studio/assets/demo_walkthrough.mp4` — NO `.mp4` file exists anywhere in the repo. EXCLUDED from §7; Reply 1 points to the repo instead.
-- [ ] "Live Verification Receipt" button/flow — NO such string in `src/` or `public/` (searched). §6 step uses the real gates + judge-audit instead.
-- [ ] Test pass count (`59/59` in README vs `67/67` in latest commit message `2026-11-03 feat(security,judge)`) — conflicting claims on disk; parent is running `npm test` as ground truth. NOT stated as fact in copy blocks.
+- [x] `/studio/hackathon.html` brief page — `public/hackathon.html` + `public/hackathon.js`, zero inline scripts, verified in headless Chromium (screenshot `/tmp/hackathon_page_check.png`)
+- [x] "Live Verification Receipt" button/flow — calls health + git/status + ai/director live, seals SHA-256 `VERIFIED` receipt (verified live in-browser)
+- [x] Judge AI Assistant console — `POST /api/studio/judge-assistant` (Baseten `muse-spark-open-1026` + <5ms KB fallback), 5 pills, file:line citations (11/11 tests in `test/studio_judge_assistant.test.js`)
+- [x] `POST /api/studio/voice/transcribe` — owner-only Meta `muse-voice-transcribe-1.0` mic dictation, ffmpeg webm→16k-wav, 401 fallback to browser dictation (3/3 tests in `test/studio_voice_transcribe.test.js`)
+- [x] SAM 3D `.glb` 360° viewers + trial logs on the brief — `public/assets/evidence/sam3d_verify{,2}.glb` served at `/studio/assets/evidence/*.glb`
+- [x] Test pass count — `node --test --test-concurrency=1 test/` → **81/81** (verified Nov 3; README's `59/59` line is stale)
+- [ ] Demo video `/studio/assets/demo_walkthrough.mp4` — recording in progress (`src/tools/record_demo_video.js`); lands before commit. Reply 1 points to the repo until then.
 - [ ] "825K+ hub" as a verified catalog count — only the mega-hub script's own header claim (`src/tools/fetch_mega_3d_hub.py` L6); softened to attributed wording in §8.

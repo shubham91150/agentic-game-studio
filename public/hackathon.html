@@ -183,6 +183,43 @@
         border-top: 1px solid var(--line);
         background: var(--surface-1);
       }
+      .sam-viewer {
+        display: block;
+        width: 100%;
+        height: 260px;
+        background: #000;
+        touch-action: none;
+        cursor: grab;
+      }
+      .sam-viewer:active {
+        cursor: grabbing;
+      }
+      .sam-meta {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        padding: 8px 10px;
+        font-size: var(--fs-12);
+        color: var(--muted);
+        border-top: 1px solid var(--line);
+        background: var(--surface-1);
+      }
+      .sam-meta .btn {
+        white-space: nowrap;
+      }
+      pre.trial-logs {
+        margin: 16px 0 0;
+        padding: 12px 14px;
+        font-size: var(--fs-12);
+        line-height: 1.65;
+        color: var(--muted);
+        background: var(--surface-1);
+        border: 1px solid var(--line);
+        border-radius: var(--r-md);
+        overflow-x: auto;
+        white-space: pre-wrap;
+      }
       table.evidence-table {
         width: 100%;
         margin-top: 16px;
@@ -766,6 +803,36 @@
             <li>VGGT: <code>src/tools/meta_vggt_scene.py</code> (<code>facebook/VGGT-1B</code> on Modal <code>spurcode-meta-vggt</code>) &#8594; <code>public/assets/custom/vggt_scene.glb</code> (1,803,584 bytes).</li>
             <li>Full trial record: <code>docs/evidence-sam3d/README.md</code>. The shipped game path uses Blender/kit assets where GPUs are unavailable — the README says so.</li>
           </ul>
+          <div class="grid-4">
+            <figure>
+              <canvas class="sam-viewer" id="sam3d-canvas-1" aria-label="Interactive 360-degree view of sam3d_verify.glb. Drag to rotate."></canvas>
+              <div class="sam-meta">
+                <span>sam3d_verify.glb &#183; 4.9 MB &#183; trial 3 &#183; <span class="sam-status" id="sam3d-status-1">loading…</span></span>
+                <a class="btn" href="/studio/assets/evidence/sam3d_verify.glb" download>&#8681; Download .glb</a>
+              </div>
+            </figure>
+            <figure>
+              <canvas class="sam-viewer" id="sam3d-canvas-2" aria-label="Interactive 360-degree view of sam3d_verify2.glb. Drag to rotate."></canvas>
+              <div class="sam-meta">
+                <span>sam3d_verify2.glb &#183; 10.9 MB &#183; trial 4 &#183; <span class="sam-status" id="sam3d-status-2">loading…</span></span>
+                <a class="btn" href="/studio/assets/evidence/sam3d_verify2.glb" download>&#8681; Download .glb</a>
+              </div>
+            </figure>
+          </div>
+          <pre class="trial-logs" aria-label="SAM 3D trial logs">$ cat docs/evidence-sam3d/trial1.log
+[sam3d] saved /tmp/opencode/sam3d_verify.glb (5170920 bytes)
+
+$ cat docs/evidence-sam3d/trial3.log
+[sam3d] saved /tmp/opencode/sam3d_verify.glb (5172088 bytes)
+TRIAL3 EXIT: 0
+
+$ cat docs/evidence-sam3d/trial4.log
+[sam3d] saved /tmp/opencode/sam3d_verify2.glb (11415872 bytes)
+TRIAL4 EXIT: 0
+
+$ cat docs/evidence-sam3d/speed.log
+[sam3d] saved /tmp/opencode/sam3d_speed.glb (4671416 bytes)
+EXIT: 0 | WALL: 5242s</pre>
         </section>
 
         <section class="stack" aria-label="07 Meta MusicGen">
@@ -807,7 +874,7 @@
 
         <section class="stack" aria-label="09 agent gates">
           <h2><span class="sec-n">09</span>Deterministic verifiable agent gates</h2>
-          <p class="sec-sub">visual_qa_gate 6/6 &#183; physics_qa_gate BFS reachability &#183; automated tests 67/67</p>
+          <p class="sec-sub">visual_qa_gate 6/6 &#183; physics_qa_gate BFS reachability &#183; automated tests 81/81</p>
           <p class="body">
             Nothing reaches the preview unverified. The visual gate runs 6
             checks, the physics gate runs 4 proofs over the same layout the
@@ -817,7 +884,7 @@
           <ul>
             <li>Visual (<code>src/verifier/visual_qa_gate.js</code>): CSP zero inline scripts/handlers; real <code>.glb</code> via GLTFLoader required; primitive fakes banned; 3D instanced wind-sway grass; ACES tone mapping; radial map on every PointsMaterial.</li>
             <li>Physics (<code>src/verifier/physics_qa_gate.js</code>): CCD zero-tunneling at 60Hz; camera clearance; jump-arc sanity; BFS flood-fill reachability of every orb (count varies per layout).</li>
-            <li>Suite: <code>node --test --test-concurrency=1 test/</code> &#8594; 67/67 (README's 59/59 line is stale).</li>
+            <li>Suite: <code>node --test --test-concurrency=1 test/</code> &#8594; 81/81 (README's 59/59 line is stale).</li>
           </ul>
         </section>
 
@@ -897,7 +964,7 @@
           <p class="sec-sub">What is deterministic, what is AI-driven, and where the VM ends</p>
           <p class="body">
             Deterministic: the 6 visual-gate checks, the 4 physics proofs, the
-            67/67 automated suite, the 20s director cache, and the &lt;5ms
+            81/81 automated suite, the 20s director cache, and the &lt;5ms
             heuristic and KB fallbacks — all runnable locally with no network.
             AI-driven: Wonder's designs, the Baseten director's tactics and
             whispers, the MusicGen theme, Image concepts, and SAM segmentation
@@ -917,6 +984,8 @@
         </footer>
       </main>
     </div>
+    <script src="/studio/vendor/three.min.js"></script>
+    <script src="/studio/vendor/GLTFLoader.js"></script>
     <script src="/studio/hackathon.js"></script>
   </body>
 </html>

@@ -33,6 +33,7 @@ import {
 } from "./agent/agent_runner.js";
 import { GameStorageManager } from "./storage/game_store.js";
 import { BasetenMuseClient } from "./agent/baseten_muse.js";
+import { MetaVoiceTranscribeClient } from "./tools/meta_voice_transcribe.js";
 import AdmZip from "adm-zip";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -561,7 +562,7 @@ export function buildAssistantSignature(question) {
 const JUDGE_ASSISTANT_KB = [
   {
     id: "stack",
-    match: ["9-model", "9 model", "nine", "model stack", "meta stack", "which models", "what models", "open weight", "open-weight"],
+    match: ["9-model", "9 model", "nine", "model stack", "meta stack", "which models", "what models", "meta models", "which meta", "what meta", "models", "powered", "open weight", "open-weight"],
     answer:
       "The repo documents 9 Meta models plus the SceneScript pipeline (README's table has 10 rows; row 10 is a DSL, not a model): " +
       "(1) muse-wonder-1.0, high-reasoning game architect; " +
@@ -618,7 +619,7 @@ const JUDGE_ASSISTANT_KB = [
     answer:
       "Three deterministic layers, all runnable locally: (1) the Visual QA Gate runs 6 checks — CSP (zero inline scripts/handlers), real .glb via GLTFLoader required, primitive box/cone fakes banned, 3D instanced wind-sway grass required, ACES tone mapping, and radial maps on every PointsMaterial. " +
       "(2) The Physics QA Gate runs 4 proofs — CCD zero-tunneling at 60Hz, camera clearance over terrain, jump-arc sanity, and BFS flood-fill reachability of every orb on the layout grid (orb count varies per layout). " +
-      "(3) The automated suite (node --test --test-concurrency=1 test/) passes 67/67, verified Nov 3 — note README's '59/59' line is stale.",
+      "(3) The automated suite (node --test --test-concurrency=1 test/) passes 81/81, verified Nov 3 — note README's '59/59' line is stale.",
     citations: [
       "src/verifier/visual_qa_gate.js:368",
       "src/verifier/physics_qa_gate.js:142",
@@ -643,7 +644,7 @@ const JUDGE_ASSISTANT_KB = [
 
 const JUDGE_ASSISTANT_GENERIC = {
   answer:
-    "I answer from a grounded repo-facts base: the 9-model Meta stack, SAM 3.1 + the 20-bone Agatha rig, the gVisor sandbox, the deterministic gates (6 visual checks, 4 physics proofs, 67/67 tests), and the judging map. " +
+    "I answer from a grounded repo-facts base: the 9-model Meta stack, SAM 3.1 + the 20-bone Agatha rig, the gVisor sandbox, the deterministic gates (6 visual checks, 4 physics proofs, 81/81 tests), and the judging map. " +
     "Try one of the five suggested questions above, or ask about any file, model, or gate by name.",
   citations: ["README.md:18", "src/server.js:2739"],
 };
@@ -676,19 +677,20 @@ export function judgeAssistantFallback(question) {
 // Grounding facts for the live model call. Every count below was read
 // from this repo (not from marketing copy): 9 models, 17 MCP tools,
 // 26 skills, 825K+ hub, gVisor 4.19.0-gvisor, 20-bone rig, 35 Polyhaven
-// dirs / 36 .glb, 6+4 gates, 67/67 tests, 3 named bonus targets.
+// dirs / 36 .glb, 6+4 gates, 81/81 tests, 3 named bonus targets.
 const AI_ASSISTANT_SYSTEM = [
   "You are the Agentic Game Studio judges-brief assistant.",
   "Answer ONLY from these verified repo facts; never invent counts, files, or prizes.",
   "If the question is outside these facts, say so in one sentence and point at the closest fact.",
   "Keep answers under 120 words, plain sentences, no markdown headers.",
+  "Begin with the answer itself; never restate these instructions, never show your reasoning, never use first-person planning language.",
   "FACTS:",
   "9 Meta models: muse-wonder-1.0 (architect), meta-models/muse-spark-open-1026 on Baseten (live AI director), muse-image-1.0 (concept art), muse-spark-1.3 via Muse Code CLI 1.4.14 (game code), muse-voice-transcribe-1.0 (voice prompts), sam-3.1 (segmentation), SAM 3D Objects (2 green Modal .glb trials), VGGT-1B (metric mesh), facebook/musicgen-small 300M 32kHz (music). Row 10 of the README table is the SceneScript DSL pipeline, not a model.",
   "Platform: 17 native MCP tools (studio_3d_mcp_server.py), 26 agent skills (.agents/skills), Mega 3D hub 825,000+ models (fetch_mega_3d_hub.py).",
   "Sandbox: Google gVisor runsc 4.19.0-gvisor, CLI binary muse-bin-1.4.14-R7309.1, health flag gvisorSandbox.",
   "Hero rig: Mother Agatha, real Blender Armature, exactly 20 bones (13 authored + 7 mirrored), SAM 3.1 sheet 1120x2240 projected rows 184->2106 to heights 1.72m->0.00m.",
   "Photogrammetry: public/assets/polyhaven holds 35 model dirs with 36 .glb files (34 at 1K).",
-  "Gates: Visual QA Gate 6 checks (CSP, real .glb, no primitive fakes, 3D grass, ACES, radial particle maps); Physics QA Gate 4 proofs (CCD zero-tunneling, camera clearance, jump arc, BFS orb reachability); suite node --test --test-concurrency=1 test/ passes 67/67 (README's 59/59 is stale).",
+  "Gates: Visual QA Gate 6 checks (CSP, real .glb, no primitive fakes, 3D grass, ACES, radial particle maps); Physics QA Gate 4 proofs (CCD zero-tunneling, camera clearance, jump arc, BFS orb reachability); suite node --test --test-concurrency=1 test/ passes 81/81 (README's 59/59 is stale).",
   "Judging: 4 official criteria Impact 30%, Meta AI Tooling 25%, Demo 25%, Technical Depth 20%; exactly 3 named bonus targets (Best Agentic Use-Case, Best Build on Meta Open Weight Models, Best Creative Build) — no 5-prize list exists in the repo. Track Indie Developer, theme Push the Frontier, commits Oct 26 - Nov 4 2026.",
 ].join(" ");
 
@@ -721,7 +723,9 @@ async function callAssistantModel(question) {
     if (!response.ok) throw new Error(`Baseten ${response.status}`);
     const data = await response.json();
     const msg = data.choices?.[0]?.message || {};
-    const text = `${msg.content || ""}\n${msg.reasoning_content || ""}`.trim();
+    // User-facing answer: final content ONLY. Reasoning traces are never
+    // shown — empty content falls through to the KB fallback via throw.
+    const text = String(msg.content || "").trim();
     if (!text) throw new Error("no text in model output");
     return {
       answer: text.slice(0, 1500),
@@ -2117,6 +2121,45 @@ const server = http.createServer(async (req, res) => {
     return sendFile(res, target);
   }
 
+  // ---------- Meta voice transcribe: multipart audio upload -> transcript ---
+  // Minimal dependency-free multipart/form-data parser: returns the first
+  // file part { field, filename, contentType, data } or null.
+  function parseMultipartFile(req, raw) {
+    const ctype = String((req.headers && req.headers["content-type"]) || "");
+    const m = ctype.match(/boundary=(?:"([^"]+)"|([^\s;]+))/i);
+    if (!m) return null;
+    const boundary = Buffer.from(`--${m[1] || m[2]}`, "utf8");
+    if (!raw || raw.length === 0) return null;
+    let start = raw.indexOf(boundary);
+    while (start !== -1) {
+      let cursor = start + boundary.length;
+      if (raw[cursor] === 45 && raw[cursor + 1] === 45) break; // closing --
+      if (raw[cursor] === 13 && raw[cursor + 1] === 10) cursor += 2;
+      const headEnd = raw.indexOf("\r\n\r\n", cursor);
+      if (headEnd === -1) break;
+      const head = raw.toString("utf8", cursor, headEnd);
+      const bodyStart = headEnd + 4;
+      const next = raw.indexOf(boundary, bodyStart);
+      if (next === -1) break;
+      let bodyEnd = next;
+      if (raw[bodyEnd - 2] === 13 && raw[bodyEnd - 1] === 10) bodyEnd -= 2;
+      const field = (head.match(/name="([^"]*)"/) || [])[1] || "";
+      const filename = (head.match(/filename="([^"]*)"/) || [])[1] || "";
+      const partType =
+        (head.match(/content-type:\s*([^\r\n;]+)/i) || [])[1] || "";
+      if (filename) {
+        return {
+          field,
+          filename: path.basename(filename).slice(0, 100),
+          contentType: partType.trim().toLowerCase(),
+          data: raw.subarray(bodyStart, bodyEnd),
+        };
+      }
+      start = next;
+    }
+    return null;
+  }
+
   // ---------- File upload for prompt attachments (raw bytes) ----------
   // POST /api/studio/upload?name=foo.png with Content-Type:
   // application/octet-stream. Max 10MB. Files land in storage/.uploads
@@ -2176,6 +2219,152 @@ const server = http.createServer(async (req, res) => {
         /* ignore */
       }
       if (!res.writableEnded) json(res, 400, { error: "Upload failed." });
+    });
+    return;
+  }
+
+  // ---------- Meta voice transcribe (OWNER-ONLY mic dictation) ----------
+  // POST /api/studio/voice/transcribe with multipart form-data (file field
+  // "audio", webm/opus from MediaRecorder or wav). Saved to
+  // storage/.uploads/, converted to 16kHz mono WAV via ffmpeg when needed,
+  // transcribed by Meta muse-voice-transcribe-1.0. Visitors get 401 and the
+  // Studio falls back to browser SpeechRecognition for them.
+  if (pathname === "/api/studio/voice/transcribe" && req.method === "POST") {
+    if (ownerGuard(req, res)) return;
+    const MAX_BYTES = 10 * 1024 * 1024;
+    const chunks = [];
+    let received = 0;
+    let tooBig = false;
+    req.on("data", (chunk) => {
+      if (tooBig) return;
+      received += chunk.length;
+      if (received > MAX_BYTES) {
+        tooBig = true;
+        try {
+          req.destroy();
+        } catch {
+          /* ignore */
+        }
+        if (!res.writableEnded) {
+          json(res, 413, { error: "Audio too large (max 10MB)." });
+        }
+        return;
+      }
+      chunks.push(chunk);
+    });
+    req.on("end", async () => {
+      if (tooBig || res.writableEnded) return;
+      try {
+        const file = parseMultipartFile(req, Buffer.concat(chunks));
+        if (!file || !file.data || file.data.length === 0) {
+          return json(res, 400, {
+            error: "Multipart audio file (field 'audio') is required.",
+          });
+        }
+        const ctype = file.contentType || "";
+        const looksAudio =
+          ctype.startsWith("audio/") ||
+          /\.(webm|wav|ogg|oga|mp3|m4a|mp4)$/i.test(file.filename);
+        if (!looksAudio) {
+          return json(res, 400, { error: "Uploaded file is not audio." });
+        }
+        const uploadDir = path.join(ROOT_DIR, "storage", ".uploads");
+        fs.mkdirSync(uploadDir, { recursive: true });
+        const id = crypto.randomBytes(6).toString("hex");
+        const ext = (
+          (file.filename.match(/\.[a-z0-9]+$/i) || [])[0] || ".webm"
+        ).toLowerCase();
+        const dest = path.join(uploadDir, `${id}_voice${ext}`);
+        fs.writeFileSync(dest, file.data);
+        if (process.env.STUDIO_VOICE_OFFLINE === "1") {
+          return json(res, 200, {
+            ok: true,
+            model: "muse-voice-transcribe-1.0",
+            transcript: "[offline test transcript — Meta call skipped]",
+            offline: true,
+          });
+        }
+        // Meta ASR wants 16kHz mono WAV; MediaRecorder sends webm/opus.
+        let wavPath = dest;
+        const isWav =
+          file.data.length > 12 &&
+          file.data.toString("ascii", 0, 4) === "RIFF";
+        if (!isWav) {
+          // NOTE: /home/opencode/.local/bin/ffmpeg is a WAV-only Python
+          // shim (tracebacks on webm) — never use it for conversion. The
+          // imageio-ffmpeg static binary is the real decoder on this VM.
+          const ffmpegCandidates = [
+            "/home/opencode/.local/lib/python3.11/site-packages/imageio_ffmpeg/binaries/ffmpeg-linux-x86_64-v9.0.2",
+            "/usr/bin/ffmpeg",
+          ];
+          const ffmpegBin =
+            ffmpegCandidates.find((p) => {
+              try {
+                return fs.existsSync(p);
+              } catch {
+                return false;
+              }
+            }) || "ffmpeg";
+          wavPath = path.join(uploadDir, `${id}_voice16k.wav`);
+          try {
+            execFileSync(
+              ffmpegBin,
+              [
+                "-y",
+                "-v",
+                "error",
+                "-i",
+                dest,
+                "-ar",
+                "16000",
+                "-ac",
+                "1",
+                "-c:a",
+                "pcm_s16le",
+                wavPath,
+              ],
+              { timeout: 30000, stdio: ["ignore", "ignore", "pipe"] },
+            );
+          } catch (convErr) {
+            return json(res, 400, {
+              error: `Audio could not be decoded (${String(
+                (convErr && convErr.message) || convErr,
+              ).slice(0, 120)}).`,
+            });
+          }
+        }
+        try {
+          const client = new MetaVoiceTranscribeClient();
+          const out = await client.transcribe(wavPath, {
+            preferredBackend: "api",
+          });
+          // The tool's local fallback invents a demo transcript offline —
+          // never present that to the user as a real transcription.
+          if (!out || out.backend === "fallback-local") {
+            return json(res, 502, {
+              error:
+                "Meta transcription unavailable right now; try again soon.",
+            });
+          }
+          return json(res, 200, {
+            ok: true,
+            model: out.model || "muse-voice-transcribe-1.0",
+            transcript: out.transcript || "",
+          });
+        } finally {
+          if (wavPath !== dest) {
+            try {
+              fs.unlinkSync(wavPath);
+            } catch {
+              /* keep the original upload only */
+            }
+          }
+        }
+      } catch (err) {
+        if (!res.writableEnded) {
+          json(res, 500, { error: "Transcription failed." });
+        }
+      }
     });
     return;
   }

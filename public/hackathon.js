@@ -361,10 +361,152 @@
     });
   }
 
+  /* ---------- SAM 3D .glb 360° viewers (section 06) ---------- */
+  // r128 global-THREE viewer: GLTFLoader + manual orbit rig (no
+  // OrbitControls in vendor), DPR-capped, resize-aware, reduced-motion
+  // respected (no auto-spin), honest load/error status text.
+  function initSamViewer(canvasId, statusId, url) {
+    const canvas = $(canvasId);
+    if (!canvas) return;
+    const statusEl = $(statusId);
+    const setStatus = (t) => {
+      if (statusEl) statusEl.textContent = t;
+    };
+    if (!window.THREE || !window.THREE.GLTFLoader) {
+      setStatus("3D libraries failed to load.");
+      return;
+    }
+    let renderer = null;
+    try {
+      renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+    } catch (e) {
+      setStatus("WebGL unavailable.");
+      return;
+    }
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x05070c);
+    const camera = new THREE.PerspectiveCamera(45, 2, 0.01, 1000);
+    scene.add(new THREE.HemisphereLight(0xdfe8ff, 0x1a1410, 0.9));
+    const key = new THREE.DirectionalLight(0xfff2df, 1.1);
+    key.position.set(3, 5, 4);
+    scene.add(key);
+    const fill = new THREE.DirectionalLight(0x88aaff, 0.35);
+    fill.position.set(-4, 2, -3);
+    scene.add(fill);
+    const rig = new THREE.Group();
+    scene.add(rig);
+    let orbitR = 3;
+    let meshCount = 0;
+    new THREE.GLTFLoader().load(
+      url,
+      (gltf) => {
+        rig.add(gltf.scene);
+        const box = new THREE.Box3().setFromObject(gltf.scene);
+        const sphere = box.getBoundingSphere(new THREE.Sphere());
+        if (sphere.radius > 1e-6) {
+          gltf.scene.position.sub(sphere.center);
+          orbitR = Math.max(
+            (sphere.radius / Math.sin((camera.fov * Math.PI) / 360)) * 1.15,
+            0.1,
+          );
+        }
+        gltf.scene.traverse((n) => {
+          if (n && n.isMesh) meshCount += 1;
+        });
+        setStatus(
+          `drag to rotate · auto-spins when idle · ${meshCount} meshes`,
+        );
+      },
+      undefined,
+      () => setStatus("model failed to load."),
+    );
+    let dragging = false;
+    let yaw = 0.6;
+    let pitch = 0.18;
+    let px = 0;
+    let py = 0;
+    let idleTimer = null;
+    let autoSpin = true;
+    let reduceMotion = false;
+    try {
+      if (
+        window.matchMedia &&
+        window.matchMedia("(prefers-reduced-motion: reduce)").matches
+      ) {
+        autoSpin = false;
+        reduceMotion = true;
+      }
+    } catch (e) {
+      /* ignore */
+    }
+    canvas.addEventListener("pointerdown", (e) => {
+      dragging = true;
+      autoSpin = false;
+      px = e.clientX;
+      py = e.clientY;
+      try {
+        canvas.setPointerCapture(e.pointerId);
+      } catch (err) {
+        /* ignore */
+      }
+      if (idleTimer) clearTimeout(idleTimer);
+    });
+    canvas.addEventListener("pointermove", (e) => {
+      if (!dragging) return;
+      yaw += (e.clientX - px) * 0.008;
+      pitch = Math.max(-1.2, Math.min(1.2, pitch + (e.clientY - py) * 0.005));
+      px = e.clientX;
+      py = e.clientY;
+    });
+    const endDrag = () => {
+      if (!dragging) return;
+      dragging = false;
+      if (idleTimer) clearTimeout(idleTimer);
+      idleTimer = setTimeout(() => {
+        if (!reduceMotion) autoSpin = true;
+      }, 4000);
+    };
+    canvas.addEventListener("pointerup", endDrag);
+    canvas.addEventListener("pointercancel", endDrag);
+    const resize = () => {
+      const w = canvas.clientWidth || 0;
+      const h = canvas.clientHeight || 0;
+      if (!w || !h) return;
+      renderer.setSize(w, h, false);
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
+    };
+    window.addEventListener("resize", resize);
+    const clock = new THREE.Clock();
+    renderer.setAnimationLoop(() => {
+      const dt = Math.min(Math.max(clock.getDelta(), 0), 0.1);
+      if (autoSpin && !dragging) yaw += dt * 0.4;
+      resize();
+      camera.position.set(
+        Math.sin(yaw) * Math.cos(pitch) * orbitR,
+        Math.sin(pitch) * orbitR,
+        Math.cos(yaw) * Math.cos(pitch) * orbitR,
+      );
+      camera.lookAt(0, 0, 0);
+      renderer.render(scene, camera);
+    });
+  }
+
   /* ---------- Wire up ---------- */
   (function init() {
     const btn = $("verify-btn");
     if (btn) btn.addEventListener("click", runVerification);
     initAssistant();
+    initSamViewer(
+      "sam3d-canvas-1",
+      "sam3d-status-1",
+      "/studio/assets/evidence/sam3d_verify.glb",
+    );
+    initSamViewer(
+      "sam3d-canvas-2",
+      "sam3d-status-2",
+      "/studio/assets/evidence/sam3d_verify2.glb",
+    );
   })();
 })();
