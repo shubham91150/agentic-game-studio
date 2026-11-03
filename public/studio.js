@@ -138,7 +138,11 @@
     }
   });
 
-  function playPreview(url, title) {
+  // Read-only visitor playback: when a stored /studio/games/ URL (or an
+  // explicit readOnly flag) is playing, preview polling must never yank the
+  // frame back to the live preview.
+  var previewReadOnly = false;
+  function playPreview(url, title, readOnly) {
     if (!url) return;
     if (titleEl) titleEl.textContent = title || "Game Preview";
     if (headerTitleEl) headerTitleEl.textContent = title || "Game Preview";
@@ -146,6 +150,9 @@
     if (frameEl) {
       frameEl.classList.remove("hidden");
       currentPreviewUrl = url;
+      previewReadOnly =
+        Boolean(readOnly) ||
+        String(url || "").indexOf("/studio/games/") === 0;
       frameEl.src = url + "?t=" + Date.now();
     }
     closeLibrary();
@@ -357,6 +364,7 @@
             playPreview(
               (data && data.url) || "/studio/live-preview/index.html",
               (data && data.title) || g.title,
+              data && data.readOnly,
             );
             setStatus(
               'Playing "' +
@@ -849,6 +857,7 @@
       // Restore this chat's linked game into the live preview FIRST so
       // the session continues with the same game + context it archived.
       var restore = Promise.resolve(false);
+      var readOnlyHit = false;
       if (activeGameId) {
         setStatus(
           'Restoring "' + (activeGameTitle || activeGameId) + '"…',
@@ -883,12 +892,20 @@
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ prompt: prompt }),
           }).then(function (res) {
+            if (res.status === 401) {
+              readOnlyHit = true;
+              return gameRestored;
+            }
             if (!res.ok) throw new Error("send failed: " + res.status);
             return gameRestored;
           });
         })
         .then(function (gameRestored) {
           closeSidebar();
+          if (readOnlyHit) {
+            setStatus(READ_ONLY_MSG, "warn");
+            return;
+          }
           setStatus(
             gameRestored
               ? "Game + context restored — continue in the live terminal."
@@ -1188,6 +1205,9 @@
           // The server auto-saved this update into the library — keep the
           // #library-count badge in sync without opening the drawer.
           refreshLibraryCount();
+          // Read-only visitor is watching a stored game — never yank the
+          // frame (or titles) back to the live preview.
+          if (previewReadOnly) return;
           if (titleEl) titleEl.textContent = data.title || "Game Preview";
           if (headerTitleEl) {
             headerTitleEl.textContent = data.title || "Game Preview";
@@ -1213,6 +1233,113 @@
   }
   pollPreviewState();
   setInterval(pollPreviewState, 2000);
+
+  // Read-only visitor mode: terminal-owning calls 401 for public judges.
+  var READ_ONLY_MSG =
+    "Read-only visitor mode: Sign in via Open full terminal to run CLI commands.";
+  function throwIfReadOnly(res) {
+    if (res && res.status === 401) throw { name: "ReadOnlyVisitor" };
+  }
+  function isReadOnlyErr(err) {
+    return Boolean(err && err.name === "ReadOnlyVisitor");
+  }
+
+  // Judge Sandbox: public visitors (terminal/send 401) build games through
+  // the sandboxed SSE pipeline instead — no VM/terminal access involved.
+  // Resolves { judgeSandbox: true } — never throws (own status reporting).
+  function sandboxPhaseLabel(ev) {
+    if (ev.id === "brain" && ev.status === "running") {
+      return "Designing with Muse Wonder 1.0";
+    }
+    if (ev.id === "webgl" && ev.status === "running") {
+      return "Compiling Three.js 3D WebGL game";
+    }
+    if (ev.id === "image" && ev.status === "running") {
+      return "Painting concept art with Muse Image";
+    }
+    if (ev.id === "store" && ev.status === "running") {
+      return "Saving to the game library";
+    }
+    return ev.label || ev.message || "Working";
+  }
+
+  function handleSandboxEvent(raw) {
+    var ev = null;
+    try {
+      ev = JSON.parse(raw);
+    } catch (e) {
+      return;
+    }
+    if (!ev || typeof ev !== "object") return;
+    if (ev.type === "phase") {
+      setStatus("Judge Sandbox: " + sandboxPhaseLabel(ev) + "…", "ok");
+      return;
+    }
+    if (ev.type === "done") {
+      setAgentWorking(false, 0);
+      if (ev.ok && ev.playUrl) {
+        playPreview(ev.playUrl, ev.title || "Judge Build", true);
+        refreshLibraryCount();
+        setStatus("Judge Sandbox: game ready — playing now.", "ok");
+      } else {
+        setStatus("Judge Sandbox build failed — try again.", "error");
+      }
+      return;
+    }
+    if (ev.type === "error") {
+      setAgentWorking(false, 0);
+      setStatus("Judge Sandbox build failed — try again.", "error");
+    }
+  }
+
+  function runJudgeSandboxBuild(prompt, model) {
+    setAgentWorking(true, 0);
+    setStatus("Judge Sandbox: queueing build…", "ok");
+    return fetch("/api/studio/generate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ prompt: prompt, model: model }),
+    })
+      .then(function (res) {
+        if (res.status === 429) {
+          setAgentWorking(false, 0);
+          setStatus(
+            "Judge Sandbox is busy (6 builds per 10 min) — try again in a few minutes.",
+            "warn",
+          );
+          return { judgeSandbox: true };
+        }
+        if (!res.ok || !res.body || !res.body.getReader) {
+          throw new Error("sandbox failed: " + res.status);
+        }
+        var reader = res.body.getReader();
+        var decoder = new TextDecoder();
+        var buf = "";
+        var pump = function () {
+          return reader.read().then(function (r) {
+            if (r.done) return { judgeSandbox: true };
+            buf += decoder.decode(r.value, { stream: true });
+            var parts = buf.split("\n\n");
+            buf = parts.pop();
+            parts.forEach(function (chunk) {
+              chunk.split("\n").forEach(function (line) {
+                line = line.replace(/^\s+|\s+$/g, "");
+                if (line.indexOf("data:") === 0) {
+                  handleSandboxEvent(line.slice(5).trim());
+                }
+              });
+            });
+            return pump();
+          });
+        };
+        return pump();
+      })
+      .catch(function () {
+        setAgentWorking(false, 0);
+        setStatus("Judge Sandbox build failed — try again.", "error");
+        return { judgeSandbox: true };
+      });
+  }
 
   // Enter submits (Shift+Enter inserts a newline); Escape stops running CLI when prompt is empty
   promptEl.addEventListener("keydown", function (event) {
@@ -1250,10 +1377,15 @@
       body: JSON.stringify({ model: modelEl.value }),
     })
       .then(function (res) {
+        throwIfReadOnly(res);
         if (!res.ok) throw new Error("model switch failed");
         setStatus("Switched CLI model to " + modelEl.value + ".", "ok");
       })
-      .catch(function () {
+      .catch(function (err) {
+        if (isReadOnlyErr(err)) {
+          setStatus(READ_ONLY_MSG, "warn");
+          return;
+        }
         setStatus("Could not switch CLI model.", "error");
       });
   });
@@ -1884,10 +2016,15 @@
       signal: controller ? controller.signal : undefined,
     })
       .then(function (res) {
+        if (res.status === 401) {
+          // Public visitor: build via the sandboxed judge pipeline instead.
+          return runJudgeSandboxBuild(finalPrompt, model);
+        }
         if (!res.ok) throw new Error("Backend answered " + res.status);
         return res.json();
       })
-      .then(function () {
+      .then(function (data) {
+        if (data && data.judgeSandbox) return;
         if (controller && controller.signal.aborted) return;
         promptEl.value = "";
         clearDraft();
@@ -2074,6 +2211,7 @@
       },
     );
     currentPreviewUrl = null;
+    previewReadOnly = false;
     if (titleEl) titleEl.textContent = "Game Preview";
     if (headerTitleEl) headerTitleEl.textContent = "Agentic Game Studio";
     if (frameEl) {
@@ -2087,10 +2225,15 @@
     var requestFreshSession = function () {
       fetch("/api/studio/session/new", { method: "POST" })
         .then(function (res) {
+          if (res.status === 401) {
+            setStatus(READ_ONLY_MSG, "warn");
+            return null;
+          }
           if (!res.ok) throw new Error("new session failed: " + res.status);
           return res.json();
         })
         .then(function (data) {
+          if (!data) return;
           var saved =
             data && data.savedGame && data.savedGame.title
               ? 'Game "' + data.savedGame.title + '" saved to library. '

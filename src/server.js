@@ -43,6 +43,121 @@ const gameStore = new GameStorageManager(STORAGE_DIR);
 const TMUX_SESSION = process.env.STUDIO_TMUX_SESSION || "muse-studio";
 let activeTerminalModel = "muse-spark-1.3";
 
+// ---------- Owner authentication (hackathon hardening) ----------
+// Unauthenticated internet visitors must never mutate the VM, drive the
+// terminal, read chats, or spend API credits. Judges keep read-only play.
+// Owner = valid opencode_gh_session cookie (same AES-256-GCM scheme as
+// /opt/opencode-gateway/server.js) OR a direct loopback request with NO
+// proxy headers. Anything via spurcode.duckdns.org / x-forwarded-* without
+// a valid cookie is NOT the owner.
+function verifyOpenCodeGitHubCookie(cookieHeader) {
+  if (!cookieHeader) return false;
+  const secret =
+    process.env.OPENCODE_SESSION_SECRET ||
+    process.env.OPENCODE_SERVER_PASSWORD ||
+    "";
+  if (!secret) return false;
+  const match = cookieHeader
+    .split(";")
+    .map((p) => p.trim())
+    .find((p) => p.startsWith("opencode_gh_session="));
+  if (!match) return false;
+  let token = "";
+  try {
+    token = decodeURIComponent(match.slice("opencode_gh_session=".length));
+  } catch {
+    return false;
+  }
+  const parts = token.split(".");
+  if (parts.length !== 3) return false;
+  try {
+    const key = crypto.createHash("sha256").update(secret).digest();
+    const iv = Buffer.from(parts[0], "base64url");
+    const encrypted = Buffer.from(parts[1], "base64url");
+    const tag = Buffer.from(parts[2], "base64url");
+    const decipher = crypto.createDecipheriv("aes-256-gcm", key, iv);
+    decipher.setAuthTag(tag);
+    const raw = Buffer.concat([
+      decipher.update(encrypted),
+      decipher.final(),
+    ]).toString("utf8");
+    const parsed = JSON.parse(raw);
+    if (
+      !parsed ||
+      typeof parsed.username !== "string" ||
+      typeof parsed.token !== "string"
+    )
+      return false;
+    if (typeof parsed.exp === "number" && parsed.exp < Date.now()) return false;
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function isOwnerRequest(req) {
+  try {
+    if (verifyOpenCodeGitHubCookie(req.headers && req.headers.cookie)) {
+      return true;
+    }
+  } catch {
+    /* fall through to loopback check */
+  }
+  const h = (req && req.headers) || {};
+  if (h["x-forwarded-for"] || h["x-forwarded-proto"] || h["x-forwarded-host"]) {
+    return false;
+  }
+  return /^(localhost|127\.0\.0\.1)(:\d+)?$/i.test(h.host || "");
+}
+
+const OWNER_REQUIRED_BODY = {
+  error:
+    "Owner authentication required. Sign in via GitHub at /terminal/ to control the VM studio.",
+};
+
+// Returns true when the request was rejected (caller must return).
+function ownerGuard(req, res) {
+  if (isOwnerRequest(req)) return false;
+  try {
+    req.resume();
+  } catch {
+    /* ignore */
+  }
+  json(res, 401, OWNER_REQUIRED_BODY);
+  return true;
+}
+
+// Judge Sandbox rate limit: max 6 public builds per 10 minutes per IP.
+const JUDGE_BUILD_MAX = 6;
+const JUDGE_BUILD_WINDOW_MS = 10 * 60 * 1000;
+const judgeBuildHits = new Map();
+function judgeClientIp(req) {
+  const fwd = String(
+    (req.headers && req.headers["x-forwarded-for"]) || "",
+  )
+    .split(",")[0]
+    .trim();
+  if (fwd) return fwd;
+  return (req.socket && req.socket.remoteAddress) || "unknown";
+}
+function judgeBuildAllowed(ip) {
+  const now = Date.now();
+  const arr = (judgeBuildHits.get(ip) || []).filter(
+    (t) => now - t < JUDGE_BUILD_WINDOW_MS,
+  );
+  if (arr.length >= JUDGE_BUILD_MAX) {
+    judgeBuildHits.set(ip, arr);
+    const retryAfter = Math.max(
+      1,
+      Math.ceil((JUDGE_BUILD_WINDOW_MS - (now - arr[0])) / 1000),
+    );
+    return { allowed: false, retryAfter };
+  }
+  arr.push(now);
+  judgeBuildHits.set(ip, arr);
+  return { allowed: true, retryAfter: 0 };
+}
+
 // ---------- Library auto-save (Task 1) ----------
 // Upserts the current public/live-preview/ game into storage/games/.
 // Same title reuses its existing gameId (no duplicate cards); a new title
@@ -566,13 +681,56 @@ const server = http.createServer(async (req, res) => {
     const raw = fs.readFileSync(mcpSettingsPath(), "utf8");
     const settings = JSON.parse(raw);
     const servers = settings.mcpServers || {};
+    // env/headers are NEVER returned (may hold tokens); secret-looking arg
+    // values are redacted. Only these safe fields leave the server.
     return Object.entries(servers).map(([name, cfg]) => ({
       name,
       transport: cfg.transport || "streamable_http",
       url: cfg.url || "",
       command: cfg.command || "",
+      args: Array.isArray(cfg.args)
+        ? cfg.args.map((a) =>
+            typeof a === "string" &&
+            /token|secret|passwd|password|api[-_]?key|bearer|private[-_]?key/i.test(
+              a,
+            )
+              ? "[redacted]"
+              : a,
+          )
+        : [],
       enabled: cfg.enabled !== false,
     }));
+  }
+
+  // stdio MCP commands: strict allowlist + shell-metacharacter block.
+  const MCP_COMMAND_ALLOWLIST = ["npx", "node", "python3", "uvx"];
+  function mcpHasShellMetachars(s) {
+    return /[;|&`$\r\n]/.test(s);
+  }
+  function validateMcpCommand(command, rawArgs) {
+    if (/\s/.test(command)) {
+      return "MCP command must be a single binary name without spaces.";
+    }
+    const base = command.split("/").pop();
+    if (!MCP_COMMAND_ALLOWLIST.includes(base)) {
+      return `MCP command not in allowlist (${MCP_COMMAND_ALLOWLIST.join(", ")}).`;
+    }
+    if (mcpHasShellMetachars(command)) {
+      return "MCP command contains blocked shell metacharacters.";
+    }
+    if (rawArgs !== undefined && !Array.isArray(rawArgs)) {
+      return "MCP args must be an array of strings.";
+    }
+    for (const a of Array.isArray(rawArgs) ? rawArgs : []) {
+      if (typeof a !== "string") {
+        return "MCP args must be an array of strings.";
+      }
+      if (a.length > 1024) return "MCP arg too long.";
+      if (mcpHasShellMetachars(a)) {
+        return "MCP args contain blocked shell metacharacters (;, |, &, `, $).";
+      }
+    }
+    return null;
   }
   if (pathname === "/api/studio/mcp" && req.method === "GET") {
     try {
@@ -582,6 +740,7 @@ const server = http.createServer(async (req, res) => {
     }
   }
   if (pathname === "/api/studio/mcp" && req.method === "POST") {
+    if (ownerGuard(req, res)) return;
     let body = "";
     req.on("data", (chunk) => (body += chunk));
     req.on("end", () => {
@@ -595,26 +754,46 @@ const server = http.createServer(async (req, res) => {
         .toLowerCase()
         .trim();
       const url = String(payload.url || "").trim();
+      const command = String(payload.command || "").trim();
       if (!/^[a-z0-9][a-z0-9-_]{1,40}$/.test(name)) {
         return json(res, 400, {
           error: "Name must be 2-41 chars: lowercase, digits, - _.",
         });
       }
-      let parsed = null;
-      try {
-        parsed = new URL(url);
-      } catch {
-        parsed = null;
-      }
-      if (
-        !parsed ||
-        (parsed.protocol !== "https:" && parsed.protocol !== "http:") ||
-        parsed.username ||
-        parsed.password
-      ) {
+      if (url && command) {
         return json(res, 400, {
-          error: "URL must be plain http(s) without credentials.",
+          error: "Provide either url or command, not both.",
         });
+      }
+      let entry = null;
+      if (command) {
+        const cmdError = validateMcpCommand(command, payload.args);
+        if (cmdError) return json(res, 400, { error: cmdError });
+        entry = {
+          transport: "stdio",
+          command,
+          args: Array.isArray(payload.args)
+            ? payload.args.map(String)
+            : [],
+        };
+      } else {
+        let parsed = null;
+        try {
+          parsed = new URL(url);
+        } catch {
+          parsed = null;
+        }
+        if (
+          !parsed ||
+          (parsed.protocol !== "https:" && parsed.protocol !== "http:") ||
+          parsed.username ||
+          parsed.password
+        ) {
+          return json(res, 400, {
+            error: "URL must be plain http(s) without credentials.",
+          });
+        }
+        entry = { transport: "streamable_http", url: parsed.toString() };
       }
       try {
         const file = mcpSettingsPath();
@@ -625,10 +804,7 @@ const server = http.createServer(async (req, res) => {
         if (!settings.mcpServers || typeof settings.mcpServers !== "object") {
           settings.mcpServers = {};
         }
-        settings.mcpServers[name] = {
-          transport: "streamable_http",
-          url: parsed.toString(),
-        };
+        settings.mcpServers[name] = entry;
         fs.copyFileSync(file, `${file}.bak`);
         fs.writeFileSync(file, JSON.stringify(settings, null, 2), "utf8");
         return json(res, 200, { ok: true, servers: readMcpServers() });
@@ -642,6 +818,7 @@ const server = http.createServer(async (req, res) => {
     /^\/api\/studio\/mcp\/([a-z0-9][a-z0-9-_]{1,40})$/,
   );
   if (mcpDel && req.method === "DELETE") {
+    if (ownerGuard(req, res)) return;
     try {
       const file = mcpSettingsPath();
       const settings = JSON.parse(fs.readFileSync(file, "utf8"));
@@ -749,6 +926,19 @@ async function activateStoredGame(gameId) {
   if (activateMatch && req.method === "POST") {
     req.resume();
     const gameId = activateMatch[1];
+    if (!isOwnerRequest(req)) {
+      // Public judge/visitor: NEVER touch the VM's live-preview files —
+      // hand back a direct read-only play URL for the stored game instead.
+      const found = await gameStore.getGame(gameId);
+      if (!found) return json(res, 404, { ok: false, error: "Game not found" });
+      return json(res, 200, {
+        ok: true,
+        id: gameId,
+        title: (found.manifest && found.manifest.title) || "Game Preview",
+        url: `/studio/games/${gameId}/index.html`,
+        readOnly: true,
+      });
+    }
     let found;
     let saved;
     try {
@@ -918,7 +1108,9 @@ async function activateStoredGame(gameId) {
     }
     // Auto-save (Task 1): stamp changed + index.html ready -> upsert the
     // library entry. Same title reuses its gameId (no duplicate cards).
-    if (updatedAt > lastAutoSaveStamp) {
+    // Owner-only side effect: public visitors may poll (read stamps) but
+    // their polls must never write to the library.
+    if (isOwnerRequest(req) && updatedAt > lastAutoSaveStamp) {
       lastAutoSaveStamp = updatedAt;
       try {
         autoSaveLivePreviewToLibrary();
@@ -955,6 +1147,7 @@ async function activateStoredGame(gameId) {
   // Library drawer. Title comes from the live-preview <title> tag
   // (fallback "Untitled Game"). Validates: title not empty, files exist.
   if (pathname === "/api/studio/publish" && req.method === "POST") {
+    if (ownerGuard(req, res)) return;
     req.resume();
     try {
       const indexPath = path.join(livePreviewDir, "index.html");
@@ -1145,11 +1338,29 @@ async function activateStoredGame(gameId) {
     return sendFile(res, assetPath);
   }
 
+  // ---------- Stored game files (read-only judge play: any staged file) ----------
+  // Serves every file inside a stored game dir — multi-file games need
+  // their sibling .js/.css/.glb next to index.html. Read-only, path-contained.
+  const gameFileMatch = pathname.match(/^\/studio\/games\/([\w-]+)\/(.+)$/);
+  if (gameFileMatch && req.method === "GET") {
+    const target = path.resolve(
+      STORAGE_DIR,
+      gameFileMatch[1],
+      gameFileMatch[2],
+    );
+    if (!target.startsWith(path.resolve(STORAGE_DIR) + path.sep)) {
+      res.writeHead(403, { "content-type": "text/plain" });
+      return res.end("Forbidden");
+    }
+    return sendFile(res, target);
+  }
+
   // ---------- File upload for prompt attachments (raw bytes) ----------
   // POST /api/studio/upload?name=foo.png with Content-Type:
   // application/octet-stream. Max 10MB. Files land in storage/.uploads
   // and the CLI reads them from its scoped run dir.
   if (pathname === "/api/studio/upload" && req.method === "POST") {
+    if (ownerGuard(req, res)) return;
     const rawName = String(url.searchParams.get("name") || "");
     const safeName =
       path
@@ -1209,6 +1420,7 @@ async function activateStoredGame(gameId) {
 
   // ---------- Send prompt / model switch into live Muse Code CLI terminal ----------
   if (pathname === "/api/studio/terminal/send" && req.method === "POST") {
+    if (ownerGuard(req, res)) return;
     let body = "";
     req.on("data", (chunk) => (body += chunk));
     req.on("end", async () => {
@@ -1276,6 +1488,7 @@ async function activateStoredGame(gameId) {
 
   // ---------- Stop / interrupt running turn in live Muse Code CLI terminal ----------
   if (pathname === "/api/studio/terminal/stop" && req.method === "POST") {
+    if (ownerGuard(req, res)) return;
     req.resume();
     try {
       execFileSync("tmux", ["send-keys", "-t", TMUX_SESSION, "Escape"]);
@@ -1297,6 +1510,7 @@ async function activateStoredGame(gameId) {
 
   // ---------- Scroll live Muse Code CLI tmux pane ----------
   if (pathname === "/api/studio/terminal/scroll" && req.method === "POST") {
+    if (ownerGuard(req, res)) return;
     let body = "";
     req.on("data", (chunk) => (body += chunk));
     req.on("end", () => {
@@ -1426,6 +1640,7 @@ async function activateStoredGame(gameId) {
   // same session. The new window becomes active automatically, so ttyd shows
   // it with no reconnect; old windows (and their agents) keep running.
   if (pathname === "/api/studio/session/new" && req.method === "POST") {
+    if (ownerGuard(req, res)) return;
     // Drain any request body; nothing in it is used or logged.
     req.resume();
     // Auto-save the current game FIRST, then link it into the archived
@@ -1522,6 +1737,7 @@ async function activateStoredGame(gameId) {
   // ---------- Chat history (archived tmux transcripts) ----------
   // GET /api/studio/chats -> newest-first [{id, createdAt, size, preview}]
   if (pathname === "/api/studio/chats" && req.method === "GET") {
+    if (ownerGuard(req, res)) return;
     let files = [];
     try {
       fs.mkdirSync(CHATS_DIR, { recursive: true });
@@ -1608,6 +1824,7 @@ async function activateStoredGame(gameId) {
   // window when possible, else view transcript + seed with context.
   const chatMatch = pathname.match(/^\/api\/studio\/chats\/(.+)$/);
   if (chatMatch && req.method === "GET") {
+    if (ownerGuard(req, res)) return;
     const raw = chatMatch[1] || "";
     let id = "";
     try {
@@ -1692,6 +1909,7 @@ async function activateStoredGame(gameId) {
     /^\/api\/studio\/chats\/(.+)\/continue$/,
   );
   if (continueMatch && req.method === "POST") {
+    if (ownerGuard(req, res)) return;
     req.resume();
     let id = "";
     try {
@@ -1783,7 +2001,11 @@ async function activateStoredGame(gameId) {
   }
 
   // ---------- Live agent run (Server-Sent Events) ----------
+  // Judge Sandbox: public for hackathon judges, but strictly sandboxed
+  // for non-owners — no subprocess CLI, no attachments, no live-preview
+  // writes, rate-limited. Owner keeps the full pipeline.
   if (pathname === "/api/studio/generate" && req.method === "POST") {
+    const sandboxed = !isOwnerRequest(req);
     let body = "";
     req.on("data", (chunk) => (body += chunk));
     req.on("end", async () => {
@@ -1796,7 +2018,7 @@ async function activateStoredGame(gameId) {
       const prompt = String(payload.prompt || "");
       const model =
         typeof payload.model === "string" ? payload.model : undefined;
-      const attachments = Array.isArray(payload.attachments)
+      const ownerAttachments = Array.isArray(payload.attachments)
         ? payload.attachments
             .filter(
               (a) =>
@@ -1821,9 +2043,26 @@ async function activateStoredGame(gameId) {
             })
             .filter(Boolean)
         : [];
+      // Sandbox: judges get zero filesystem/attachment/subprocess access —
+      // only safe HTTPS design APIs + pure-JS compile + library save.
+      // (The generate flow never writes public/live-preview/ anyway: the
+      // done event's playUrl points at the saved library game.)
+      const attachments = sandboxed ? [] : ownerAttachments;
 
       if (!prompt.trim()) {
         return json(res, 400, { error: "A game prompt is required." });
+      }
+
+      if (sandboxed) {
+        const verdict = judgeBuildAllowed(judgeClientIp(req));
+        if (!verdict.allowed) {
+          res.setHeader("retry-after", String(verdict.retryAfter));
+          return json(res, 429, {
+            error:
+              "Judge Sandbox build limit reached (6 builds per 10 minutes). Try again soon.",
+            retryAfter: verdict.retryAfter,
+          });
+        }
       }
 
       res.writeHead(200, {
@@ -1865,7 +2104,7 @@ async function activateStoredGame(gameId) {
         const result = await runner.run(prompt, {
           model,
           attachments,
-          skipSubprocessCli: Boolean(payload.skipSubprocessCli),
+          skipSubprocessCli: sandboxed || Boolean(payload.skipSubprocessCli),
         });
         if (!result.ok) {
           emit({ type: "done", ok: false, at: Date.now() });
@@ -1885,6 +2124,6 @@ async function activateStoredGame(gameId) {
   res.end("Not found");
 });
 
-server.listen(PORT, "0.0.0.0", () => {
+server.listen(PORT, "127.0.0.1", () => {
   console.log(`[Studio] Agentic Game Studio backend listening on port ${PORT}`);
 });

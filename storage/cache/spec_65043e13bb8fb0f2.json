@@ -1,0 +1,102 @@
+{
+  "title": "Tiny Test Orb Garden",
+  "prompt": "Tiny test orb garden for sandbox probe",
+  "objective": "Collect all glowing orbs in the tiny garden while avoiding the obstacles",
+  "metaModel": "muse-wonder-1.0",
+  "architectModel": "muse-wonder-1.0",
+  "enrichmentModel": "meta-models/muse-spark-open-1026",
+  "reasoning": "{\"title\": \"Tiny Test Orb Garden\", \"biome\": \"bioluminescent-canopy\", \"gravity\": -12, \"playerSpeed\": 10, \"jumpVelocity\": 9, \"objective\": \"Collect all glowing orbs in the tiny garden while avoiding the obstacles\", \"focalAssets\": [{\"prompt\": \"cute small explorer with rounded helmet and backpack in a miniature glowing garden, third-person game character\", \"role\": \"player\"}, {\"prompt\": \"bright floating ",
+  "timestamp": "2026-11-03T04:40:18.937Z",
+  "world": {
+    "biome": "bioluminescent-canopy",
+    "terrain": {
+      "type": "procedural-heightmap",
+      "size": [
+        100,
+        100
+      ],
+      "roughness": 0.25,
+      "colorPalette": [
+        "#0f172a",
+        "#1e293b",
+        "#06b6d4"
+      ]
+    },
+    "sky": {
+      "fogColor": "#09090b",
+      "fogDensity": 0.012,
+      "ambientLightIntensity": 0.75,
+      "sunColor": "#38bdf8"
+    }
+  },
+  "mechanics": {
+    "camera": {
+      "fov": 60,
+      "offset": [
+        0,
+        6,
+        12
+      ],
+      "followTarget": true,
+      "smoothLag": 0.1
+    },
+    "physics": {
+      "gravity": -12,
+      "playerSpeed": 10,
+      "jumpVelocity": 9,
+      "friction": 0.92
+    },
+    "controls": {
+      "desktop": [
+        "KeyW",
+        "KeyA",
+        "KeyS",
+        "KeyD",
+        "Space"
+      ],
+      "mobile": [
+        "VirtualJoystick",
+        "TouchJumpButton"
+      ]
+    }
+  },
+  "focalAssets": [
+    {
+      "id": "player_avatar",
+      "role": "player",
+      "category": "character",
+      "prompt": "Tiny hovering orb probe avatar with translucent glass shell, soft bioluminescent glow and delicate vine-wrapped thrusters for garden exploration",
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "id": "energy_cell",
+      "role": "collectible",
+      "category": "prop",
+      "prompt": "Glowing bioluminescent seed collectible pulsing with cyan light, floating spore particles and translucent petal shell",
+      "scale": [
+        0.6,
+        0.6,
+        0.6
+      ]
+    },
+    {
+      "id": "pylon_barrier",
+      "role": "obstacle",
+      "category": "structure",
+      "prompt": "Tangled bioluminescent canopy root obstacle with thick glowing vines, thorned pods and shifting spore mist blocking the path",
+      "scale": [
+        1.2,
+        2.5,
+        1.2
+      ]
+    }
+  ],
+  "targets": {
+    "webgl": true,
+    "unity": true
+  }
+}
