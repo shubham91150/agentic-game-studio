@@ -184,41 +184,48 @@ before(async () => {
 });
 
 after(async () => {
-  if (server) {
+  // Bulletproof cleanup: every step isolated so one failure can never skip
+  // the live-preview restore (a RED-era real activate once stranded the
+  // worktree on another game exactly this way).
+  const steps = [
+    () => {
+      if (server) server.kill("SIGKILL");
+      server = null;
+    },
+    () => tmux(["kill-session", "-t", SCRATCH]),
+    () => {
+      for (const f of fs.readdirSync(CHATS)) {
+        if (!beforeChats.has(f)) fs.rmSync(path.join(CHATS, f));
+      }
+    },
+    () => {
+      for (const f of fs.readdirSync(GAMES)) {
+        if (!beforeGames.has(f)) {
+          fs.rmSync(path.join(GAMES, f), { recursive: true, force: true });
+        }
+      }
+      fs.writeFileSync(path.join(GAMES, "index.json"), indexBackup);
+    },
+    () => {
+      for (const f of fs.readdirSync(UPLOADS)) {
+        if (!beforeUploads.has(f)) fs.rmSync(path.join(UPLOADS, f));
+      }
+    },
+    () => {
+      fs.rmSync(LIVE, { recursive: true, force: true });
+      fs.cpSync(LIVE_BACKUP, LIVE, { recursive: true });
+      fs.rmSync(LIVE_BACKUP, { recursive: true, force: true });
+    },
+    () => {
+      if (mcpExisted) fs.writeFileSync(MCP_FILE, mcpBackup, "utf8");
+      else fs.rmSync(MCP_FILE);
+    },
+  ];
+  for (const s of steps) {
     try {
-      server.kill("SIGKILL");
+      s();
     } catch {
-      /* ignore */
-    }
-    server = null;
-  }
-  try {
-    tmux(["kill-session", "-t", SCRATCH]);
-  } catch {
-    /* ignore */
-  }
-  for (const f of fs.readdirSync(CHATS)) {
-    if (!beforeChats.has(f)) fs.rmSync(path.join(CHATS, f));
-  }
-  for (const f of fs.readdirSync(GAMES)) {
-    if (!beforeGames.has(f)) {
-      fs.rmSync(path.join(GAMES, f), { recursive: true, force: true });
-    }
-  }
-  fs.writeFileSync(path.join(GAMES, "index.json"), indexBackup);
-  for (const f of fs.readdirSync(UPLOADS)) {
-    if (!beforeUploads.has(f)) fs.rmSync(path.join(UPLOADS, f));
-  }
-  fs.rmSync(LIVE, { recursive: true, force: true });
-  fs.cpSync(LIVE_BACKUP, LIVE, { recursive: true });
-  fs.rmSync(LIVE_BACKUP, { recursive: true, force: true });
-  if (mcpExisted) {
-    fs.writeFileSync(MCP_FILE, mcpBackup, "utf8");
-  } else {
-    try {
-      fs.rmSync(MCP_FILE);
-    } catch {
-      /* ignore */
+      /* keep restoring the rest */
     }
   }
 });
