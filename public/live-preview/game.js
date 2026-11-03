@@ -9,6 +9,9 @@
  * Quality: Low (shadows off, pixelRatio<=1) / Med (<=1.5) / High (<=2),
  * with auto step-down when fps<45 for 3s. ?debug=1 overlay + window.game.
  * r128 global THREE. No module syntax. No per-frame allocations.
+ * HN2: EffectComposer chain (Render + UnrealBloom 0.55/0.45/0.72 +
+ * teal-indigo/warm grade + vignette) on Med/High, direct render on Low;
+ * hide/search interactions via guarded sibling spots + player hide API.
  */
 (function () {
   "use strict";
@@ -20,6 +23,16 @@
   var DOOR_RADIUS = 2.2;
   var AUTO_FPS = 45;
   var AUTO_SECS = 3;
+  /* HN2: hide/search touch radius + corner rooms for the search
+   * distraction (keys/coords mirror enemy.js ROOM_CENTERS; each room is
+   * the closest named room to one map corner). */
+  var HIDE_RADIUS = 1.6;
+  var CORNER_ROOMS = [
+    { room: "classroom a", x: -5, z: -2 },
+    { room: "classroom b", x: 5, z: -2 },
+    { room: "west store", x: -8, z: 7 },
+    { room: "east store", x: 8, z: 7 },
+  ];
 
   var DEBUG = false;
   try {
@@ -81,6 +94,11 @@
   var vfx = null;
   var UI = window.StV_UI || null;
   var Audio8 = window.StV_Audio || null;
+  /* HN2 post chain: null until buildPost() succeeds; every consumer
+   * treats null as "direct renderer.render", so a missing/broken pass
+   * can never crash the frame loop. */
+  var composer = null;
+  var bloomPass = null;
 
   /* Stage 2+3 run state: door lock, jumpscare, horror-beat flags. */
   var doorLocked = true;
@@ -103,6 +121,7 @@
     crouch: false,
     keyHeld: false,
     inClassB: false,
+    hidden: false,
   };
 
   var colliders = [];
@@ -167,6 +186,21 @@
     } catch (err) {
       /* x */
     }
+    /* HN2: keep composer buffers on the same pixel ratio (quality
+     * toggles change it), and lazily build the chain if quality rose
+     * from a composer-less Low boot. */
+    try {
+      if (composer && composer.setPixelRatio && renderer.getPixelRatio) {
+        composer.setPixelRatio(renderer.getPixelRatio());
+      }
+    } catch (err) {
+      /* x */
+    }
+    try {
+      if (!composer && postWanted()) buildPost();
+    } catch (err) {
+      /* direct render stands */
+    }
     var wantShadow = settings.quality !== "Low";
     try {
       if (renderer.shadowMap.enabled !== wantShadow) {
@@ -209,6 +243,123 @@
     } catch (err) {
       /* x */
     }
+    /* HN2: composer buffers + bloom mips follow the canvas (composer
+     * propagates to passes itself; the explicit bloom call pins the
+     * same effective size). */
+    try {
+      if (composer && composer.setSize) {
+        var pr = 1;
+        try {
+          pr = renderer.getPixelRatio ? renderer.getPixelRatio() : 1;
+        } catch (e2) {
+          pr = 1;
+        }
+        composer.setSize(w, hgt);
+        if (bloomPass && bloomPass.setSize) {
+          bloomPass.setSize(Math.round(w * pr), Math.round(hgt * pr));
+        }
+      }
+    } catch (err) {
+      /* direct render unaffected */
+    }
+  }
+
+  /* HN2 post chain: EffectComposer(RenderPass + UnrealBloomPass +
+   * grade ShaderPass). Grade = teal-indigo shadow lift + warm golden
+   * highlight gain + soft 0.32 vignette. The encodings include keeps
+   * sRGB output identical to the direct path; tone mapping is NOT
+   * repeated here (r128 applies ACES inside RenderPass already). */
+  var GRADE_VERT = [
+    "varying vec2 vUv;",
+    "void main() {",
+    "  vUv = uv;",
+    "  gl_Position = projectionMatrix * modelViewMatrix *",
+    "    vec4(position, 1.0);",
+    "}",
+  ].join("\n");
+
+  var GRADE_FRAG = [
+    "uniform sampler2D tDiffuse;",
+    "varying vec2 vUv;",
+    "void main() {",
+    "  vec4 tex = texture2D(tDiffuse, vUv);",
+    "  vec3 col = tex.rgb;",
+    "  float luma = dot(col, vec3(0.299, 0.587, 0.114));",
+    "  float shadowM = 1.0 - smoothstep(0.0, 0.45, luma);",
+    "  col += vec3(0.0392, 0.1020, 0.1412) * (shadowM * 0.55);",
+    "  float hiM = smoothstep(0.45, 1.0, luma);",
+    "  col *= mix(vec3(1.0), vec3(1.0, 0.8510, 0.6275), hiM * 0.45);",
+    "  vec2 dc = vUv - vec2(0.5);",
+    "  float vig = 1.0 - smoothstep(0.35, 0.85, length(dc));",
+    "  col *= mix(0.68, 1.0, vig);",
+    "  gl_FragColor = vec4(col, tex.a);",
+    "  #include <encodings_fragment>",
+    "}",
+  ].join("\n");
+
+  function postWanted() {
+    try {
+      return String(settings.quality || "").toLowerCase() !== "low";
+    } catch (err) {
+      return true;
+    }
+  }
+
+  function buildPost() {
+    if (composer || !postWanted()) return;
+    try {
+      if (!renderer || !scene || !camera) return;
+      var T = window.THREE || {};
+      if (typeof T.EffectComposer !== "function") return;
+      if (typeof T.RenderPass !== "function") return;
+      if (typeof T.UnrealBloomPass !== "function") return;
+      if (typeof T.ShaderPass !== "function") return;
+      var w = 1;
+      var hgt = 1;
+      try {
+        w = container.clientWidth || window.innerWidth || 1;
+        hgt = container.clientHeight || window.innerHeight || 1;
+      } catch (err) {
+        /* 1x1; onResize corrects */
+      }
+      var comp = new T.EffectComposer(renderer);
+      comp.addPass(new T.RenderPass(scene, camera));
+      var bloom = new T.UnrealBloomPass(
+        new T.Vector2(w, hgt),
+        0.55,
+        0.45,
+        0.72,
+      );
+      comp.addPass(bloom);
+      comp.addPass(
+        new T.ShaderPass({
+          uniforms: { tDiffuse: { value: null } },
+          vertexShader: GRADE_VERT,
+          fragmentShader: GRADE_FRAG,
+        }),
+      );
+      comp.setSize(w, hgt);
+      composer = comp;
+      bloomPass = bloom;
+    } catch (err) {
+      composer = null;
+      bloomPass = null;
+    }
+  }
+
+  /* HN2: single render entry — composer on Med/High, direct fallback
+   * on Low or after any post failure (fail-safe, never throws). */
+  function renderFrame() {
+    if (composer && postWanted()) {
+      try {
+        composer.render();
+        return;
+      } catch (err) {
+        composer = null;
+        bloomPass = null;
+      }
+    }
+    renderer.render(scene, camera);
   }
 
   function requestLock() {
@@ -324,6 +475,22 @@
   function resetRun() {
     timerMs = 0;
     keyFound = false;
+    /* HN2: search spots reset to unsearched with the rest of run state. */
+    try {
+      var sa = window.__stvSearchSpots;
+      if (sa && sa.length) {
+        for (var si = 0; si < sa.length; si++) {
+          try {
+            sa[si].searched = false;
+          } catch (e2) {
+            /* x */
+          }
+        }
+      }
+    } catch (err) {
+      /* x */
+    }
+    psState.hidden = false;
     lowTime = 0;
     keys = {};
     alertTick = 0;
@@ -350,6 +517,14 @@
       player.reset(spawn.x, spawn.z, spawn.ry || 0);
       player.setTorch(true);
       player.setCrouch(false);
+      /* HN2: a restart never strands the player inside a cabinet. */
+      try {
+        if (typeof player.isHidden === "function" && player.isHidden()) {
+          if (typeof player.exitHide === "function") player.exitHide();
+        }
+      } catch (err) {
+        /* x */
+      }
     }
     if (enemy) {
       try {
@@ -523,16 +698,36 @@
     var txt = null;
     if (state === "playing" && player && tmpV) {
       var pp = player.pos();
-      var kp = keyPos(tmpV);
-      if (!keyFound && kp && distXZ(pp.x, pp.z, kp.x, kp.z) <= KEY_RADIUS) {
-        txt = "E \u2014 Chapel Key";
+      /* HN2: hidden wins (only exit is available); key/door keep their
+       * existing priority so a cabinet radius can never swallow the
+       * stage-critical pickup, then hide, then unsearched search. */
+      if (isHiddenNow()) {
+        txt = "E \u2014 Step out";
       } else {
-        var dp = doorPos(tmpV);
-        if (dp && distXZ(pp.x, pp.z, dp.x, dp.z) <= DOOR_RADIUS) {
-          txt =
-            keyFound && !doorLocked
-              ? "E \u2014 Chapel Door (khol do!)"
-              : "E \u2014 Chapel Door (locked)";
+        var kp = keyPos(tmpV);
+        if (!keyFound && kp && distXZ(pp.x, pp.z, kp.x, kp.z) <= KEY_RADIUS) {
+          txt = "E \u2014 Chapel Key";
+        } else {
+          var dp = doorPos(tmpV);
+          if (dp && distXZ(pp.x, pp.z, dp.x, dp.z) <= DOOR_RADIUS) {
+            txt =
+              keyFound && !doorLocked
+                ? "E \u2014 Chapel Door (khol do!)"
+                : "E \u2014 Chapel Door (locked)";
+          } else {
+            var hsNear = nearSpot(hideSpots(), pp.x, pp.z, HIDE_RADIUS);
+            if (hsNear) {
+              txt = "E \u2014 Hide inside Gothic Cabinet";
+            } else {
+              var ssNear = nearSpot(searchSpots(), pp.x, pp.z, HIDE_RADIUS);
+              if (ssNear && !ssNear.searched) {
+                txt = "E \u2014 Search Cabinet";
+              } else if (distXZ(pp.x, pp.z, CLOCK_LURE.x, CLOCK_LURE.z) <= 1.8 &&
+                  Date.now() >= clockCdUntil) {
+                txt = "E \u2014 Ring the Grandfather Clock";
+              }
+            }
+          }
         }
       }
     }
@@ -683,6 +878,135 @@
     show("stageclear");
   }
 
+  /* HN2 hide/search helpers: sibling levels.js exports
+   * window.__stvHideSpots=[{x,z,ry,name}] and window.__stvSearchSpots=
+   * [{x,z,name}]; sibling player.js adds enterHide/exitHide/isHidden.
+   * Everything here is guarded — the game plays identically when any
+   * of it is absent. */
+  function hideSpots() {
+    try {
+      var a = window.__stvHideSpots;
+      return a && a.length ? a : null;
+    } catch (err) {
+      return null;
+    }
+  }
+
+  function searchSpots() {
+    try {
+      var a = window.__stvSearchSpots;
+      return a && a.length ? a : null;
+    } catch (err) {
+      return null;
+    }
+  }
+
+  function isHiddenNow() {
+    try {
+      return !!(player && player.isHidden && player.isHidden());
+    } catch (err) {
+      return false;
+    }
+  }
+
+  function nearSpot(list, px, pz, r) {
+    if (!list) return null;
+    for (var i = 0; i < list.length; i++) {
+      var s = list[i];
+      if (!s || typeof s.x !== "number" || typeof s.z !== "number") continue;
+      if (distXZ(px, pz, s.x, s.z) <= r) return s;
+    }
+    return null;
+  }
+
+  /* HN2: farthest named corner room from (px,pz) — the search
+   * distraction target. Keys match enemy.js ROOM_CENTERS (lowercase);
+   * unknown rooms are a safe no-op inside applyDirectorOrder. */
+  function farthestCornerRoom(px, pz) {
+    var best = "north corridor";
+    var bd = -1;
+    try {
+      for (var i = 0; i < CORNER_ROOMS.length; i++) {
+        var c = CORNER_ROOMS[i];
+        var dx = px - c.x;
+        var dz = pz - c.z;
+        var d = dx * dx + dz * dz;
+        if (d > bd) {
+          bd = d;
+          best = c.room;
+        }
+      }
+    } catch (err) {
+      /* default stands */
+    }
+    return best;
+  }
+
+  /* HN2 search: one-time per spot; marks the spot, toasts the clue,
+   * and sends Agatha to inspect the farthest corner room. */
+  /* Goosebump clockwork lure: the grandfather clock at (-3.65, 6.5)
+   * (levels.js U_CLOCK spot) rings on E and pulls Agatha to the
+   * Entrance Hall to investigate — 30s cooldown vs lure spam. */
+  var CLOCK_LURE = { x: -3.65, z: 6.5 };
+  var clockCdUntil = 0;
+  function doClockLure() {
+    clockCdUntil = Date.now() + 30000;
+    toast("Ghadi baj gayi — Agatha hall ki taraf aa rahi hai!");
+    try {
+      if (Audio8 && Audio8.chime) Audio8.chime();
+      else if (Audio8 && Audio8.pickup) Audio8.pickup();
+    } catch (err) { /* x */ }
+    try {
+      if (enemy && typeof enemy.applyDirectorOrder === "function") {
+        enemy.applyDirectorOrder({
+          tactic: "inspect_hideout",
+          targetRoom: "entrance hall",
+          alertBoost: 20,
+          whisper: "Kaun bajata hai meri ghadi..."
+        });
+      }
+    } catch (err) { /* x */ }
+    lastPrompt = "force-refresh";
+    updatePrompt();
+  }
+
+  function doSearch(spot) {
+    try {
+      spot.searched = true;
+    } catch (err) {
+      /* x */
+    }
+    var nm = "Cabinet";
+    try {
+      if (spot && spot.name) nm = String(spot.name);
+    } catch (err) {
+      /* x */
+    }
+    toast("Clue mila: " + nm + " — Agatha bhatak gayi!");
+    try {
+      if (enemy && typeof enemy.applyDirectorOrder === "function" && player) {
+        var pp = player.pos();
+        enemy.applyDirectorOrder({
+          tactic: "inspect_hideout",
+          targetRoom: farthestCornerRoom(pp.x, pp.z),
+          alertBoost: 15,
+        });
+      }
+    } catch (err) {
+      /* distraction cosmetic */
+    }
+    try {
+      if (Audio8) {
+        if (typeof Audio8.chime === "function") Audio8.chime();
+        else if (typeof Audio8.pickup === "function") Audio8.pickup();
+      }
+    } catch (err) {
+      /* x */
+    }
+    lastPrompt = "force-refresh";
+    updatePrompt();
+  }
+
   function distXZ(ax, az, bx, bz) {
     var dx = ax - bx;
     var dz = az - bz;
@@ -711,6 +1035,18 @@
 
   function doInteract() {
     if (state !== "playing" || jumpscare || !player || !tmpV) return;
+    /* HN2: hidden E always steps out (never grabs key/door remotely). */
+    if (isHiddenNow()) {
+      try {
+        if (typeof player.exitHide === "function") player.exitHide();
+      } catch (err) {
+        /* x */
+      }
+      psState.hidden = isHiddenNow();
+      lastPrompt = "force-refresh";
+      updatePrompt();
+      return;
+    }
     var pp = player.pos();
     var kp = keyPos(tmpV);
     /* Stage 2+3 win edge: key pickup unlocks the door, it no longer
@@ -785,6 +1121,33 @@
       } else {
         toast("Chapel ka darwaza band hai — pehle Chapel Key dhoondo.");
       }
+      return;
+    }
+    /* HN2 hide: enter the cabinet (sibling player API, guarded).
+     * Sibling signature is enterHide(x, z, ry) — numbers, not the spot
+     * object; hidden state is read back, never assumed. */
+    var hsAct = nearSpot(hideSpots(), pp.x, pp.z, HIDE_RADIUS);
+    if (hsAct && player && typeof player.enterHide === "function") {
+      try {
+        player.enterHide(hsAct.x, hsAct.z, hsAct.ry);
+      } catch (err) {
+        /* x */
+      }
+      psState.hidden = isHiddenNow();
+      lastPrompt = "force-refresh";
+      updatePrompt();
+      return;
+    }
+    /* HN2 search: one-time clue + Agatha distraction. */
+    var ssAct = nearSpot(searchSpots(), pp.x, pp.z, HIDE_RADIUS);
+    if (ssAct && !ssAct.searched) {
+      doSearch(ssAct);
+      return;
+    }
+    /* Goosebump clock lure (30s cooldown). */
+    if (distXZ(pp.x, pp.z, CLOCK_LURE.x, CLOCK_LURE.z) <= 1.8 &&
+        Date.now() >= clockCdUntil) {
+      doClockLure();
     }
   }
 
@@ -879,6 +1242,8 @@
         psState.crouch = player ? player.isCrouch() : false;
         psState.keyHeld = keyFound;
         psState.inClassB = inClassB(psState.x, psState.z);
+        /* HN2: hidden flag mirrors the player hide API every step. */
+        psState.hidden = isHiddenNow();
         enemy.update(dt, timerMs / 1000, psState);
       } catch (err) {
         /* x */
@@ -970,6 +1335,19 @@
         esCache.suspicion = es.suspicion;
         esCache.dist = es.dist;
         esCache.alert01 = es.alert01;
+      }
+    } catch (err) {
+      /* x */
+    }
+    /* Goosebump EM proximity: Agatha <9m => lanterns shudder. */
+    try {
+      var emD = (es && typeof es.dist === "number") ? es.dist : 99;
+      var emF = emD < 9 ? 1 - emD / 9 : 0;
+      if (world && typeof world.setThreatFactor === "function") {
+        world.setThreatFactor(emF);
+      }
+      if (player && typeof player.setEMFlicker === "function") {
+        player.setEMFlicker(emF);
       }
     } catch (err) {
       /* x */
@@ -1163,7 +1541,7 @@
       if (!pausedRendered) {
         pausedRendered = true;
         try {
-          renderer.render(scene, camera);
+          renderFrame();
         } catch (err) {
           /* ignore */
         }
@@ -1237,7 +1615,7 @@
     }
 
     try {
-      renderer.render(scene, camera);
+      renderFrame();
     } catch (err) {
       /* surface lost; next frame retries */
     }
@@ -1555,6 +1933,13 @@
     applyQuality(settings.quality);
     onResize();
     window.addEventListener("resize", onResize, false);
+    /* HN2: build the post chain once the renderer/scene/camera exist
+     * (no-op on Low or when a pass is missing — direct render stands). */
+    try {
+      buildPost();
+    } catch (err) {
+      /* x */
+    }
 
     if (window.StV_Levels && window.StV_Levels.buildWorld) {
       try {

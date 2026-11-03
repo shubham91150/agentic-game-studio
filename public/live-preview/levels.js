@@ -1,23 +1,25 @@
-/* Ashes of St. Vermilion — Stage 1 world (Task 2) + gothic kit (Subagent B).
+/* Ashes of St. Vermilion — Stage 1 world (Task 2) + gothic kit (Subagent B)
+ * + HN2 photogrammetry swap (world-builder: Poly Haven CC0 furniture).
  * Owns: architecture, lights, props, lightning rig, key + chapel door.
  * Contract: window.StV_Levels = { buildWorld(scene), VERSION }.
  * r128 global style: uses window.THREE + window.WorldRealism, no modules.
  * Arch ref: docs/stvermilion-arch.md sections 1/3/4 (dims, lights, props).
  * Kit ref: ./assets/*.glb by Subagent A (Blender 3.4, meters, origin at base):
  *   gothic_pillar_arch (plinth/shaft/capital + vault springer ribs, y 0->5.41),
- *   gothic_window_frame (stone/iron/glass + MoonShaft node, shaft aims +Z),
- *   school_desk_chair (desk faces -Z, chair on +Z side, y 0->0.98),
- *   classroom_furniture (chalkboard west half + bookshelf east half, front +Z),
- *   chapel_pew_altar (altar at -Z end, pew at +Z end, emissive-only flames).
+ *   gothic_window_frame (stone/iron/glass + MoonShaft node, shaft aims +Z).
+ *   (school_desk_chair / classroom_furniture / chapel_pew_altar retired by
+ *   the HN2 swap: SchoolDesk+Chair, worn bookshelves, painted benches.)
  * Art direction lock: moonlit blue-greys + amber lantern light, aged dark
  * stone/wood/iron PBR. No cartoon look. Zero new primitive geometry here:
- * all 3D architecture/furniture comes from the .glb kit (+ pre-existing
+ * all 3D architecture/furniture comes from .glb scans (+ pre-existing
  * PBR wall planes); ash motes are THREE.Points (not a banned primitive).
+ * HN2 additions: PMREM IBL (gradient room baked once), grounding contact
+ * discs under floor props, window.__stvHideSpots / __stvSearchSpots.
  */
 (function () {
   "use strict";
 
-  var VERSION = "stv-stage1-1.1.0";
+  var VERSION = "stv-stage1-1.2.0";
   var WALL_H = 3.2;
   var WALL_T = 0.3;
   var LINTEL_Y0 = 2.3;
@@ -34,14 +36,67 @@
 
   // Subagent-A gothic kit, relative to the live-preview page like
   // enemy.js AGATHA_URL ("./assets/agatha.glb"). Served at
-  // /studio/live-preview/assets/*.glb. Loaded with NO targetLength so the
+  // /studio/live-preview/assets/ (every model a .glb). Loaded with NO
+  // targetLength so the
   // meter-accurate Blender dims survive (loader still XZ-centers + grounds).
   var U_PILLAR = "./assets/gothic_pillar_arch.glb";
   var U_WINDOW = "./assets/gothic_window_frame.glb";
   var U_SHAFT = "./assets/moonlight_shaft.glb";
+  // Retired by the HN2 photogrammetry swap (consts kept, zero references).
   var U_DESK = "./assets/school_desk_chair.glb";
   var U_FURN = "./assets/classroom_furniture.glb";
   var U_PEW = "./assets/chapel_pew_altar.glb";
+
+  // HN2 photogrammetry set: CC0 Poly Haven scans, 1K (disk
+  // public/assets/polyhaven/<id>/<id>_1k.glb -> /studio/assets/...).
+  // loadGlbModel normalizes by targetLength — meter lengths per prop family
+  // are chosen at each placeProp call site (see swap table in handoff).
+  // Credit: Poly Haven CC0 (one line, per asset rule).
+  var U_DESK2 = "/studio/assets/polyhaven/SchoolDesk_01/SchoolDesk_01_1k.glb";
+  var U_CHAIR = "/studio/assets/polyhaven/SchoolChair_01/SchoolChair_01_1k.glb";
+  var U_SHELF = "/studio/assets/polyhaven/wooden_bookshelf_worn/wooden_bookshelf_worn_1k.glb";
+  var U_BOOKS = "/studio/assets/polyhaven/book_encyclopedia_set_01/book_encyclopedia_set_01_1k.glb";
+  var U_WARD = "/studio/assets/polyhaven/GothicCabinet_01/GothicCabinet_01_1k.glb";
+  var U_DRAWER = "/studio/assets/polyhaven/drawer_cabinet/drawer_cabinet_1k.glb";
+  var U_DOOR = "/studio/assets/polyhaven/large_castle_door/large_castle_door_1k.glb";
+  var U_BENCH = "/studio/assets/polyhaven/painted_wooden_bench/painted_wooden_bench_1k.glb";
+  var U_CANDLE = "/studio/assets/polyhaven/brass_candleholders/brass_candleholders_1k.glb";
+  var U_CHAND = "/studio/assets/polyhaven/Chandelier_01/Chandelier_01_1k.glb";
+  var U_CHAND2 = "/studio/assets/polyhaven/lantern_chandelier_01/lantern_chandelier_01_1k.glb";
+  var U_ROCK = "/studio/assets/polyhaven/Rockingchair_01/Rockingchair_01_1k.glb";
+  var U_WHEEL = "/studio/assets/polyhaven/wheelchair_01/wheelchair_01_1k.glb";
+  var U_CLOCK = "/studio/assets/polyhaven/vintage_grandfather_clock_01/vintage_grandfather_clock_01_1k.glb";
+  var U_FRAME = "/studio/assets/polyhaven/hanging_picture_frame_01/hanging_picture_frame_01_1k.glb";
+  var U_TREAS = "/studio/assets/polyhaven/treasure_chest/treasure_chest_1k.glb";
+  var U_LAMP = "/studio/assets/polyhaven/vintage_oil_lamp/vintage_oil_lamp_1k.glb";
+  var U_TABLE = "/studio/assets/polyhaven/WoodenTable_01/WoodenTable_01_1k.glb";
+  var U_COMM = "/studio/assets/polyhaven/GothicCommode_01/GothicCommode_01_1k.glb";
+
+  /* ------ renderer capture for PMREM (eval-time, levels.js only) ------
+   * First principles: r128 PMREMGenerator bakes IBL by RENDERING an env
+   * scene, so it needs the live WebGLRenderer — but the renderer is owned
+   * by game.js and publishes no handle. Deferred scripts eval in document
+   * order (this file before game.js), so wrapping the constructor here
+   * transparently records the instance before game.js constructs it.
+   * Proxy(construct) keeps prototype/instanceof semantics identical;
+   * guarded so a missing Proxy (or any failure) just disables IBL. */
+  var stvCapturedRenderer = null;
+  try {
+    var Tcap = (typeof window !== "undefined") ? window.THREE : null;
+    if (Tcap && Tcap.WebGLRenderer && !Tcap.WebGLRenderer.__stvWrapped &&
+        typeof Proxy === "function" && typeof Reflect !== "undefined") {
+      var OrigWGL = Tcap.WebGLRenderer;
+      Tcap.WebGLRenderer = new Proxy(OrigWGL, {
+        construct: function (target, args) {
+          var inst = Reflect.construct(target, args);
+          stvCapturedRenderer = inst;
+          try { window.__stvRenderer = inst; } catch (ePub) { /* optional */ }
+          return inst;
+        }
+      });
+      try { Tcap.WebGLRenderer.__stvWrapped = true; } catch (eMark) { /* optional */ }
+    }
+  } catch (eWrap) { /* no capture: PMREM block below skips silently */ }
 
   function buildWorld(scene) {
     var THREE = window.THREE;
@@ -70,6 +125,50 @@
         }
       }
     } catch (toneErr) { /* renderer not up yet; game.js applies it */ }
+
+    /* ---------- PMREM image-based lighting (HN2) ----------
+     * First principles: MeshStandardMaterial PBR reflects its environment;
+     * with scene.environment null, varnish/brass/glass have nothing to
+     * reflect and read flat black under point lights alone. A tiny
+     * procedural gradient ROOM (warm amber ceiling, teal-grey walls,
+     * near-black floor + bright lantern/moon proxy quads) baked through
+     * r128 PMREMGenerator.fromScene gives every PBR surface cheap IBL
+     * fill + soft specular streaks. All PlaneGeometry (zero gate
+     * primitives), baked once here before first render; fully guarded. */
+    try {
+      if (THREE.PMREMGenerator) {
+        var pmremRenderer = stvCapturedRenderer ||
+          ((typeof window !== "undefined" &&
+            (window.StV_Renderer || window.__stvRenderer)) || null);
+        if (pmremRenderer) {
+          var envScene = new THREE.Scene();
+          var envQuad = function (w, h, color, px, py, pz, rx, ry) {
+            var m = new THREE.Mesh(new THREE.PlaneGeometry(w, h),
+              new THREE.MeshBasicMaterial({ color: color, side: THREE.DoubleSide }));
+            m.position.set(px, py, pz);
+            m.rotation.set(rx || 0, ry || 0, 0);
+            envScene.add(m);
+            return m;
+          };
+          envQuad(12, 12, 0x6a3d1e, 0, 3, 0, Math.PI / 2, 0);   // ceiling: lantern amber
+          envQuad(12, 12, 0x040405, 0, -3, 0, -Math.PI / 2, 0); // floor: light pit
+          envQuad(12, 6, 0x1d323b, 0, 0, -6, 0, 0);             // walls: teal-grey stone
+          envQuad(12, 6, 0x1d323b, 0, 0, 6, 0, Math.PI);
+          envQuad(12, 6, 0x24363e, -6, 0, 0, 0, Math.PI / 2);
+          envQuad(12, 6, 0x24363e, 6, 0, 0, 0, -Math.PI / 2);
+          envQuad(3, 1.6, 0xffc27a, -3, 1.4, -5.7, 0, 0);       // lantern proxy L
+          envQuad(3, 1.6, 0xff9a3c, 3, 1.4, 5.7, 0, Math.PI);   // lantern proxy R
+          envQuad(1.6, 3.2, 0xbcd6f0, 5.7, 1.0, 0, 0, -Math.PI / 2); // moon-slit proxy
+          var pmrem = new THREE.PMREMGenerator(pmremRenderer);
+          var envRT = pmrem.fromScene(envScene, 0.035);
+          if (envRT && envRT.texture) { scene.environment = envRT.texture; }
+          pmrem.dispose();
+          scene.userData.stvEnv = scene.environment ? "pmrem" : "none";
+        } else {
+          scene.userData.stvEnv = "none";
+        }
+      }
+    } catch (envErr) { scene.userData.stvEnv = "none"; }
 
     /* ---------- shared 1K PBR materials + unit plane ----------
      * First principles: real ambientCG 1K Color+NormalGL+Roughness maps via
@@ -111,8 +210,8 @@
     // Convent interior grade: aged damp plaster walls, weathered dark-grey
     // stone on the chapel face, dark wood wainscot below. NO red brick grid
     // anywhere indoors — Bricks075A stays on disk, unused by this level.
-    // (Iron/Metal032 stays unused: this stage has no IBL envmap, and bare
-    // metal under point lights alone renders near-black. Revisit with PMREM.)
+    // (Iron/Metal032 stays on disk: no iron prop this stage. Bare metal
+    // now gets PMREM IBL from the gradient room baked above.)
     var wallMatLong = pbr1k("Plaster001", 3, 1, 0x453f36, 0.7);
     var wallMatShort = pbr1k("Plaster001", 2, 1, 0x453f36, 0.7);
     var wallMatStone = pbr1k("Rock035", 3, 1, 0x615f5a, 1.0);
@@ -149,6 +248,25 @@
       [0.5, "rgba(255,120,30,0.25)"],
       [1, "rgba(0,0,0,0)"]
     ]);
+    // Contact-shadow disc (HN2): radial black falloff on the shared
+    // unitPlane, laid 5mm above the floor. Pure grounding AO under floor
+    // props — transparent, depthWrite off, zero colliders, zero routes.
+    var contactTex = radialSpriteTex(128, [
+      [0, "rgba(0,0,0,0.55)"],
+      [0.6, "rgba(0,0,0,0.28)"],
+      [1, "rgba(0,0,0,0)"]
+    ]);
+    var contactMat = new THREE.MeshBasicMaterial({
+      map: contactTex, transparent: true, depthWrite: false
+    });
+    function addContactShadow(x, z, w, d) {
+      var m = new THREE.Mesh(unitPlane, contactMat);
+      m.rotation.x = -Math.PI / 2;
+      m.position.set(x, 0.005, z);
+      m.scale.set(w, d, 1);
+      m.renderOrder = 2;
+      scene.add(m);
+    }
     // Flame teardrop: additive-stacked radial blobs, orange base -> amber
     // mid -> pale core -> white-hot tip. Additive faint sprites read as
     // flame because real flame IS emissive gas: bright core, soft falloff,
@@ -336,6 +454,20 @@
       mat.blending = THREE.AdditiveBlending;
       mat.needsUpdate = true;
     }
+    // Shared 1K dark-stone PBR for kit stone/brick: Rock035 maps load
+    // once and are stamped onto every ConventStone/Brick material so
+    // pillars read as normal-mapped masonry, never flat grey.
+    var pbrStoneMaps = null;
+    function stoneMaps() {
+      if (!pbrStoneMaps) {
+        pbrStoneMaps = {
+          map: pbrTex("Rock035", "Color", 1, 1, true),
+          normalMap: pbrTex("Rock035", "NormalGL", 1, 1, false),
+          roughnessMap: pbrTex("Rock035", "Roughness", 1, 1, false)
+        };
+      }
+      return pbrStoneMaps;
+    }
     // Named-node fast path (MoonShaft exists per kit contract) + a
     // material-name sweep fallback. Clones share materials, so dedupe.
     function collectWindowMats(root) {
@@ -364,12 +496,18 @@
             // Amplify the authored relief: plaster-tinted stone normals
             // are subtle; x1.6 makes carving read under dim torch light.
             if (m.normalScale) { m.normalScale.set(1.6, 1.6); }
-            // Brick factors were authored near-white for a linear
-            // pipeline, so they wash out under sRGB output — pull to a
-            // mid weathered grade (flagged: materials are shared clones).
-            if (nm.indexOf("brick") >= 0 && !m.userData.stvBrickGrade) {
-              m.color.multiplyScalar(0.5);
-              m.userData.stvBrickGrade = true;
+            // HN2 fix: stamp real 1K Rock035 PBR (dark gothic masonry)
+            // over the flat authored tints. Vertex-color soot is kept.
+            if (!m.userData.stvPbrStone) {
+              try {
+                var sm = stoneMaps();
+                m.map = sm.map;
+                m.normalMap = sm.normalMap;
+                m.roughnessMap = sm.roughnessMap;
+                m.color.setHex(0x4a4640);
+                m.needsUpdate = true;
+                m.userData.stvPbrStone = true;
+              } catch (eStone) { /* keep authored maps */ }
             }
           }
         });
@@ -390,10 +528,21 @@
     var chapelDoor = new THREE.Group();
     chapelDoor.position.set(0, 0, -9);
     chapelDoor.userData.locked = true;
-    var doorSlab = new THREE.Mesh(unitPlane, doorMat);
-    doorSlab.scale.set(2.2, 2.7, 1);
-    doorSlab.position.set(0, 1.35, 0.05);
-    chapelDoor.add(doorSlab);
+    // HN2: photogrammetry castle-door leaf inside the SAME group (game.js
+    // contract intact: doorPos reads group world pos, unlock swings
+    // rotation.y, tintDoor finds the MeshBasicMaterial slit below).
+    // The locked wall-band collider above is untouched. Fallback slab only
+    // materializes if the .glb 404s.
+    loadWithCatch(U_DOOR, function (doorRoot) {
+      doorRoot.position.set(0, 0, 0.05);
+      doorRoot.rotation.y = 0;
+      chapelDoor.add(doorRoot);
+    }, function () {
+      var doorSlab = new THREE.Mesh(unitPlane, doorMat);
+      doorSlab.scale.set(2.2, 2.7, 1);
+      doorSlab.position.set(0, 1.35, 0.05);
+      chapelDoor.add(doorSlab);
+    }, 2.6);
     var trimL = new THREE.Mesh(unitPlane, trimMat);
     trimL.scale.set(0.25, 2.9, 1);
     trimL.position.set(-1.225, 1.45, 0.05);
@@ -498,7 +647,7 @@
      * onRoot (lantern glass/flames never pass through here); unmapped
      * materials are kept and tinted the same way. Idempotent setHex, so
      * shared clone materials can't double-darken. */
-    var WALNUT_HEX = 0x3a2a1d;
+    var WALNUT_HEX = 0x241a10;
     function weatherWood(root) {
       try {
         root.traverse(function (o) {
@@ -525,6 +674,8 @@
           x1: def.x + def.hw, z1: def.z + def.hd
         });
       }
+      // HN2: visual-only grounding disc (never a collider).
+      if (def.shadow) { addContactShadow(def.x, def.z, def.shadow[0], def.shadow[1]); }
       loadWithCatch(def.url, function (root) {
         // Keep vendor XZ-centering + grounding offsets, then move to the spot.
         root.position.x += def.x;
@@ -558,11 +709,14 @@
       });
     }
     var CHESTS = [[-11.2, 0.5], [-10, 7]]; // C1 nudged W so the 3m hall keeps a 1.6m pass
+    // HN2: photogrammetry treasure_chest on the SAME spots with the SAME
+    // hw/hd (identical collider rects). No weatherWood: the scan ships
+    // graded and a walnut stamp would flatten its PBR.
     for (i = 0; i < CHESTS.length; i++) {
       placeProp({
-        url: U_CHEST, x: CHESTS[i][0], y: 0, z: CHESTS[i][1],
-        len: 0.95, hw: 0.48, hd: 0.3, fb: [0.8, 0.6, 0x7a5a34],
-        onRoot: weatherWood
+        url: U_TREAS, x: CHESTS[i][0], y: 0, z: CHESTS[i][1],
+        len: 0.9, hw: 0.48, hd: 0.3, fb: [0.8, 0.6, 0x7a5a34],
+        shadow: [1.0, 0.65]
       });
     }
     // 5 crates: 2-high stack at H1, 1 key-desk under K1, 2 at H5.
@@ -571,10 +725,15 @@
       [6.5, 0, -4.5, true], [-3.2, 0, 7.9, true], [-2.5, 0, 8.35, true]
     ];
     for (i = 0; i < CRATES.length; i++) {
+      // Gothic photogrammetry instead of low-poly orange crates (same
+      // coords/colliders): commodes everywhere, treasure chest riding
+      // on top of the H1 stack. Scans ship graded — no walnut stamp.
+      var crateUrl = (i === 1) ? U_TREAS : U_COMM;
       placeProp({
-        url: U_CRATE, x: CRATES[i][0], y: CRATES[i][1], z: CRATES[i][2],
-        len: 0.62, hw: CRATES[i][3] ? 0.31 : 0, hd: 0.31, fb: [0.55, 0.55, 0x8a6a42],
-        onRoot: weatherWood
+        url: crateUrl, x: CRATES[i][0], y: CRATES[i][1], z: CRATES[i][2],
+        len: (i === 1) ? 0.9 : 1.0, hw: CRATES[i][3] ? 0.31 : 0, hd: 0.31,
+        fb: [0.55, 0.55, 0x8a6a42],
+        shadow: [0.7, 0.7]
       });
     }
     var BARRELS = [[7.3, 0.3], [7.8, 0.6], [7.4, 0.9], [-6.2, 7.8], [-5.6, 8.1]];
@@ -656,8 +815,12 @@
       len: undefined, hw: 0.35, hd: 0.35, fb: PILLAR_FB
     });
 
-    /* ---------- gothic kit: classroom desks (all face the south board) ----------
-     * Footprint after centering: x +/-0.47, z +/-0.625. Aisles kept clear:
+    /* ------ HN2: photogrammetry school desks + chairs + books (all face
+     * the south board). Retires school_desk_chair kit: SchoolDesk_01 sits
+     * EXACTLY on the route-verified DESKS center (same hw 0.47 / hd 0.63
+     * rect pushed — BFS 36/36 untouched, zero route changes), SchoolChair_01
+     * tucks on the +Z side facing the desk (visual only, same rect), and an
+     * encyclopedia set rides every 3rd desktop. Aisles kept clear (as before):
      * A: vertical x -5 lane, horizontal z -2 lane, dwell (-6,-4.5), H1 crate,
      *    D1/D3 gaps. B: vertical x 5 lane, horizontal z -2 lane, dwell
      *    (6,-0.5), key crate + key target (6.5,-3.5), H2 barrels, D2/D4. */
@@ -680,16 +843,30 @@
       [8.3, -5.2], [8.3, -4.3], [8.3, -3.4]
     ];
     for (i = 0; i < DESKS.length; i++) {
-      placeProp({
-        url: U_DESK, x: DESKS[i][0], y: 0, z: DESKS[i][1], ry: 0,
-        len: undefined, hw: 0.47, hd: 0.63, fb: DESK_FB, onRoot: collectWindowMats
-      });
+      (function (dx, dz, k) {
+        placeProp({
+          url: U_DESK2, x: dx, y: 0, z: dz, ry: 0, len: 1.1,
+          hw: 0.47, hd: 0.63, fb: DESK_FB, shadow: [1.0, 1.35]
+        });
+        placeProp({
+          url: U_CHAIR, x: dx, y: 0, z: dz + 0.42, ry: Math.PI, len: 0.9,
+          fb: [0.5, 0.8, 0x6a5236]
+        });
+        if (k % 3 === 0) {
+          placeProp({
+            url: U_BOOKS, x: dx + 0.22, y: 0.72, z: dz - 0.05, ry: 0.3,
+            len: 0.4, fb: [0.3, 0.25, 0x7a2a2a]
+          });
+        }
+      })(DESKS[i][0], DESKS[i][1], i);
     }
 
-    /* ---------- gothic kit: chalkboard + bookshelf walls ----------
-     * Unit spans x -2..2 after centering (board west, shelf east), 0.4 deep,
-     * front (+Z, tray side) faces the room. South units face north (ry 0);
-     * divider units face into their classroom (ry -/+PI/2). */
+    /* ------ HN2: photogrammetry bookshelf walls + encyclopedias -------
+     * Retires classroom_furniture kit: 3 worn bookshelves span each 4m FURN
+     * unit (south units ry 0 face north; divider units ry -/+PI/2 face into
+     * their classroom), one encyclopedia set per unit at mid-shelf on the
+     * room face. The CENTER shelf of each unit sits EXACTLY on the FURN
+     * center and pushes the SAME hw/hd (identical collider rects). */
     var FURN_FB = [3.6, 1.8, 0x4a4438];
     var FURNS = [
       // x, z, ry, hw, hd
@@ -698,19 +875,36 @@
       [5.6, -5.7, 0, 2.0, 0.2],             // B south wall
       [1.25, 0, Math.PI / 2, 0.2, 2.0]      // B divider wall
     ];
+    var SHELF_OFF = [-1.25, 0, 1.25];
     for (i = 0; i < FURNS.length; i++) {
-      placeProp({
-        url: U_FURN, x: FURNS[i][0], y: 0, z: FURNS[i][1], ry: FURNS[i][2],
-        len: undefined, hw: FURNS[i][3], hd: FURNS[i][4], fb: FURN_FB,
-        onRoot: collectWindowMats
-      });
+      (function (fx, fz, fry, fhw, fhd) {
+        var alongZ = (fhw < fhd); // divider units run along Z
+        for (var q = 0; q < SHELF_OFF.length; q++) {
+          var sx = alongZ ? fx : fx + SHELF_OFF[q];
+          var sz = alongZ ? fz + SHELF_OFF[q] : fz;
+          placeProp({
+            url: U_SHELF, x: sx, y: 0, z: sz, ry: fry, len: 1.9,
+            hw: (q === 1) ? fhw : 0, hd: fhd,
+            fb: [0.95, 1.8, 0x4a4438],
+            shadow: alongZ ? [0.6, 1.0] : [1.0, 0.6]
+          });
+        }
+        var bx = alongZ ? fx + ((fry > 0) ? 0.15 : -0.15) : fx;
+        var bz = alongZ ? fz : fz + 0.15;
+        placeProp({
+          url: U_BOOKS, x: bx, y: 1.1, z: bz, ry: fry + 0.2,
+          len: 0.4, fb: [0.3, 0.25, 0x7a2a2a]
+        });
+      })(FURNS[i][0], FURNS[i][1], FURNS[i][2], FURNS[i][3], FURNS[i][4]);
     }
 
-    /* ---------- gothic kit: chapel pew + altar ----------
-     * Unit: altar at -Z end, pew at +Z end, 1.9 x 2.9 after centering.
-     * Flames are emissive-only (r128 has no bloom), so each altar gets a
-     * real amber PointLight + a flicker entry on the shared ConventFlame
-     * material (picked up by collectWindowMats via the flame sweep). */
+    /* ------ HN2: photogrammetry pew benches (retires chapel_pew_altar) --
+     * Two painted benches per PEW rect: the FIRST sits EXACTLY on the
+     * route-verified center and pushes the SAME hw/hd (identical collider
+     * rects); the second fills the rect, visual only. The altar ends become
+     * candle nooks (brass pairs + oil lamps below) under the SAME amber
+     * PointLights; altar flicker entries stay light-only (no ConventFlame
+     * material now that the kit unit is gone — guarded by the mat check). */
     var PEW_FB = [1.8, 1.2, 0x5a4632];
     var PEWS = [
       // x, z, ry, hw, hd — entrance-hall east aisle + north-chapel anchor.
@@ -721,21 +915,90 @@
       [5.0, -8.25, Math.PI / 2, 1.45, 0.95]
     ];
     for (i = 0; i < PEWS.length; i++) {
-      placeProp({
-        url: U_PEW, x: PEWS[i][0], y: 0, z: PEWS[i][1], ry: PEWS[i][2],
-        len: undefined, hw: PEWS[i][3], hd: PEWS[i][4],
-        fb: PEW_FB, onRoot: collectWindowMats
-      });
+      (function (px, pz, pry, phw, phd) {
+        var deepZ = (phw < phd); // hall rect deeper in Z, chapel rect in X
+        // Altar table at the nook end (hall: z-1.1, chapel: x-1.1) pushes
+        // the SAME rect collider; ONE bench at center (visual); the old
+        // +0.7 offset second bench floated — deleted by design.
+        var tx = deepZ ? px : px - 1.1;
+        var tz = deepZ ? pz - 1.1 : pz;
+        placeProp({
+          url: U_TABLE, x: tx, y: 0, z: tz, ry: pry, len: 1.3,
+          hw: phw, hd: phd, fb: PEW_FB,
+          shadow: deepZ ? [1.4, 0.9] : [0.9, 1.4]
+        });
+        placeProp({
+          url: U_BENCH, x: px, y: 0, z: pz, ry: pry, len: 1.8, fb: PEW_FB,
+          shadow: deepZ ? [1.9, 0.7] : [0.7, 1.9]
+        });
+      })(PEWS[i][0], PEWS[i][1], PEWS[i][2], PEWS[i][3], PEWS[i][4]);
     }
-    // Altar candle glow: hall altar sits at the unit's -Z end (3.0, 5.2);
-    // chapel altar maps to (3.9, -8.25) under ry=PI/2. y=1.9 floats just
-    // above the 1.5m candle flames. Flicker entries attach once the shared
-    // ConventFlame material arrives (first pew load wins the race is fine:
-    // both pew clones share the material, one entry each keeps phases).
+    // Altar candle glow (HN2: now washes the candle nooks): hall nook at
+    // (3.0, 5.2), chapel nook at (3.9, -8.25). y=1.9 floats just above the
+    // bench candles. Flicker entries stay light-only (mat:null guarded).
     var altarA = point(3.0, 1.9, 5.2, 0xff9a3c, 0.85, 6);
     var altarB = point(3.9, 1.9, -8.25, 0xff9a3c, 0.85, 6);
     flickers.push({ mat: null, light: altarA, base: 0.85, phase: 9.1 });
     flickers.push({ mat: null, light: altarB, base: 0.85, phase: 21.7 });
+
+    /* ---- HN2: chandeliers, bench candles, oil-lamp glow spots ---------
+     * Chandeliers hang below the beams (hall / north corridor / south
+     * corridor); brass pairs ride the pew benches under the altar glow;
+     * oil lamps sit on the floor as glow spots. Zero colliders here. */
+    /* Goosebump layer 1 — autonomous living props: rocking chair +
+     * swaying chandeliers. Roots collected via onRoot, animated in
+     * update() with slow sines (rot.x rock, rot.z sway). */
+    var rockers = [];
+    var swayers = [];
+    function trackRocker(root) { rockers.push({ root: root, ph: rockers.length * 1.7 }); }
+    function trackSway(root) { swayers.push({ root: root, ph: swayers.length * 2.3 }); }
+    var CHAND_FB = [0.7, 0.6, 0xd8a040];
+    placeProp({ url: U_CHAND, x: -2.2, y: 2.45, z: 7.0, len: 0.8, fb: CHAND_FB, onRoot: trackSway });
+    placeProp({ url: U_CHAND2, x: 5.5, y: 2.45, z: -7.5, len: 0.8, fb: CHAND_FB, onRoot: trackSway });
+    placeProp({ url: U_CHAND, x: 0, y: 2.45, z: 3.5, len: 0.8, fb: CHAND_FB, onRoot: trackSway });
+    var CAND_FB = [0.3, 0.3, 0xc89858];
+    placeProp({ url: U_CANDLE, x: 2.5, y: 0.46, z: 6.3, ry: 0.2, len: 0.35, fb: CAND_FB });
+    placeProp({ url: U_CANDLE, x: 3.5, y: 0.46, z: 6.3, ry: -0.2, len: 0.35, fb: CAND_FB });
+    placeProp({ url: U_CANDLE, x: 5.0, y: 0.46, z: -8.7, ry: 0.1, len: 0.35, fb: CAND_FB });
+    placeProp({ url: U_CANDLE, x: 5.0, y: 0.46, z: -7.8, ry: -0.1, len: 0.35, fb: CAND_FB });
+    var LAMP_FB = [0.25, 0.3, 0xffc06a];
+    placeProp({ url: U_LAMP, x: 2.5, y: 0, z: 5.2, len: 0.3, fb: LAMP_FB, shadow: [0.35, 0.35] });
+    placeProp({ url: U_LAMP, x: 3.9, y: 0, z: -8.25, len: 0.3, fb: LAMP_FB, shadow: [0.35, 0.35] });
+    placeProp({ url: U_LAMP, x: 9.0, y: 0, z: 8.2, len: 0.3, fb: LAMP_FB, shadow: [0.35, 0.35] });
+
+    /* ---- HN2: clock, wardrobes, drawer, wheelchair, frames ------------
+     * Wall-hugging NEW colliders in dead zones only (BFS-audited: every
+     * previously reachable waypoint stays reachable — see handoff report).
+     * Wardrobe/drawer/chest coords feed the __stvHideSpots /
+     * __stvSearchSpots export at the bottom (game.js contract). */
+    placeProp({ url: U_CLOCK, x: -3.65, y: 0, z: 6.5, ry: Math.PI / 2,
+      len: 1.9, hw: 0.3, hd: 0.3, fb: [0.6, 1.8, 0x4a3320], shadow: [0.7, 0.6] });
+    // HIDE = [x, z, ry, hw, hd]: A-west (faces E), S-corridor (faces S),
+    // E-store south wall (faces N). E-store sits W of the S windows + boxes.
+    var HIDE = [
+      [-8.55, -4.6, Math.PI / 2, 0.32, 0.55],
+      [0, 2.42, 0, 0.55, 0.32],
+      [6.6, 8.55, Math.PI, 0.55, 0.32]
+    ];
+    for (var hc = 0; hc < HIDE.length; hc++) {
+      (function (hx, hz, hry, hhw, hhd) {
+        placeProp({ url: U_WARD, x: hx, y: 0, z: hz, ry: hry, len: 2.0,
+          hw: hhw, hd: hhd, fb: [1.0, 1.9, 0x3a2c1e],
+          shadow: (hhw < hhd) ? [0.7, 1.15] : [1.15, 0.7] });
+      })(HIDE[hc][0], HIDE[hc][1], HIDE[hc][2], HIDE[hc][3], HIDE[hc][4]);
+    }
+    var DRAWER = { x: 8.6, z: 0.5, ry: -Math.PI / 2 }; // B east wall, faces W
+    placeProp({ url: U_DRAWER, x: DRAWER.x, y: 0, z: DRAWER.z, ry: DRAWER.ry,
+      len: 1.0, hw: 0.3, hd: 0.45, fb: [0.8, 0.9, 0x5a4632], shadow: [0.65, 0.95] });
+    placeProp({ url: U_WHEEL, x: -9.3, y: 0, z: 6.0, ry: 0.5,
+      len: 1.1, hw: 0.35, hd: 0.45, fb: [0.7, 0.9, 0x6a6a70], shadow: [0.7, 0.95] });
+    placeProp({ url: U_ROCK, x: 5.4, y: 0, z: 7.8, ry: -0.6,
+      len: 0.9, hw: 0.35, hd: 0.4, fb: [0.65, 0.9, 0x5a4632], shadow: [0.7, 0.9],
+      onRoot: trackRocker });
+    var FRAME_FB = [0.6, 0.6, 0x8a7648];
+    placeProp({ url: U_FRAME, x: -2, y: 1.7, z: 8.92, ry: Math.PI, len: 0.7, fb: FRAME_FB });
+    placeProp({ url: U_FRAME, x: -8.92, y: 1.7, z: -3.2, ry: Math.PI / 2, len: 0.7, fb: FRAME_FB });
+    placeProp({ url: U_FRAME, x: 3, y: 1.7, z: -8.92, ry: 0, len: 0.7, fb: FRAME_FB });
 
     /* ---------- ash motes: 600 wind-drifted THREE.Points ----------
      * r128 PointsMaterial, additive at low opacity for a faint ember-dust
@@ -784,6 +1047,7 @@
     var aiBlackoutT = 0;      // lantern_blackout seconds remaining
     var aiBlackoutDim = 0.25; // lantern_blackout dim multiplier
     var aiOmenT = 0;          // chapel_omen seconds remaining
+    var aiProxF = 0;          // goosebump EM proximity factor 0..1 (game.js fed)
     var omenCrimson = new THREE.Color(0xff2a1a);
     var omenAmber = new THREE.Color(0xff9a3c);
     var chapelSet = [P5, altarA, altarB];
@@ -882,7 +1146,23 @@
           dim = aiBlackoutDim * (0.75 + 0.25 * bf);
           if (dim < 0.02) { dim = 0.02; }
         }
-        fl.light.intensity = fl.base * dim * (1 + n * 0.18);
+        // Goosebump layer 2 — proximity EM flicker: game.js feeds
+        // aiProxF (0..1) from Agatha's distance; lanterns shudder at
+        // 43 rad/s as she closes in, before you ever see her.
+        var emf = 1 + Math.sin(t * 43.0 + fl.phase) * 0.35 * aiProxF;
+        fl.light.intensity = fl.base * dim * (1 + n * 0.18) * emf;
+      }
+      // Goosebump layer 1 drivers (cheap: 1 rocker + 3 chandeliers).
+      var lr;
+      for (lr = 0; lr < rockers.length; lr++) {
+        try {
+          rockers[lr].root.rotation.x = Math.sin(t * 1.4 + rockers[lr].ph) * 0.06;
+        } catch (eRock) { /* x */ }
+      }
+      for (lr = 0; lr < swayers.length; lr++) {
+        try {
+          swayers[lr].root.rotation.z = Math.sin(t * 0.9 + swayers[lr].ph) * 0.025;
+        } catch (eSway) { /* x */ }
       }
       var env = 0;
       if (strikeT < 0) {
@@ -987,12 +1267,31 @@
       } catch (eAi) { /* director orders never break the world */ }
     }
 
+    /* ---------- HN2 hide/search spot export (game.js contract) ----------
+     * hideSpots=[{x,z,ry,name}] (enterHide numbers), searchSpots=[{x,z,name}]
+     * + searched flag. Coords match the wardrobes/drawer/chests above. */
+    try {
+      window.__stvHideSpots = [
+        { x: HIDE[0][0], z: HIDE[0][1], ry: HIDE[0][2], name: "Classroom A wardrobe" },
+        { x: HIDE[1][0], z: HIDE[1][1], ry: HIDE[1][2], name: "South corridor wardrobe" },
+        { x: HIDE[2][0], z: HIDE[2][1], ry: HIDE[2][2], name: "East store wardrobe" }
+      ];
+      window.__stvSearchSpots = [
+        { x: DRAWER.x, z: DRAWER.z, name: "Classroom B drawer cabinet", searched: false },
+        { x: CHESTS[0][0], z: CHESTS[0][1], name: "West nook chest", searched: false },
+        { x: CHESTS[1][0], z: CHESTS[1][1], name: "South-west store chest", searched: false }
+      ];
+    } catch (eSpots) { /* guarded: game plays identically without spots */ }
+
     return {
       colliders: colliders,
       spawn: { x: 0, z: 8.5, ry: 0 },
       bounds: { x0: -12, z0: -9, x1: 12, z1: 9 },
       update: update,
       applyAiEnvironment: applyAiEnvironment,
+      setThreatFactor: function (f) {
+        aiProxF = Math.max(0, Math.min(1, +f || 0));
+      },
       keyMesh: keyMesh,
       chapelDoor: chapelDoor
     };

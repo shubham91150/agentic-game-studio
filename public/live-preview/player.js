@@ -2,7 +2,7 @@
  * window.StV_Player.create(camera, colliders, bounds) ->
  *   {pos(), update(dt,input), setTorch, setCrouch, noiseLevel,
  *    setMoveVec, setLookDelta, + additive: reset, setEnabled,
- *    setSensitivity, onStep hook}
+ *    setSensitivity, onStep hook, HN2 hide: enterHide/exitHide/isHidden}
  * Units: meters. Eye 1.6m (crouch 0.9m). Walk 3.2 / run 5.2 / crouch 1.6 m/s.
  * Collision: circle (r=0.35m) vs AABB list in XZ + bounds clamp.
  * Look: pointer-lock mouse + drag fallback + touch via setLookDelta.
@@ -41,6 +41,8 @@
   var SWAY_MAX = 0.03;
   var GLASS_HEX = 0xffa63e;
   var GLASS_EI = 1.6;
+  var HIDE_EYE = 1.55;
+  var HIDE_PEEK = 0.35;
 
   window.StV_Player = {
     create: function (camera, colliders, bounds) {
@@ -64,6 +66,7 @@
       var stepAcc = 0;
       var bobPhase = 0;
       var flickT = 0;
+      var emfF = 0; // goosebump EM proximity factor 0..1 (game.js fed)
       var dragging = false;
       var lastDX = 0;
       var lastDY = 0;
@@ -77,6 +80,16 @@
       var smYawV = 0;
       var smPitchV = 0;
       var crouchK = 0;
+      /* HN2 hide-mode state: resume snapshot + door-gap peek anchor. */
+      var hidden = false;
+      var hidePX = 0;
+      var hidePZ = 0;
+      var hideYaw = 0;
+      var hidePitch = 0;
+      var hideTorch = true;
+      var hideCrouch = false;
+      var hidePeekX = 0;
+      var hidePeekZ = 0;
 
       try {
         reducedMotion = window.matchMedia &&
@@ -324,14 +337,25 @@
         pos: function () { return camera.position; },
 
         setTorch: function (on) {
+          if (hidden) {
+            /* Torch stays dark inside; remember the desired state. */
+            hideTorch = !!on;
+            torchOn = false;
+            torch.visible = false;
+            applyGlassTorch();
+            return;
+          }
           torchOn = !!on;
           torch.visible = torchOn;
           applyGlassTorch();
         },
-        isTorchOn: function () { return torchOn; },
+        isTorchOn: function () { return hidden ? false : torchOn; },
 
-        setCrouch: function (on) { crouch = !!on; },
-        isCrouch: function () { return crouch; },
+        setCrouch: function (on) {
+          if (hidden) { hideCrouch = !!on; crouch = false; return; }
+          crouch = !!on;
+        },
+        isCrouch: function () { return hidden ? false : crouch; },
 
         setEnabled: function (on) {
           enabled = !!on;
@@ -354,9 +378,80 @@
           applyLook(+dx || 0, +dy || 0, TOUCH_LOOK);
         },
 
-        noiseLevel: function () { return noise; },
+        noiseLevel: function () { return hidden ? 0 : noise; },
+
+        isHidden: function () { return hidden; },
+        setEMFlicker: function (f) {
+          emfF = Math.max(0, Math.min(1, +f || 0));
+        },
+
+        enterHide: function (x, z, ry) {
+          if (hidden) return false;
+          if (typeof x !== 'number' || typeof z !== 'number' ||
+              typeof ry !== 'number') return false;
+          if (!isFinite(x) || !isFinite(z) || !isFinite(ry)) return false;
+          hidePX = px;
+          hidePZ = pz;
+          hideYaw = yaw;
+          hidePitch = pitch;
+          hideTorch = torchOn;
+          hideCrouch = crouch;
+          hidden = true;
+          px = x;
+          pz = z;
+          vx = 0;
+          vz = 0;
+          crouch = false;
+          yaw = ry;
+          pitch = 0;
+          accYaw = 0;
+          accPitch = 0;
+          noise = 0;
+          stepAcc = 0;
+          /* Door-gap peek: eye 1.55m, 0.35m out along facing
+           * forward(ry) = (-sin ry, -cos ry). */
+          hidePeekX = x - Math.sin(ry) * HIDE_PEEK;
+          hidePeekZ = z - Math.cos(ry) * HIDE_PEEK;
+          eyeH = HIDE_EYE;
+          torchOn = false;
+          torch.visible = false;
+          applyGlassTorch();
+          camera.position.set(hidePeekX, HIDE_EYE, hidePeekZ);
+          camera.rotation.set(pitch, yaw, 0);
+          return true;
+        },
+
+        exitHide: function () {
+          if (!hidden) return false;
+          hidden = false;
+          px = hidePX;
+          pz = hidePZ;
+          yaw = hideYaw;
+          pitch = hidePitch;
+          clampLook();
+          vx = 0;
+          vz = 0;
+          noise = 0;
+          stepAcc = 0;
+          crouch = !!hideCrouch;
+          eyeH = crouch ? EYE_CROUCH : EYE_STAND;
+          torchOn = !!hideTorch;
+          torch.visible = torchOn;
+          applyGlassTorch();
+          collide();
+          camera.position.set(px, eyeH, pz);
+          camera.rotation.set(pitch, yaw, 0);
+          return true;
+        },
 
         reset: function (x, z, ry) {
+          if (hidden) {
+            hidden = false;
+            crouch = !!hideCrouch;
+            torchOn = !!hideTorch;
+            torch.visible = torchOn;
+            applyGlassTorch();
+          }
           px = (typeof x === 'number') ? x : 0;
           pz = (typeof z === 'number') ? z : 8.5;
           if (typeof ry === 'number') yaw = ry;
@@ -388,48 +483,74 @@
         update: function (dt, input) {
           if (!enabled) return;
           input = input || {};
-          var f = (input.f ? 1 : 0) - (input.b ? 1 : 0) + touchZ;
-          var s = (input.r ? 1 : 0) - (input.l ? 1 : 0) + touchX;
-          var mag = Math.sqrt(f * f + s * s);
-          if (mag > 1) { f /= mag; s /= mag; mag = 1; }
-
-          var running = !!input.run && !crouch && f > 0.1;
+          var f;
+          var s;
+          var mag;
+          var running;
+          if (hidden) {
+            /* Locked inside: no translation, camera stays live. */
+            f = 0;
+            s = 0;
+            mag = 0;
+            running = false;
+          } else {
+            f = (input.f ? 1 : 0) - (input.b ? 1 : 0) + touchZ;
+            s = (input.r ? 1 : 0) - (input.l ? 1 : 0) + touchX;
+            mag = Math.sqrt(f * f + s * s);
+            if (mag > 1) { f /= mag; s /= mag; mag = 1; }
+            running = !!input.run && !crouch && f > 0.1;
+          }
           var speed = crouch ? CROUCH_SPD : (running ? RUN : WALK);
 
           var sy = Math.sin(yaw);
           var cy = Math.cos(yaw);
-          var tvx = (f * -sy + s * cy) * speed;
-          var tvz = (f * -cy + s * -sy) * speed;
+          var tvx = 0;
+          var tvz = 0;
+          if (!hidden) {
+            tvx = (f * -sy + s * cy) * speed;
+            tvz = (f * -cy + s * -sy) * speed;
+          }
 
-          var rate = (mag > 0.05) ? ACCEL : FRICTION;
+          var rate = (!hidden && mag > 0.05) ? ACCEL : FRICTION;
           var k = 1 - Math.exp(-rate * dt);
           vx += (tvx - vx) * k;
           vz += (tvz - vz) * k;
 
-          /* Axis-separated integrate + resolve (stable corners). */
-          px += vx * dt;
-          collide();
-          pz += vz * dt;
-          collide();
+          if (!hidden) {
+            /* Axis-separated integrate + resolve (stable corners). */
+            px += vx * dt;
+            collide();
+            pz += vz * dt;
+            collide();
+          }
 
           /* Kill velocity leaking into walls: re-derive from travel. */
-          var eyeTarget = crouch ? EYE_CROUCH : EYE_STAND;
+          var eyeTarget = hidden ? HIDE_EYE :
+            (crouch ? EYE_CROUCH : EYE_STAND);
           eyeH += (eyeTarget - eyeH) * (1 - Math.exp(-12 * dt));
 
           var planar = Math.sqrt(vx * vx + vz * vz);
           var bob = 0;
-          if (!reducedMotion && planar > 0.3) {
+          if (!hidden && !reducedMotion && planar > 0.3) {
             bobPhase += dt * planar * 2.2;
             bob = Math.sin(bobPhase) * 0.028 * Math.min(1, planar / WALK);
           }
 
-          camera.position.set(px, eyeH + bob, pz);
+          if (hidden) {
+            camera.position.set(hidePeekX, eyeH + bob, hidePeekZ);
+          } else {
+            camera.position.set(px, eyeH + bob, pz);
+          }
           camera.rotation.set(pitch, yaw, 0);
 
           flickT += dt;
-          if (torchOn) {
+          if (hidden) {
+            if (torch.visible) torch.visible = false;
+          } else if (torchOn) {
+            // Goosebump EM flicker: held lantern shudders as Agatha nears.
+            var emfH = 1 + Math.sin(flickT * 43.0) * 0.35 * emfF;
             torch.intensity = TORCH_BASE *
-              (1 + 0.05 * Math.sin(flickT * 13.7) + 0.03 * Math.sin(flickT * 31.3 + 1.7));
+              (1 + 0.05 * Math.sin(flickT * 13.7) + 0.03 * Math.sin(flickT * 31.3 + 1.7)) * emfH;
           }
 
           /* Held-lantern viewmodel: smoothed look inertia + subtle physical
@@ -481,16 +602,19 @@
           }
 
           var nTarget = 0;
-          if (planar > 0.3) {
+          if (!hidden && planar > 0.3) {
             nTarget = crouch ? 0.25 : (running && planar > 4 ? 1 : 0.55);
           }
           noise += (nTarget - noise) * (1 - Math.exp(-6 * dt));
+          if (hidden) noise = 0;
 
-          stepAcc += planar * dt;
-          var stride = running ? STRIDE_RUN : STRIDE_WALK;
-          if (stepAcc >= stride && planar > 0.5 && api.onStep) {
-            stepAcc = 0;
-            api.onStep(running);
+          if (!hidden) {
+            stepAcc += planar * dt;
+            var stride = running ? STRIDE_RUN : STRIDE_WALK;
+            if (stepAcc >= stride && planar > 0.5 && api.onStep) {
+              stepAcc = 0;
+              api.onStep(running);
+            }
           }
         }
       };

@@ -649,11 +649,13 @@
         return { d: Math.sqrt(best), i: bi };
       }
 
-      function evalSenses(px, pz, noise, torchOn, crouch) {
+      function evalSenses(px, pz, noise, torchOn, crouch, psHidden) {
         var dx = px - ax;
         var dz = pz - az;
         var dist = Math.sqrt(dx * dx + dz * dz);
-        var hidden = !!crouch && noise < 0.4 && nearestH(px, pz).d <= HIDE_R;
+        // Cabinet hiding (HN2 interact) conceals regardless of crouch/noise.
+        var hidden = !!psHidden ||
+          (!!crouch && noise < 0.4 && nearestH(px, pz).d <= HIDE_R);
         var range = (torchOn ? SIGHT_ON : SIGHT_OFF) * mult.sight;
         var s = sense;
         s.dist = dist;
@@ -937,6 +939,7 @@
         var crouch = false;
         var keyHeld = false;
         var inB = false;
+        var psHidden = false;
         if (playerState) {
           if (typeof playerState.x === "number") px = playerState.x;
           if (typeof playerState.z === "number") pz = playerState.z;
@@ -945,11 +948,15 @@
           crouch = !!playerState.crouch;
           keyHeld = !!playerState.keyHeld;
           inB = !!playerState.inClassB;
+          psHidden = !!playerState.hidden;
         } else if (player && player.pos) {
           try {
             var pp = player.pos();
             px = pp.x;
             pz = pp.z;
+            if (typeof player.isHidden === "function") {
+              psHidden = !!player.isHidden();
+            }
           } catch (err) {
             /* spawn default stands */
           }
@@ -972,7 +979,7 @@
           return;
         }
 
-        var s = evalSenses(px, pz, noise, torchOn, crouch);
+        var s = evalSenses(px, pz, noise, torchOn, crouch, psHidden);
         var dist = s.dist;
 
         /* Suspicion meter: fills, then state decays. */
