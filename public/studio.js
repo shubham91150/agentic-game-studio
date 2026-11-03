@@ -890,7 +890,11 @@
           return fetch("/api/studio/terminal/send", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ prompt: prompt }),
+            body: JSON.stringify({
+              prompt: prompt,
+              scope: scopeEl ? scopeEl.value : "game",
+              skills: activeSkills.slice(),
+            }),
           }).then(function (res) {
             if (res.status === 401) {
               readOnlyHit = true;
@@ -1298,7 +1302,12 @@
     return fetch("/api/studio/generate", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ prompt: prompt, model: model }),
+      body: JSON.stringify({
+        prompt: prompt,
+        model: model,
+        scope: scopeEl ? scopeEl.value : "game",
+        skills: activeSkills.slice(),
+      }),
     })
       .then(function (res) {
         if (res.status === 429) {
@@ -1374,7 +1383,11 @@
     fetch("/api/studio/terminal/send", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ model: modelEl.value }),
+      body: JSON.stringify({
+        model: modelEl.value,
+        scope: scopeEl ? scopeEl.value : "game",
+        skills: activeSkills.slice(),
+      }),
     })
       .then(function (res) {
         throwIfReadOnly(res);
@@ -2012,6 +2025,8 @@
         prompt: finalPrompt,
         model: model,
         attachments: currentAttachments,
+        scope: scope,
+        skills: activeSkills.slice(),
       }),
       signal: controller ? controller.signal : undefined,
     })

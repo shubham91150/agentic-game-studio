@@ -127,6 +127,67 @@ function ownerGuard(req, res) {
   return true;
 }
 
+// ---------- Smart power-router prompt enrichment ----------
+// 1-line prompts ("ek racing game banao") get a concise routing directive
+// appended so the agent always researches first and uses the right tools
+// per stage (.agents/memory/tool-routing-matrix.md). Exported for tests.
+const STUDIO_CONFIRM_RE =
+  /^(yes|yeah|yep|y|ha+|haan|ok|okay|continue|go|go ahead|no|nahi|na|nope|cancel|stop)[.!…]*$/i;
+const STUDIO_BUILD_RE =
+  /\b(build|creat|upgrad|fix|mak|implement|generat|design|improv|polish|refactor|rework|redo|add|banao|bana)\w*\b/i;
+
+function sanitizeScope(value) {
+  return typeof value === "string" && value.trim()
+    ? value.trim().slice(0, 32)
+    : "game";
+}
+
+function sanitizeSkills(value) {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter((s) => typeof s === "string" && s.trim())
+    .map((s) => s.trim().slice(0, 64))
+    .slice(0, 20);
+}
+
+function sanitizeAttachmentNames(value) {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((a) => {
+      if (typeof a === "string") return a;
+      if (a && typeof a.name === "string") return a.name;
+      if (a && typeof a.path === "string") return a.path;
+      return "";
+    })
+    .filter(Boolean)
+    .map((n) => String(n).split("/").pop().slice(0, 80))
+    .filter(Boolean)
+    .slice(0, 20);
+}
+
+export function enrichStudioPrompt(prompt, opts) {
+  const raw =
+    prompt === undefined || prompt === null ? "" : String(prompt);
+  const t = raw.trim();
+  if (!t) return raw;
+  if (t.startsWith("/")) return raw; // slash command: /model, /help, /clear…
+  if (STUDIO_CONFIRM_RE.test(t)) return raw; // yes / ha / ok / continue …
+  if (!STUDIO_BUILD_RE.test(t) && t.length < 12) return raw; // short chat
+  // Build request (any length, EN or Hinglish verbs) or a long message:
+  // long non-verb messages are usually implicit work feedback ("the lantern
+  // looks too dim"), so route them too rather than risk skipped tools.
+  const o = opts && typeof opts === "object" ? opts : {};
+  const scope = sanitizeScope(o.scope);
+  const skills = sanitizeSkills(o.skills);
+  const atts = sanitizeAttachmentNames(o.attachments);
+  const directive =
+    `[Studio Context: scope=${scope}, ` +
+    `skills=${skills.length ? skills.join(", ") : "none"}, ` +
+    `attachments=${atts.length ? atts.length + " file(s): " + atts.join(", ") : "none"} | ` +
+    `Follow .agents/memory/tool-routing-matrix.md: research first, use Blender 3.4/MCP/PBR/audio tools & subagent_spawn per stage, verify with visual_qa_gate.js]`;
+  return `${t}\n\n${directive}`;
+}
+
 // Judge Sandbox rate limit: max 6 public builds per 10 minutes per IP.
 const JUDGE_BUILD_MAX = 6;
 const JUDGE_BUILD_WINDOW_MS = 10 * 60 * 1000;
@@ -1504,9 +1565,15 @@ async function activateStoredGame(gameId) {
           await sleep(400);
         }
         if (prompt) {
-          const finalPrompt = attachments.length
-            ? `${prompt} (Reference files: ${attachments.join(", ")})`
-            : prompt;
+          const enriched = enrichStudioPrompt(prompt, {
+            scope: payload.scope,
+            skills: payload.skills,
+            attachments,
+          });
+          const finalPrompt =
+            attachments.length && enriched === prompt
+              ? `${prompt} (Reference files: ${attachments.join(", ")})`
+              : enriched;
           await sendLineToTmux(finalPrompt);
         }
         return json(res, 200, {
@@ -2141,7 +2208,14 @@ async function activateStoredGame(gameId) {
 
       try {
         const runner = new AgentRunner(ROOT_DIR, emit);
-        const result = await runner.run(prompt, {
+        const genPrompt = sandboxed
+          ? prompt
+          : enrichStudioPrompt(prompt, {
+              scope: payload.scope,
+              skills: payload.skills,
+              attachments: ownerAttachments,
+            });
+        const result = await runner.run(genPrompt, {
           model,
           attachments,
           skipSubprocessCli: !sandboxed && Boolean(payload.skipSubprocessCli),
@@ -2165,6 +2239,15 @@ async function activateStoredGame(gameId) {
   res.end("Not found");
 });
 
-server.listen(PORT, "127.0.0.1", () => {
-  console.log(`[Studio] Agentic Game Studio backend listening on port ${PORT}`);
-});
+// Only bind when run directly (`node src/server.js`); importing this module
+// (unit tests for enrichStudioPrompt) must not grab the port.
+const __isMainModule =
+  Boolean(process.argv[1]) &&
+  path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+if (__isMainModule) {
+  server.listen(PORT, "127.0.0.1", () => {
+    console.log(
+      `[Studio] Agentic Game Studio backend listening on port ${PORT}`,
+    );
+  });
+}
