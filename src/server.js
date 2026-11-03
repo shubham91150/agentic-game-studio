@@ -12,6 +12,8 @@
  *   POST /api/studio/generate             -> SSE stream of agent events
  *   GET  /studio/games/:id/index.html     -> play a stored game
  *   GET  /studio/judge-games/:id/*         -> play an ephemeral judge build
+ *   POST /api/studio/judge-audit            -> judge visit ping (token-gated)
+ *   GET  /api/studio/judge-audit            -> last 50 judge events (owner)
  *   GET  /api/studio/export/unity/:id     -> download a Unity C# script
  *   GET  /api/studio/download             -> download the current live-preview game as a .zip
  */
@@ -203,6 +205,79 @@ const judgeBuildHits = new Map();
 // (Single-instance in-memory mutex; a multi-instance deploy would need a
 // shared store. Decremented in the generate handler's finally block.)
 let activeJudgeBuildCount = 0;
+
+// ---------- Hackathon judge verification token + prompt-cache gate ----------
+// Uncached live-AI builds spend real API credits, so strangers (no valid
+// ?judge= token) may only run prompts whose design is already cached
+// (spec_<hash>.json — zero credits). Every 3D Library game stays open to
+// play for everyone; judges with the access link can build anything.
+// The hash MUST match AgentRunner's prompt-only legacy key exactly:
+// sha1(trim(prompt).toLowerCase()).slice(0, 16).
+export const JUDGE_TOKEN =
+  process.env.STUDIO_JUDGE_TOKEN || "meta-judge-2026";
+const JUDGE_AUDIT_FILE = path.join(JUDGE_RUNS_DIR, "judge_audit.json");
+export function judgePromptCacheHit(prompt) {
+  try {
+    const h = crypto
+      .createHash("sha1")
+      .update(String(prompt || "").trim().toLowerCase())
+      .digest("hex")
+      .slice(0, 16);
+    return fs.existsSync(
+      path.join(ROOT_DIR, "storage", "cache", `spec_${h}.json`),
+    );
+  } catch {
+    return false;
+  }
+}
+export function judgeTokenValid(req, payload) {
+  const headerToken =
+    req && req.headers ? req.headers["x-judge-token"] : undefined;
+  const bodyToken =
+    payload && typeof payload.judgeToken === "string"
+      ? payload.judgeToken
+      : undefined;
+  return headerToken === JUDGE_TOKEN || bodyToken === JUDGE_TOKEN;
+}
+export function judgeGenerateAllowed(req, payload, prompt) {
+  if (judgeTokenValid(req, payload)) {
+    return { allowed: true, via: "judge-token" };
+  }
+  if (judgePromptCacheHit(prompt)) {
+    return { allowed: true, via: "cache-hit" };
+  }
+  return { allowed: false, via: "none" };
+}
+// Best-effort append; never throws, never blocks the request. Capped so
+// the audit file cannot grow without bound.
+function appendJudgeAudit(req, event, prompt) {
+  try {
+    fs.mkdirSync(JUDGE_RUNS_DIR, { recursive: true });
+    let arr = [];
+    try {
+      const raw = fs.readFileSync(JUDGE_AUDIT_FILE, "utf8");
+      const parsed = JSON.parse(raw || "[]");
+      if (Array.isArray(parsed)) arr = parsed;
+    } catch {
+      arr = [];
+    }
+    arr.push({
+      at: new Date().toISOString(),
+      event: String(event || "").slice(0, 40),
+      prompt: String(prompt ?? "").slice(0, 300),
+      ua: String((req.headers && req.headers["user-agent"]) || "").slice(
+        0,
+        120,
+      ),
+    });
+    fs.writeFileSync(
+      JUDGE_AUDIT_FILE,
+      JSON.stringify(arr.slice(-1000), null, 2),
+    );
+  } catch {
+    /* audit must never break the request */
+  }
+}
 function judgeClientIp(req) {
   const fwd = String((req.headers && req.headers["x-forwarded-for"]) || "")
     .split(",")[0]
@@ -2517,6 +2592,22 @@ const server = http.createServer(async (req, res) => {
         return json(res, 400, { error: "A game prompt is required." });
       }
 
+      // Credit protection: strangers (no valid judge token) may only run
+      // pre-cached prompts (zero API spend). Rejected BEFORE the rate
+      // limiter so 403s never consume the judge build budget.
+      if (sandboxed) {
+        const gate = judgeGenerateAllowed(req, payload, prompt);
+        if (!gate.allowed) {
+          return json(res, 403, {
+            error:
+              "Uncached live AI builds require the Hackathon Judge access link (?judge=meta-judge-2026). Pre-cached prompts and all 3D Library games are open to play!",
+          });
+        }
+        if (gate.via === "judge-token") {
+          appendJudgeAudit(req, "judge_generate", prompt);
+        }
+      }
+
       let judgeSlotTaken = false;
       if (sandboxed) {
         const verdict = judgeBuildAllowed(judgeClientIp(req));
@@ -2605,6 +2696,43 @@ const server = http.createServer(async (req, res) => {
       }
     });
     return;
+  }
+
+  // ---------- Judge activity audit (token-gated POST, owner-only GET) ------
+  if (pathname === "/api/studio/judge-audit" && req.method === "POST") {
+    let body = "";
+    req.on("data", (chunk) => (body += chunk));
+    req.on("end", () => {
+      let payload = {};
+      try {
+        payload = JSON.parse(body || "{}");
+      } catch {
+        payload = {};
+      }
+      if (!judgeTokenValid(req, payload)) {
+        return json(res, 403, {
+          error: "Judge verification required (?judge= access link).",
+        });
+      }
+      appendJudgeAudit(
+        req,
+        payload.event || "judge_visit",
+        payload.prompt || "",
+      );
+      return json(res, 200, { ok: true });
+    });
+    return;
+  }
+  if (pathname === "/api/studio/judge-audit" && req.method === "GET") {
+    if (ownerGuard(req, res)) return;
+    let events = [];
+    try {
+      const parsed = JSON.parse(fs.readFileSync(JUDGE_AUDIT_FILE, "utf8"));
+      if (Array.isArray(parsed)) events = parsed;
+    } catch {
+      events = [];
+    }
+    return json(res, 200, { ok: true, events: events.slice(-50).reverse() });
   }
 
   // ---------- Live AI Director (PUBLIC judges route — NO owner guard) ----------

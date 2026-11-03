@@ -23,6 +23,7 @@ const PORT = 3222;
 const BASE = `http://127.0.0.1:${PORT}`;
 const SCRATCH = `ags-sec-${process.pid}`;
 const SECRET = "sec-test-only-secret";
+const TEST_JUDGE_TOKEN = "sec-judge-token-1";
 const CHATS = path.join(ROOT, "storage", "chats");
 const GAMES = path.join(ROOT, "storage", "games");
 const JUDGE_RUNS = path.join(ROOT, "storage", ".judge-runs");
@@ -44,6 +45,8 @@ let beforeGames = new Set();
 let beforeJudgeRuns = new Set();
 let judgeIndexBackup = null;
 let judgeIndexExisted = false;
+let judgeAuditBackup = null;
+let judgeAuditExisted = false;
 let beforeUploads = new Set();
 let indexBackup = "[]";
 let mcpBackup = null;
@@ -70,7 +73,7 @@ function scratchAlive() {
 // Visitor request: arrives via the public proxy (forged Host + forwarding
 // headers), optionally with a cookie. Raw http is required because fetch
 // forbids overriding the Host header.
-function forged(method, p, body, cookie) {
+function forged(method, p, body, cookie, extraHeaders) {
   return new Promise((resolve, reject) => {
     const data = body === undefined ? null : JSON.stringify(body);
     const headers = {
@@ -78,6 +81,7 @@ function forged(method, p, body, cookie) {
       "x-forwarded-for": "203.0.113.5",
       "x-forwarded-proto": "https",
       "x-forwarded-host": "spurcode.duckdns.org",
+      ...(extraHeaders || {}),
     };
     if (cookie) headers.cookie = cookie;
     if (data) {
@@ -171,6 +175,16 @@ before(async () => {
     judgeIndexBackup = null;
     judgeIndexExisted = false;
   }
+  try {
+    judgeAuditBackup = fs.readFileSync(
+      path.join(JUDGE_RUNS, "judge_audit.json"),
+      "utf8",
+    );
+    judgeAuditExisted = true;
+  } catch {
+    judgeAuditBackup = null;
+    judgeAuditExisted = false;
+  }
   beforeUploads = new Set(fs.readdirSync(UPLOADS));
   indexBackup = fs.readFileSync(path.join(GAMES, "index.json"), "utf8");
   try {
@@ -194,6 +208,7 @@ before(async () => {
       STUDIO_PORT: String(PORT),
       STUDIO_TMUX_SESSION: SCRATCH,
       OPENCODE_SESSION_SECRET: SECRET,
+      STUDIO_JUDGE_TOKEN: TEST_JUDGE_TOKEN,
     },
     stdio: "ignore",
   });
@@ -236,6 +251,9 @@ after(async () => {
       const idx = path.join(JUDGE_RUNS, "index.json");
       if (judgeIndexExisted) fs.writeFileSync(idx, judgeIndexBackup);
       else fs.rmSync(idx, { force: true });
+      const audit = path.join(JUDGE_RUNS, "judge_audit.json");
+      if (judgeAuditExisted) fs.writeFileSync(audit, judgeAuditBackup);
+      else fs.rmSync(audit, { force: true });
     },
     () => {
       for (const f of fs.readdirSync(UPLOADS)) {
@@ -342,9 +360,9 @@ function judgePromptHash() {
     .slice(0, 16);
 }
 
-function readSandboxStream(prompt) {
+function readSandboxStream(prompt, extra) {
   return new Promise((resolve, reject) => {
-    const data = JSON.stringify({ prompt });
+    const data = JSON.stringify({ prompt, ...(extra && extra.body) });
     const r = http.request(
       {
         host: "127.0.0.1",
@@ -355,6 +373,7 @@ function readSandboxStream(prompt) {
           host: "spurcode.duckdns.org",
           "x-forwarded-for": "203.0.113.5",
           "x-forwarded-proto": "https",
+          ...((extra && extra.headers) || {}),
           "content-type": "application/json",
           "content-length": Buffer.byteLength(data),
         },
@@ -463,15 +482,35 @@ test("judge mutex: 2nd concurrent build → 429 in-progress", async () => {
   assert.match(String(losers[0].text), /currently in progress/);
 });
 
+test("judge token via header: cached build 200 + judge_generate audited", async () => {
+  const r = await readSandboxStream(JUDGE_PROMPT, {
+    headers: { "x-judge-token": TEST_JUDGE_TOKEN },
+  });
+  assert.equal(r.status, 200);
+  const done = r.events.find((e) => e.type === "done");
+  assert.ok(done && done.ok, "token build completes");
+  assert.match(
+    String(done.playUrl || ""),
+    /^\/studio\/judge-games\/[\w-]+\/index\.html$/,
+  );
+  const audit = await ownerGet("/api/studio/judge-audit");
+  assert.equal(audit.status, 200);
+  const entry = (audit.json.events || []).find(
+    (e) => e.event === "judge_generate",
+  );
+  assert.ok(entry, "token generate auto-appends judge_generate audit");
+  assert.ok(entry.at && entry.ua !== undefined);
+});
+
 test("judge rate limit: 7th build in 10 min → 429", async () => {
-  // 3 builds already consumed above (1 sandbox + 2 mutex race); burn 3
-  // more (cache hits, fast). The first burn also proves the mutex slot
-  // was released — a stuck slot would 429 with "currently in progress".
-  for (let i = 0; i < 3; i++) {
+  // 4 builds already consumed above (1 sandbox + 2 mutex race + 1 token);
+  // burn 2 more (cache hits, fast). The first burn also proves the mutex
+  // slot was released — a stuck slot would 429 with "currently in progress".
+  for (let i = 0; i < 2; i++) {
     const r = await readSandboxStream(JUDGE_PROMPT);
     assert.ok(
       r.events.some((e) => e.type === "done" && e.ok),
-      `build ${i + 4} completes`,
+      `build ${i + 5} completes`,
     );
   }
   const over = await forged("POST", "/api/studio/generate", {
@@ -480,6 +519,61 @@ test("judge rate limit: 7th build in 10 min → 429", async () => {
   assert.equal(over.status, 429);
   assert.match(String(over.json && over.json.error), /limit reached/i);
   assert.ok((over.json && over.json.retryAfter) > 0);
+});
+
+test("judge gate: uncached prompt without token → 403, zero side effects", async () => {
+  // The rate budget is EXHAUSTED above, yet this must 403 (not 429):
+  // the stranger gate fires before the rate limiter and consumes nothing.
+  const beforeRuns = new Set(
+    fs.existsSync(JUDGE_RUNS) ? fs.readdirSync(JUDGE_RUNS) : [],
+  );
+  const r = await forged("POST", "/api/studio/generate", {
+    prompt: `Stranger meadow probe ${Date.now()} ${Math.random()}`,
+  });
+  assert.equal(r.status, 403);
+  assert.match(
+    String(r.json && r.json.error),
+    /Judge access link \(\?judge=meta-judge-2026\)/,
+  );
+  assert.deepEqual(
+    new Set(fs.existsSync(JUDGE_RUNS) ? fs.readdirSync(JUDGE_RUNS) : []),
+    beforeRuns,
+    "403 stranger build writes nothing",
+  );
+  assert.equal(
+    fs.readFileSync(path.join(GAMES, "index.json"), "utf8"),
+    indexBackup,
+  );
+});
+
+test("judge audit: POST needs token (header or body), GET is owner-only", async () => {
+  const anon = await forged("POST", "/api/studio/judge-audit", {
+    event: "judge_visit",
+  });
+  assert.equal(anon.status, 403);
+  const viaHeader = await forged(
+    "POST",
+    "/api/studio/judge-audit",
+    { event: "judge_visit" },
+    undefined,
+    { "x-judge-token": TEST_JUDGE_TOKEN },
+  );
+  assert.equal(viaHeader.status, 200);
+  const viaBody = await forged("POST", "/api/studio/judge-audit", {
+    event: "judge_visit",
+    judgeToken: TEST_JUDGE_TOKEN,
+  });
+  assert.equal(viaBody.status, 200);
+  const visitorGet = await forged("GET", "/api/studio/judge-audit");
+  assert.equal(visitorGet.status, 401);
+  const owner = await ownerGet("/api/studio/judge-audit");
+  assert.equal(owner.status, 200);
+  assert.ok(Array.isArray(owner.json.events));
+  assert.ok(owner.json.events.length <= 50);
+  const visit = owner.json.events.find((e) => e.event === "judge_visit");
+  assert.ok(visit, "owner sees the judge visit ping");
+  assert.ok(visit.at && visit.ua !== undefined && visit.prompt !== undefined);
+  assert.equal(owner.json.events[0].at >= visit.at, true, "newest-first");
 });
 
 test("visitor activate → 200 readOnly play URL, disk untouched", async () => {

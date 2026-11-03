@@ -1587,6 +1587,45 @@
   pollPreviewState();
   setInterval(pollPreviewState, 2000);
 
+  // Hackathon judge verification: ?judge=<token> links verify judges so
+  // uncached live-AI builds stay open to them (strangers get 403 + cached
+  // prompts + library play). The token persists across reloads.
+  var JUDGE_TOKEN_KEY = "ags_judge_token";
+  function loadJudgeToken() {
+    try {
+      return localStorage.getItem(JUDGE_TOKEN_KEY);
+    } catch (e) {
+      return null;
+    }
+  }
+  (function captureJudgeToken() {
+    var val = null;
+    try {
+      val =
+        window.location &&
+        window.location.search &&
+        new URLSearchParams(window.location.search).get("judge");
+    } catch (e) {
+      val = null;
+    }
+    if (!val) return;
+    try {
+      localStorage.setItem(JUDGE_TOKEN_KEY, val);
+    } catch (e) {
+      /* ignore (privacy mode / quota) */
+    }
+    fetch("/api/studio/judge-audit", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-judge-token": val,
+      },
+      body: JSON.stringify({ event: "judge_visit", judgeToken: val }),
+    }).catch(function () {
+      /* audit ping is best-effort */
+    });
+  })();
+
   // Read-only visitor mode: terminal-owning calls 401 for public judges.
   var READ_ONLY_MSG =
     "Read-only visitor mode: Sign in via Open full terminal to run CLI commands.";
@@ -1648,15 +1687,22 @@
   function runJudgeSandboxBuild(prompt, model) {
     setAgentWorking(true, 0);
     setStatus("Judge Sandbox: queueing build…", "ok");
+    var judgeToken = loadJudgeToken();
+    var genHeaders = { "Content-Type": "application/json" };
+    var genBody = {
+      prompt: prompt,
+      model: model,
+      scope: scopeEl ? scopeEl.value : "game",
+      skills: activeSkills.slice(),
+    };
+    if (judgeToken) {
+      genHeaders["x-judge-token"] = judgeToken;
+      genBody.judgeToken = judgeToken;
+    }
     return fetch("/api/studio/generate", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        prompt: prompt,
-        model: model,
-        scope: scopeEl ? scopeEl.value : "game",
-        skills: activeSkills.slice(),
-      }),
+      headers: genHeaders,
+      body: JSON.stringify(genBody),
     })
       .then(function (res) {
         if (res.status === 429) {
@@ -1666,6 +1712,22 @@
             "warn",
           );
           return { judgeSandbox: true };
+        }
+        if (res.status === 403) {
+          setAgentWorking(false, 0);
+          return res
+            .json()
+            .catch(function () {
+              return null;
+            })
+            .then(function (j) {
+              setStatus(
+                "Judge Sandbox: " +
+                  ((j && j.error) || "judge access link required."),
+                "warn",
+              );
+              return { judgeSandbox: true };
+            });
         }
         if (!res.ok || !res.body || !res.body.getReader) {
           throw new Error("sandbox failed: " + res.status);
