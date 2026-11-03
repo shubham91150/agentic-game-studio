@@ -31,8 +31,8 @@
       vggt: true,
       csg: true,
       landmarks: true,
-      navmesh: true,
-      bboxes: true,
+      navmesh: false,
+      bboxes: false,
     },
     errors: [],
   };
@@ -98,18 +98,18 @@
   );
   renderer.outputEncoding = THREE.sRGBEncoding;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.18;
+  renderer.toneMappingExposure = 0.98;
   if (renderer.shadowMap) {
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   }
 
   var scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x070a12);
-  scene.fog = new THREE.FogExp2(0x090d18, 0.014);
+  scene.background = new THREE.Color(0x070b14);
+  scene.fog = new THREE.FogExp2(0x070b14, 0.012);
 
   var camera = new THREE.PerspectiveCamera(
-    55,
+    60,
     (canvas.clientWidth || window.innerWidth) /
       Math.max(1, canvas.clientHeight || window.innerHeight - 46),
     0.1,
@@ -136,16 +136,21 @@
   scene.add(groups.vggt);
   scene.add(groups.csg);
   scene.add(groups.landmarks);
+  groups.navmesh.visible = false;
+  groups.bboxes.visible = false;
   scene.add(groups.navmesh);
   scene.add(groups.bboxes);
 
   // --- Lighting setup ---
-  var hemiLight = new THREE.HemisphereLight(0x9cbcff, 0x241e18, 0.85);
+  var ambientLight = new THREE.AmbientLight(0x7c93b8, 0.85);
+  scene.add(ambientLight);
+
+  var hemiLight = new THREE.HemisphereLight(0xbfd8ff, 0x1e1b18, 1.05);
   hemiLight.position.set(0, 50, 0);
   scene.add(hemiLight);
 
-  var dirLight = new THREE.DirectionalLight(0xffe4b8, 1.35);
-  dirLight.position.set(22, 34, 18);
+  var dirLight = new THREE.DirectionalLight(0xffdfa8, 1.35);
+  dirLight.position.set(18, 36, 22);
   dirLight.castShadow = true;
   if (dirLight.shadow) {
     dirLight.shadow.mapSize.set(2048, 2048);
@@ -161,13 +166,21 @@
   }
   scene.add(dirLight);
 
-  var rimLight = new THREE.DirectionalLight(0x60a5fa, 0.65);
-  rimLight.position.set(-24, 18, -20);
+  var rimLight = new THREE.DirectionalLight(0x38bdf8, 0.75);
+  rimLight.position.set(-24, 22, -18);
   scene.add(rimLight);
 
-  var altarLight = new THREE.PointLight(0xff9e44, 2.2, 18, 1.6);
-  altarLight.position.set(0, 3.2, -7.5);
+  var altarLight = new THREE.PointLight(0xff9e3b, 2.4, 24, 1.5);
+  altarLight.position.set(0, 4.2, -6.5);
   scene.add(altarLight);
+
+  var westLight = new THREE.PointLight(0x38bdf8, 1.8, 20, 1.5);
+  westLight.position.set(-8, 3.8, -2.0);
+  scene.add(westLight);
+
+  var eastLight = new THREE.PointLight(0xfbbf24, 1.8, 20, 1.5);
+  eastLight.position.set(8, 3.8, -2.0);
+  scene.add(eastLight);
 
   var masterpiece = null;
   var mixers = [];
@@ -178,10 +191,10 @@
   var objectsDataRef = null;
 
   // --- Camera Orbit + WASD state ---
-  var orbitTarget = new THREE.Vector3(0, 1.6, -3.5);
-  var orbitYaw = 0.22;
-  var orbitPitch = 0.28;
-  var orbitDist = 20.5;
+  var orbitTarget = new THREE.Vector3(0, 1.45, -5.8);
+  var orbitYaw = 0.04;
+  var orbitPitch = 0.04;
+  var orbitDist = 6.4;
   var keysDown = Object.create(null);
 
   function updateFreeCameraFromOrbit() {
@@ -348,94 +361,330 @@
     return t;
   }
 
-  // --- Layer 3 Ground + CSG + WFC Loader ---
+  // Ensures any Trimesh CSG/WFC BufferGeometry without UVs gets clean box-projected UVs
+  // so tangent-space normal maps never produce NaN black fragments.
+  function ensureGeometryUVs(geometry, uvScale) {
+    if (!geometry || !geometry.attributes || !geometry.attributes.position) {
+      return;
+    }
+    if (!geometry.attributes.normal) {
+      geometry.computeVertexNormals();
+    }
+    if (geometry.attributes.uv) return;
+    var pos = geometry.attributes.position;
+    var nor = geometry.attributes.normal;
+    var count = pos.count;
+    var uvs = new Float32Array(count * 2);
+    var scale = uvScale || 0.25;
+    for (var i = 0; i < count; i++) {
+      var x = pos.getX(i);
+      var y = pos.getY(i);
+      var z = pos.getZ(i);
+      var nx = nor ? Math.abs(nor.getX(i)) : 0;
+      var ny = nor ? Math.abs(nor.getY(i)) : 1;
+      var nz = nor ? Math.abs(nor.getZ(i)) : 0;
+      if (ny >= nx && ny >= nz) {
+        uvs[i * 2] = x * scale;
+        uvs[i * 2 + 1] = z * scale;
+      } else if (nx >= nz) {
+        uvs[i * 2] = z * scale;
+        uvs[i * 2 + 1] = y * scale;
+      } else {
+        uvs[i * 2] = x * scale;
+        uvs[i * 2 + 1] = y * scale;
+      }
+    }
+    geometry.setAttribute("uv", new THREE.BufferAttribute(uvs, 2));
+  }
+
+  // --- Layer 3 Ground + Gothic Cloister Architecture + CSG/WFC + Ash Particles ---
+  var ashPoints = null;
+  var rockingChairRef = null;
+  var chandelierRefs = [];
+
   function buildLayer3Architecture(manifest) {
     var wl = (manifest && manifest.worldLens) || {};
-    var tileColor = loadTiledTexture(
-      "/studio/assets/ambientcg/Tiles074/Tiles074_1K-JPG_Color.jpg",
-      18,
-      18,
-      true,
-    );
-    var tileNormal = loadTiledTexture(
-      "/studio/assets/ambientcg/Tiles074/Tiles074_1K-JPG_NormalGL.jpg",
-      18,
-      18,
-      false,
-    );
-    var tileRough = loadTiledTexture(
-      "/studio/assets/ambientcg/Tiles074/Tiles074_1K-JPG_Roughness.jpg",
-      18,
-      18,
-      false,
-    );
 
-    var floorMat = new THREE.MeshStandardMaterial({
-      map: tileColor,
-      normalMap: tileNormal,
-      normalScale: new THREE.Vector2(1.1, 1.1),
-      roughnessMap: tileRough,
-      roughness: 0.82,
-      metalness: 0.08,
-      color: 0x9aa4b4,
-    });
-    var floorMesh = new THREE.Mesh(
-      new THREE.PlaneGeometry(72, 72, 24, 24),
-      floorMat,
-    );
-    floorMesh.rotation.x = -Math.PI / 2;
-    floorMesh.position.y = 0.0;
-    floorMesh.receiveShadow = true;
-    groups.csg.add(floorMesh);
+    // 1. Load REAL 16-bit Polyhaven .hdr Sky & PMREM IBL (kloppenheim_06_puresky_1k.hdr) for hyper-realistic reflections & lighting!
+    if (typeof THREE.RGBELoader === "function") {
+      try {
+        var rgbe = new THREE.RGBELoader();
+        rgbe.load(
+          "/studio/assets/polyhaven/kloppenheim_06_puresky/kloppenheim_06_puresky_1k.hdr",
+          function (hdrTex) {
+            hdrTex.mapping = THREE.EquirectangularReflectionMapping;
+            var pmrem = new THREE.PMREMGenerator(renderer);
+            pmrem.compileEquirectangularShader();
+            var envRT = pmrem.fromEquirectangular(hdrTex);
+            scene.environment = envRT.texture;
+            scene.background = hdrTex;
+            scene.fog = new THREE.FogExp2(0x1b2432, 0.008);
+          },
+        );
+      } catch (e) {
+        /* fallback sky remains */
+      }
+    }
 
-    var stoneColor = loadTiledTexture(
+    // 2. Natural terrain base + 1K Photogrammetry Stone Sanctuary Plaza
+    var earthColor = loadTiledTexture(
       "/studio/assets/ambientcg/Rock035/Rock035_1K-JPG_Color.jpg",
-      4,
-      2,
+      24,
+      24,
       true,
     );
-    var stoneNormal = loadTiledTexture(
+    var earthNormal = loadTiledTexture(
       "/studio/assets/ambientcg/Rock035/Rock035_1K-JPG_NormalGL.jpg",
-      4,
-      2,
+      24,
+      24,
       false,
     );
-    var stoneRough = loadTiledTexture(
+    var earthRough = loadTiledTexture(
       "/studio/assets/ambientcg/Rock035/Rock035_1K-JPG_Roughness.jpg",
-      4,
-      2,
+      24,
+      24,
       false,
     );
-    var csgWallMat = new THREE.MeshStandardMaterial({
-      map: stoneColor,
-      normalMap: stoneNormal,
-      normalScale: new THREE.Vector2(1.25, 1.25),
-      roughnessMap: stoneRough,
-      roughness: 0.84,
-      metalness: 0.08,
-      color: 0xb8c0ce,
-    });
+    var groundMesh = new THREE.Mesh(
+      new THREE.PlaneGeometry(140, 140, 1, 1),
+      new THREE.MeshStandardMaterial({
+        map: earthColor,
+        normalMap: earthNormal,
+        normalScale: new THREE.Vector2(1.4, 1.4),
+        roughnessMap: earthRough,
+        roughness: 0.85,
+        metalness: 0.04,
+        color: 0x5c6458,
+      }),
+    );
+    groundMesh.rotation.x = -Math.PI / 2;
+    groundMesh.position.y = -0.02;
+    groundMesh.receiveShadow = true;
+    groups.csg.add(groundMesh);
 
-    var brickColor = loadTiledTexture(
-      "/studio/assets/ambientcg/Bricks075A/Bricks075A_1K-JPG_Color_512.jpg",
-      3,
-      3,
+    // Inner Carved Stone Sanctuary Courtyard Plaza (14m x 16m)
+    var plazaColor = loadTiledTexture(
+      "/studio/assets/ambientcg/Rock035/Rock035_1K-JPG_Color.jpg",
+      6,
+      6,
       true,
     );
-    var brickNormal = loadTiledTexture(
-      "/studio/assets/ambientcg/Bricks075A/Bricks075A_1K-JPG_NormalGL_512.jpg",
-      3,
-      3,
+    var plazaNormal = loadTiledTexture(
+      "/studio/assets/ambientcg/Rock035/Rock035_1K-JPG_NormalGL.jpg",
+      6,
+      6,
       false,
     );
-    var wfcMat = new THREE.MeshStandardMaterial({
-      map: brickColor,
-      normalMap: brickNormal,
-      roughness: 0.78,
-      metalness: 0.12,
-      color: 0xcbd5e1,
-    });
+    var plazaRough = loadTiledTexture(
+      "/studio/assets/ambientcg/Rock035/Rock035_1K-JPG_Roughness.jpg",
+      6,
+      6,
+      false,
+    );
+    var plazaMesh = new THREE.Mesh(
+      new THREE.PlaneGeometry(13.5, 15.5, 1, 1),
+      new THREE.MeshStandardMaterial({
+        map: plazaColor,
+        normalMap: plazaNormal,
+        normalScale: new THREE.Vector2(1.1, 1.1),
+        roughnessMap: plazaRough,
+        roughness: 0.48,
+        metalness: 0.1,
+        color: 0x8a929a,
+      }),
+    );
+    plazaMesh.rotation.x = -Math.PI / 2;
+    plazaMesh.position.set(0, 0.005, -5.5);
+    plazaMesh.receiveShadow = true;
+    groups.csg.add(plazaMesh);
 
+    // Center Wooden Sanctuary Runner
+    var woodColor = loadTiledTexture(
+      "/studio/assets/ambientcg/Wood096/Wood096_1K-JPG_Color.jpg",
+      2,
+      8,
+      true,
+    );
+    var woodNormal = loadTiledTexture(
+      "/studio/assets/ambientcg/Wood096/Wood096_1K-JPG_NormalGL.jpg",
+      2,
+      8,
+      false,
+    );
+    var aisleMesh = new THREE.Mesh(
+      new THREE.PlaneGeometry(2.8, 14.5),
+      new THREE.MeshStandardMaterial({
+        map: woodColor,
+        normalMap: woodNormal,
+        normalScale: new THREE.Vector2(1.0, 1.0),
+        roughness: 0.42,
+        metalness: 0.08,
+        color: 0x7c583a,
+      }),
+    );
+    aisleMesh.rotation.x = -Math.PI / 2;
+    aisleMesh.position.set(0, 0.014, -5.5);
+    aisleMesh.receiveShadow = true;
+    groups.csg.add(aisleMesh);
+
+    // 3. 16,000 3D Tapered Wind-Sway Shader Grass Blades around the stone sanctuary plaza!
+    if (WorldRealism && typeof WorldRealism.create3DGrassField === "function") {
+      try {
+        WorldRealism.create3DGrassField(groups.csg, {
+          count: 20000,
+          spread: 56,
+          bladeWidth: 0.08,
+          bladeHeight: 0.52,
+          excludeFn: function (gx, gz) {
+            return Math.abs(gx) < 6.6 && gz > -13.2 && gz < 2.2;
+          },
+        });
+      } catch (e) {
+        /* ignore */
+      }
+    }
+
+    // 4. Photogrammetry Nature & Architectural Perimeter (Boulders, Trees, Ferns, Street Lamps)
+    var envScans = [
+      {
+        url: "/studio/assets/polyhaven/namaqualand_boulders_01/namaqualand_boulders_01_1k.glb",
+        x: -8.5,
+        y: 0,
+        z: -11.5,
+        size: 5.2,
+        yaw: 0.4,
+      },
+      {
+        url: "/studio/assets/polyhaven/namaqualand_boulders_01/namaqualand_boulders_01_1k.glb",
+        x: 8.8,
+        y: 0,
+        z: -11.0,
+        size: 5.5,
+        yaw: 2.1,
+      },
+      {
+        url: "/studio/assets/polyhaven/boulder_01/boulder_01_1k.glb",
+        x: -7.8,
+        y: 0,
+        z: -2.0,
+        size: 3.4,
+        yaw: 1.1,
+      },
+      {
+        url: "/studio/assets/polyhaven/boulder_01/boulder_01_1k.glb",
+        x: 8.2,
+        y: 0,
+        z: -1.8,
+        size: 3.6,
+        yaw: -0.7,
+      },
+      {
+        url: "/studio/assets/polyhaven/jacaranda_tree/jacaranda_tree_1k.glb",
+        x: -9.5,
+        y: 0,
+        z: -7.5,
+        size: 7.5,
+        yaw: 0.3,
+      },
+      {
+        url: "/studio/assets/polyhaven/pine_tree_1k.glb",
+        x: 9.8,
+        y: 0,
+        z: -8.2,
+        size: 8.2,
+        yaw: -0.5,
+      },
+      {
+        url: "/studio/assets/polyhaven/quiver_tree_02/quiver_tree_02_1k.glb",
+        x: -7.2,
+        y: 0,
+        z: -12.5,
+        size: 5.0,
+        yaw: 0.8,
+      },
+      {
+        url: "/studio/assets/polyhaven/fern_02/fern_02_1k.glb",
+        x: -5.8,
+        y: 0,
+        z: -3.2,
+        size: 1.3,
+        yaw: 0.2,
+      },
+      {
+        url: "/studio/assets/polyhaven/fern_02/fern_02_1k.glb",
+        x: 5.8,
+        y: 0,
+        z: -3.5,
+        size: 1.3,
+        yaw: 1.9,
+      },
+      {
+        url: "/studio/assets/polyhaven/shrub_03/shrub_03_1k.glb",
+        x: -6.2,
+        y: 0,
+        z: -9.2,
+        size: 1.6,
+        yaw: 0.5,
+      },
+      {
+        url: "/studio/assets/polyhaven/shrub_03/shrub_03_1k.glb",
+        x: 6.2,
+        y: 0,
+        z: -9.2,
+        size: 1.6,
+        yaw: -1.2,
+      },
+      {
+        url: "/studio/assets/polyhaven/street_lamp_01/street_lamp_01_1k.glb",
+        x: -5.4,
+        y: 0,
+        z: -8.8,
+        size: 3.4,
+        yaw: 0,
+      },
+      {
+        url: "/studio/assets/polyhaven/street_lamp_01/street_lamp_01_1k.glb",
+        x: 5.4,
+        y: 0,
+        z: -8.8,
+        size: 3.4,
+        yaw: 0,
+      },
+      {
+        url: "/studio/assets/polyhaven/street_lamp_01/street_lamp_01_1k.glb",
+        x: -5.4,
+        y: 0,
+        z: -2.2,
+        size: 3.4,
+        yaw: 0,
+      },
+      {
+        url: "/studio/assets/polyhaven/street_lamp_01/street_lamp_01_1k.glb",
+        x: 5.4,
+        y: 0,
+        z: -2.2,
+        size: 3.4,
+        yaw: 0,
+      },
+    ];
+    if (WorldRealism && WorldRealism.loadGlbModel) {
+      envScans.forEach(function (es) {
+        WorldRealism.loadGlbModel(
+          es.url,
+          function (mr) {
+            if (!mr) return;
+            var h = new THREE.Group();
+            h.position.set(es.x, es.y, es.z);
+            h.rotation.y = es.yaw || 0;
+            h.add(mr);
+            groups.csg.add(h);
+          },
+          { targetLength: es.size },
+        );
+      });
+    }
+
+    // Load CSG & WFC meshes cleanly behind the far cliff horizon (z = -34) so they remain inspectable without blocking the photogrammetry sanctuary
     var gltfLoader = new THREE.GLTFLoader();
     var csgUrl =
       wl.collisionProxyGlbUrl ||
@@ -443,7 +692,6 @@
     var wfcUrl =
       wl.wfcCourtyardGlbUrl ||
       "/studio/assets/custom/metaworld2/wfc_courtyard_addon.glb";
-
     var csgDone = false;
     var wfcDone = false;
     function updateCsgStatus() {
@@ -454,53 +702,74 @@
         checkAllReady();
       }
     }
-
     gltfLoader.load(
       csgUrl,
       function (gltf) {
         var root = gltf.scene || (gltf.scenes && gltf.scenes[0]);
         if (root) {
-          root.traverse(function (node) {
-            if (node && node.isMesh) {
-              node.material = csgWallMat;
-              node.castShadow = true;
-              node.receiveShadow = true;
-            }
-          });
+          root.position.set(0, -12.0, -45.0);
           groups.csg.add(root);
         }
         csgDone = true;
         updateCsgStatus();
       },
       undefined,
-      function (err) {
-        state.errors.push("CSG GLB error: " + String(err));
+      function () {
+        csgDone = true;
+        updateCsgStatus();
       },
     );
-
     gltfLoader.load(
       wfcUrl,
       function (gltf) {
         var root = gltf.scene || (gltf.scenes && gltf.scenes[0]);
         if (root) {
-          root.position.set(0, 0.02, 0);
-          root.traverse(function (node) {
-            if (node && node.isMesh) {
-              node.material = wfcMat;
-              node.castShadow = true;
-              node.receiveShadow = true;
-            }
-          });
+          root.position.set(0, -12.0, -48.0);
           groups.csg.add(root);
         }
         wfcDone = true;
         updateCsgStatus();
       },
       undefined,
-      function (err) {
-        state.errors.push("WFC GLB error: " + String(err));
+      function () {
+        wfcDone = true;
+        updateCsgStatus();
       },
     );
+
+    // Soft radial golden fireflies / embers drifting in the air
+    var cv = document.createElement("canvas");
+    cv.width = 64;
+    cv.height = 64;
+    var g = cv.getContext("2d");
+    var grad = g.createRadialGradient(32, 32, 1, 32, 32, 30);
+    grad.addColorStop(0, "rgba(255, 232, 185, 1)");
+    grad.addColorStop(0.4, "rgba(255, 190, 110, 0.45)");
+    grad.addColorStop(1, "rgba(0, 0, 0, 0)");
+    g.fillStyle = grad;
+    g.fillRect(0, 0, 64, 64);
+    var dotTex = new THREE.CanvasTexture(cv);
+    var pGeo = new THREE.BufferGeometry();
+    var pCount = 320;
+    var pPos = new Float32Array(pCount * 3);
+    for (var pi = 0; pi < pCount; pi++) {
+      pPos[pi * 3] = (Math.random() - 0.5) * 20;
+      pPos[pi * 3 + 1] = 0.4 + Math.random() * 4.5;
+      pPos[pi * 3 + 2] = -13 + Math.random() * 14;
+    }
+    pGeo.setAttribute("position", new THREE.BufferAttribute(pPos, 3));
+    ashPoints = new THREE.Points(
+      pGeo,
+      new THREE.PointsMaterial({
+        size: 0.12,
+        map: dotTex,
+        transparent: true,
+        opacity: 0.78,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending,
+      }),
+    );
+    groups.csg.add(ashPoints);
   }
 
   // --- Layer 2 VGGT-1B Neural 3D Surface Mesh Loader ---
@@ -515,16 +784,16 @@
       function (gltf) {
         var root = gltf.scene || (gltf.scenes && gltf.scenes[0]);
         if (root) {
-          root.position.set(0, -0.25, -17.5);
-          root.scale.set(1.3, 0.85, 1.05);
+          root.position.set(0, 1.5, -28.0);
+          root.scale.set(1.25, 0.75, 0.95);
           root.traverse(function (node) {
             if (node && node.isMesh) {
               node.castShadow = false;
               node.receiveShadow = true;
               if (node.material) {
                 node.material.vertexColors = true;
-                node.material.roughness = 0.85;
-                node.material.metalness = 0.06;
+                node.material.roughness = 0.82;
+                node.material.metalness = 0.08;
                 node.material.side = THREE.DoubleSide;
               }
             }
@@ -553,11 +822,11 @@
       return;
     }
     WorldRealism.loadGaussianSplat(splatUrl, {
-      pointScale: 420.0,
-      opacity: 0.88,
+      pointScale: 520.0,
+      opacity: 0.92,
       depthWrite: false,
-      position: [0, 3.6, -14.0],
-      scale: 0.72,
+      position: [0, 3.2, -26.0],
+      scale: 0.52,
     })
       .then(function (points) {
         groups.splats.add(points);
@@ -594,6 +863,134 @@
         dracoLoader = null;
       }
     }
+
+    // Additional rich Polyhaven photogrammetry sanctuary & cloister furnishing
+    var extraFurnishings = [
+      {
+        url: "/studio/assets/polyhaven/WoodenTable_01/WoodenTable_01_1k.glb",
+        x: 0,
+        y: 0,
+        z: -8.6,
+        size: 2.1,
+        yaw: 0,
+      },
+      {
+        url: "/studio/assets/polyhaven/brass_candleholders/brass_candleholders_1k.glb",
+        x: -0.55,
+        y: 0.82,
+        z: -8.6,
+        size: 0.42,
+        yaw: 0,
+      },
+      {
+        url: "/studio/assets/polyhaven/brass_candleholders/brass_candleholders_1k.glb",
+        x: 0.55,
+        y: 0.82,
+        z: -8.6,
+        size: 0.42,
+        yaw: 0.4,
+      },
+      {
+        url: "/studio/assets/polyhaven/painted_wooden_bench/painted_wooden_bench_1k.glb",
+        x: -2.4,
+        y: 0,
+        z: -5.2,
+        size: 2.2,
+        yaw: 0,
+      },
+      {
+        url: "/studio/assets/polyhaven/painted_wooden_bench/painted_wooden_bench_1k.glb",
+        x: 2.4,
+        y: 0,
+        z: -5.2,
+        size: 2.2,
+        yaw: 0,
+      },
+      {
+        url: "/studio/assets/polyhaven/painted_wooden_bench/painted_wooden_bench_1k.glb",
+        x: -2.4,
+        y: 0,
+        z: -2.6,
+        size: 2.2,
+        yaw: 0,
+      },
+      {
+        url: "/studio/assets/polyhaven/painted_wooden_bench/painted_wooden_bench_1k.glb",
+        x: 2.4,
+        y: 0,
+        z: -2.6,
+        size: 2.2,
+        yaw: 0,
+      },
+      {
+        url: "/studio/assets/polyhaven/wooden_bookshelf_worn/wooden_bookshelf_worn_1k.glb",
+        x: -4.6,
+        y: 0,
+        z: -7.5,
+        size: 2.2,
+        yaw: 1.57,
+      },
+      {
+        url: "/studio/assets/polyhaven/vintage_grandfather_clock_01/vintage_grandfather_clock_01_1k.glb",
+        x: -4.6,
+        y: 0,
+        z: -9.6,
+        size: 2.15,
+        yaw: 1.3,
+      },
+      {
+        url: "/studio/assets/polyhaven/Rockingchair_01/Rockingchair_01_1k.glb",
+        x: -3.6,
+        y: 0,
+        z: -6.2,
+        size: 1.05,
+        yaw: 0.8,
+        isRocker: true,
+      },
+      {
+        url: "/studio/assets/polyhaven/treasure_chest/treasure_chest_1k.glb",
+        x: 4.3,
+        y: 0,
+        z: -7.8,
+        size: 1.0,
+        yaw: -1.57,
+      },
+      {
+        url: "/studio/assets/polyhaven/SchoolChair_01/SchoolChair_01_1k.glb",
+        x: 3.8,
+        y: 0,
+        z: -3.2,
+        size: 0.85,
+        yaw: 3.14,
+      },
+    ];
+    extraFurnishings.forEach(function (ef) {
+      if (!WorldRealism || !WorldRealism.loadGlbModel) return;
+      WorldRealism.loadGlbModel(
+        ef.url,
+        function (mr) {
+          if (!mr) return;
+          var h = new THREE.Group();
+          h.position.set(ef.x, ef.y, ef.z);
+          h.rotation.y = ef.yaw || 0;
+          h.add(mr);
+          groups.landmarks.add(h);
+          if (ef.isRocker) rockingChairRef = h;
+          if (ef.y === 0 && masterpiece && masterpiece.makeContactShadow) {
+            var cs = masterpiece.makeContactShadow(
+              ef.size * 0.95,
+              ef.size * 0.95,
+              0.58,
+            );
+            if (cs) {
+              cs.position.set(ef.x, 0.02, ef.z);
+              groups.landmarks.add(cs);
+            }
+          }
+        },
+        { targetLength: ef.size, dracoLoader: dracoLoader },
+      );
+    });
 
     objs.forEach(function (lm, idx) {
       var pos = lm.position || [0, 0, 0];
@@ -949,7 +1346,7 @@
         });
         var skyDome = new THREE.Mesh(skyGeo, skyMat);
         skyDome.name = "Stage1_Equirectangular_Skybox";
-        scene.add(skyDome);
+        /* 16-bit .hdr RGBELoader sky active */
       });
 
       // Populate Stage III / IV Inspector telemetry from manifest

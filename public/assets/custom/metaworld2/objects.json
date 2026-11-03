@@ -19,7 +19,7 @@
       "position": [
         0.0,
         0.0,
-        -9.0
+        -10.5
       ],
       "radius": 2.4,
       "height": 4.2,
@@ -27,7 +27,7 @@
       "standoffRadius": 5.6,
       "glbUrl": "/studio/assets/polyhaven/large_castle_door/large_castle_door_1k.glb",
       "modelUrl": "/studio/assets/polyhaven/large_castle_door/large_castle_door_1k.glb",
-      "targetSize": 4.2,
+      "targetSize": 4.0,
       "yawDeg": 0.0,
       "assetSource": "Polyhaven 1K Photogrammetry (large_castle_door_1k.glb)"
     },
@@ -43,9 +43,9 @@
         1072
       ],
       "position": [
-        -12.0,
+        -4.5,
         0.0,
-        -6.0
+        -4.2
       ],
       "radius": 2.1,
       "height": 5.0,
@@ -53,8 +53,8 @@
       "standoffRadius": 5.3,
       "glbUrl": "/studio/assets/polyhaven/GothicCabinet_01/GothicCabinet_01_1k.glb",
       "modelUrl": "/studio/assets/polyhaven/GothicCabinet_01/GothicCabinet_01_1k.glb",
-      "targetSize": 3.2,
-      "yawDeg": 90.0,
+      "targetSize": 2.5,
+      "yawDeg": 65.0,
       "assetSource": "Polyhaven 1K Photogrammetry (GothicCabinet_01_1k.glb)"
     },
     {
@@ -69,9 +69,9 @@
         1520
       ],
       "position": [
-        12.0,
+        3.8,
         0.0,
-        -6.0
+        -4.2
       ],
       "radius": 2.1,
       "height": 5.0,
@@ -79,8 +79,8 @@
       "standoffRadius": 5.3,
       "glbUrl": "/studio/assets/polyhaven/SchoolDesk_01/SchoolDesk_01_1k.glb",
       "modelUrl": "/studio/assets/polyhaven/SchoolDesk_01/SchoolDesk_01_1k.glb",
-      "targetSize": 2.4,
-      "yawDeg": -90.0,
+      "targetSize": 1.35,
+      "yawDeg": -65.0,
       "assetSource": "Polyhaven 1K Photogrammetry (SchoolDesk_01_1k.glb)"
     },
     {
@@ -95,9 +95,9 @@
         478
       ],
       "position": [
-        -12.0,
-        0.0,
-        9.0
+        -0.85,
+        0.82,
+        -8.5
       ],
       "radius": 2.0,
       "height": 3.8,
@@ -105,8 +105,8 @@
       "standoffRadius": 5.2,
       "glbUrl": "/studio/assets/polyhaven/Lantern_01/Lantern_01_1k.glb",
       "modelUrl": "/studio/assets/polyhaven/Lantern_01/Lantern_01_1k.glb",
-      "targetSize": 2.2,
-      "yawDeg": 45.0,
+      "targetSize": 0.55,
+      "yawDeg": 0.0,
       "assetSource": "Polyhaven 1K Photogrammetry (Lantern_01_1k.glb)"
     },
     {
@@ -121,9 +121,9 @@
         773
       ],
       "position": [
-        12.0,
+        0.85,
         0.0,
-        9.0
+        -5.8
       ],
       "radius": 2.0,
       "height": 3.8,
@@ -131,8 +131,8 @@
       "standoffRadius": 5.2,
       "glbUrl": "/studio/live-preview/assets/agatha.glb",
       "modelUrl": "/studio/live-preview/assets/agatha.glb",
-      "targetSize": 2.8,
-      "yawDeg": -135.0,
+      "targetSize": 1.75,
+      "yawDeg": 12.0,
       "assetSource": "SAM 3.1 + Blender 20-Bone Rigged Hero (agatha.glb)"
     }
   ]

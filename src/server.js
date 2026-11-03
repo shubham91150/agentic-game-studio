@@ -1852,7 +1852,7 @@ const server = http.createServer(async (req, res) => {
 
   // ---------- Vendor assets (Three.js, GLTFLoader, World Realism, Rapier physics) ----------
   const vendorMatch = pathname.match(
-    /^\/studio\/vendor\/(three\.min\.js|GLTFLoader\.js|world_realism\.js|rapier3d-compat\.mjs|rapier_wasm3d_bg\.wasm|DRACOLoader\.js|draco_decoder\.js|draco_decoder\.wasm|CopyShader\.js|LuminosityHighPassShader\.js|EffectComposer\.js|RenderPass\.js|ShaderPass\.js|UnrealBloomPass\.js)$/,
+    /^\/studio\/vendor\/(three\.min\.js|GLTFLoader\.js|world_realism\.js|rapier3d-compat\.mjs|rapier_wasm3d_bg\.wasm|DRACOLoader\.js|RGBELoader\.js|draco_decoder\.js|draco_decoder\.wasm|CopyShader\.js|LuminosityHighPassShader\.js|EffectComposer\.js|RenderPass\.js|ShaderPass\.js|UnrealBloomPass\.js)$/,
   );
   if (vendorMatch) {
     const vendorPath = path.join(
