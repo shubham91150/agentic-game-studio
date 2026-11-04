@@ -658,6 +658,18 @@
   if (gitBtn) gitBtn.addEventListener("click", openGit);
   if (gitClose) gitClose.addEventListener("click", closeGit);
 
+  // Owner-only Git button: the commit/sync drawer is visible solely for
+  // the owner account. Read-only probe (GET judge-audit is 401 for
+  // visitors behind the proxy); the backend still enforces auth.
+  (function gateGitButton() {
+    if (!gitBtn) return;
+    fetch("/api/studio/judge-audit", { cache: "no-store" })
+      .then(function (res) {
+        if (res.ok) gitBtn.classList.remove("hidden");
+      })
+      .catch(function () {});
+  })();
+
   // Sync: commit (optional message) + push. Disabled while pending, inline
   // result, 401 → owner sign-in hint.
   if (gitSyncBtn) {
