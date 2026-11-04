@@ -1423,7 +1423,7 @@ button.icon-btn {
   background: rgba(255, 255, 255, 0.06);
 }
 
-.plus-item > span:first-child:not(.plus-icon) {
+.plus-item > span:first-child:not(.plus-icon):not(.mcp-badge) {
   flex: 1 1 auto;
   min-width: 0;
   overflow: hidden;
@@ -1699,24 +1699,25 @@ div.plus-flyout::-webkit-scrollbar-thumb {
 
 .mcp-badge {
   flex: 0 0 auto;
-  width: 20px;
-  height: 20px;
-  border-radius: 6px;
+  width: 24px;
+  height: 24px;
+  border-radius: 7px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: hsl(0, 0%, 24%);
+  background: #1f1f1f;
+  border: 1px solid rgba(255, 255, 255, 0.1);
   color: #ffffff;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
   line-height: 1;
   overflow: hidden;
 }
 
 .mcp-badge img {
-  width: 15px;
-  height: 15px;
-  border-radius: 3px;
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
 }
 
 .plus-perm-list {
