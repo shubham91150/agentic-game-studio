@@ -13,7 +13,7 @@
     />
     <title>Agentic Game Studio</title>
     <link rel="stylesheet" href="/studio/fonts/fonts.css" />
-    <link rel="stylesheet" href="/studio/app.css?v=23" />
+    <link rel="stylesheet" href="/studio/app.css?v=24" />
     <link rel="manifest" href="/studio/manifest.webmanifest" />
     <link rel="apple-touch-icon" href="/studio/icon.svg" />
     <link
@@ -1094,15 +1094,20 @@
                         </span>
                       </button>
                       <div id="plus-permissions" class="plus-sub hidden">
-                        <div class="plus-hint">
-                          The build sandbox enforces these at all times:
+                        <div class="plus-perm-list" id="plus-perm-list">
+                          <div class="plus-item plus-perm-row" data-perm="ask">
+                            <span class="plus-perm-label">Ask Permission</span>
+                            <span class="tick" style="display:none;">✓</span>
+                          </div>
+                          <div class="plus-item plus-perm-row is-active" data-perm="auto">
+                            <span class="plus-perm-label">Auto</span>
+                            <span class="tick">✓</span>
+                          </div>
+                          <div class="plus-item plus-perm-row" data-perm="full">
+                            <span class="plus-perm-label">Full</span>
+                            <span class="tick" style="display:none;">✓</span>
+                          </div>
                         </div>
-                        <ul class="plus-perm-list">
-                          <li>Google gVisor sandbox with read-only mounts</li>
-                          <li>Prompt safety shield on every build</li>
-                          <li>Visual + Physics QA gates before play</li>
-                          <li>Owner routes behind AES-256-GCM auth</li>
-                        </ul>
                       </div>
                     </div>
                   </div>
@@ -1411,6 +1416,6 @@
           </div>
         </section>
       </div>
-    <script src="/studio/studio.js?v=23"></script>
+    <script src="/studio/studio.js?v=24"></script>
   </body>
 </html>

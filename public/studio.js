@@ -2915,15 +2915,21 @@
 
       function openMcpModal(srv) {
         var key = (srv.name || "").toLowerCase();
-        var meta = MCP_META[key] || {
-          title: srv.name,
-          desc: "Model Context Protocol server connection.",
-          docs: "https://modelcontextprotocol.io",
-          auth: srv.url ? "OAuth" : "None",
-          url:
-            srv.url ||
-            (srv.command ? srv.command + " " + (srv.args || []).join(" ") : ""),
-        };
+        var meta = srv.isNew
+          ? {
+              title: "Custom MCP",
+              desc: "Connect any Model Context Protocol server via URL or command.",
+              docs: "https://modelcontextprotocol.io",
+              auth: "None",
+              url: "",
+            }
+          : (MCP_META[key] || {
+              title: srv.name,
+              desc: "Model Context Protocol server connection.",
+              docs: "https://modelcontextprotocol.io",
+              auth: srv.url ? "OAuth" : "None",
+              url: srv.url || (srv.command ? srv.command + " " + (srv.args || []).join(" ") : ""),
+            });
         var currentAuth = meta.auth || "None";
 
         var backdrop = document.createElement("div");
@@ -3104,7 +3110,15 @@
 
         cancelBtn.addEventListener("click", closeModal);
         submitBtn.addEventListener("click", function () {
-          setStatus("Connected MCP: " + meta.title, "ok");
+          if (srv.isNew) {
+            var n = nameInp.value.trim();
+            var u = urlInp.value.trim();
+            if (!n && !u) return;
+            addMcpServer(n || "custom-mcp", u);
+            setStatus("Added MCP: " + (n || "custom-mcp"), "ok");
+          } else {
+            setStatus("Connected MCP: " + meta.title, "ok");
+          }
           closeModal();
         });
 
@@ -3145,33 +3159,56 @@
         });
         plusMcps.appendChild(row);
       });
-      var addRow = document.createElement("div");
-      addRow.className = "plus-add";
-      var nameInput = document.createElement("input");
-      nameInput.type = "text";
-      nameInput.placeholder = "name";
-      nameInput.setAttribute("aria-label", "MCP server name");
-      nameInput.maxLength = 41;
-      var urlInput = document.createElement("input");
-      urlInput.type = "url";
-      urlInput.placeholder = "https://…/mcp";
-      urlInput.setAttribute("aria-label", "MCP server URL");
-      var addBtn = document.createElement("button");
-      addBtn.type = "button";
-      addBtn.textContent = "Add";
-      addBtn.addEventListener("click", function () {
-        addMcpServer(nameInput.value, urlInput.value);
+      var customRow = document.createElement("div");
+      customRow.className = "plus-item plus-mcp-row plus-custom-mcp-row";
+
+      var customBadge = document.createElement("span");
+      customBadge.className = "mcp-badge";
+      customBadge.innerHTML =
+        '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>';
+
+      var customName = document.createElement("span");
+      customName.className = "mcp-name";
+      customName.textContent = "Custom MCP";
+
+      customRow.appendChild(customBadge);
+      customRow.appendChild(customName);
+      customRow.addEventListener("click", function () {
+        openMcpModal({ name: "", url: "", isNew: true });
       });
-      addRow.appendChild(nameInput);
-      addRow.appendChild(urlInput);
-      addRow.appendChild(addBtn);
-      plusMcps.appendChild(addRow);
-      var note = document.createElement("div");
-      note.className = "plus-hint";
-      note.textContent = "Takes effect in a new CLI session.";
-      plusMcps.appendChild(note);
+      plusMcps.appendChild(customRow);
     }
   }
+
+  // Permissions selection: Ask Permission / Auto / Full
+  var permRows = document.querySelectorAll(".plus-perm-row");
+  var currentPerm = localStorage.getItem("ags_permission_mode") || "auto";
+
+  function updatePermUI(perm) {
+    currentPerm = perm;
+    localStorage.setItem("ags_permission_mode", perm);
+    permRows.forEach(function (row) {
+      var p = row.getAttribute("data-perm");
+      var tick = row.querySelector(".tick");
+      if (p === perm) {
+        row.classList.add("is-active");
+        if (tick) tick.style.display = "inline";
+      } else {
+        row.classList.remove("is-active");
+        if (tick) tick.style.display = "none";
+      }
+    });
+  }
+
+  permRows.forEach(function (row) {
+    row.addEventListener("click", function () {
+      var p = row.getAttribute("data-perm") || "auto";
+      updatePermUI(p);
+      var label = row.querySelector(".plus-perm-label");
+      setStatus("Permissions: " + (label ? label.textContent : p), "ok");
+    });
+  });
+  updatePermUI(currentPerm);
 
   function refreshMcp() {
     fetch("/api/studio/mcp")
