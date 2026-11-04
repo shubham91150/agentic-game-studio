@@ -2455,6 +2455,38 @@
 
   // Custom instructions: free-text chips prepended to the sent prompt
   var customInstructions = [];
+  var DEFAULT_INSTRUCTIONS = [
+    {
+      title: "Be Concise",
+      rule: "Be concise and direct, avoiding unnecessary conversational filler.",
+    },
+  ];
+
+  function loadSavedInstructions() {
+    try {
+      var raw = localStorage.getItem("ags_user_instructions");
+      if (raw) {
+        var parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length) return parsed;
+      }
+    } catch (e) {}
+    return DEFAULT_INSTRUCTIONS.slice();
+  }
+
+  function saveInstructionItem(item) {
+    try {
+      var list = loadSavedInstructions();
+      // Avoid duplicate by title
+      var exists = list.some(function (x) {
+        return (x.title || "").toLowerCase() === (item.title || "").toLowerCase();
+      });
+      if (!exists) {
+        list.push(item);
+        localStorage.setItem("ags_user_instructions", JSON.stringify(list));
+      }
+    } catch (e) {}
+  }
+
   function renderInstructionChips() {
     if (!instructionListEl) return;
     instructionListEl.innerHTML = "";
@@ -2472,32 +2504,222 @@
           return x !== text;
         });
         renderInstructionChips();
+        renderPlusInstructions();
       });
       chip.appendChild(label);
       chip.appendChild(remove);
       instructionListEl.appendChild(chip);
     });
   }
-  function addInstruction() {
-    if (!instructionInput) return;
-    var text = instructionInput.value.trim();
-    if (!text) return;
-    customInstructions.push(text);
-    instructionInput.value = "";
-    renderInstructionChips();
-    instructionInput.focus();
-  }
-  if (instructionAdd) {
-    instructionAdd.addEventListener("click", addInstruction);
-  }
-  if (instructionInput) {
-    instructionInput.addEventListener("keydown", function (event) {
-      if (event.key === "Enter") {
-        event.preventDefault();
-        addInstruction();
+
+  var instructionSearchTerm = "";
+  function renderPlusInstructions() {
+    var listEl = document.getElementById("plus-instructions-list");
+    if (!listEl) return;
+    listEl.innerHTML = "";
+    var all = loadSavedInstructions();
+    var term = instructionSearchTerm.toLowerCase();
+    var filtered = all.filter(function (item) {
+      if (!term) return true;
+      return (
+        (item.title || "").toLowerCase().indexOf(term) !== -1 ||
+        (item.rule || "").toLowerCase().indexOf(term) !== -1
+      );
+    });
+
+    if (!filtered.length) {
+      var empty = document.createElement("div");
+      empty.className = "plus-hint";
+      empty.style.padding = "6px 8px";
+      empty.textContent = term ? "No instructions match." : "No instructions yet.";
+      listEl.appendChild(empty);
+      return;
+    }
+
+    filtered.forEach(function (item) {
+      var row = document.createElement("div");
+      row.className = "plus-instructions-item";
+      row.title = item.rule || item.title;
+
+      var label = document.createElement("span");
+      label.textContent = item.title;
+      row.appendChild(label);
+
+      var fullText = item.title && item.rule && item.title !== item.rule
+        ? item.title + ": " + item.rule
+        : (item.rule || item.title);
+
+      var isActive = customInstructions.indexOf(fullText) !== -1 || customInstructions.indexOf(item.rule) !== -1;
+      if (isActive) {
+        var tick = document.createElement("span");
+        tick.className = "tick";
+        tick.textContent = "✓";
+        row.appendChild(tick);
       }
+
+      row.addEventListener("click", function () {
+        var matchIdx = customInstructions.indexOf(fullText);
+        if (matchIdx === -1) matchIdx = customInstructions.indexOf(item.rule);
+
+        if (matchIdx !== -1) {
+          customInstructions.splice(matchIdx, 1);
+        } else {
+          customInstructions.push(fullText);
+        }
+        renderInstructionChips();
+        renderPlusInstructions();
+      });
+
+      listEl.appendChild(row);
     });
   }
+
+  function openInstructionModal() {
+    var backdrop = document.createElement("div");
+    backdrop.className = "mcp-modal-backdrop";
+
+    var dialog = document.createElement("div");
+    dialog.className = "instruction-modal-dialog";
+    dialog.setAttribute("role", "dialog");
+    dialog.setAttribute("aria-modal", "true");
+
+    var titleEl = document.createElement("h3");
+    titleEl.className = "instruction-modal-title";
+    titleEl.textContent = "Add New Instruction";
+    dialog.appendChild(titleEl);
+
+    // Title Field
+    var titleField = document.createElement("div");
+    titleField.className = "mcp-modal-field";
+    var titleLbl = document.createElement("label");
+    titleLbl.className = "mcp-modal-label";
+    titleLbl.textContent = "Title";
+    var titleInp = document.createElement("input");
+    titleInp.className = "mcp-modal-input";
+    titleInp.type = "text";
+    titleInp.placeholder = "Ex. Always use shadow-sm";
+    titleInp.maxLength = 150;
+    titleField.appendChild(titleLbl);
+    titleField.appendChild(titleInp);
+    dialog.appendChild(titleField);
+
+    // Rule Field
+    var ruleField = document.createElement("div");
+    ruleField.className = "mcp-modal-field";
+    ruleField.style.marginBottom = "8px";
+    var ruleLbl = document.createElement("label");
+    ruleLbl.className = "mcp-modal-label";
+    ruleLbl.textContent = "Rule";
+    var ruleTextarea = document.createElement("textarea");
+    ruleTextarea.className = "instruction-modal-textarea";
+    ruleTextarea.placeholder =
+      "Ex. Always use the tailwind shadow-sm class when adding shadows to any elements in the UI.";
+    ruleTextarea.maxLength = 5000;
+    ruleField.appendChild(ruleLbl);
+    ruleField.appendChild(ruleTextarea);
+    dialog.appendChild(ruleField);
+
+    // Character Counter
+    var counterEl = document.createElement("div");
+    counterEl.className = "instruction-char-count";
+    counterEl.textContent = "0 / 5,000 characters";
+    dialog.appendChild(counterEl);
+
+    // Actions
+    var actions = document.createElement("div");
+    actions.className = "mcp-modal-actions";
+    actions.style.marginTop = "22px";
+
+    var cancelBtn = document.createElement("button");
+    cancelBtn.type = "button";
+    cancelBtn.className = "mcp-modal-btn-cancel";
+    cancelBtn.textContent = "Cancel";
+
+    var addBtn = document.createElement("button");
+    addBtn.type = "button";
+    addBtn.className = "instruction-btn-add";
+    addBtn.textContent = "Add";
+
+    function updateAddState() {
+      var len = ruleTextarea.value.length;
+      counterEl.textContent = len.toLocaleString() + " / 5,000 characters";
+      var hasContent =
+        titleInp.value.trim().length > 0 || ruleTextarea.value.trim().length > 0;
+      if (hasContent) {
+        addBtn.classList.add("active");
+      } else {
+        addBtn.classList.remove("active");
+      }
+    }
+
+    titleInp.addEventListener("input", updateAddState);
+    ruleTextarea.addEventListener("input", updateAddState);
+
+    function closeModal() {
+      window.removeEventListener("keydown", onKey);
+      backdrop.remove();
+    }
+
+    function onKey(ev) {
+      if (ev.key === "Escape") closeModal();
+    }
+
+    cancelBtn.addEventListener("click", closeModal);
+    addBtn.addEventListener("click", function () {
+      var t = titleInp.value.trim();
+      var r = ruleTextarea.value.trim();
+      if (!t && !r) return;
+      var full = t && r ? t + ": " + r : (r || t);
+
+      if (customInstructions.indexOf(full) === -1) {
+        customInstructions.push(full);
+        renderInstructionChips();
+      }
+
+      saveInstructionItem({
+        title: t || (r.length > 30 ? r.slice(0, 30) + "…" : r),
+        rule: r || t,
+      });
+
+      renderPlusInstructions();
+      setStatus("Added instruction: " + (t || r.slice(0, 24)), "ok");
+      closeModal();
+    });
+
+    backdrop.addEventListener("click", function (ev) {
+      if (ev.target === backdrop) closeModal();
+    });
+    window.addEventListener("keydown", onKey);
+
+    actions.appendChild(cancelBtn);
+    actions.appendChild(addBtn);
+    dialog.appendChild(actions);
+
+    backdrop.appendChild(dialog);
+    document.body.appendChild(backdrop);
+    setTimeout(function () {
+      titleInp.focus();
+    }, 60);
+  }
+
+  // Setup Instruction Search and Open Modal button
+  var instrSearchInp = document.getElementById("instruction-search-input");
+  if (instrSearchInp) {
+    instrSearchInp.addEventListener("input", function (e) {
+      instructionSearchTerm = e.target.value.trim();
+      renderPlusInstructions();
+    });
+  }
+
+  var openInstrModalBtn = document.getElementById("instruction-modal-open-btn");
+  if (openInstrModalBtn) {
+    openInstrModalBtn.addEventListener("click", function (e) {
+      e.stopPropagation();
+      openInstructionModal();
+    });
+  }
+
+  renderPlusInstructions();
 
   function renderSkillChips() {
     if (!skillListEl) return;

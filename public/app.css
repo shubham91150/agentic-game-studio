@@ -1521,6 +1521,137 @@ button.icon-btn {
   background: transparent;
 }
 
+/* ---------- Instruction Modal (v0 style) ---------- */
+.instruction-modal-dialog {
+  width: 100%;
+  max-width: 470px;
+  background: #111113;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow:
+    0 24px 50px -12px rgba(0, 0, 0, 0.85),
+    0 0 0 1px rgba(255, 255, 255, 0.05);
+  display: flex;
+  flex-direction: column;
+  animation: mcpModalScaleIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.instruction-modal-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #ffffff;
+  margin: 0 0 18px 0;
+  letter-spacing: -0.01em;
+}
+
+.instruction-modal-textarea {
+  width: 100%;
+  min-height: 105px;
+  background: #18181b;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  padding: 10px 12px;
+  color: #ffffff;
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+  resize: vertical;
+  line-height: 1.45;
+  transition: border-color 0.15s;
+}
+
+.instruction-modal-textarea:focus {
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.instruction-char-count {
+  font-size: 12px;
+  color: #71717a;
+  margin-top: 6px;
+  user-select: none;
+}
+
+.instruction-btn-add {
+  background: #27272a;
+  border: none;
+  border-radius: 8px;
+  color: #71717a;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 8px 22px;
+  cursor: not-allowed;
+  transition: all 0.15s;
+}
+
+.instruction-btn-add.active {
+  background: #ffffff;
+  color: #09090b;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+}
+
+.instruction-btn-add.active:hover {
+  background: #f4f4f5;
+  transform: translateY(-1px);
+}
+
+.plus-instructions-list {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.plus-instructions-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-size: 13px;
+  color: #e4e4e7;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.plus-instructions-item:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.plus-instructions-item .tick {
+  color: #4ade80;
+  font-weight: 700;
+  font-size: 13px;
+  margin-left: 8px;
+}
+
+.plus-instructions-new-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 10px;
+  border-radius: 8px;
+  font-size: 13px;
+  color: #a1a1aa;
+  cursor: pointer;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  margin-top: 4px;
+  background: transparent;
+  border-left: none;
+  border-right: none;
+  border-bottom: none;
+  width: 100%;
+  text-align: left;
+  transition: all 0.15s;
+}
+
+.plus-instructions-new-btn:hover {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.06);
+}
+
 /* ---------- MCP Connection Modal (v0 style) ---------- */
 .mcp-modal-backdrop {
   position: fixed;

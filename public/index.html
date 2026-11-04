@@ -13,7 +13,7 @@
     />
     <title>Agentic Game Studio</title>
     <link rel="stylesheet" href="/studio/fonts/fonts.css" />
-    <link rel="stylesheet" href="/studio/app.css?v=22" />
+    <link rel="stylesheet" href="/studio/app.css?v=23" />
     <link rel="manifest" href="/studio/manifest.webmanifest" />
     <link rel="apple-touch-icon" href="/studio/icon.svg" />
     <link
@@ -992,21 +992,25 @@
                         </span>
                       </button>
                       <div id="plus-instructions" class="plus-sub hidden">
-                        <div class="plus-add plus-add-single">
+                        <div class="plus-search">
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                            <circle cx="11" cy="11" r="8" />
+                            <path d="m21 21-4.35-4.35" />
+                          </svg>
                           <input
                             type="text"
-                            id="instruction-input"
-                            placeholder="e.g. Reply in pirate speak"
-                            aria-label="New instruction"
-                            maxlength="200"
+                            id="instruction-search-input"
+                            placeholder="Search instructions…"
+                            aria-label="Search instructions"
                           />
-                          <button type="button" id="instruction-add">
-                            Add
-                          </button>
                         </div>
-                        <div class="plus-hint">
-                          Added instructions are sent with your next prompt.
-                        </div>
+                        <div class="plus-instructions-list" id="plus-instructions-list"></div>
+                        <button type="button" class="plus-instructions-new-btn" id="instruction-modal-open-btn">
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                            <path d="M12 5v14M5 12h14" />
+                          </svg>
+                          <span>New Instruction</span>
+                        </button>
                       </div>
                       <button
                         type="button"
@@ -1407,6 +1411,6 @@
           </div>
         </section>
       </div>
-    <script src="/studio/studio.js?v=22"></script>
+    <script src="/studio/studio.js?v=23"></script>
   </body>
 </html>
