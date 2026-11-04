@@ -1282,11 +1282,15 @@ button.icon-btn {
   overscroll-behavior: contain;
   display: flex;
   flex-direction: column;
-  border: 1px solid var(--line);
-  border-radius: var(--r-md);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 14px;
   background: #121212;
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6);
+  box-shadow:
+    0 8px 24px rgba(0, 0, 0, 0.55),
+    0 24px 64px rgba(0, 0, 0, 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
   padding: 6px;
+  animation: menu-in 0.16s ease-out;
 }
 
 .model-item {
@@ -1350,11 +1354,15 @@ button.icon-btn {
   overscroll-behavior: contain;
   display: flex;
   flex-direction: column;
-  border: 1px solid var(--line);
-  border-radius: var(--r-md);
-  background: #000;
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 14px;
+  background: #121212;
+  box-shadow:
+    0 8px 24px rgba(0, 0, 0, 0.55),
+    0 24px 64px rgba(0, 0, 0, 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
   padding: 6px;
+  animation: menu-in 0.16s ease-out;
 }
 
 @keyframes menu-in {
@@ -1366,6 +1374,24 @@ button.icon-btn {
     opacity: 1;
     transform: translateY(0) scale(1);
   }
+}
+
+.plus-menu::-webkit-scrollbar,
+.model-menu::-webkit-scrollbar {
+  width: 8px;
+}
+
+.plus-menu::-webkit-scrollbar-thumb,
+.model-menu::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  border: 2px solid #121212;
+}
+
+.plus-sub:not(.hidden) {
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  margin-top: 2px;
+  padding-top: 4px;
 }
 
 #plus-skills,
