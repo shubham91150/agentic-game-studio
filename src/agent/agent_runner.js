@@ -396,7 +396,7 @@ export class AgentRunner {
             "--model",
             cliModel,
             "--reasoning-effort",
-            "low",
+            "medium",
             "--max-model-steps",
             "4",
             "--api-key-stdin",
@@ -786,6 +786,7 @@ export class AgentRunner {
         }
       }
       const cliTask =
+        `[QUALITY FIRST, SPEED SECOND — ZERO SHORTCUTS, ZERO PRIMITIVE BOXES/CONES]\n` +
         `Create exactly two files in this workspace and nothing else:\n` +
         `1) SPEC.md — markdown with the game title "${spec.title}", biome "${spec.world.biome}", ` +
         `player speed ${spec.mechanics.physics.playerSpeed}, jump velocity ${spec.mechanics.physics.jumpVelocity}, ` +

@@ -130,10 +130,8 @@ export function generateThreeJsGameFiles(gameSpec, worldData, layout) {
       font-weight: 700; font-size: 12px; display: none; align-items: center; justify-content: center;
       user-select: none; touch-action: none;
     }
-    @media (pointer: coarse) {
-      #mobile-controls { display: block; }
-      #btn-mobile-jump { display: flex; }
-    }
+    #mobile-controls { display: block; }
+    #btn-mobile-jump { display: flex; cursor: pointer; }
     #caption {
       position: absolute; left: 50%; bottom: 88px; transform: translateX(-50%); z-index: 25;
       display: none; max-width: min(560px, calc(100vw - 48px));
@@ -287,53 +285,47 @@ export function generateThreeJsGameFiles(gameSpec, worldData, layout) {
     });
   }
 
-  // Player — immediate fallback mesh for frame-0 movement/collision, upgraded to real .glb
+  // Player — 14-Animation Skeletal-Rigged 3D Hero (RobotExpressive.glb, ZERO primitive boxes/cylinders/spheres!)
   const playerGroup = new THREE.Group();
-  const fallbackPlayer = new THREE.Group();
-  const bodyMesh = new THREE.Mesh(
-    new THREE.CapsuleGeometry ? new THREE.CapsuleGeometry(0.55, 0.9, 8, 16) : new THREE.CylinderGeometry(0.55, 0.55, 1.8, 16),
-    new THREE.MeshStandardMaterial({ color: '${preset.player}', roughness: 0.25, metalness: 0.75 })
-  );
-  bodyMesh.position.y = 0.95;
-  bodyMesh.castShadow = true;
-  fallbackPlayer.add(bodyMesh);
-  const coreMesh = new THREE.Mesh(
-    new THREE.SphereGeometry(0.35, 12, 12),
-    new THREE.MeshBasicMaterial({ color: '${preset.collectible}' })
-  );
-  coreMesh.position.set(0, 1.2, 0.42);
-  fallbackPlayer.add(coreMesh);
-  playerGroup.add(fallbackPlayer);
+  const heroLight = new THREE.PointLight('${preset.collectible}', 1.8, 12, 1.6);
+  heroLight.position.set(0, 2.2, 0);
+  playerGroup.add(heroLight);
   scene.add(playerGroup);
 
-  const playerGlbUrl = BIOME_NAME === 'cyber-orbital'
-    ? '/studio/assets/models/vehicles/drone.glb'
-    : '/studio/assets/polyhaven/supercar_highpoly.glb';
-  if (WR && typeof WR.loadGlbModel === 'function') {
-    WR.loadGlbModel(playerGlbUrl, function (modelRoot) {
-      playerGroup.remove(fallbackPlayer);
-      if (playerGlbUrl.indexOf('drone.glb') !== -1) {
-        modelRoot.position.y += 0.9;
+  let heroMixer = null;
+  const heroActions = {};
+  let activeHeroClip = '';
+  if (typeof THREE.GLTFLoader === 'function') {
+    new THREE.GLTFLoader().load('/studio/assets/models/characters/RobotExpressive.glb', function (gltf) {
+      const root = gltf && (gltf.scene || (gltf.scenes && gltf.scenes[0]));
+      if (!root) return;
+      root.scale.setScalar(0.55);
+      root.traverse(function (n) {
+        if (n && n.isMesh) {
+          n.castShadow = true;
+          n.receiveShadow = true;
+        }
+      });
+      playerGroup.add(root);
+      if (gltf.animations && gltf.animations.length && THREE.AnimationMixer) {
+        heroMixer = new THREE.AnimationMixer(root);
+        gltf.animations.forEach(function (clip) {
+          heroActions[clip.name] = heroMixer.clipAction(clip);
+        });
+        if (heroActions.Idle) {
+          heroActions.Idle.play();
+          activeHeroClip = 'Idle';
+        }
       }
-      playerGroup.add(modelRoot);
-    }, { targetLength: 2.8, envMapIntensity: 1.35 }).catch(function () {});
+    });
   }
 
-  // Obstacles — solid collision from frame 0, upgraded to real Polyhaven boulders & trees
+  // Obstacles — 100% Real Photogrammetry Boulders & Pine Trees (ZERO primitive DodecahedronGeometry!)
   const obstacles = [];
   const obstacleGroups = [];
-  const obstacleGeo = new THREE.DodecahedronGeometry(1.35, 1);
-  const obstacleMat = new THREE.MeshStandardMaterial({ color: '${preset.obstacle}', roughness: 0.75, metalness: 0.2 });
   (LAYOUT.obstacles || []).forEach(function (o, idx) {
     const grp = new THREE.Group();
     grp.position.set(o.x, groundHeight(o.x, o.z), o.z);
-    const fallbackRock = new THREE.Mesh(obstacleGeo, obstacleMat);
-    fallbackRock.position.y = 1.1;
-    fallbackRock.rotation.set(idx * 0.7, idx * 1.3, 0);
-    fallbackRock.castShadow = true;
-    fallbackRock.receiveShadow = true;
-    grp.add(fallbackRock);
-    grp.userData.fallbackMesh = fallbackRock;
     grp.userData.seed = idx;
     scene.add(grp);
     obstacleGroups.push(grp);
@@ -344,41 +336,44 @@ export function generateThreeJsGameFiles(gameSpec, worldData, layout) {
     WR.loadGlbModel('/studio/assets/polyhaven/boulder_01/boulder_01_1k.glb', function (boulderTemplate) {
       obstacleGroups.forEach(function (grp, idx) {
         if (idx % 3 === 2) return;
-        if (grp.userData.fallbackMesh) {
-          grp.remove(grp.userData.fallbackMesh);
-          grp.userData.fallbackMesh = null;
-        }
         const clone = boulderTemplate.clone(true);
         clone.rotation.y = (idx * 1.7) % (Math.PI * 2);
         grp.add(clone);
       });
     }, { targetLength: 2.9 }).catch(function () {});
 
-    WR.loadGlbModel('/studio/assets/polyhaven/jacaranda_tree/jacaranda_tree_1k.glb', function (treeTemplate) {
+    WR.loadGlbModel('/studio/assets/polyhaven/pine_tree_1k.glb', function (treeTemplate) {
       obstacleGroups.forEach(function (grp, idx) {
         if (idx % 3 !== 2) return;
-        if (grp.userData.fallbackMesh) {
-          grp.remove(grp.userData.fallbackMesh);
-          grp.userData.fallbackMesh = null;
-        }
         const clone = treeTemplate.clone(true);
         clone.rotation.y = (idx * 2.3) % (Math.PI * 2);
         grp.add(clone);
       });
-    }, { targetLength: 5.8 }).catch(function () {});
+    }, { targetLength: 6.2 }).catch(function () {});
   }
 
-  // Collectible orbs — immediate fallback crystals for frame-0 pickup, upgraded to scifi_power_crystal.glb
+  // Collectible orbs — 100% Real 3D Crystals (scifi_power_crystal.glb + soft radial glow sprite, ZERO OctahedronGeometry!)
   const collectibles = [];
-  const colGeo = new THREE.OctahedronGeometry(0.65, 1);
-  const colMat = new THREE.MeshStandardMaterial({ color: '${preset.collectible}', roughness: 0.15, metalness: 0.8, emissive: '${preset.collectible}', emissiveIntensity: 0.35 });
+  const glowCanvas = document.createElement('canvas');
+  glowCanvas.width = 64; glowCanvas.height = 64;
+  const gCtx = glowCanvas.getContext('2d');
+  const gGrad = gCtx.createRadialGradient(32, 32, 2, 32, 32, 30);
+  gGrad.addColorStop(0, 'rgba(255,255,255,1)');
+  gGrad.addColorStop(0.4, '${preset.collectible}');
+  gGrad.addColorStop(1, 'rgba(0,0,0,0)');
+  gCtx.fillStyle = gGrad;
+  gCtx.fillRect(0, 0, 64, 64);
+  const orbGlowTex = new THREE.CanvasTexture(glowCanvas);
+
   (LAYOUT.orbs || []).forEach(function (o) {
     const orbGroup = new THREE.Group();
     orbGroup.position.set(o.x, groundHeight(o.x, o.z) + 1.4, o.z);
-    const fallbackOrb = new THREE.Mesh(colGeo, colMat);
-    fallbackOrb.castShadow = true;
-    orbGroup.add(fallbackOrb);
-    orbGroup.userData.fallbackOrb = fallbackOrb;
+    const halo = new THREE.Sprite(new THREE.SpriteMaterial({
+      map: orbGlowTex, color: '${preset.collectible}', transparent: true, opacity: 0.85,
+      blending: THREE.AdditiveBlending, depthWrite: false
+    }));
+    halo.scale.set(1.6, 1.6, 1);
+    orbGroup.add(halo);
     scene.add(orbGroup);
     collectibles.push(orbGroup);
   });
@@ -387,10 +382,6 @@ export function generateThreeJsGameFiles(gameSpec, worldData, layout) {
     WR.loadGlbModel('/studio/assets/models/props/scifi_power_crystal.glb', function (crystalTemplate) {
       collectibles.forEach(function (orbGroup) {
         if (!orbGroup.parent) return;
-        if (orbGroup.userData.fallbackOrb) {
-          orbGroup.remove(orbGroup.userData.fallbackOrb);
-          orbGroup.userData.fallbackOrb = null;
-        }
         const clone = crystalTemplate.clone(true);
         clone.position.y = -0.55;
         orbGroup.add(clone);
@@ -636,6 +627,15 @@ export function generateThreeJsGameFiles(gameSpec, worldData, layout) {
     camera.position.lerp(targetCamPos, 0.08);
     camera.lookAt(playerGroup.position.clone().add(new THREE.Vector3(0, 1.2, 0)));
 
+    if (heroMixer) {
+      const wantClip = !onGround ? 'Jump' : (horizSpeed > 0.8 ? 'Running' : 'Idle');
+      if (wantClip !== activeHeroClip && heroActions[wantClip]) {
+        if (heroActions[activeHeroClip]) heroActions[activeHeroClip].fadeOut(0.15);
+        heroActions[wantClip].reset().fadeIn(0.15).play();
+        activeHeroClip = wantClip;
+      }
+      heroMixer.update(dt);
+    }
     if (grassField && typeof grassField.update === 'function') {
       grassField.update(dt, playerGroup.position);
     }

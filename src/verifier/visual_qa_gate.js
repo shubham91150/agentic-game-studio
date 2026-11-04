@@ -24,7 +24,7 @@ import { fileURLToPath } from "node:url";
 
 export class VisualQualityGate {
   constructor(options = {}) {
-    this.maxAllowedPrimitives = options.maxAllowedPrimitives ?? 3;
+    this.maxAllowedPrimitives = options.maxAllowedPrimitives ?? 0;
   }
 
   collectFiles(targetDir) {
@@ -172,6 +172,8 @@ export class VisualQualityGate {
       ConeGeometry: 0,
       CylinderGeometry: 0,
       SphereGeometry: 0,
+      DodecahedronGeometry: 0,
+      OctahedronGeometry: 0,
     };
 
     for (const file of jsFiles) {
