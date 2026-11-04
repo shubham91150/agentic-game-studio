@@ -1517,13 +1517,252 @@ button.icon-btn {
   background: transparent;
 }
 
-.plus-mcp-row > .mcp-name {
-  flex: 1 1 auto;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  text-align: left;
+/* ---------- MCP Connection Modal (v0 style) ---------- */
+.mcp-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  background: rgba(0, 0, 0, 0.72);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  animation: mcpModalFadeIn 0.18s ease-out;
+}
+
+@keyframes mcpModalFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.mcp-modal-dialog {
+  width: 100%;
+  max-width: 460px;
+  background: #111113;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 16px;
+  padding: 26px 24px 20px 24px;
+  box-shadow:
+    0 24px 50px -12px rgba(0, 0, 0, 0.85),
+    0 0 0 1px rgba(255, 255, 255, 0.05);
+  display: flex;
+  flex-direction: column;
+  animation: mcpModalScaleIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes mcpModalScaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.mcp-modal-icons {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.mcp-modal-app-icon,
+.mcp-modal-brand-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: #18181b;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.mcp-modal-brand-icon img {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+}
+
+.mcp-modal-dots {
+  color: #71717a;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 3px;
+  user-select: none;
+}
+
+.mcp-modal-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #ffffff;
+  text-align: center;
+  margin: 0 0 6px 0;
+  letter-spacing: -0.01em;
+}
+
+.mcp-modal-sub {
+  font-size: 13px;
+  color: #a1a1aa;
+  text-align: center;
+  margin: 0 0 22px 0;
+  line-height: 1.45;
+}
+
+.mcp-modal-sub a {
+  color: #60a5fa;
+  text-decoration: none;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.mcp-modal-sub a:hover {
+  text-decoration: underline;
+}
+
+.mcp-modal-field {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 16px;
+}
+
+.mcp-modal-label {
+  font-size: 12.5px;
+  font-weight: 500;
+  color: #a1a1aa;
+  margin-bottom: 6px;
+}
+
+.mcp-modal-input {
+  width: 100%;
+  height: 38px;
+  background: #18181b;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  padding: 0 12px;
+  color: #ffffff;
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.mcp-modal-input:focus {
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.mcp-modal-tabs {
+  display: flex;
+  background: #18181b;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 9px;
+  padding: 3px;
+  gap: 2px;
+}
+
+.mcp-modal-tab {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: #a1a1aa;
+  font-size: 12.5px;
+  font-weight: 500;
+  padding: 7px 10px;
+  border-radius: 7px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.mcp-modal-tab:hover {
+  color: #e4e4e7;
+}
+
+.mcp-modal-tab.active {
+  background: #27272a;
+  color: #ffffff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+}
+
+.mcp-modal-info-box {
+  background: #18181b;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 9px;
+  padding: 22px 16px;
+  text-align: center;
+  color: #a1a1aa;
+  font-size: 13px;
+  line-height: 1.4;
+  margin-bottom: 22px;
+  min-height: 68px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mcp-modal-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 4px;
+}
+
+.mcp-modal-btn-cancel {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 8px;
+  color: #e4e4e7;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 8px 18px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.mcp-modal-btn-cancel:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+.mcp-modal-btn-submit {
+  background: #ffffff;
+  border: none;
+  border-radius: 8px;
+  color: #09090b;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 8px 22px;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+  transition: all 0.15s;
+}
+
+.mcp-modal-btn-submit:hover {
+  background: #f4f4f5;
+  transform: translateY(-1px);
+}
+
+.mcp-modal-btn-submit:active {
+  transform: translateY(0);
+}
+
+.plus-mcp-row {
+  cursor: pointer;
+}
+
+.plus-mcp-row:hover {
+  background: rgba(255, 255, 255, 0.06);
 }
 
 .plus-mcp-row button {

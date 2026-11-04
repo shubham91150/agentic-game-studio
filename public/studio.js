@@ -2497,6 +2497,242 @@
         fallbackLetter();
         return holder;
       }
+      var MCP_META = {
+        context7: {
+          title: "Context7",
+          desc: "Up-to-date library docs & code examples.",
+          docs: "https://context7.com",
+          auth: "OAuth",
+          url: "https://mcp.context7.com/mcp",
+        },
+        playwright: {
+          title: "Playwright",
+          desc: "End-to-end browser automation & visual QA.",
+          docs: "https://playwright.dev",
+          auth: "None",
+          url: "npx @playwright/mcp@latest --headless --browser=chromium --no-sandbox",
+        },
+        "sequential-thinking": {
+          title: "Sequential Thinking",
+          desc: "Dynamic structured reasoning and step-by-step problem solving.",
+          docs: "https://modelcontextprotocol.io",
+          auth: "None",
+          url: "npx -y @modelcontextprotocol/server-sequential-thinking",
+        },
+        shadcn: {
+          title: "shadcn/ui",
+          desc: "Production UI component library & block generator.",
+          docs: "https://ui.shadcn.com",
+          auth: "None",
+          url: "npx shadcn@latest mcp",
+        },
+        "studio-3d-tools": {
+          title: "Studio 3D Tools",
+          desc: "17 procedural 3D modeling, Blender rigging, and physics tools.",
+          docs: "https://spurcode.duckdns.org/studio/hackathon.html",
+          auth: "None",
+          url: "python3 src/tools/studio_3d_mcp_server.py",
+        },
+      };
+
+      function openMcpModal(srv) {
+        var key = (srv.name || "").toLowerCase();
+        var meta = MCP_META[key] || {
+          title: srv.name,
+          desc: "Model Context Protocol server connection.",
+          docs: "https://modelcontextprotocol.io",
+          auth: srv.url ? "OAuth" : "None",
+          url: srv.url || (srv.command ? srv.command + " " + (srv.args || []).join(" ") : ""),
+        };
+        var currentAuth = meta.auth || "None";
+
+        var backdrop = document.createElement("div");
+        backdrop.className = "mcp-modal-backdrop";
+
+        var dialog = document.createElement("div");
+        dialog.className = "mcp-modal-dialog";
+        dialog.setAttribute("role", "dialog");
+        dialog.setAttribute("aria-modal", "true");
+
+        // Top icons (App ... Brand)
+        var iconsRow = document.createElement("div");
+        iconsRow.className = "mcp-modal-icons";
+
+        var appIcon = document.createElement("div");
+        appIcon.className = "mcp-modal-app-icon";
+        appIcon.innerHTML =
+          '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14.5L8.5 7h2L6 14.5h-2z" fill="#ffffff" stroke="none"/><path d="M10.5 14.5L15 7h2l-4.5 7.5h-2z" fill="#ffffff" stroke="none"/><circle cx="18.5" cy="11" r="3" stroke="#ffffff" stroke-width="1.8"/></svg>';
+
+        var dots = document.createElement("span");
+        dots.className = "mcp-modal-dots";
+        dots.textContent = "\u00B7\u00B7\u00B7";
+
+        var brandIcon = document.createElement("div");
+        brandIcon.className = "mcp-modal-brand-icon";
+        var bSrc = brandIconSrc(srv.name);
+        if (bSrc) {
+          var bImg = document.createElement("img");
+          bImg.src = bSrc;
+          bImg.alt = srv.name;
+          brandIcon.appendChild(bImg);
+        } else {
+          brandIcon.style.background = "hsl(" + hueFromId(srv.name) + ", 65%, 45%)";
+          var bLetter = document.createElement("span");
+          bLetter.style.color = "#ffffff";
+          bLetter.style.fontWeight = "700";
+          bLetter.textContent = (srv.name || "M").charAt(0).toUpperCase();
+          brandIcon.appendChild(bLetter);
+        }
+
+        iconsRow.appendChild(appIcon);
+        iconsRow.appendChild(dots);
+        iconsRow.appendChild(brandIcon);
+        dialog.appendChild(iconsRow);
+
+        // Title
+        var title = document.createElement("h3");
+        title.className = "mcp-modal-title";
+        title.textContent = "Add " + meta.title + " MCP Connection";
+        dialog.appendChild(title);
+
+        // Subtitle + Docs link
+        var sub = document.createElement("p");
+        sub.className = "mcp-modal-sub";
+        sub.innerHTML =
+          meta.desc +
+          ' <a href="' +
+          meta.docs +
+          '" target="_blank" rel="noopener noreferrer">View Docs <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></a>';
+        dialog.appendChild(sub);
+
+        // Name Field
+        var nameField = document.createElement("div");
+        nameField.className = "mcp-modal-field";
+        var nameLbl = document.createElement("label");
+        nameLbl.className = "mcp-modal-label";
+        nameLbl.textContent = "Name";
+        var nameInp = document.createElement("input");
+        nameInp.className = "mcp-modal-input";
+        nameInp.type = "text";
+        nameInp.value = meta.title;
+        nameField.appendChild(nameLbl);
+        nameField.appendChild(nameInp);
+        dialog.appendChild(nameField);
+
+        // URL Field
+        var urlField = document.createElement("div");
+        urlField.className = "mcp-modal-field";
+        var urlLbl = document.createElement("label");
+        urlLbl.className = "mcp-modal-label";
+        urlLbl.textContent = srv.url ? "URL" : "Command / Transport";
+        var urlInp = document.createElement("input");
+        urlInp.className = "mcp-modal-input";
+        urlInp.type = "text";
+        urlInp.value = srv.url || (srv.command ? srv.command + " " + (srv.args || []).join(" ") : meta.url);
+        urlField.appendChild(urlLbl);
+        urlField.appendChild(urlInp);
+        dialog.appendChild(urlField);
+
+        // Authentication Field
+        var authField = document.createElement("div");
+        authField.className = "mcp-modal-field";
+        var authLbl = document.createElement("label");
+        authLbl.className = "mcp-modal-label";
+        authLbl.textContent = "Authentication";
+        authField.appendChild(authLbl);
+
+        var tabs = document.createElement("div");
+        tabs.className = "mcp-modal-tabs";
+        var authOptions = ["None", "Bearer", "Headers", "OAuth"];
+        var tabBtns = {};
+
+        var infoBox = document.createElement("div");
+        infoBox.className = "mcp-modal-info-box";
+
+        var submitBtn = null;
+
+        function updateAuthView(opt) {
+          currentAuth = opt;
+          authOptions.forEach(function (o) {
+            if (tabBtns[o]) {
+              tabBtns[o].classList.toggle("active", o === opt);
+            }
+          });
+          if (opt === "OAuth") {
+            infoBox.textContent = "You'll be redirected to authorize after saving this MCP";
+            if (submitBtn) submitBtn.textContent = "Authorize";
+          } else if (opt === "Bearer") {
+            infoBox.innerHTML =
+              '<input class="mcp-modal-input" type="password" placeholder="Enter Bearer token\u2026" style="width:100%" />';
+            if (submitBtn) submitBtn.textContent = "Save";
+          } else if (opt === "Headers") {
+            infoBox.innerHTML =
+              '<input class="mcp-modal-input" type="text" placeholder="Header: Value" style="width:100%" />';
+            if (submitBtn) submitBtn.textContent = "Save";
+          } else {
+            infoBox.textContent = "No authentication required for this MCP connection.";
+            if (submitBtn) submitBtn.textContent = "Connect";
+          }
+        }
+
+        authOptions.forEach(function (opt) {
+          var btn = document.createElement("button");
+          btn.type = "button";
+          btn.className = "mcp-modal-tab" + (opt === currentAuth ? " active" : "");
+          btn.textContent = opt;
+          btn.addEventListener("click", function () {
+            updateAuthView(opt);
+          });
+          tabBtns[opt] = btn;
+          tabs.appendChild(btn);
+        });
+        authField.appendChild(tabs);
+        dialog.appendChild(authField);
+        dialog.appendChild(infoBox);
+
+        // Action Buttons
+        var actions = document.createElement("div");
+        actions.className = "mcp-modal-actions";
+
+        var cancelBtn = document.createElement("button");
+        cancelBtn.type = "button";
+        cancelBtn.className = "mcp-modal-btn-cancel";
+        cancelBtn.textContent = "Cancel";
+
+        submitBtn = document.createElement("button");
+        submitBtn.type = "button";
+        submitBtn.className = "mcp-modal-btn-submit";
+        submitBtn.textContent = currentAuth === "OAuth" ? "Authorize" : "Connect";
+
+        function closeModal() {
+          window.removeEventListener("keydown", onKey);
+          backdrop.remove();
+        }
+
+        function onKey(ev) {
+          if (ev.key === "Escape") closeModal();
+        }
+
+        cancelBtn.addEventListener("click", closeModal);
+        submitBtn.addEventListener("click", function () {
+          setStatus("Connected MCP: " + meta.title, "ok");
+          closeModal();
+        });
+
+        backdrop.addEventListener("click", function (ev) {
+          if (ev.target === backdrop) closeModal();
+        });
+        window.addEventListener("keydown", onKey);
+
+        actions.appendChild(cancelBtn);
+        actions.appendChild(submitBtn);
+        dialog.appendChild(actions);
+
+        backdrop.appendChild(dialog);
+        document.body.appendChild(backdrop);
+        updateAuthView(currentAuth);
+      }
+
       servers.forEach(function (srv) {
         var row = document.createElement("div");
         row.className = "plus-item plus-mcp-row";
@@ -2508,13 +2744,16 @@
         row.appendChild(name);
         var del = document.createElement("button");
         del.type = "button";
-        del.textContent = "×";
+        del.textContent = "\u00D7";
         del.setAttribute("aria-label", "Remove MCP server " + srv.name);
         del.addEventListener("click", function (event) {
           event.stopPropagation();
           removeMcpServer(srv.name);
         });
         row.appendChild(del);
+        row.addEventListener("click", function () {
+          openMcpModal(srv);
+        });
         plusMcps.appendChild(row);
       });
       var addRow = document.createElement("div");
