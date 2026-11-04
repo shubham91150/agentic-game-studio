@@ -1163,6 +1163,27 @@
   var pipelineModal = document.getElementById("pipeline-modal");
   var pipelineOverlay = document.getElementById("pipeline-overlay");
   var pipelineClose = document.getElementById("pipeline-close");
+  var pipelineDock = document.querySelector("#workspace-split .dock");
+  // Keep the modal box clear of the prompt composer dock: the modal is
+  // top-anchored inside #workspace-split and its max-height is capped so
+  // its bottom edge always sits above the dock (internal scroll beyond).
+  function layoutPipelineModal() {
+    if (!pipelineModal || pipelineModal.classList.contains("hidden")) return;
+    if (!splitEl) return;
+    var splitRect = splitEl.getBoundingClientRect();
+    if (!splitRect || splitRect.height <= 0) return;
+    var clearance = 24;
+    if (pipelineDock) {
+      var dockRect = pipelineDock.getBoundingClientRect();
+      if (dockRect && dockRect.height > 0) {
+        clearance = Math.max(24, splitRect.bottom - dockRect.top + 8);
+      }
+    }
+    pipelineModal.style.top = "12px";
+    pipelineModal.style.bottom = "auto";
+    pipelineModal.style.maxHeight =
+      Math.max(160, splitRect.height - 12 - clearance) + "px";
+  }
   function openPipelineModal() {
     pausePreviewGame();
     if (pipelineModal) {
@@ -1170,6 +1191,7 @@
       pipelineModal.setAttribute("aria-hidden", "false");
     }
     if (pipelineOverlay) pipelineOverlay.classList.remove("hidden");
+    layoutPipelineModal();
   }
   function closePipelineModal() {
     if (pipelineModal) {
@@ -1178,9 +1200,15 @@
     }
     if (pipelineOverlay) pipelineOverlay.classList.add("hidden");
   }
-  if (pipelineClose) pipelineClose.addEventListener("click", closePipelineModal);
+  if (pipelineClose)
+    pipelineClose.addEventListener("click", closePipelineModal);
   if (pipelineOverlay)
     pipelineOverlay.addEventListener("click", closePipelineModal);
+  // Re-fit the modal when the workspace geometry changes (window resize,
+  // mobile CLI/preview tab switch) while it is open.
+  window.addEventListener("resize", layoutPipelineModal);
+  if (tabCli) tabCli.addEventListener("click", layoutPipelineModal);
+  if (tabPreview) tabPreview.addEventListener("click", layoutPipelineModal);
   document.addEventListener("keydown", function (event) {
     if (event.key === "Escape") closePipelineModal();
   });

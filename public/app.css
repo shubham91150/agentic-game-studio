@@ -296,6 +296,7 @@ body {
 /* ---------- Split workspace ---------- */
 
 .workspace-split {
+  position: relative;
   flex: 1 1 auto;
   min-height: 0;
   display: grid;
@@ -891,7 +892,10 @@ body {
   padding-bottom: 10px;
   overflow: visible;
   position: relative;
-  z-index: 60;
+  /* Above the workspace-scoped pipeline dim (z 90) so the prompt composer
+   * stays visible and interactive while the modal is open; below the modal
+   * box itself (z 92), which JS keeps clear of the dock. */
+  z-index: 91;
 }
 
 .prompt-box {
@@ -3703,26 +3707,31 @@ body:has(.preview-box.landscape-fullscreen) .dock {
   text-overflow: ellipsis;
 }
 
-/* ---------- Pipeline Modal (5-column System Design flow, monochrome) ---------- */
+/* ---------- Pipeline Modal (5-column System Design flow, monochrome) ----------
+ * Scoped to the workspace only: overlay + modal are absolute-positioned
+ * inside #workspace-split (position: relative), so the top bar, left
+ * sidebar, mobile tabs and prompt composer dock are never covered or
+ * blocked. The dock sits above the dim (z 91) but below the modal box
+ * (z 92); JS clears the modal bottom above the dock (see studio.js). */
 .pipeline-overlay {
-  position: fixed;
+  position: absolute;
   inset: 0;
   background: rgba(0, 0, 0, 0.72);
   z-index: 90;
 }
 .pipeline-modal {
-  position: fixed;
-  top: 50%;
+  position: absolute;
+  top: 12px;
   left: 50%;
-  transform: translate(-50%, -50%);
-  width: min(1280px, 94vw);
-  max-height: 88vh;
+  transform: translateX(-50%);
+  width: min(1280px, calc(100% - 24px));
+  max-height: calc(100% - 24px);
   overflow-y: auto;
   background: #000000;
   border: 1px solid #26262c;
   border-radius: 14px;
   box-shadow: 0 24px 80px rgba(0, 0, 0, 0.8);
-  z-index: 91;
+  z-index: 92;
   padding: 20px 22px 24px;
 }
 .pipeline-modal-head {

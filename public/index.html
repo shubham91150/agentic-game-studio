@@ -458,200 +458,6 @@
         </div>
       </aside>
 
-      <!-- Pipeline Modal: 5-column System Design flow (code-built, monochrome) -->
-      <div class="pipeline-overlay hidden" id="pipeline-overlay"></div>
-      <div
-        class="pipeline-modal hidden"
-        id="pipeline-modal"
-        role="dialog"
-        aria-modal="true"
-        aria-label="App pipeline: prompt to playable game"
-      >
-        <div class="pipeline-modal-head">
-          <div>
-            <p class="pipeline-eyebrow">System Design</p>
-            <h2 class="pipeline-title">Prompt to playable game</h2>
-          </div>
-          <button
-            type="button"
-            id="pipeline-close"
-            class="icon-btn"
-            aria-label="Close pipeline"
-          >
-            <svg
-              width="15"
-              height="15"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            >
-              <path d="M18 6 6 18" />
-              <path d="m6 6 12 12" />
-            </svg>
-          </button>
-        </div>
-        <div class="pipeline-grid" id="pipeline-grid">
-          <div class="plm-col">
-            <div class="plm-col-head">INPUT</div>
-            <div class="pl-box">
-              <strong>USER prompt box</strong>
-              <span>model + scope + skills + attach</span>
-            </div>
-            <div class="pl-box">
-              <strong>Voice mic</strong>
-              <span>muse-voice-transcribe-1.0 → prompt</span>
-              <em>meta</em>
-            </div>
-            <div class="pl-box">
-              <strong>terminal/send + generate</strong>
-              <span>SSE stream + upload/session/chats</span>
-              <em>tool</em>
-            </div>
-            <div class="pl-box">
-              <strong>Live Muse CLI tmux</strong>
-              <span>muse-studio, ttyd frame</span>
-              <em>tool</em>
-            </div>
-          </div>
-
-          <div class="plm-arrow" aria-hidden="true">→</div>
-
-          <div class="plm-col">
-            <div class="plm-col-head">BRAIN · reasoning</div>
-            <div class="pl-box">
-              <strong>0 Safety shield</strong>
-              <span>local rules</span>
-            </div>
-            <div class="pl-box">
-              <strong>1 Wonder 1.0 architect</strong>
-              <span>game JSON: title/biome/physics</span>
-              <em>meta</em>
-            </div>
-            <div class="pl-box">
-              <strong>1 Baseten spark-open-1026</strong>
-              <span>focal asset enrich (open)</span>
-              <em>meta</em>
-            </div>
-            <div class="pl-box">
-              <strong>Muse CLI exec --json</strong>
-              <span>thinking + tool:write_file</span>
-              <em>meta</em>
-            </div>
-          </div>
-
-          <div class="plm-arrow" aria-hidden="true">→</div>
-
-          <div class="plm-col">
-            <div class="plm-col-head">ASSETS · tools</div>
-            <div class="pl-box">
-              <strong>1b Muse Image 1.0</strong>
-              <span>concept/key art, cached</span>
-              <em>meta</em>
-            </div>
-            <div class="pl-box">
-              <strong>SAM 3.1 segment_image</strong>
-              <span>boxes + masks → cutout</span>
-              <em>meta</em>
-            </div>
-            <div class="pl-box">
-              <strong>SAM 3D Objects Modal</strong>
-              <span>shipped — backend sam3d</span>
-              <em>meta</em>
-            </div>
-            <div class="pl-box">
-              <strong>VGGT-1B metric scene</strong>
-              <span>pointcloud + mesh recon</span>
-              <em>meta</em>
-            </div>
-            <div class="pl-box">
-              <strong>depth / warp / projection</strong>
-              <span>depth_map + novel_view + blender</span>
-              <em>tool</em>
-            </div>
-            <div class="pl-box">
-              <strong>Blender cleanup</strong>
-              <span>decimate + merge → .glb</span>
-              <em>tool</em>
-            </div>
-            <div class="pl-box">
-              <strong>MusicGen soundtrack</strong>
-              <span>musicgen-small 32kHz stems</span>
-              <em>meta</em>
-            </div>
-            <div class="pl-box">
-              <strong>NPC dialogue Spark Open</strong>
-              <span>npc_dialogue.js via Baseten</span>
-              <em>meta</em>
-            </div>
-          </div>
-
-          <div class="plm-arrow" aria-hidden="true">→</div>
-
-          <div class="plm-col">
-            <div class="plm-col-head">BUILD · deterministic</div>
-            <div class="pl-box">
-              <strong>3 Terrain + layout</strong>
-              <span>grid + orbs/obstacles</span>
-              <em>tool</em>
-            </div>
-            <div class="pl-box">
-              <strong>4 Three.js + Unity + Godot</strong>
-              <span>webgl + C# + ref</span>
-              <em>tool</em>
-            </div>
-            <div class="pl-box">
-              <strong>5 Physics QA gate</strong>
-              <span>local math, BFS reach</span>
-              <em>tool</em>
-            </div>
-            <div class="pl-box">
-              <strong>Visual QA gate · 6 checks</strong>
-              <span>0 primitive fakes allowed</span>
-              <em>tool</em>
-            </div>
-            <div class="pl-box">
-              <strong>Live AI Director</strong>
-              <span>14s telemetry poll, tactics + env</span>
-              <em>meta</em>
-            </div>
-            <div class="pl-box">
-              <strong>Judge sandbox gVisor</strong>
-              <span>runsc 4.19, read-only, isolated</span>
-              <em>tool</em>
-            </div>
-          </div>
-
-          <div class="plm-arrow" aria-hidden="true">→</div>
-
-          <div class="plm-col">
-            <div class="plm-col-head">PLAY + STORE</div>
-            <div class="pl-box">
-              <strong>6 Library storage/games</strong>
-              <span>manifest + html + unity</span>
-              <em>tool</em>
-            </div>
-            <div class="pl-box">
-              <strong>Preview pane + drawer</strong>
-              <span>live-preview + play + library</span>
-              <em>tool</em>
-            </div>
-            <div class="pl-box">
-              <strong>Read routes</strong>
-              <span>preview-state/games/mcp/chats</span>
-              <em>tool</em>
-            </div>
-            <div class="pl-box">
-              <strong>Judge audit log</strong>
-              <span>token ping + visit/prompt log</span>
-              <em>tool</em>
-            </div>
-          </div>
-        </div>
-      </div>
-
       <!-- Mobile view switcher (visible on screens <= 960px) -->
       <nav class="mobile-tabs" id="mobile-tabs" aria-label="Workspace view">
         <button
@@ -674,6 +480,200 @@
       </nav>
 
       <div class="workspace-split" id="workspace-split" data-active-pane="cli">
+        <!-- Pipeline Modal: 5-column System Design flow (code-built, monochrome) -->
+        <div class="pipeline-overlay hidden" id="pipeline-overlay"></div>
+        <div
+          class="pipeline-modal hidden"
+          id="pipeline-modal"
+          role="dialog"
+          aria-modal="true"
+          aria-label="App pipeline: prompt to playable game"
+        >
+          <div class="pipeline-modal-head">
+            <div>
+              <p class="pipeline-eyebrow">System Design</p>
+              <h2 class="pipeline-title">Prompt to playable game</h2>
+            </div>
+            <button
+              type="button"
+              id="pipeline-close"
+              class="icon-btn"
+              aria-label="Close pipeline"
+            >
+              <svg
+                width="15"
+                height="15"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M18 6 6 18" />
+                <path d="m6 6 12 12" />
+              </svg>
+            </button>
+          </div>
+          <div class="pipeline-grid" id="pipeline-grid">
+            <div class="plm-col">
+              <div class="plm-col-head">INPUT</div>
+              <div class="pl-box">
+                <strong>USER prompt box</strong>
+                <span>model + scope + skills + attach</span>
+              </div>
+              <div class="pl-box">
+                <strong>Voice mic</strong>
+                <span>muse-voice-transcribe-1.0 → prompt</span>
+                <em>meta</em>
+              </div>
+              <div class="pl-box">
+                <strong>terminal/send + generate</strong>
+                <span>SSE stream + upload/session/chats</span>
+                <em>tool</em>
+              </div>
+              <div class="pl-box">
+                <strong>Live Muse CLI tmux</strong>
+                <span>muse-studio, ttyd frame</span>
+                <em>tool</em>
+              </div>
+            </div>
+
+            <div class="plm-arrow" aria-hidden="true">→</div>
+
+            <div class="plm-col">
+              <div class="plm-col-head">BRAIN · reasoning</div>
+              <div class="pl-box">
+                <strong>0 Safety shield</strong>
+                <span>local rules</span>
+              </div>
+              <div class="pl-box">
+                <strong>1 Wonder 1.0 architect</strong>
+                <span>game JSON: title/biome/physics</span>
+                <em>meta</em>
+              </div>
+              <div class="pl-box">
+                <strong>1 Baseten spark-open-1026</strong>
+                <span>focal asset enrich (open)</span>
+                <em>meta</em>
+              </div>
+              <div class="pl-box">
+                <strong>Muse CLI exec --json</strong>
+                <span>thinking + tool:write_file</span>
+                <em>meta</em>
+              </div>
+            </div>
+
+            <div class="plm-arrow" aria-hidden="true">→</div>
+
+            <div class="plm-col">
+              <div class="plm-col-head">ASSETS · tools</div>
+              <div class="pl-box">
+                <strong>1b Muse Image 1.0</strong>
+                <span>concept/key art, cached</span>
+                <em>meta</em>
+              </div>
+              <div class="pl-box">
+                <strong>SAM 3.1 segment_image</strong>
+                <span>boxes + masks → cutout</span>
+                <em>meta</em>
+              </div>
+              <div class="pl-box">
+                <strong>SAM 3D Objects Modal</strong>
+                <span>shipped — backend sam3d</span>
+                <em>meta</em>
+              </div>
+              <div class="pl-box">
+                <strong>VGGT-1B metric scene</strong>
+                <span>pointcloud + mesh recon</span>
+                <em>meta</em>
+              </div>
+              <div class="pl-box">
+                <strong>depth / warp / projection</strong>
+                <span>depth_map + novel_view + blender</span>
+                <em>tool</em>
+              </div>
+              <div class="pl-box">
+                <strong>Blender cleanup</strong>
+                <span>decimate + merge → .glb</span>
+                <em>tool</em>
+              </div>
+              <div class="pl-box">
+                <strong>MusicGen soundtrack</strong>
+                <span>musicgen-small 32kHz stems</span>
+                <em>meta</em>
+              </div>
+              <div class="pl-box">
+                <strong>NPC dialogue Spark Open</strong>
+                <span>npc_dialogue.js via Baseten</span>
+                <em>meta</em>
+              </div>
+            </div>
+
+            <div class="plm-arrow" aria-hidden="true">→</div>
+
+            <div class="plm-col">
+              <div class="plm-col-head">BUILD · deterministic</div>
+              <div class="pl-box">
+                <strong>3 Terrain + layout</strong>
+                <span>grid + orbs/obstacles</span>
+                <em>tool</em>
+              </div>
+              <div class="pl-box">
+                <strong>4 Three.js + Unity + Godot</strong>
+                <span>webgl + C# + ref</span>
+                <em>tool</em>
+              </div>
+              <div class="pl-box">
+                <strong>5 Physics QA gate</strong>
+                <span>local math, BFS reach</span>
+                <em>tool</em>
+              </div>
+              <div class="pl-box">
+                <strong>Visual QA gate · 6 checks</strong>
+                <span>0 primitive fakes allowed</span>
+                <em>tool</em>
+              </div>
+              <div class="pl-box">
+                <strong>Live AI Director</strong>
+                <span>14s telemetry poll, tactics + env</span>
+                <em>meta</em>
+              </div>
+              <div class="pl-box">
+                <strong>Judge sandbox gVisor</strong>
+                <span>runsc 4.19, read-only, isolated</span>
+                <em>tool</em>
+              </div>
+            </div>
+
+            <div class="plm-arrow" aria-hidden="true">→</div>
+
+            <div class="plm-col">
+              <div class="plm-col-head">PLAY + STORE</div>
+              <div class="pl-box">
+                <strong>6 Library storage/games</strong>
+                <span>manifest + html + unity</span>
+                <em>tool</em>
+              </div>
+              <div class="pl-box">
+                <strong>Preview pane + drawer</strong>
+                <span>live-preview + play + library</span>
+                <em>tool</em>
+              </div>
+              <div class="pl-box">
+                <strong>Read routes</strong>
+                <span>preview-state/games/mcp/chats</span>
+                <em>tool</em>
+              </div>
+              <div class="pl-box">
+                <strong>Judge audit log</strong>
+                <span>token ping + visit/prompt log</span>
+                <em>tool</em>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- LEFT SIDE: Hero + Outlined Muse Code CLI Terminal + Bottom Prompt Box -->
         <aside class="pane-left" aria-label="Agent CLI and prompt composer">
           <main class="hero hero-compact" id="hero">
