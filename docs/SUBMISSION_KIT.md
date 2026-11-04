@@ -1,6 +1,6 @@
 # Cerebral Valley × Meta Hackathon — Submission Kit (ready to copy)
 
-<!-- sources: README.md, package.json, docs/evidence-sam3d/README.md, docs/evidence-sam3d/trial1.log, docs/evidence-sam3d/trial3.log, docs/evidence-sam3d/trial4.log, docs/evidence-sam3d/speed.log, src/verifier/visual_qa_gate.js, src/verifier/physics_qa_gate.js, src/tools/studio_3d_mcp_server.py, src/tools/fetch_mega_3d_hub.py, src/server.js, src/agent/agent_runner.js, src/agent/meta_wonder.js, src/agent/muse_wonder.js, src/agent/baseten_muse.js, src/pipeline/meta_image.js, src/pipeline/assets_3d.js, src/tools/make-image.js, src/tools/segment_image.py, src/tools/modal_call_3d.py, src/tools/meta_vggt_scene.py, src/tools/meta_musicgen_audio.py, src/tools/meta_voice_transcribe.js, src/tools/scenescript_wfc_world.py, public/studio.js, public/index.html, public/live-preview/index.html, public/live-preview/game.js, public/assets/audio/, public/assets/custom/, storage/games/game_1793459815775_afba76/index.html, .agents/skills/, git log + git remote -->
+<!-- sources: README.md, package.json, docs/evidence-sam3d/README.md, docs/evidence-sam3d/trial1.log, docs/evidence-sam3d/trial3.log, docs/evidence-sam3d/trial4.log, docs/evidence-sam3d/speed.log, src/verifier/visual_qa_gate.js, src/verifier/physics_qa_gate.js, src/tools/studio_3d_mcp_server.py, src/tools/fetch_mega_3d_hub.py, src/server.js, src/agent/agent_runner.js, src/agent/meta_wonder.js, src/agent/muse_wonder.js, src/agent/baseten_muse.js, src/pipeline/meta_image.js, src/pipeline/assets_3d.js, src/tools/make-image.js, src/tools/segment_image.py, src/tools/modal_call_3d.py, src/tools/meta_vggt_scene.py, src/tools/meta_musicgen_audio.py, src/tools/meta_voice_transcribe.js, src/tools/scenescript_wfc_world.py, public/studio.js, public/index.html, public/live-preview/index.html, public/live-preview/game.js, public/assets/audio/, public/assets/custom/, .agents/skills/, git log + git remote -->
 
 > Every claim below is grounded in a repo file actually read for this kit (see sources comment above). Anything NOT verifiable on disk is listed unticked in §10 — never pasted into the copy blocks as fact.
 
@@ -30,7 +30,7 @@
 - **Live agent terminal:** a real Muse Code CLI session runs in the browser with 17 native 3D/world/audio tools — CAD `.glb` builders, Blender generators, city extruders, voice transcription.
 - **Real assets, never boxes:** characters, cars, trees, and buildings load as real `.glb` models; a hard QA gate auto-rejects anything faked from boxes or cones.
 - **Living games:** a runtime AI Director adapts enemy tactics, whispers hints, and mutates the environment (blackouts, storms) as you play.
-- **Two flagship games ship in-repo:** Ashes of St. Vermilion (gothic stealth horror) (3D sports-car racing).
+- **Flagship game ships in-repo:** Ashes of St. Vermilion — Stage 3 (3D Gothic stealth horror with 19 Polyhaven 1K photogrammetry scans, 20-bone rigged Mother Agatha, and live Meta AI Director).
 - **Judge-safe sandbox:** visitors build real games with zero login inside a locked-down Google gVisor container — no host access, rate-limited, credit-protected.
 - **Proof over promises:** every build passes deterministic physics + visual QA gates, and SAM 3D GPU trials are archived with logs and byte counts.
 
@@ -70,7 +70,7 @@
 1. **Open the live studio** in a browser (see §7 links). No login needed.
 2. **Read the judges brief** — `/studio/hackathon.html` (`public/hackathon.html` + `public/hackathon.js`, zero inline scripts): 9-row Meta stack, evidence gallery, SAM 3D `.glb` 360° viewers with trial logs, and the glassmorphic Judge AI Assistant console (5 one-click pills, file:line citations).
 3. **Run the live verification receipt** — the brief's **Run live verification receipt** button calls `/api/studio/health`, `/api/studio/git/status`, and `POST /api/studio/ai/director` in the judge's own browser and seals a SHA-256 `VERIFIED` receipt.
-4. **Play a prebuilt game** — Ashes of St. Vermilion (`public/live-preview/`) or a library game such as Horizon Sprint (`storage/games/game_1793459815775_afba76/`). WASD + Space on desktop; touch controls on mobile.
+4. **Play the flagship game** — Ashes of St. Vermilion — Stage 3 (`public/live-preview/` and `storage/games/game_1793679153102_17eff3/`). WASD + mouse look + E interact on desktop; virtual joystick + touch buttons on mobile.
 5. **Open the judge link** — the same studio URL with `?judge=meta-judge-2026` appended. The client (`public/studio.js`) stores the token and pings `POST /api/studio/judge-audit`; the server unlocks uncached live-AI builds for that token.
 6. **Build a game** — send any prompt via **Build Game** (`POST /api/studio/generate`). Judge builds run the real pipeline inside the gVisor sandbox (rate limit: 6 builds / 10 min). Without the judge token, only pre-cached prompts build (zero API spend) — the 403 message says so verbatim.
 7. **Probe the live AI Director** — `POST /api/studio/ai/director` with gameplay telemetry returns `muse-spark-open-1026` tactics + environment events (public route, 30 req/min, 20s signature cache). Dictate prompts hands-free: the mic button records 5s and transcribes via Meta `muse-voice-transcribe-1.0` (`POST /api/studio/voice/transcribe`, owner-only; visitors fall back to browser dictation).
@@ -83,8 +83,8 @@
 
 ```text
 Repo:   https://github.com/shubham91150/agentic-game-studio   (git remote `origin`)
-Brief:  <deployed-studio-URL>/studio/hackathon.html  (judges brief: stack, evidence, SAM 3D viewers, AI assistant, live receipt)
-Studio: <deployed-studio-URL>/studio/?judge=meta-judge-2026  (judge access link; token default in src/server.js)
+Brief:  https://spurcode.duckdns.org/studio/hackathon.html  (judges brief: stack, evidence, SAM 3D viewers, AI assistant, live receipt)
+Studio: https://spurcode.duckdns.org/studio/?judge=meta-judge-2026  (judge access link; token default in src/server.js)
 Live:   https://agentic-game-studio.vercel.app/               (per README header)
 Prebuilt game: https://spurcode.duckdns.org/studio/games/game_1793679153102_17eff3/index.html
 Game library API: GET https://spurcode.duckdns.org/api/studio/games  (per README)
