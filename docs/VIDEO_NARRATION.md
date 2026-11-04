@@ -3,7 +3,7 @@
 - Video: `public/assets/demo_walkthrough.mp4` (2:54, 5 chapters, no BGM — voiceover goes on top)
 - Voice: deep male narrator — **Brian** (`nPczCjzI2devNBz1zQrb`, "Deep, Resonant and Comforting"), backup George (warm British storyteller) or Adam (dominant, firm)
 - ElevenLabs settings: Stability ~55, Similarity ~75, Style ~20, pace unhurried (~140 wpm)
-- NOTE: the `Elevenlabs_Key` currently in the vault returns 401 from ElevenLabs — re-paste the correct API key before generating.
+- Voiceover audio generated via ElevenLabs (Brian) and muxed into the master — `demo_walkthrough.mp4` ships with narration, no BGM.
 
 ## Chapter 1 — Live studio + working agent (0:00–0:38)
 
