@@ -63,3 +63,26 @@
   2. Run automated Playwright playtests verifying every keyboard, mouse, and on-screen touch button, 60-FPS real-time clock speed, and win/loss states.
   3. Confirm every `[x]` item in `BUILD_TODO.md` is completed with zero shortcuts.
 
+
+## 🤝 STAGE-SYNCHRONIZED 4-AGENT SWARM & TIME-EXTENSION PROTOCOL (ELITE CRAFTSMANSHIP ONLY)
+
+1. **ALL 4 AGENTS FOCUS ON THE SAME STAGE TOGETHER (NEVER SPLIT ACROSS DIFFERENT STAGES IN PARALLEL)**:
+   - **Forbidden Pattern**: Never assign Subagent A to Assets, Subagent B to World, Subagent C to Player/UI, and Subagent D to Game Loop at the same time. That causes blind integration mismatches and rushed, basic work.
+   - **Required Pattern (Stage-Synchronized Swarm)**: All 4 agents must work on the **SAME stage simultaneously**, dividing the micro-tasks of that single stage so each agent can do deep research and elite-level execution on its slice:
+     - **During Stage 1 (Research & `BUILD_TODO.md`)**: All 4 agents research every micro-detail of the genre (visual references, lighting, anatomy/rigging, physics math, sound, HUD) and build one exhaustive `BUILD_TODO.md`.
+     - **During Stage 2 (3D Assets Only)**: All 4 agents work EXCLUSIVELY on 3D `.glb` assets and textures:
+       - *Agent 1*: Hero / First-Person Viewmodel + Rigged Hands + PBR Weapon Materials + Isolated Render Audit.
+       - *Agent 2*: Enemy / Character `.glb` Models + Real Clothing/Skin UVs + Skeletal `Idle`/`Walk`/`Run`/`Hit`/`Death` Animations + Isolated Render Audit.
+       - *Agent 3*: Architectural Kit, Landmarks & Interactive Mechanism `.glb` Models + Isolated Render Audit.
+       - *Agent 4*: Photogrammetry Props, Foliage, 1K Normal-Mapped PBR Textures & Triangle/BufferView Optimization (`60 FPS` budget) + Isolated Render Audit.
+     - **During Stage 3 (3D World & Lighting Only)**: All 4 agents collaborate exclusively on world layout, PBR surfaces, HDRI/sky, volumetric fog, `UnrealBloomPass`, and ambient micro-life, followed by multi-angle world render verification.
+     - **During Stages 4 & 5 (Controller, AI, Audio & UI Only)**: All 4 agents collaborate on physics/camera feel, HFSM/A* AI, 4-bus Cathedral Reverb WebAudio, and desktop + mobile controls (verifying exact DOM IDs against `index.html`).
+     - **During Stage 6 (Deep QA & Playtest)**: All 4 agents verify every checkbox in `BUILD_TODO.md`, run `visual_qa_gate.js` (`maxAllowedPrimitives = 0`), and run full Playwright control/FPS audits.
+
+2. **MICRO-RESEARCH BEFORE EVERY TASK**:
+   - Even for the smallest detail (how a shirt collar sits on a neck, how weapon recoil recovers, how fog blends into a skybox, how a button responds to touch), agents must research and verify the exact math/geometry first instead of guessing.
+
+3. **AUTONOMOUS MULTI-HOUR EXECUTION & EXPLICIT TIME-EXTENSION REQUESTS**:
+   - Agents are expected to work autonomously for hours against `BUILD_TODO.md` to achieve **Elite AAA quality (never basic/placeholder quality)**.
+   - **Never rush or take a shortcut when time runs low**: If an agent needs more time to finish a stage or polish an asset to 10/10 quality, it MUST explicitly inform the user: *"मुझे इस काम को Elite लेवल पर पूरा करने के लिए अभी और समय चाहिए — मैं बिना किसी शॉर्टकट के `BUILD_TODO.md` के हिसाब से इसे पूरा कर रहा हूँ"* and continue working methodically until every item is truly complete.
+
