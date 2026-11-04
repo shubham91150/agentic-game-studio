@@ -78,6 +78,13 @@
         color: var(--muted);
         font-size: var(--fs-13);
       }
+      .video-caption {
+        margin: 0;
+        padding: 10px 18px 14px;
+        text-align: center;
+        color: var(--muted);
+        font-size: var(--fs-13);
+      }
       .btn-row {
         display: flex;
         flex-wrap: wrap;
@@ -656,13 +663,11 @@
               <span class="window-dots">
                 <span></span><span></span><span></span>
               </span>
-              <span class="shot-title">Demo walkthrough</span>
+              <span class="shot-title">Demo walkthrough · 2:54 · narrated</span>
             </div>
             <video
               id="demo-video"
               controls
-              autoplay
-              muted
               loop
               playsinline
               preload="metadata"
@@ -679,6 +684,11 @@
               (/studio/assets/demo_walkthrough.mp4). The download button below
               points at the same path and will work once the file lands.
             </p>
+            <p class="video-caption">
+              2:54 narrated walkthrough (English voiceover) — press play with
+              sound on. Live agent run, code architecture, rigged character,
+              flagship gameplay, and reproducible proof.
+            </p>
           </figure>
           <div class="btn-row">
             <a
@@ -690,7 +700,11 @@
             <a class="btn" href="/studio/?judge=meta-judge-2026"
               >Open live studio (verified judge mode unlocked)</a
             >
-            <a class="btn" href="/studio/live-preview/index.html" target="_blank" rel="noopener"
+            <a
+              class="btn"
+              href="/studio/live-preview/index.html"
+              target="_blank"
+              rel="noopener"
               >Play Ashes of St. Vermilion — Stage 3 (Fullscreen)</a
             >
           </div>
