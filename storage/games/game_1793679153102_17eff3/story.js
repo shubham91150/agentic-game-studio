@@ -1,40 +1,24 @@
-/* Ashes of St. Vermilion — story content (Stage 1+2 ext).
- * Plain data only: no rendering, no audio, no THREE use here.
- * r128 global style: exposes window.StV_Story. No module syntax.
- * Stage 2+3: OBJECTIVES gains the door->escape chain, GAMEOVER lines added.
- */
+/* Crimson Outbreak: Quarantine Sector 7 — Story & Tactical Briefing */
 (function () {
   'use strict';
 
   window.StV_Story = {
-    TITLE: 'ASHES OF ST. VERMILION',
+    TITLE: 'Crimson Outbreak: Quarantine Sector 7',
     INTRO: [
       {
-        title: 'PHAS GAYA',
-        body: 'Kabir jali hui St. Vermilion convent school me phas gaya hai. ' +
-          'Raat gehari hai aur barish thamne ka naam nahi le rahi.'
+        title: 'SECTOR 7 BIOHAZARD BREACH',
+        body: 'St. Vermilion Quarantine Ward has fallen to the Bloodfang strain. Your squad is gone. Neutralize the infected horde, detonate biohazard barrels, and recover the Sector Bio-Key in Lab B.'
       },
       {
-        title: 'GUN-GUNAHAT',
-        body: 'Andheri galiyon me Agatha ki gun-gunahat goonj rahi hai. ' +
-          'Torch jalaye rakho — aur shor mat karo.'
-      },
-      {
-        title: 'CHAPEL KEY',
-        body: 'Nikasi ka ek hi rasta hai: Classroom B me chhupi Chapel Key dhoondo. ' +
-          'Chapel ka darwaza kholo... jaldi.'
+        title: 'TACTICAL ARSENAL & HEADSHOTS',
+        body: 'Aim for the head (2.5x Critical Damage). Shoot red Biohazard Barrels to wipe out zombie packs. Press [1/2/3] or WEAPON to cycle M4-X Carbine, M870 Shotgun, and VGGT Railcannon.'
       }
     ],
     OBJECTIVES: [
-      'Chapel Key dhoondo — Classroom B',
-      'Chapel ka darwaza kholo — Agatha se bach ke',
-      'BHAGO — chapel ke darwaze se niklo!'
+      'Purge Infected (0/8) & Find Bio-Key in Lab B',
+      'Bio-Key Secured — Purge Horde & Unlock North Extraction Gate [E]',
+      'WARNING: ALPHA BLOODFANG MUTANT INBOUND — AIM FOR THE HEAD!'
     ],
-    /* Stage 2+3 additive: gameover flavor lines (ui picks one). */
-    GAMEOVER: [
-      'Agatha ne tumhe pakad liya. Uski lantern ab tumhare liye jalti hai.',
-      'Galiyon me daudna kaafi nahi tha. Woh har darwaze ke peeche thi.',
-      'Chapel itna paas tha... par Maa ki pakad se koi nahi bhaagta.'
-    ]
+    CLEAR_TEXT: 'QUARANTINE SECTOR 7 PURGED — EXTRACTION SUCCESSFUL.'
   };
 })();

@@ -1,0 +1,19 @@
+{
+  "id": "game_1793679153102_17eff3",
+  "title": "Ashes of St. Vermilion — Stage 3",
+  "prompt": "",
+  "biome": "gothic-horror",
+  "metaModel": "hand-made",
+  "enrichmentModel": null,
+  "objective": "",
+  "createdAt": "2026-11-03T04:12:33.129Z",
+  "updatedAt": "2026-11-04T03:20:36.261Z",
+  "playUrl": "/studio/games/game_1793679153102_17eff3/index.html",
+  "imageUrl": "/studio/games/game_1793679153102_17eff3/assets/concept.png",
+  "files": {
+    "html": "index.html",
+    "manifest": "manifest.json",
+    "unity": [],
+    "js": "game.js"
+  }
+}

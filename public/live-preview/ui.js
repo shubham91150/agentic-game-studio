@@ -19,7 +19,6 @@
   var H = {};
   var toastTimer = 0;
   var bannerTimer = 0;
-  var loreTimer = 0;
   var joyId = null;
   var lookId = null;
   var lookLX = 0;
@@ -88,60 +87,6 @@
       s.borderRadius = '6px';
       s.pointerEvents = 'none';
       document.body.appendChild(el);
-      return el;
-    } catch (err) { return null; }
-  }
-
-  /* Subagent C additive: lazily create a >=44px platformer touch
-   * button inside the existing touch cluster (64px actual, matches
-   * .touch-btn look via inline style; CSP-safe, no stylesheet edit). */
-  function ensurePlatBtn(id, label, fn) {
-    var el = $(id);
-    if (el) {
-      /* Sibling-built native button: attach handlers once, keep its CSS. */
-      try {
-        if (!el.getAttribute('data-plat-wired')) {
-          el.setAttribute('data-plat-wired', '1');
-          on(el, 'touchstart', function (ev) {
-            try { ev.preventDefault(); } catch (e) { /* x */ }
-            touchSeen = true;
-            try { fn(); } catch (e2) { /* x */ }
-          }, { passive: false });
-          on(el, 'click', function () {
-            try { fn(); } catch (e) { /* x */ }
-          });
-        }
-      } catch (err) { /* x */ }
-      return el;
-    }
-    try {
-      var host = $('touch-ui') || $('joy');
-      if (host && host.parentNode) host = host.parentNode;
-      else host = document.body;
-      el = document.createElement('button');
-      el.id = id;
-      el.type = 'button';
-      el.textContent = label;
-      var s = el.style;
-      s.minWidth = '64px';
-      s.minHeight = '64px';
-      s.margin = '6px';
-      s.fontSize = '15px';
-      s.letterSpacing = '0.1em';
-      s.color = '#e8dcc4';
-      s.background = 'rgba(20,34,44,0.85)';
-      s.border = '1px solid #2a5a5a';
-      s.borderRadius = '32px';
-      s.touchAction = 'none';
-      on(el, 'touchstart', function (ev) {
-        try { ev.preventDefault(); } catch (e) { /* x */ }
-        touchSeen = true;
-        try { fn(); } catch (e2) { /* x */ }
-      }, { passive: false });
-      on(el, 'click', function () {
-        try { fn(); } catch (e) { /* x */ }
-      });
-      host.appendChild(el);
       return el;
     } catch (err) { return null; }
   }
@@ -489,115 +434,6 @@
       }
     },
 
-    /* Subagent C additive: platformer HUD pips (dash charges + orb
-     * count). Nodes are created lazily inside #hud; no-ops headless. */
-    ensurePlatformerHud: function () {
-      try {
-        var hud = $('hud') || document.body;
-        if (!hud) return;
-        if (!$('hud-dash')) {
-          var d = document.createElement('div');
-          d.id = 'hud-dash';
-          d.style.fontSize = '15px';
-          d.style.letterSpacing = '0.1em';
-          d.style.color = '#66ffee';
-          d.style.border = '1px solid #2a5a5a';
-          d.style.borderRadius = '4px';
-          d.style.padding = '4px 10px';
-          d.style.whiteSpace = 'nowrap';
-          d.textContent = '\u25C6 DASH';
-          hud.appendChild(d);
-        }
-        if (!$('hud-orbs')) {
-          var o = document.createElement('div');
-          o.id = 'hud-orbs';
-          o.style.fontSize = '15px';
-          o.style.letterSpacing = '0.1em';
-          o.style.color = '#ffcf6e';
-          o.style.border = '1px solid #8a5a24';
-          o.style.borderRadius = '4px';
-          o.style.padding = '4px 10px';
-          o.style.whiteSpace = 'nowrap';
-          o.textContent = '\u25C9 ORBS 0';
-          hud.appendChild(o);
-        }
-      } catch (err) { /* HUD cosmetic */ }
-    },
-
-    setDash: function (n, max) {
-      var el = $('hud-dash');
-      if (!el) return;
-      var c = Math.max(0, Math.min(4, +n || 0));
-      var m = Math.max(1, Math.min(4, +max || 1));
-      var s = '';
-      var k;
-      for (k = 0; k < m; k++) s += (k < c) ? '\u25C6 ' : '\u25C7 ';
-      try {
-        el.textContent = s + 'DASH';
-        el.style.color = c > 0 ? '#66ffee' : '#557';
-      } catch (err) { /* x */ }
-    },
-
-    setOrbs: function (n) {
-      var el = $('hud-orbs');
-      if (!el) return;
-      try { el.textContent = '\u25C9 ORBS ' + Math.max(0, +n || 0); }
-      catch (err) { /* x */ }
-    },
-
-    /* Subagent C additive: lore whisper caption bar (Hindi/English),
-     * role=status aria-live=polite, 4s auto-hide. */
-    lore: function (txt, ms) {
-      if (!txt) return;
-      try {
-        var el = $('caption');
-        if (!el) {
-          el = document.createElement('div');
-          el.id = 'caption';
-          el.setAttribute('role', 'status');
-          el.setAttribute('aria-live', 'polite');
-          var s = el.style;
-          s.position = 'fixed';
-          s.left = '50%';
-          s.bottom = '18%';
-          s.transform = 'translateX(-50%)';
-          s.zIndex = '30';
-          s.maxWidth = '80%';
-          s.textAlign = 'center';
-          s.padding = '8px 18px';
-          s.font = 'italic 15px Georgia,serif';
-          s.letterSpacing = '0.06em';
-          s.color = '#cfe8ff';
-          s.background = 'rgba(3,5,7,0.92)';
-          s.border = '1px solid #2a5a5a';
-          s.borderRadius = '6px';
-          s.pointerEvents = 'none';
-          document.body.appendChild(el);
-        }
-        el.textContent = txt;
-        unhide(el);
-        if (loreTimer) { try { clearTimeout(loreTimer); } catch (e) { /* x */ } }
-        loreTimer = setTimeout(function () {
-          loreTimer = 0;
-          hide(el);
-        }, (typeof ms === 'number' && ms > 0) ? ms : 4000);
-      } catch (err) { /* x */ }
-    },
-
-    /* Subagent C additive: JUMP + DASH touch buttons (>=44px, 64px
-     * actual) beside the existing cluster; fire H.onJump / H.onDash. */
-    platformerTouch: function () {
-      try {
-        ensurePlatBtn('btn-jump', 'JUMP', function () {
-          if (H.onJump) H.onJump();
-        });
-        ensurePlatBtn('btn-dash', 'DASH', function () {
-          if (H.onDash) H.onDash();
-        });
-        updateTouchVisibility();
-      } catch (err) { /* x */ }
-    },
-
     bind: function (h) {
       H = h || {};
       wireButtons();
@@ -637,11 +473,8 @@
 
     /* Stage 2 additive: gameover retry/menu + difficulty selector. */
     var gameover = $('gameover');
-    /* Subagent D: Hollow Light's TRY AGAIN is #btn-again — without this
-     * candidate the game-over card has a dead button. */
-    var retryG = first(['btn-go-retry', 'gameover-retry', 'go-restart', 'btn-again']) ||
-      (gameover ? query('[data-act="retry"]', gameover) : null) ||
-      (gameover ? query('button', gameover) : null);
+    var retryG = first(['btn-go-retry', 'gameover-retry', 'go-restart']) ||
+      (gameover ? query('[data-act="retry"]', gameover) : null);
     on(retryG, 'click', function () { if (H.onRestart) H.onRestart(); });
 
     var menuG = first(['btn-go-menu', 'gameover-menu', 'go-quit']) ||
@@ -836,12 +669,20 @@
   }
 
   function updateTouchVisibility() {
-    var ids = ['btn-act', 'btn-jump', 'btn-dash', 'btn-left', 'btn-right', 'btn-down'];
-    for (var i = 0; i < ids.length; i++) {
+    var coarse = false;
+    try {
+      coarse = window.matchMedia &&
+        window.matchMedia('(pointer: coarse)').matches;
+    } catch (err) { coarse = false; }
+    var show = coarse || touchSeen;
+    var ids = ['joy', 'btn-torch', 'btn-crouch', 'btn-act', 'touch-ui'];
+    var i;
+    for (i = 0; i < ids.length; i++) {
       var el = $(ids[i]);
-      if (el) {
-        try { el.style.display = 'flex'; } catch (err) {}
-      }
+      if (!el) continue;
+      try {
+        el.style.display = show ? '' : 'none';
+      } catch (err) { /* x */ }
     }
   }
 

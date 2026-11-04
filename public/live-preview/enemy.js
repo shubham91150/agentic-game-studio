@@ -150,7 +150,7 @@
   var OZ = -9;
   var BODY_R = 0.35;
   var ARRIVE_R = 0.4;
-  var AGATHA_URL = "./assets/agatha.glb";
+  var AGATHA_URL = "./assets/bloodfang_zombie.glb";
 
   function clampNum(v, lo, hi) {
     return v < lo ? lo : v > hi ? hi : v;
@@ -236,6 +236,13 @@
       var mixerOk = false;
       var idleAction = null;
       var walkAction = null;
+      var runAction = null;
+      var hitAction = null;
+      var deadAction = null;
+      var alphaHP = 220;
+      var alphaMaxHP = 220;
+      var hitStaggerT = 0;
+      var deadDownT = 0;
       var headBone = null;
       var scanQ = null;
       var scanAxisY = null;
@@ -968,6 +975,28 @@
           readDifficulty();
         }
 
+        if (deadDownT > 0) {
+          deadDownT -= dt;
+          if (mixerOk && mixer) {
+            try { mixer.update(dt); } catch (eD) {}
+          }
+          if (deadDownT <= 0) {
+            alphaHP = alphaMaxHP;
+            if (deadAction) deadAction.stop();
+            var rIdx = Math.floor(Math.random() * ROUTE.length);
+            ax = ROUTE[rIdx][0];
+            az = ROUTE[rIdx][1];
+            st = "PATROL";
+            suspicion = 0;
+            group.position.set(ax, 0, az);
+          }
+          return;
+        }
+        if (hitStaggerT > 0) {
+          hitStaggerT -= dt;
+          animate(dt, 0);
+          return;
+        }
         if (st === "CAUGHT") {
           /* Frozen interrupt: face the player, keep the lantern alive. */
           var cdx = px - ax;
@@ -1295,7 +1324,13 @@
           try {
             var k = Math.max(0, Math.min(1, walkBlend));
             if (idleAction) idleAction.setEffectiveWeight(1 - k);
-            if (walkAction) walkAction.setEffectiveWeight(k);
+            if (st === "CHASE" && runAction) {
+              if (walkAction) walkAction.setEffectiveWeight(0);
+              runAction.setEffectiveWeight(k);
+            } else {
+              if (runAction) runAction.setEffectiveWeight(0);
+              if (walkAction) walkAction.setEffectiveWeight(k);
+            }
             mixer.update(dt);
           } catch (errMix) {
             useMixer = false;
@@ -1529,12 +1564,19 @@
           if (!clips) return;
           var idleClip = null;
           var walkClip = null;
+          var runClip = null;
+          var hitClip = null;
+          var deadClip = null;
           var i;
           for (i = 0; i < clips.length; i++) {
             var nm = (clips[i] && clips[i].name ? clips[i].name : "")
               .toLowerCase();
             if (!idleClip && nm.indexOf("idle") >= 0) idleClip = clips[i];
             if (!walkClip && nm.indexOf("walk") >= 0) walkClip = clips[i];
+            if (!runClip && nm.indexOf("run") >= 0) runClip = clips[i];
+            if (!hitClip && nm.indexOf("hit") >= 0) hitClip = clips[i];
+            if (!deadClip && nm.indexOf("dead front") >= 0) deadClip = clips[i];
+            else if (!deadClip && nm.indexOf("dead") >= 0) deadClip = clips[i];
           }
           if (
             window.THREE.AnimationClip &&
@@ -1558,6 +1600,21 @@
             walkAction = mixer.clipAction(walkClip);
             walkAction.setEffectiveWeight(0);
             walkAction.play();
+          }
+          if (runClip) {
+            runAction = mixer.clipAction(runClip);
+            runAction.setEffectiveWeight(0);
+            runAction.play();
+          }
+          if (hitClip) {
+            hitAction = mixer.clipAction(hitClip);
+            hitAction.setLoop(window.THREE.LoopOnce, 1);
+            hitAction.clampWhenFinished = true;
+          }
+          if (deadClip) {
+            deadAction = mixer.clipAction(deadClip);
+            deadAction.setLoop(window.THREE.LoopOnce, 1);
+            deadAction.clampWhenFinished = true;
           }
           mixerOk = true;
         } catch (err) {
@@ -1729,6 +1786,32 @@
       /* ---------- public handle (arch Section 1, verbatim shape) ---------- */
       return {
         update: update,
+        getGroup: function () { return group; },
+        getPos: function () { return { x: ax, y: 0, z: az, dead: deadDownT > 0 }; },
+        damage: function (dmg, isHead) {
+          if (deadDownT > 0) return { killed: false, hp: 0 };
+          alphaHP = Math.max(0, alphaHP - (dmg || 35));
+          suspicion = TH_CONFIRM;
+          if (st !== "CHASE") enter("CHASE", ax, az);
+          if (alphaHP <= 0) {
+            deadDownT = 5.5;
+            catchT = 0;
+            if (deadAction) {
+              try {
+                if (idleAction) idleAction.setEffectiveWeight(0);
+                if (walkAction) walkAction.setEffectiveWeight(0);
+                if (runAction) runAction.setEffectiveWeight(0);
+                deadAction.reset().play();
+              } catch (eK) {}
+            }
+            return { killed: true, hp: 0, boss: true };
+          }
+          hitStaggerT = isHead ? 0.55 : 0.28;
+          if (hitAction) {
+            try { hitAction.reset().play(); } catch (eH) {}
+          }
+          return { killed: false, hp: alphaHP, boss: true };
+        },
 
         getState: function () {
           return {
@@ -1902,177 +1985,5 @@
         },
       };
     },
-  };
-
-  /* ================================================================
-   * StV_Wraith — shadow_wraith patrol/glide AI for the platformer
-   * layer (Subagent C, additive). Side-view XY (y-up), same plane as
-   * StV_Platformer. PATROL: waypoint loop with sine glide bob;
-   * CHASE: player inside sense box => glide-steer toward player;
-   * LOOK: 1s suspicion pause after losing the player. setDirectorBoost
-   * is the live AI-director speed hook (multiplier + seconds, decays).
-   * Zero heap allocs in update(). Catch/damage stays in game.js.
-   * ================================================================ */
-  window.StV_Wraith = {
-    VERSION: 'wraith-1.0.0',
-    create: function (opts) {
-      opts = opts || {};
-      var wps = (opts.waypoints && opts.waypoints.length > 1)
-        ? opts.waypoints
-        : [[-6, 1.2], [6, 1.2]];
-      var patrolSpd = (typeof opts.speed === 'number' && isFinite(opts.speed))
-        ? opts.speed : 1.7;
-      var chaseSpd = (typeof opts.chaseSpeed === 'number' && isFinite(opts.chaseSpeed))
-        ? opts.chaseSpeed : 2.8;
-      var senseR = (typeof opts.senseR === 'number' && isFinite(opts.senseR))
-        ? opts.senseR : 6.0;
-      var senseDy = (typeof opts.senseDy === 'number' && isFinite(opts.senseDy))
-        ? opts.senseDy : 2.5;
-      var glideAmp = (typeof opts.glideAmp === 'number' && isFinite(opts.glideAmp))
-        ? opts.glideAmp : 0.28;
-      var glideFreq = (typeof opts.glideFreq === 'number' && isFinite(opts.glideFreq))
-        ? opts.glideFreq : 1.5;
-
-      var x = +wps[0][0] || 0;
-      var y = +wps[0][1] || 0;
-      var gy = y;
-      var face = 1;
-      var wi = 1;
-      var state = 'PATROL';
-      var lookT = 0;
-      var glideT = Math.random() * 10;
-      var boostMult = 1;
-      var boostT = 0;
-      var dist = 99;
-      var spd = 0;
-
-      function num(v, d) {
-        return (typeof v === 'number' && isFinite(v)) ? v : d;
-      }
-
-      var api = {
-        reset: function () {
-          x = +wps[0][0] || 0;
-          y = +wps[0][1] || 0;
-          gy = y;
-          wi = 1;
-          state = 'PATROL';
-          lookT = 0;
-          boostMult = 1;
-          boostT = 0;
-          dist = 99;
-          spd = 0;
-        },
-
-        /* Live AI-director speed hook: mult>1 hunts harder for `secs`. */
-        setDirectorBoost: function (mult, secs) {
-          var m = num(mult, 1);
-          var s = num(secs, 0);
-          if (m < 0.25) m = 0.25;
-          if (m > 3) m = 3;
-          if (s < 0) s = 0;
-          if (s > 20) s = 20;
-          boostMult = m;
-          boostT = s;
-        },
-
-        getState: function () {
-          return {
-            x: x, y: y, gy: gy, face: face, state: state,
-            speed: spd, dist: dist, boost: boostMult
-          };
-        },
-
-        /* Subagent D additive: zone handoff — the wraith rehomes to hunt
-         * the player's current zone (game.js owns the zone table). */
-        rehome: function (pts) {
-          if (!pts || pts.length === undefined || pts.length < 2) return;
-          wps = pts;
-          wi = 1;
-          x = +wps[0][0] || 0;
-          y = +wps[0][1] || 0;
-          gy = y;
-          state = 'PATROL';
-          lookT = 0;
-          dist = 99;
-          spd = 0;
-        },
-
-        update: function (dt, px, py) {
-          if (!(dt > 0)) return;
-          if (dt > 0.05) dt = 0.05;
-          px = num(px, x);
-          py = num(py, y);
-          if (boostT > 0) {
-            boostT -= dt;
-            if (boostT <= 0) { boostT = 0; boostMult = 1; }
-          }
-          glideT += dt;
-
-          var dx = px - x;
-          var dy = py - y;
-          dist = Math.sqrt(dx * dx + dy * dy);
-          var sees = dist < senseR && Math.abs(dy) < senseDy;
-
-          if (state === 'PATROL') {
-            if (sees) {
-              state = 'CHASE';
-            } else {
-              var tx = +wps[wi][0] || 0;
-              var ty = +wps[wi][1] || 0;
-              var wx = tx - x;
-              var wy = ty - y;
-              var wd = Math.sqrt(wx * wx + wy * wy);
-              if (wd < 0.3) {
-                wi = (wi + 1) % wps.length;
-              } else {
-                spd = patrolSpd * boostMult;
-                x += (wx / wd) * spd * dt;
-                y += (wy / wd) * spd * dt * 0.6;
-                if (Math.abs(wx) > 0.05) face = wx > 0 ? 1 : -1;
-              }
-            }
-          }
-          if (state === 'CHASE') {
-            if (!sees) {
-              state = 'LOOK';
-              lookT = 1.0;
-            } else {
-              spd = chaseSpd * boostMult;
-              if (dist > 0.05) {
-                x += (dx / dist) * spd * dt;
-                y += (dy / dist) * spd * dt * 0.7;
-              }
-              if (Math.abs(dx) > 0.05) face = dx > 0 ? 1 : -1;
-            }
-          }
-          if (state === 'LOOK') {
-            spd = 0;
-            if (sees) {
-              state = 'CHASE';
-            } else {
-              lookT -= dt;
-              if (lookT <= 0) {
-                state = 'PATROL';
-                var best = 0;
-                var bd = 1e9;
-                for (var k = 0; k < wps.length; k++) {
-                  var qx = (+wps[k][0] || 0) - x;
-                  var qy = (+wps[k][1] || 0) - y;
-                  var qd = qx * qx + qy * qy;
-                  if (qd < bd) { bd = qd; best = k; }
-                }
-                wi = (best + 1) % wps.length;
-              }
-            }
-          }
-
-          /* Glide bob: render height only, physics path untouched. */
-          gy = y + Math.sin(glideT * glideFreq * 2 * Math.PI) * glideAmp;
-        }
-      };
-
-      return api;
-    }
   };
 })();

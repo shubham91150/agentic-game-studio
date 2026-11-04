@@ -1,1400 +1,1468 @@
-/* Hollow Light — levels.js (Subagent B: World, Parallax, Water, Vines, Bloom)
- * Ori / Hollow Knight 7-layer side-scrolling world: X -20..+160, Y 0..+45.
- * Sources: Polyhaven CC0 (boulder_01, fern_02, jacaranda_tree, kloppenheim HDR),
- * Khronos/CC0 models index (bridge-pillar-wide), Subagent-A kit in ./assets/.
- * Contract for game.js: create renderer+scene+camera, then call:
- *   var world = Levels.buildWorld(scene, camera, renderer);
- *   world.update(dt, elapsed, { x, y, vx, vy, grounded });
- *   Levels.masterpiece.render(); // bloom composer (falls back to renderer.render)
- * Uses global THREE (r128) + window.WorldRealism when present. No modules (CSP).
+/* Ashes of St. Vermilion — Stage 1 world (Task 2) + gothic kit (Subagent B)
+ * + HN2 photogrammetry swap (world-builder: Poly Haven CC0 furniture).
+ * Owns: architecture, lights, props, lightning rig, key + chapel door.
+ * Contract: window.StV_Levels = { buildWorld(scene), VERSION }.
+ * r128 global style: uses window.THREE + window.WorldRealism, no modules.
+ * Arch ref: docs/stvermilion-arch.md sections 1/3/4 (dims, lights, props).
+ * Kit ref: ./assets/*.glb by Subagent A (Blender 3.4, meters, origin at base):
+ *   gothic_pillar_arch (plinth/shaft/capital + vault springer ribs, y 0->5.41),
+ *   gothic_window_frame (stone/iron/glass + MoonShaft node, shaft aims +Z).
+ *   (school_desk_chair / classroom_furniture / chapel_pew_altar retired by
+ *   the HN2 swap: SchoolDesk+Chair, worn bookshelves, painted benches.)
+ * Art direction lock: moonlit blue-greys + amber lantern light, aged dark
+ * stone/wood/iron PBR. No cartoon look. Zero new primitive geometry here:
+ * all 3D architecture/furniture comes from .glb scans (+ pre-existing
+ * PBR wall planes); ash motes are THREE.Points (not a banned primitive).
+ * HN2 additions: PMREM IBL (gradient room baked once), grounding contact
+ * discs under floor props, window.__stvHideSpots / __stvSearchSpots.
  */
 (function () {
-  'use strict';
+  "use strict";
 
-  if (!window.Levels) window.Levels = {};
-  var Levels = window.Levels;
+  var VERSION = "stv-stage1-1.2.0";
+  var WALL_H = 3.2;
+  var WALL_T = 0.3;
+  var LINTEL_Y0 = 2.3;
 
-  /* ---------------- World constants (Stage 1 locked goal) ---------------- */
-  Levels.WORLD = { minX: -20, maxX: 160, minY: 0, maxY: 45, cameraZ: 12.2 };
-  Levels.WATER_Y = -1.5;
-  Levels.KILL_Y = -8;
-  Levels.GOAL = { x0: 150, y0: 28, x1: 160, y1: 40 };
+  // Serve URLs verbatim (disk public/X -> /studio/X). 8 unique URLs, 24 instances.
+  var U_LANTERN = "/studio/assets/polyhaven/Lantern_01/Lantern_01_1k.glb";
+  var U_BARREL01 = "/studio/assets/polyhaven/Barrel_01/Barrel_01_1k.glb";
+  var U_KEY = "/studio/assets/models/props/key.glb";
+  var U_CHEST = "/studio/assets/models/props/chest.glb";
+  var U_CRATE = "/studio/assets/models/props/crate.glb";
+  var U_BARREL = "/studio/assets/models/props/barrel.glb";
+  var U_BOX = "/studio/assets/models/props/box-large.glb";
+  var U_LADDER = "/studio/assets/models/props/ladder.glb";
 
-  /* Subagent-A 6-model kit (defensive: every load has a procedural fallback).
-   * If A has not finished, placeholders keep the world playable. */
-  Levels.ASSETS = {
-    hero: './assets/spirit_hero.glb',
-    warden: './assets/hollow_warden.glb',
-    gear: './assets/clockwork_gear.glb',
-    lantern: './assets/soul_lantern.glb',
-    bell: './assets/sanctuary_bell.glb',
-    thorn: './assets/thorn_platform.glb',
-    cavernBg: './assets/cavern_bg.webp'
-  };
-  Levels.POLY = {
-    pillar: '/studio/assets/models/roads/bridge-pillar-wide.glb',
-    boulder: './assets/cavern_boulder.glb',
-    fern: './assets/cavern_fern.glb',
-    jacaranda: '/studio/assets/polyhaven/jacaranda_tree/jacaranda_tree_1k.glb',
-    hdr: '/studio/assets/polyhaven/kloppenheim_06_puresky/kloppenheim_06_puresky_1k.hdr'
-  };
+  // Subagent-A gothic kit, relative to the live-preview page like
+  // enemy.js AGATHA_URL ("./assets/agatha.glb"). Served at
+  // /studio/live-preview/assets/ (every model a .glb). Loaded with NO
+  // targetLength so the
+  // meter-accurate Blender dims survive (loader still XZ-centers + grounds).
+  var U_PILLAR = "./assets/gothic_pillar_arch.glb";
+  var U_WINDOW = "./assets/gothic_window_frame.glb";
+  var U_SHAFT = "./assets/moonlight_shaft.glb";
+  // Retired by the HN2 photogrammetry swap (consts kept, zero references).
+  var U_DESK = "./assets/school_desk_chair.glb";
+  var U_FURN = "./assets/classroom_furniture.glb";
+  var U_PEW = "./assets/chapel_pew_altar.glb";
 
-  /* ---------------- Zones ---------------- */
-  Levels.zones = [
-    { id: 0, name: 'Whispering Roots', x0: -20, x1: 45,
-      tint: 0x1d5c4e, fog: 0x06181a, hint: 'Follow the fireflies. Mind the still water.' },
-    { id: 1, name: 'Clockwork Aqueducts', x0: 45, x1: 105,
-      tint: 0x8a6a2f, fog: 0x141007, hint: 'Old gears still turn. Crumbling stone will not wait.' },
-    { id: 2, name: 'Belltower Chasm', x0: 105, x1: 160,
-      tint: 0x3b2f6e, fog: 0x0b0918, hint: 'Climb the lantern chain. Ring the sanctuary bell.' }
-  ];
+  // HN2 photogrammetry set: CC0 Poly Haven scans, 1K (disk
+  // public/assets/polyhaven/<id>/<id>_1k.glb -> /studio/assets/...).
+  // loadGlbModel normalizes by targetLength — meter lengths per prop family
+  // are chosen at each placeProp call site (see swap table in handoff).
+  // Credit: Poly Haven CC0 (one line, per asset rule).
+  var U_DESK2 = "/studio/assets/polyhaven/SchoolDesk_01/SchoolDesk_01_1k.glb";
+  var U_CHAIR = "/studio/assets/polyhaven/SchoolChair_01/SchoolChair_01_1k.glb";
+  var U_SHELF = "/studio/assets/polyhaven/wooden_bookshelf_worn/wooden_bookshelf_worn_1k.glb";
+  var U_BOOKS = "/studio/assets/polyhaven/book_encyclopedia_set_01/book_encyclopedia_set_01_1k.glb";
+  var U_WARD = "/studio/assets/polyhaven/GothicCabinet_01/GothicCabinet_01_1k.glb";
+  var U_DRAWER = "/studio/assets/polyhaven/drawer_cabinet/drawer_cabinet_1k.glb";
+  var U_DOOR = "/studio/assets/polyhaven/large_castle_door/large_castle_door_1k.glb";
+  var U_BENCH = "/studio/assets/polyhaven/painted_wooden_bench/painted_wooden_bench_1k.glb";
+  var U_CANDLE = "/studio/assets/polyhaven/brass_candleholders/brass_candleholders_1k.glb";
+  var U_CHAND = "/studio/assets/polyhaven/Chandelier_01/Chandelier_01_1k.glb";
+  var U_CHAND2 = "/studio/assets/polyhaven/lantern_chandelier_01/lantern_chandelier_01_1k.glb";
+  var U_ROCK = "/studio/assets/polyhaven/Rockingchair_01/Rockingchair_01_1k.glb";
+  var U_WHEEL = "/studio/assets/polyhaven/wheelchair_01/wheelchair_01_1k.glb";
+  var U_CLOCK = "/studio/assets/polyhaven/vintage_grandfather_clock_01/vintage_grandfather_clock_01_1k.glb";
+  var U_FRAME = "/studio/assets/polyhaven/hanging_picture_frame_01/hanging_picture_frame_01_1k.glb";
+  var U_TREAS = "/studio/assets/polyhaven/treasure_chest/treasure_chest_1k.glb";
+  var U_LAMP = "/studio/assets/polyhaven/vintage_oil_lamp/vintage_oil_lamp_1k.glb";
+  var U_TABLE = "/studio/assets/polyhaven/WoodenTable_01/WoodenTable_01_1k.glb";
+  var U_COMM = "/studio/assets/polyhaven/GothicCommode_01/GothicCommode_01_1k.glb";
 
-  Levels.zoneAt = function (x) {
-    if (x < 45) return 0;
-    if (x < 105) return 1;
-    return 2;
-  };
-
-  /* Ground runs: solid earth strips (top surface walkable). Gaps = water hazard. */
-  Levels.GROUND_RUNS = [
-    { x0: -20, x1: 8, top: 0 },     // Zone 1 meadow
-    { x0: 14, x1: 30, top: 0 },     // Zone 1 east bank
-    { x0: 31, x1: 45, top: 2 },     // Zone 1 rise
-    { x0: 43, x1: 60, top: 2 },     // transition + aqueduct west deck
-    { x0: 80, x1: 105, top: 2 },    // aqueduct east deck (chasm 60..80)
-    { x0: 105, x1: 118, top: 2 },   // chasm base
-    { x0: 150, x1: 160, top: 30 }   // summit shelf (goal)
-  ];
-
-  /* Water hazard spans (open gaps between ground runs). */
-  Levels.hazards = [
-    { type: 'water', x0: 8, x1: 14, y: 0.4 },
-    { type: 'water', x0: 60, x1: 80, y: 2.4 },
-    { type: 'water', x0: 118, x1: 150, y: 2.4 }
-  ];
-
-  /* Floating platforms: P(centerX, topY, width). Types: solid | crumble | moving. */
-  function P(x, top, w, type, extra) {
-    var p = { x: x, top: top, w: w, type: type || 'solid' };
-    if (extra) for (var k in extra) p[k] = extra[k];
-    return p;
-  }
-  Levels.PLATFORMS = [
-    // Zone 1: gentle root-steps
-    P(18, 2.2, 4), P(23, 4.2, 3.6), P(28, 6.0, 3.6),
-    P(33, 4.6, 3.2), P(37, 6.6, 3.2), P(41, 8.6, 3.4),
-    P(11, 2.6, 2.6), // hop over first water gap
-    // Zone 2: crumbling aqueduct stones over the chasm (blueprint timing:
-    // shake 0.55s -> drop 3.0s -> scale-pop respawn)
-    P(63, 3.4, 3.0, 'crumble'), P(67, 4.4, 3.0, 'crumble'),
-    P(71, 5.4, 3.0, 'crumble'), P(75, 5.4, 3.0, 'crumble'),
-    P(78.5, 4.2, 2.6, 'crumble'),
-    P(87, 5.0, 3.4, 'moving', { axis: 'y', range: 2.2, period: 4.5, phase: 0 }),
-    P(94, 7.0, 3.2), P(99, 9.0, 3.2),
-    P(52, 5.0, 3.0), P(56, 6.6, 2.8), // gear-side optional hops
-    // Zone 3: lantern-chain ascent
-    P(121, 6.0, 3.0), P(126, 9.5, 2.8), P(131, 13.0, 2.8),
-    P(136, 16.5, 2.8), P(141, 20.0, 2.8), P(145, 23.5, 2.8),
-    P(148, 27.0, 3.0),
-    P(133, 10.5, 2.4, 'moving', { axis: 'x', range: 3.0, period: 5.0, phase: 1.2 }),
-    P(110, 5.0, 3.0), P(114, 7.5, 2.6) // chasm entry hops
-  ];
-
-  /* Checkpoint totems (positions only; visuals in buildWorld). */
-  Levels.CHECKPOINTS = [
-    { x: -14, y: 0 }, { x: 32, y: 2 }, { x: 82, y: 2 },
-    { x: 108, y: 2 }, { x: 136, y: 16.5 }
-  ];
-
-  Levels.groundTopAt = function (x) {
-    var top = -99;
-    for (var i = 0; i < Levels.GROUND_RUNS.length; i++) {
-      var g = Levels.GROUND_RUNS[i];
-      if (x >= g.x0 && x <= g.x1 && g.top > top) top = g.top;
+  /* ------ renderer capture for PMREM (eval-time, levels.js only) ------
+   * First principles: r128 PMREMGenerator bakes IBL by RENDERING an env
+   * scene, so it needs the live WebGLRenderer — but the renderer is owned
+   * by game.js and publishes no handle. Deferred scripts eval in document
+   * order (this file before game.js), so wrapping the constructor here
+   * transparently records the instance before game.js constructs it.
+   * Proxy(construct) keeps prototype/instanceof semantics identical;
+   * guarded so a missing Proxy (or any failure) just disables IBL. */
+  var stvCapturedRenderer = null;
+  try {
+    var Tcap = (typeof window !== "undefined") ? window.THREE : null;
+    if (Tcap && Tcap.WebGLRenderer && !Tcap.WebGLRenderer.__stvWrapped &&
+        typeof Proxy === "function" && typeof Reflect !== "undefined") {
+      var OrigWGL = Tcap.WebGLRenderer;
+      Tcap.WebGLRenderer = new Proxy(OrigWGL, {
+        construct: function (target, args) {
+          var inst = Reflect.construct(target, args);
+          stvCapturedRenderer = inst;
+          try { window.__stvRenderer = inst; } catch (ePub) { /* optional */ }
+          return inst;
+        }
+      });
+      try { Tcap.WebGLRenderer.__stvWrapped = true; } catch (eMark) { /* optional */ }
     }
-    return top;
-  };
+  } catch (eWrap) { /* no capture: PMREM block below skips silently */ }
 
-  /* ---------------- Canvas texture helpers ---------------- */
+  function buildWorld(scene) {
+    var THREE = window.THREE;
+    var WR = window.WorldRealism;
+    if (!THREE) { throw new Error("StV_Levels needs global THREE (r128)."); }
 
-  function makeCanvas(w, h) {
-    var cv = document.createElement('canvas');
-    cv.width = w; cv.height = h;
-    return cv;
-  }
+    var colliders = [];
+    var i;
 
-  /* Soft radial Gaussian sprite (fireflies, glow fallbacks). Zero squares. */
-  Levels.makeGlowSprite = function (inner, outer) {
-    var cv = makeCanvas(128, 128);
-    var cx = cv.getContext('2d');
-    var g = cx.createRadialGradient(64, 64, 2, 64, 64, 64);
-    g.addColorStop(0, inner || 'rgba(255,255,255,1)');
-    g.addColorStop(0.25, inner || 'rgba(255,255,255,1)');
-    g.addColorStop(0.55, outer || 'rgba(140,255,220,0.45)');
-    g.addColorStop(1, 'rgba(0,0,0,0)');
-    cx.fillStyle = g;
-    cx.fillRect(0, 0, 128, 128);
-    var tex = new THREE.CanvasTexture(cv);
-    return tex;
-  };
-
-  /* Cavern gradient fallback when cavern_bg.webp is missing. */
-  Levels.makeCavernFallback = function () {
-    var cv = makeCanvas(1024, 256);
-    var cx = cv.getContext('2d');
-    var g = cx.createLinearGradient(0, 0, 0, 256);
-    g.addColorStop(0, '#0a1a3a');
-    g.addColorStop(0.45, '#0b2a33');
-    g.addColorStop(0.75, '#123a35');
-    g.addColorStop(1, '#04100f');
-    cx.fillStyle = g;
-    cx.fillRect(0, 0, 1024, 256);
-    // Distant glow pockets (bioluminescent cavern feel).
-    var pockets = [[140, 150, 60], [420, 120, 80], [700, 160, 55], [900, 110, 70]];
-    for (var i = 0; i < pockets.length; i++) {
-      var px = pockets[i][0], py = pockets[i][1], pr = pockets[i][2];
-      var rg = cx.createRadialGradient(px, py, 2, px, py, pr);
-      rg.addColorStop(0, 'rgba(125,249,212,0.5)');
-      rg.addColorStop(1, 'rgba(125,249,212,0)');
-      cx.fillStyle = rg;
-      cx.fillRect(px - pr, py - pr, pr * 2, pr * 2);
-    }
-    // Root silhouettes hanging from the top.
-    cx.strokeStyle = 'rgba(2,10,8,0.85)';
-    cx.lineCap = 'round';
-    for (var r = 0; r < 46; r++) {
-      var rx = (r * 197.3) % 1024;
-      var len = 40 + ((r * 53.7) % 90);
-      cx.lineWidth = 3 + ((r * 7.1) % 7);
-      cx.beginPath();
-      cx.moveTo(rx, 0);
-      cx.quadraticCurveTo(rx + 18, len * 0.5, rx - 10, len);
-      cx.stroke();
-    }
-    return new THREE.CanvasTexture(cv);
-  };
-
-  /* Aqueduct arch silhouette strip (mid-far backdrop). */
-  Levels.makeAqueductStrip = function (color, archW, archH) {
-    var cv = makeCanvas(1024, 256);
-    var cx = cv.getContext('2d');
-    cx.clearRect(0, 0, 1024, 256);
-    cx.fillStyle = color || 'rgba(6,16,24,0.92)';
-    cx.fillRect(0, 0, 1024, 256);
-    // Cut arches (destination-out) so the cavern glows through.
-    cx.globalCompositeOperation = 'destination-out';
-    var aw = archW || 120, ah = archH || 190;
-    for (var x = 20; x < 1024; x += aw + 46) {
-      cx.beginPath();
-      cx.moveTo(x, 256);
-      cx.lineTo(x, 256 - ah + aw / 2);
-      cx.arc(x + aw / 2, 256 - ah + aw / 2, aw / 2, Math.PI, 0);
-      cx.lineTo(x + aw, 256);
-      cx.closePath();
-      cx.fill();
-    }
-    // Small round windows in the spandrels.
-    for (var wx = 60; wx < 1024; wx += 166) {
-      cx.beginPath();
-      cx.arc(wx, 52, 14, 0, Math.PI * 2);
-      cx.fill();
-    }
-    var tex = new THREE.CanvasTexture(cv);
-    tex.wrapS = THREE.RepeatWrapping;
-    return tex;
-  };
-
-  /* Mossy stone fallback albedo when PBR helpers are unavailable. */
-  Levels.makeStoneFallback = function () {
-    var cv = makeCanvas(256, 256);
-    var cx = cv.getContext('2d');
-    cx.fillStyle = '#3a4a44';
-    cx.fillRect(0, 0, 256, 256);
-    var seed = 1234567;
-    function rnd() {
-      seed = (seed * 16807) % 2147483647;
-      return (seed - 1) / 2147483646;
-    }
-    for (var i = 0; i < 5200; i++) {
-      var v = 40 + Math.floor(rnd() * 60);
-      var moss = rnd() > 0.72;
-      cx.fillStyle = moss
-        ? 'rgba(' + (52 + v * 0.3) + ',' + (120 + v * 0.5) + ',' + (80 + v * 0.3) + ',0.5)'
-        : 'rgba(' + v + ',' + (v + 8) + ',' + (v + 4) + ',0.5)';
-      cx.fillRect(Math.floor(rnd() * 256), Math.floor(rnd() * 256), 2, 2);
-    }
-    // Stone block seams.
-    cx.strokeStyle = 'rgba(10,16,14,0.7)';
-    cx.lineWidth = 3;
-    for (var y = 0; y <= 256; y += 64) {
-      cx.beginPath(); cx.moveTo(0, y); cx.lineTo(256, y); cx.stroke();
-    }
-    for (var x = 0; x <= 256; x += 128) {
-      cx.beginPath(); cx.moveTo(x, 0); cx.lineTo(x, 256); cx.stroke();
-    }
-    var tex = new THREE.CanvasTexture(cv);
-    tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
-    return tex;
-  };
-
-  /* ---------------- Custom BufferGeometry builders ----------------
-   * Hand-built vertex data keeps level geometry crisp while using zero
-   * banned primitive helper names. All normals/UVs computed explicitly. */
-
-  /* Solid slab (platform / ground block) with explicit normals + UVs. */
-  Levels.createSlabGeometry = function (w, h, d, uvScale) {
-    var hw = w / 2, hh = h / 2, hd = d / 2;
-    var us = uvScale || 0.25;
-    // 24 verts: 4 per face, CCW outward.
-    var P = [
-      // +z (front)
-      -hw, -hh, hd, hw, -hh, hd, hw, hh, hd, -hw, hh, hd,
-      // -z (back)
-      hw, -hh, -hd, -hw, -hh, -hd, -hw, hh, -hd, hw, hh, -hd,
-      // +x
-      hw, -hh, hd, hw, -hh, -hd, hw, hh, -hd, hw, hh, hd,
-      // -x
-      -hw, -hh, -hd, -hw, -hh, hd, -hw, hh, hd, -hw, hh, -hd,
-      // +y (top)
-      -hw, hh, hd, hw, hh, hd, hw, hh, -hd, -hw, hh, -hd,
-      // -y (bottom)
-      -hw, -hh, -hd, hw, -hh, -hd, hw, -hh, hd, -hw, -hh, hd
-    ];
-    var N = [
-      0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1,
-      0, 0, -1, 0, 0, -1, 0, 0, -1, 0, 0, -1,
-      1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0,
-      -1, 0, 0, -1, 0, 0, -1, 0, 0, -1, 0, 0,
-      0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0,
-      0, -1, 0, 0, -1, 0, 0, -1, 0, 0, -1, 0
-    ];
-    var U = [];
-    var dims = [[w, h], [w, h], [d, h], [d, h], [w, d], [w, d]];
-    for (var f = 0; f < 6; f++) {
-      var du = dims[f][0] * us, dv = dims[f][1] * us;
-      U.push(0, 0, du, 0, du, dv, 0, dv);
-    }
-    var I = [];
-    for (var q = 0; q < 6; q++) {
-      var b = q * 4;
-      I.push(b, b + 1, b + 2, b, b + 2, b + 3);
-    }
-    var g = new THREE.BufferGeometry();
-    g.setAttribute('position', new THREE.Float32BufferAttribute(P, 3));
-    g.setAttribute('normal', new THREE.Float32BufferAttribute(N, 3));
-    g.setAttribute('uv', new THREE.Float32BufferAttribute(U, 2));
-    g.setIndex(I);
-    return g;
-  };
-
-  /* Tapered 8-vertex curved blade for the reactive tuft InstancedMesh. */
-  Levels.createBladeGeometry = function (height, width) {
-    var h = height || 0.9, w = (width || 0.16) / 2;
-    var curve = 0.22;
-    // 4 rows x 2 verts, narrowing to a tip, curving in +x.
-    var rows = [
-      { y: 0, hw: w, bend: 0 },
-      { y: h * 0.38, hw: w * 0.72, bend: curve * 0.25 },
-      { y: h * 0.72, hw: w * 0.42, bend: curve * 0.65 },
-      { y: h, hw: 0.004, bend: curve }
-    ];
-    var P = [], C = [], U = [], I = [];
-    for (var i = 0; i < rows.length; i++) {
-      var r = rows[i], f = i / (rows.length - 1);
-      P.push(r.bend - r.hw, r.y, 0, r.bend + r.hw, r.y, 0);
-      // Root dark -> tip bright bioluminescent teal.
-      var cr = 0.10 + f * 0.35, cg = 0.28 + f * 0.62, cb = 0.24 + f * 0.5;
-      C.push(cr, cg, cb, cr, cg, cb);
-      U.push(0, f, 1, f);
-      if (i < rows.length - 1) {
-        var b = i * 2;
-        I.push(b, b + 1, b + 3, b, b + 3, b + 2);
+    /* ---------- atmosphere: fog, backdrop, tone mapping ---------- */
+    scene.fog = new THREE.FogExp2(0x060a0e, 0.045);
+    scene.background = new THREE.Color(0x030507);
+    scene.userData = scene.userData || {};
+    scene.userData.stvFlash = 0;
+    scene.userData.stvToneMapping = THREE.ACESFilmicToneMapping;
+    // The renderer is owned by game.js; apply ACES here when reachable so the
+    // look is right even if game.js reads scene.userData.stvToneMapping late.
+    try {
+      var earlyRenderer = (typeof window !== "undefined" &&
+        (window.StV_Renderer || window.__stvRenderer)) || null;
+      if (earlyRenderer) {
+        earlyRenderer.toneMapping = THREE.ACESFilmicToneMapping;
+        earlyRenderer.toneMappingExposure = 1.0;
+        if (THREE.sRGBEncoding !== undefined && "outputEncoding" in earlyRenderer) {
+          earlyRenderer.outputEncoding = THREE.sRGBEncoding;
+        }
       }
-    }
-    var g = new THREE.BufferGeometry();
-    g.setAttribute('position', new THREE.Float32BufferAttribute(P, 3));
-    g.setAttribute('color', new THREE.Float32BufferAttribute(C, 3));
-    g.setAttribute('uv', new THREE.Float32BufferAttribute(U, 2));
-    g.setIndex(I);
-    g.computeVertexNormals();
-    return g;
-  };
+    } catch (toneErr) { /* renderer not up yet; game.js applies it */ }
 
-  /* Open 4-sided tapered light shaft (god-ray) with vertical alpha fade. */
-  Levels.createShaftGeometry = function (topW, botW, height) {
-    var tw = topW / 2, bw = botW / 2, h = height / 2;
-    // Cross of two quads (x-plane and z-plane) so the shaft reads from side view.
-    var P = [
-      -tw, h, 0, tw, h, 0, bw, -h, 0, -bw, -h, 0,
-      0, h, -tw, 0, h, tw, 0, -h, bw, 0, -h, -bw
-    ];
-    var C = [];
-    for (var i = 0; i < 8; i++) {
-      var top = (i % 4) < 2;
-      var a = top ? 0.55 : 0.0;
-      C.push(0.75, 0.95, 0.85, a);
-    }
-    var U = [0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0];
-    var I = [0, 2, 1, 0, 3, 2, 4, 6, 5, 4, 7, 6];
-    var g = new THREE.BufferGeometry();
-    g.setAttribute('position', new THREE.Float32BufferAttribute(P, 3));
-    g.setAttribute('color', new THREE.Float32BufferAttribute(C, 4));
-    g.setAttribute('uv', new THREE.Float32BufferAttribute(U, 2));
-    g.setIndex(I);
-    g.computeVertexNormals();
-    return g;
-  };
+    /* ---------- PMREM image-based lighting (HN2) ----------
+     * First principles: MeshStandardMaterial PBR reflects its environment;
+     * with scene.environment null, varnish/brass/glass have nothing to
+     * reflect and read flat black under point lights alone. A tiny
+     * procedural gradient ROOM (warm amber ceiling, teal-grey walls,
+     * near-black floor + bright lantern/moon proxy quads) baked through
+     * r128 PMREMGenerator.fromScene gives every PBR surface cheap IBL
+     * fill + soft specular streaks. All PlaneGeometry (zero gate
+     * primitives), baked once here before first render; fully guarded. */
+    try {
+      if (THREE.PMREMGenerator) {
+        var pmremRenderer = stvCapturedRenderer ||
+          ((typeof window !== "undefined" &&
+            (window.StV_Renderer || window.__stvRenderer)) || null);
+        if (pmremRenderer) {
+          var envScene = new THREE.Scene();
+          var envQuad = function (w, h, color, px, py, pz, rx, ry) {
+            var m = new THREE.Mesh(new THREE.PlaneGeometry(w, h),
+              new THREE.MeshBasicMaterial({ color: color, side: THREE.DoubleSide }));
+            m.position.set(px, py, pz);
+            m.rotation.set(rx || 0, ry || 0, 0);
+            envScene.add(m);
+            return m;
+          };
+          envQuad(12, 12, 0x6a3d1e, 0, 3, 0, Math.PI / 2, 0);   // ceiling: lantern amber
+          envQuad(12, 12, 0x040405, 0, -3, 0, -Math.PI / 2, 0); // floor: light pit
+          envQuad(12, 6, 0x1d323b, 0, 0, -6, 0, 0);             // walls: teal-grey stone
+          envQuad(12, 6, 0x1d323b, 0, 0, 6, 0, Math.PI);
+          envQuad(12, 6, 0x24363e, -6, 0, 0, 0, Math.PI / 2);
+          envQuad(12, 6, 0x24363e, 6, 0, 0, 0, -Math.PI / 2);
+          envQuad(3, 1.6, 0xffc27a, -3, 1.4, -5.7, 0, 0);       // lantern proxy L
+          envQuad(3, 1.6, 0xff9a3c, 3, 1.4, 5.7, 0, Math.PI);   // lantern proxy R
+          envQuad(1.6, 3.2, 0xbcd6f0, 5.7, 1.0, 0, 0, -Math.PI / 2); // moon-slit proxy
+          var pmrem = new THREE.PMREMGenerator(pmremRenderer);
+          var envRT = pmrem.fromScene(envScene, 0.035);
+          if (envRT && envRT.texture) { scene.environment = envRT.texture; }
+          pmrem.dispose();
+          scene.userData.stvEnv = scene.environment ? "pmrem" : "none";
+        } else {
+          scene.userData.stvEnv = "none";
+        }
+      }
+    } catch (envErr) { scene.userData.stvEnv = "none"; }
 
-  /* Fallback toothed gear (only used if clockwork_gear.glb is missing). */
-  Levels.createGearFallback = function (radius, teeth, depth) {
-    var shape = new THREE.Shape();
-    var r = radius || 2, n = teeth || 12, d = depth || 0.6;
-    var inner = r * 0.82, steps = n * 4;
-    for (var i = 0; i <= steps; i++) {
-      var a = (i / steps) * Math.PI * 2;
-      var seg = i % 4;
-      var rr = (seg === 1 || seg === 2) ? r : inner;
-      var x = Math.cos(a) * rr, y = Math.sin(a) * rr;
-      if (i === 0) shape.moveTo(x, y); else shape.lineTo(x, y);
+    /* ---------- shared 1K PBR materials + unit plane ----------
+     * First principles: real ambientCG 1K Color+NormalGL+Roughness maps via
+     * THREE.TextureLoader. Albedo JPEGs store gamma-encoded sRGB, so ONLY the
+     * albedo gets texture.encoding=sRGBEncoding (GPU decodes to linear for
+     * lighting math; without it the grade washes out). Normal/roughness are
+     * linear data — tagging them sRGB would corrupt vectors/curves.
+     * RepeatWrapping tiles without clamp streaks; anisotropy 8 keeps
+     * grazing-angle texels (floor running to the horizon) sharp. Meshes still
+     * reuse the one shared unitPlane — zero new geometry of any kind. */
+    var unitPlane = new THREE.PlaneGeometry(1, 1);
+    var texLoader = new THREE.TextureLoader();
+    function pbrTex(set, kind, rx, ry, srgb) {
+      var t = texLoader.load("/studio/assets/ambientcg/" + set + "/" +
+        set + "_1K-JPG_" + kind + ".jpg");
+      t.wrapS = THREE.RepeatWrapping;
+      t.wrapT = THREE.RepeatWrapping;
+      t.repeat.set(rx, ry);
+      t.anisotropy = 8;
+      if (srgb && THREE.sRGBEncoding !== undefined) { t.encoding = THREE.sRGBEncoding; }
+      return t;
     }
-    var hole = new THREE.Path();
-    hole.absarc(0, 0, r * 0.22, 0, Math.PI * 2, true);
-    shape.holes.push(hole);
-    var g = new THREE.ExtrudeGeometry(shape, {
-      depth: d, bevelEnabled: true, bevelThickness: 0.06, bevelSize: 0.06, bevelSegments: 1
+    function pbr1k(set, rx, ry, tint, normalScale) {
+      var m = new THREE.MeshStandardMaterial({
+        map: pbrTex(set, "Color", rx, ry, true),
+        normalMap: pbrTex(set, "NormalGL", rx, ry, false),
+        roughnessMap: pbrTex(set, "Roughness", rx, ry, false),
+        roughness: 1.0,
+        metalness: 0.0,
+        side: THREE.DoubleSide
+      });
+      if (m.normalScale) {
+        var ns = (typeof normalScale === "number") ? normalScale : 0.9;
+        m.normalScale.set(ns, ns);
+      }
+      if (typeof tint === "number") { m.color.setHex(tint); }
+      return m;
+    }
+    // Convent interior grade: aged damp plaster walls, weathered dark-grey
+    // stone on the chapel face, dark wood wainscot below. NO red brick grid
+    // anywhere indoors — Bricks075A stays on disk, unused by this level.
+    // (Iron/Metal032 stays on disk: no iron prop this stage. Bare metal
+    // now gets PMREM IBL from the gradient room baked above.)
+    var wallMatLong = pbr1k("Plaster001", 3, 1, 0x453f36, 0.7);
+    var wallMatShort = pbr1k("Plaster001", 2, 1, 0x453f36, 0.7);
+    var wallMatStone = pbr1k("Rock035", 3, 1, 0x615f5a, 1.0);
+    var floorMat = pbr1k("Tiles074", 8, 6, 0x555049);
+    var ceilMat = pbr1k("Plaster001", 4, 3, 0x4a453e, 0.35);
+    var doorMat = pbr1k("Wood096", 1, 1, 0x1c130c);
+    var trimMat = pbr1k("Wood096", 1, 1, 0x38302a);
+    var beamMat = pbr1k("Wood096", 4, 1, 0x4a3a28);
+    var skirtMat = pbr1k("WoodFloor051", 4, 1, 0x3a2e22);
+
+    /* ---------- canvas sprite textures (radial falloff, never squares) ------
+     * WebGL rasterizes every gl.POINTS particle / sprite texel quad as an
+     * axis-aligned SQUARE. A flat-filled map (or no map) = hard ■ edges. A
+     * radial Gaussian-falloff alpha map drives corner fragments to alpha 0,
+     * so only soft round discs / teardrops survive. alphaTest 0.01 discards
+     * the near-zero fringe (no halo bleed, no sort artifacts). */
+    function radialSpriteTex(size, stops) {
+      var cv = document.createElement("canvas");
+      cv.width = cv.height = size;
+      var ctx = cv.getContext("2d");
+      var grad = ctx.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
+      for (var s = 0; s < stops.length; s++) { grad.addColorStop(stops[s][0], stops[s][1]); }
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, size, size);
+      return new THREE.CanvasTexture(cv);
+    }
+    var ashTex = radialSpriteTex(64, [
+      [0, "rgba(255,235,205,1)"],
+      [0.4, "rgba(180,175,170,0.45)"],
+      [1, "rgba(0,0,0,0)"]
+    ]);
+    var haloTex = radialSpriteTex(64, [
+      [0, "rgba(255,170,60,0.9)"],
+      [0.5, "rgba(255,120,30,0.25)"],
+      [1, "rgba(0,0,0,0)"]
+    ]);
+    // Contact-shadow disc (HN2): radial black falloff on the shared
+    // unitPlane, laid 5mm above the floor. Pure grounding AO under floor
+    // props — transparent, depthWrite off, zero colliders, zero routes.
+    var contactTex = radialSpriteTex(128, [
+      [0, "rgba(0,0,0,0.55)"],
+      [0.6, "rgba(0,0,0,0.28)"],
+      [1, "rgba(0,0,0,0)"]
+    ]);
+    var contactMat = new THREE.MeshBasicMaterial({
+      map: contactTex, transparent: true, depthWrite: false
     });
-    g.translate(0, 0, -d / 2);
-    return g;
-  };
+    function addContactShadow(x, z, w, d) {
+      var m = new THREE.Mesh(unitPlane, contactMat);
+      m.rotation.x = -Math.PI / 2;
+      m.position.set(x, 0.005, z);
+      m.scale.set(w, d, 1);
+      m.renderOrder = 2;
+      scene.add(m);
+    }
+    // Flame teardrop: additive-stacked radial blobs, orange base -> amber
+    // mid -> pale core -> white-hot tip. Additive faint sprites read as
+    // flame because real flame IS emissive gas: bright core, soft falloff,
+    // light summed onto the backdrop instead of occluding it.
+    function makeFlameTex() {
+      var S = 64;
+      var cv = document.createElement("canvas");
+      cv.width = cv.height = S;
+      var ctx = cv.getContext("2d");
+      ctx.globalCompositeOperation = "lighter";
+      function blob(cx, cy, rx, ry, r, g, b, a) {
+        var gr = ctx.createRadialGradient(0, 0, 0, 0, 0, 1);
+        gr.addColorStop(0, "rgba(" + r + "," + g + "," + b + "," + a + ")");
+        gr.addColorStop(0.55, "rgba(" + r + "," + g + "," + b + "," + (a * 0.45) + ")");
+        gr.addColorStop(1, "rgba(0,0,0,0)");
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.scale(rx, ry);
+        ctx.fillStyle = gr;
+        ctx.beginPath();
+        ctx.arc(0, 0, 1, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+      blob(32, 44, 15, 14, 255, 110, 25, 0.75);
+      blob(32, 37, 10, 13, 255, 180, 70, 0.9);
+      blob(32, 31, 6.5, 9.5, 255, 230, 160, 0.95);
+      blob(32, 21, 3.5, 7.5, 255, 244, 214, 1.0);
+      return new THREE.CanvasTexture(cv);
+    }
+    var flameTex = makeFlameTex();
 
-  /* Fallback bell profile (only used if sanctuary_bell.glb is missing). */
-  Levels.createBellFallback = function (radius, height) {
-    var r = radius || 1.2, h = height || 1.8;
-    var pts = [];
-    var prof = [
-      [0.02, 1.0], [0.35, 0.98], [0.5, 0.85], [0.55, 0.6],
-      [0.62, 0.35], [0.8, 0.12], [1.0, 0.04], [1.02, 0.0]
+    function addPlane(axis, a, b, c, y0, y1, mat) {
+      var len = b - a;
+      var m = new THREE.Mesh(unitPlane, mat);
+      m.scale.set(len, y1 - y0, 1);
+      if (axis === 0) { m.position.set((a + b) / 2, (y0 + y1) / 2, c); }
+      else { m.position.set(c, (y0 + y1) / 2, (a + b) / 2); m.rotation.y = Math.PI / 2; }
+      m.receiveShadow = true;
+      scene.add(m);
+      return m;
+    }
+    function wallMatFor(len) { return len > 8 ? wallMatLong : wallMatShort; }
+
+    /* ---------- floor + ceiling ---------- */
+    var floor = new THREE.Mesh(unitPlane, floorMat);
+    floor.scale.set(24, 18, 1);
+    floor.rotation.x = -Math.PI / 2;
+    floor.position.set(0, 0, 0);
+    floor.receiveShadow = true;
+    scene.add(floor);
+    var ceil = new THREE.Mesh(unitPlane, ceilMat);
+    ceil.scale.set(24, 18, 1);
+    ceil.rotation.x = Math.PI / 2;
+    ceil.position.set(0, WALL_H, 0);
+    scene.add(ceil);
+
+    /* ---------- walls: [axis, a, b, c] (axis 0: run on X at z=c) ---------- */
+    var SEGS = [
+      [0, -12, -1.1, -9], [0, 1.1, 12, -9], // N exterior, chapel gap x -1.1..1.1
+      [0, -12, 12, 9],                      // S exterior
+      [1, -9, 9, -12],                      // W exterior
+      [1, -9, 9, 12],                       // E exterior
+      [0, -9, 9, -6],                       // z=-6 (W/E corridors stay open)
+      [0, -9, -5.7, 2], [0, -4.3, 4.3, 2], [0, 5.7, 9, 2], // z=+2, D1/D2 gaps
+      [1, -6, -2.7, -9], [1, -1.3, 2, -9],   // x=-9, D3 gap
+      [1, -6, -2.7, 9], [1, -1.3, 2, 9],     // x=+9, D4 gap
+      [0, -12, -8.7, 5], [0, -7.3, -2, 5],   // z=+5, D5 / arch / D6 gaps
+      [0, 2, 7.3, 5], [0, 8.7, 12, 5],
+      [1, 5, 9, -4],                        // x=-4 hall/store
+      [1, 5, 9, 4]                          // x=+4 hall/store
     ];
-    for (var i = 0; i < prof.length; i++) {
-      pts.push(new THREE.Vector2(prof[i][0] * r, prof[i][1] * h));
-    }
-    return new THREE.LatheGeometry(pts, 20);
-  };
-
-  /* ---------------- Defensive GLB loader ----------------
-   * Tries GLTFLoader; on failure runs onFallback(place) so the world
-   * never has holes while Subagent A finishes the kit. */
-  Levels.loadGlb = function (url, place, onFallback) {
-    function fail() {
-      if (typeof onFallback === 'function') {
-        try { onFallback(place); } catch (e) { /* keep world alive */ }
+    var ht = WALL_T / 2;
+    for (i = 0; i < SEGS.length; i++) {
+      var s = SEGS[i];
+      // Chapel north face (z=-9): weathered dark-grey stone masonry accent.
+      var segMat = (s[0] === 0 && s[3] === -9) ? wallMatStone :
+        wallMatFor(s[2] - s[1]);
+      addPlane(s[0], s[1], s[2], s[3], 0, WALL_H, segMat);
+      if (s[0] === 0) {
+        colliders.push({ x0: s[1], z0: s[3] - ht, x1: s[2], z1: s[3] + ht });
+      } else {
+        colliders.push({ x0: s[3] - ht, z0: s[1], x1: s[3] + ht, z1: s[2] });
       }
     }
-    try {
-      if (!THREE.GLTFLoader) { fail(); return; }
-      var loader = new THREE.GLTFLoader();
-      loader.load(url,
-        function (gltf) {
-          try { place(gltf.scene || gltf); } catch (e) { fail(); }
-        },
-        undefined,
-        function () { fail(); }
-      );
-    } catch (e) { fail(); }
-  };
+    // Divider block x -1..1, z -6..2: solid collider + visible faces.
+    colliders.push({ x0: -1, z0: -6, x1: 1, z1: 2 });
+    addPlane(1, -6, 2, -1, 0, WALL_H, wallMatLong);
+    addPlane(1, -6, 2, 1, 0, WALL_H, wallMatLong);
+    // Chapel door gap stays shut: locked collider.
+    colliders.push({ x0: -1.1, z0: -9 - ht, x1: 1.1, z1: -9 + ht });
 
-  Levels.fitGlb = function (root, targetSize, groundY) {
-    try {
-      var box = new THREE.Box3().setFromObject(root);
-      var size = new THREE.Vector3();
-      box.getSize(size);
-      var longest = Math.max(size.x, size.y, size.z) || 1;
-      var s = targetSize / longest;
-      root.scale.setScalar(s);
-      if (typeof groundY === 'number') {
-        box = new THREE.Box3().setFromObject(root);
-        root.position.y += groundY - box.min.y;
-      }
-    } catch (e) { /* leave as-is */ }
-    return root;
-  };
-
-  /* ---------------- Side-scroll camera rig ----------------
-   * Z=+16 fixed. X: critically-damped follow + velocity look-ahead.
-   * Y: platform-lock (only re-locks when the player settles >2.5m away
-   * or is grounded). Trauma shake S = T^2 (GMTK 6-DOF-lite). */
-  Levels.CameraRig = function (camera) {
-    this.camera = camera;
-    this.focus = new THREE.Vector3(0, 2.3, 0);
-    this.lockedY = 2.3;
-    this.trauma = 0;
-    this.shakeT = 0;
-    this.smoothK = 5.5;
-    this.lookAhead = 3.2;
-  };
-
-  Levels.CameraRig.prototype.addTrauma = function (x) {
-    this.trauma = Math.min(1, this.trauma + x);
-  };
-
-  Levels.CameraRig.prototype.update = function (dt, p) {
-    var W = Levels.WORLD;
-    var k = 1 - Math.exp(-this.smoothK * dt);
-    // Look-ahead from horizontal velocity, clamped.
-    var ahead = Math.max(-this.lookAhead, Math.min(this.lookAhead, (p.vx || 0) * 0.28));
-    var tx = p.x + ahead;
-    tx = Math.max(W.minX + 6, Math.min(W.maxX - 6, tx));
-    this.focus.x += (tx - this.focus.x) * k;
-    // Vertical platform-lock.
-    if (p.grounded || Math.abs(p.y - this.lockedY) > 1.8) {
-      this.lockedY += ((p.y + 1.55) - this.lockedY) * (1 - Math.exp(-3.8 * dt));
+    /* ---------- lintels over door gaps ---------- */
+    var LINTELS = [
+      [0, -5.7, -4.3, 2], [0, 4.3, 5.7, 2],   // D1 D2
+      [1, -2.7, -1.3, -9], [1, -2.7, -1.3, 9], // D3 D4
+      [0, -8.7, -7.3, 5], [0, 7.3, 8.7, 5],   // D5 D6
+      [0, -2, 2, 5]                            // open arch
+    ];
+    for (i = 0; i < LINTELS.length; i++) {
+      var L = LINTELS[i];
+      addPlane(L[0], L[1], L[2], L[3], LINTEL_Y0, WALL_H, wallMatFor(L[2] - L[1]));
     }
-    this.lockedY = Math.max(1.9, Math.min(34, this.lockedY));
-    this.focus.y += (this.lockedY - this.focus.y) * k;
-    // Trauma shake (decays ~1.2/s), smooth multi-sine noise.
-    this.trauma = Math.max(0, this.trauma - dt * 1.2);
-    this.shakeT += dt * (6 + this.trauma * 22);
-    var s = this.trauma * this.trauma;
-    var t = this.shakeT;
-    var sx = s * 0.9 * (Math.sin(t * 1.1) * 0.6 + Math.sin(t * 2.7 + 1.3) * 0.4);
-    var sy = s * 0.7 * (Math.sin(t * 1.7 + 4.1) * 0.6 + Math.sin(t * 3.3) * 0.4);
-    this.camera.position.set(this.focus.x + sx, this.focus.y + sy, W.cameraZ);
-    this.camera.rotation.z = s * 0.035 * Math.sin(t * 1.9 + 0.7);
-    this.camera.lookAt(this.focus.x + sx * 0.5, this.focus.y + sy * 0.5, 0);
-  };
 
-  Levels.createCamera = function (aspect) {
-    var cam = new THREE.PerspectiveCamera(50, aspect || 16 / 9, 0.1, 500);
-    cam.position.set(0, 6, Levels.WORLD.cameraZ);
-    return cam;
-  };
-
-  /* PBR surface material: WorldRealism procedural maps first, canvas fallback. */
-  Levels.surfaceMaterial = function (kind, opts) {
-    var o = opts || {};
-    try {
-      if (window.WorldRealism && window.WorldRealism.createProceduralPBRMaterial) {
-        return window.WorldRealism.createProceduralPBRMaterial(kind, {
-          repeat: o.repeat || [2, 2],
-          roughness: o.roughness !== undefined ? o.roughness : 0.85,
-          metalness: o.metalness !== undefined ? o.metalness : 0.05,
-          color: o.color
-        });
+    /* ---------- wood wainscot + chair rail + ceiling timber (visual only) --
+     * Full-height (1.02m) dark plank wainscot hugs BOTH faces of every wall
+     * segment (3.5cm off the face: no z-fight, no colliders, gaps stay open
+     * because SEGS does), capped by a chair rail. Timber beams hug the
+     * ceiling (soffit at y 3.1 + side cheeks), each spanning inside one room
+     * so no beam pierces a wall. Reuses unitPlane. */
+    var sk;
+    for (sk = 0; sk < SEGS.length; sk++) {
+      var g = SEGS[sk];
+      addPlane(g[0], g[1], g[2], g[3] + 0.035, 0, 1.02, skirtMat);
+      addPlane(g[0], g[1], g[2], g[3] - 0.035, 0, 1.02, skirtMat);
+      addPlane(g[0], g[1], g[2], g[3] + 0.03, 1.02, 1.1, trimMat);
+      addPlane(g[0], g[1], g[2], g[3] - 0.03, 1.02, 1.1, trimMat);
+    }
+    addPlane(1, -6, 2, -1 + 0.035, 0, 1.02, skirtMat);
+    addPlane(1, -6, 2, -1 - 0.035, 0, 1.02, skirtMat);
+    addPlane(1, -6, 2, 1 + 0.035, 0, 1.02, skirtMat);
+    addPlane(1, -6, 2, 1 - 0.035, 0, 1.02, skirtMat);
+    /* ---------- AO corner strips (visual only, zero colliders) ----------
+     * Soft dark gradients where walls meet floor/ceiling — fakes the
+     * bounced-light falloff a path tracer gives free, grounding every
+     * wall. Floor strips ride 1cm in FRONT of the wainscot (0.045 vs
+     * 0.035: no z-fight, wainscot base darkens too); ceiling coves hug
+     * the face at 0.025. Unlit MeshBasicMaterial, depthWrite off. */
+    function aoCornerTex(darkTop) {
+      var cv = document.createElement("canvas");
+      cv.width = 2; cv.height = 64;
+      var cx = cv.getContext("2d");
+      var gr = cx.createLinearGradient(0, 0, 0, 64);
+      if (darkTop) {
+        gr.addColorStop(0, "rgba(0,0,0,0.5)");
+        gr.addColorStop(1, "rgba(0,0,0,0)");
+      } else {
+        gr.addColorStop(0, "rgba(0,0,0,0)");
+        gr.addColorStop(1, "rgba(0,0,0,0.55)");
       }
-    } catch (e) { /* fall through */ }
-    return new THREE.MeshStandardMaterial({
-      map: Levels.makeStoneFallback(),
-      color: o.color !== undefined ? o.color : 0x9fb8ad,
-      roughness: 0.9,
-      metalness: 0.05
+      cx.fillStyle = gr;
+      cx.fillRect(0, 0, 2, 64);
+      return new THREE.CanvasTexture(cv);
+    }
+    var aoFloorMat = new THREE.MeshBasicMaterial({
+      map: aoCornerTex(false), transparent: true,
+      depthWrite: false, side: THREE.DoubleSide
     });
-  };
+    var aoCeilMat = new THREE.MeshBasicMaterial({
+      map: aoCornerTex(true), transparent: true,
+      depthWrite: false, side: THREE.DoubleSide
+    });
+    var ao;
+    for (ao = 0; ao < SEGS.length; ao++) {
+      var sg = SEGS[ao];
+      addPlane(sg[0], sg[1], sg[2], sg[3] + 0.045, 0, 0.4, aoFloorMat);
+      addPlane(sg[0], sg[1], sg[2], sg[3] - 0.045, 0, 0.4, aoFloorMat);
+      addPlane(sg[0], sg[1], sg[2], sg[3] + 0.025, WALL_H - 0.35, WALL_H, aoCeilMat);
+      addPlane(sg[0], sg[1], sg[2], sg[3] - 0.025, WALL_H - 0.35, WALL_H, aoCeilMat);
+    }
+    function addBeamX(x0, x1, z) {
+      var soffit = new THREE.Mesh(unitPlane, beamMat);
+      soffit.scale.set(x1 - x0, 0.3, 1);
+      soffit.rotation.x = Math.PI / 2; // face down like the ceiling plane
+      soffit.position.set((x0 + x1) / 2, 3.1, z);
+      scene.add(soffit);
+      addPlane(0, x0, x1, z - 0.15, 2.95, 3.2, beamMat);
+      addPlane(0, x0, x1, z + 0.15, 2.95, 3.2, beamMat);
+    }
+    addBeamX(-4, 4, 7);        // entrance hall (touches x=+-4 walls)
+    addBeamX(-12, 12, -7.5);   // north corridor (clear of divider + D3/D4)
+    addBeamX(-9, -1, -2);       // classroom A (ends kiss x=-9/-1 walls)
+    addBeamX(1, 9, -2);         // classroom B
+    addBeamX(-12, -4, 7);       // south-west store
+    addBeamX(4, 12, 7);         // south-east store
 
-  /* ================= buildWorld ================= */
-  Levels.buildWorld = function (scene, camera, renderer, opts) {
-    var o = opts || {};
-    var W = Levels.WORLD;
-    var WR = window.WorldRealism || {};
+    /* ---------- lights per arch section 3 ---------- */
+    scene.add(new THREE.AmbientLight(0x1a2b3a, 0.16));
+    scene.add(new THREE.HemisphereLight(0x2a4a5a, 0x0a0805, 0.18));
+    function point(x, y, z, color, intensity, dist) {
+      var pl = new THREE.PointLight(color, intensity, dist, 2);
+      pl.position.set(x, y, z);
+      scene.add(pl);
+      return pl;
+    }
+    var P1 = point(0, 2.4, 7, 0xff9a3c, 1.1, 10);
+    var P2 = point(-8, 2.4, 3.5, 0xff9a3c, 1.0, 9);
+    var P3 = point(0, 2.4, -7.5, 0xff9a3c, 1.1, 10);
+    var P4 = point(-5, 2.4, -2, 0xff9a3c, 1.0, 9);
+    var P5 = point(0, 2.6, -8.2, 0xff7733, 0.9, 6);
+    var bolt = new THREE.DirectionalLight(0xbdd8ff, 0);
+    bolt.position.set(20, 30, -10);
+    scene.add(bolt);
 
-    /* ---- Renderer: ACES tone mapping + shadows (QA check 5) ---- */
-    try {
-      renderer.toneMapping = THREE.ACESFilmicToneMapping;
-      renderer.toneMappingExposure = 1.1;
-      renderer.outputEncoding = THREE.sRGBEncoding;
-      if (renderer.shadowMap) {
-        renderer.shadowMap.enabled = true;
-        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    /* ---------- gothic windows: split frame + shaft (no colliders: they hug
+     * the walls; shafts are light, Agatha/the player walk through them).
+     * Frame GLB holds stone+mullions+glass ONLY (x +-1.00, y 0.72->3.82,
+     * z +-0.21) — the old baked diagonal shaft is GONE, so no bbox trick
+     * can drag the window off the wall. Both load raw (autoGround:false):
+     * frame x0.62 at y=0.70 -> sill 1.15 / crown 3.07, flush 10cm inboard
+     * of the wall plane; shaft origin (top mount edge, +Z aim) sits at the
+     * glass head (y 2.6) and stretches (0.42, 1.1, 1.3): 0.8m wide like
+     * the glass, down to the floor and 3m into the room. Shaft aims +Z
+     * locally, so ry matches facings. */
+    var moonMats = [];   // unique ConventMoonShaft materials (lightning flash)
+    var glassMats = [];  // unique ConventGlass materials (mild flash)
+    var flameMats = [];  // unique ConventFlame materials (altar flicker)
+    function grabUnique(mat, arr) {
+      if (!mat || !mat.emissive) { return; }
+      for (var g = 0; g < arr.length; g++) { if (arr[g] === mat) { return; } }
+      mat.userData.baseEmissive = (typeof mat.emissiveIntensity === "number") ?
+        mat.emissiveIntensity : 1;
+      arr.push(mat);
+    }
+    // Soft volumetric look: the Blender shaft reads as an opaque white ramp
+    // unless tamed at load — faint additive beam, no depth writes. The
+    // lightning hook keeps driving emissiveIntensity on top of this.
+    function softenShaft(mat) {
+      if (!mat) { return; }
+      mat.transparent = true;
+      mat.opacity = 0.10;
+      mat.depthWrite = false;
+      mat.blending = THREE.AdditiveBlending;
+      mat.needsUpdate = true;
+    }
+    // Shared 1K dark-stone PBR for kit stone/brick: Rock035 maps load
+    // once and are stamped onto every ConventStone/Brick material so
+    // pillars read as normal-mapped masonry, never flat grey.
+    var pbrStoneMaps = null;
+    function stoneMaps() {
+      if (!pbrStoneMaps) {
+        pbrStoneMaps = {
+          map: pbrTex("Rock035", "Color", 1, 1, true),
+          normalMap: pbrTex("Rock035", "NormalGL", 1, 1, false),
+          roughnessMap: pbrTex("Rock035", "Roughness", 1, 1, false)
+        };
       }
-    } catch (e) { /* headless-safe */ }
-
-    /* ---- Ori / Hollow Knight Deep Midnight Bioluminescent Cavern Lighting ---- */
-    scene.background = new THREE.Color(0x040914);
-    scene.fog = new THREE.FogExp2(0x040914, 0.012);
-    var hemi = new THREE.HemisphereLight(0x38bdf8, 0x090d16, 0.65);
-    hemi.position.set(0, 40, 0);
-    scene.add(hemi);
-    var key = new THREE.DirectionalLight(0x9be8ff, 1.25);
-    key.position.set(24, 48, 28);
-    key.castShadow = false;
-    scene.add(key);
-    var warmRim = new THREE.DirectionalLight(0xffb454, 0.75);
-    warmRim.position.set(-30, 18, 14);
-    scene.add(warmRim);
-
-    /* ---- Masterpiece pass: bloom + grade + vignette + contact shadows ---- */
-    var masterpiece = null;
-    try {
-      if (false && WR.enableMasterpieceRendering) {
-        masterpiece = WR.enableMasterpieceRendering(renderer, scene, camera, {
-          bloom: { strength: 0.38, radius: 0.42, threshold: 0.82 },
-          grade: {
-            shadow: [0.03, 0.09, 0.10], highlight: [0.95, 1.0, 0.9],
-            vignette: 0.34
-          },
-          env: { top: 0x1e4e5c, mid: 0x0a1c26, bottom: 0x020508 },
-          contactShadow: { opacity: 0.5 }
-        });
-      }
-    } catch (e) { masterpiece = null; }
-    Levels.masterpiece = masterpiece;
-    Levels.renderFrame = function () {
-      if (masterpiece && masterpiece.render) masterpiece.render();
-      else { try { renderer.render(scene, camera); } catch (e) { /* x */ } }
-    };
-    Levels.onResize = function (w, h) {
+      return pbrStoneMaps;
+    }
+    // Named-node fast path (MoonShaft exists per kit contract) + a
+    // material-name sweep fallback. Clones share materials, so dedupe.
+    function collectWindowMats(root) {
+      var shaft = null;
+      try { shaft = root.getObjectByName("MoonShaft"); } catch (eShaft) { shaft = null; }
+      if (shaft && shaft.material) { grabUnique(shaft.material, moonMats); softenShaft(shaft.material); }
       try {
-        camera.aspect = w / h;
-        camera.updateProjectionMatrix();
-        renderer.setSize(w, h);
-        if (masterpiece && masterpiece.setSize) masterpiece.setSize(w, h);
-      } catch (e) { /* x */ }
-    };
-
-    /* Keep dark bioluminescent cavern PMREM IBL from enableMasterpieceRendering */
-
-    /* ================= LAYER 1: cavern backdrop, z=-28 ================= */
-    var skyTex = null;
-    try {
-      skyTex = new THREE.TextureLoader().load(Levels.ASSETS.cavernBg,
-        undefined, undefined,
-        function () {
-          skyPlane.material.map = Levels.makeCavernFallback();
-          skyPlane.material.needsUpdate = true;
-        });
-    } catch (e) { skyTex = Levels.makeCavernFallback(); }
-    if (!skyTex) skyTex = Levels.makeCavernFallback();
-    var skyPlane = new THREE.Mesh(
-      new THREE.PlaneGeometry(280, 95),
-      new THREE.MeshBasicMaterial({ map: skyTex, color: 0x3c6278, fog: false, depthWrite: false })
-    );
-    skyPlane.position.set(70, 20, -28);
-    skyPlane.renderOrder = -10;
-    scene.add(skyPlane);
-
-    /* ============ LAYER 2: aqueduct silhouettes + god-rays, z=-16 ============ */
-    var stripNear = new THREE.Mesh(
-      new THREE.PlaneGeometry(230, 42),
-      new THREE.MeshBasicMaterial({
-        map: Levels.makeAqueductStrip('rgba(8,20,28,0.95)', 120, 190),
-        transparent: true, depthWrite: false, fog: false
-      })
-    );
-    stripNear.material.map.repeat.set(2.2, 1);
-    stripNear.position.set(70, 9, -16);
-    stripNear.renderOrder = -8;
-    scene.add(stripNear);
-    var stripFar = new THREE.Mesh(
-      new THREE.PlaneGeometry(250, 50),
-      new THREE.MeshBasicMaterial({
-        map: Levels.makeAqueductStrip('rgba(12,26,44,0.8)', 170, 260),
-        transparent: true, depthWrite: false, fog: false, opacity: 0.85
-      })
-    );
-    stripFar.material.map.repeat.set(1.6, 1);
-    stripFar.position.set(70, 12, -21);
-    stripFar.renderOrder = -9;
-    scene.add(stripFar);
-
-    var shaftMat = new THREE.MeshBasicMaterial({
-      vertexColors: true, transparent: true, opacity: 0.5,
-      blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, fog: false
-    });
-    var shaftGeo = Levels.createShaftGeometry(7, 2.2, 34);
-    var shaftXs = [0, 30, 55, 85, 115, 145];
-    for (var si = 0; si < shaftXs.length; si++) {
-      var shaft = new THREE.Mesh(shaftGeo, shaftMat);
-      shaft.position.set(shaftXs[si], 14, -14);
-      shaft.rotation.z = 0.16 + (si % 3) * 0.05;
-      shaft.renderOrder = -5;
-      scene.add(shaft);
-    }
-
-    /* ========= LAYER 3: midground pillars / boulders / ferns, z=-6 ========= */
-    var mid = new THREE.Group();
-    scene.add(mid);
-    function scatterGlb(url, spots, size, groundY, tint) {
-      for (var i = 0; i < spots.length; i++) {
-        (function (sp) {
-          Levels.loadGlb(url, function (root) {
-            Levels.fitGlb(root, sp.s || size, groundY);
-            root.position.x = sp.x;
-            root.position.z = sp.z !== undefined ? sp.z : -6;
-            if (sp.ry) root.rotation.y = sp.ry;
-            root.traverse(function (n) {
-              if (n.isMesh) {
-                n.castShadow = false;
-                n.receiveShadow = false;
-                if (tint !== undefined && n.material && n.material.color) {
-                  n.material = n.material.clone();
-                  n.material.color.multiply(new THREE.Color(tint));
-                }
-              }
-            });
-            mid.add(root);
-          }, null);
-        })(spots[i]);
-      }
-    }
-    // Stone aqueduct pillars marching into the distance.
-    scatterGlb(Levels.POLY.pillar, [
-      { x: -10 }, { x: 15 }, { x: 40 }, { x: 65 }, { x: 90 },
-      { x: 115, z: -8 }, { x: 140, z: -8 }
-    ], 14, -2, 0x9ab8c8);
-    // Mossy boulders.
-    scatterGlb(Levels.POLY.boulder, [
-      { x: 5, s: 3.2, z: -5 }, { x: 50, s: 4.2, z: -7 }, { x: 95, s: 3.6, z: -5 },
-      { x: 130, s: 4.6, z: -7 }, { x: -14, s: 2.6, z: -5 }
-    ], 3.6, -0.4);
-    // Fern clusters + luminous jacaranda crowns.
-    var fernSpots = [];
-    for (var fi = -16; fi <= 156; fi += 13) fernSpots.push({ x: fi + (fi % 2), s: 1.4, z: -4.5 });
-    scatterGlb(Levels.POLY.fern, fernSpots, 1.4, 0);
-    /* Skip 7.2MB 250k-tri jacaranda tree to keep 60 FPS locked */
-
-    /* ================= LAYER 4: playable plane, z=0 ================= */
-    var play = new THREE.Group();
-    scene.add(play);
-    var tLoader = new THREE.TextureLoader();
-    function load1kPbr(diffUrl, norUrl, rx, ry, tintHex, rough) {
-      var diff = tLoader.load(diffUrl);
-      var nor = tLoader.load(norUrl);
-      diff.wrapS = diff.wrapT = THREE.RepeatWrapping;
-      nor.wrapS = nor.wrapT = THREE.RepeatWrapping;
-      diff.repeat.set(rx, ry);
-      nor.repeat.set(rx, ry);
-      if (THREE.sRGBEncoding !== undefined) diff.encoding = THREE.sRGBEncoding;
-      return new THREE.MeshStandardMaterial({
-        map: diff,
-        normalMap: nor,
-        normalScale: new THREE.Vector2(1.3, 1.3),
-        color: tintHex,
-        roughness: rough || 0.68,
-        metalness: 0.14,
-        envMapIntensity: 1.25
-      });
-    }
-    var groundMat = load1kPbr(
-      '/studio/assets/ambientcg/Rock035/Rock035_1K-JPG_Color.jpg',
-      '/studio/assets/ambientcg/Rock035/Rock035_1K-JPG_NormalGL.jpg',
-      4, 2, 0x283842, 0.62
-    );
-    var stoneMat = load1kPbr(
-      '/studio/assets/ambientcg/Rock035/Rock035_1K-JPG_Color.jpg',
-      '/studio/assets/ambientcg/Rock035/Rock035_1K-JPG_NormalGL.jpg',
-      2, 1, 0x2e444e, 0.58
-    );
-    var gearZoneMat = load1kPbr(
-      '/studio/assets/ambientcg/Wood096/Wood096_1K-JPG_Color.jpg',
-      '/studio/assets/ambientcg/Wood096/Wood096_1K-JPG_NormalGL.jpg',
-      3, 1, 0x5c4632, 0.55
-    );
-    var bellZoneMat = load1kPbr(
-      '/studio/assets/ambientcg/Rock035/Rock035_1K-JPG_Color.jpg',
-      '/studio/assets/ambientcg/Rock035/Rock035_1K-JPG_NormalGL.jpg',
-      3, 1, 0x3b325c, 0.58
-    );
-    var runeRimMat = new THREE.MeshStandardMaterial({
-      color: 0x38f9d4,
-      emissive: 0x22d3ee,
-      emissiveIntensity: 1.65,
-      roughness: 0.25,
-      metalness: 0.2
-    });
-
-    // Live collider list for player.js: {id,x0,y0,x1,y1,top,type,active,mesh,...}
-    var solids = [];
-    var solidSeq = 0;
-    function addSolid(cx, topY, w, h, depth, mat, type, extra) {
-      var slimD = Math.min(depth, 1.8);
-      var geo = Levels.createSlabGeometry(w, h, slimD, 0.28);
-      var mesh = new THREE.Mesh(geo, mat);
-      mesh.position.set(cx, topY - h / 2, 0);
-      mesh.castShadow = true;
-      mesh.receiveShadow = true;
-      /* Clean 1K Rock035 dark stone surface on top & front */
-      play.add(mesh);
-      var s = {
-        id: solidSeq++, x0: cx - w / 2, y0: topY - h, x1: cx + w / 2, y1: topY,
-        top: topY, cx: cx, w: w, type: type || 'solid', active: true, mesh: mesh,
-        state: 'idle', stateT: 0, dx: 0, dy: 0, baseTop: topY, baseCx: cx
-      };
-      if (extra) for (var k in extra) s[k] = extra[k];
-      solids.push(s);
-      return s;
-    }
-
-    // Ground runs + organic Photogrammetry Boulder Ledges along every ground run!
-    for (var gi = 0; gi < Levels.GROUND_RUNS.length; gi++) {
-      var gr = Levels.GROUND_RUNS[gi];
-      var gw = gr.x1 - gr.x0;
-      var zone = Levels.zoneAt((gr.x0 + gr.x1) / 2);
-      var gmat = zone === 0 ? groundMat : (zone === 1 ? gearZoneMat : bellZoneMat);
-      addSolid((gr.x0 + gr.x1) / 2, gr.top, gw, 6, 1.8, gmat, 'solid');
-    }
-
-    // Floating platforms.
-    var crumbles = [], movers = [];
-    for (var pi = 0; pi < Levels.PLATFORMS.length; pi++) {
-      var pd = Levels.PLATFORMS[pi];
-      var pzone = Levels.zoneAt(pd.x);
-      var pmat = pzone === 0 ? groundMat : (pzone === 1 ? stoneMat : bellZoneMat);
-      var ps = addSolid(pd.x, pd.top, pd.w, 1.1, 3.4, pmat, pd.type, {
-        axis: pd.axis, range: pd.range, period: pd.period, phase: pd.phase || 0
-      });
-      if (pd.type === 'crumble') crumbles.push(ps);
-      if (pd.type === 'moving') movers.push(ps);
-    }
-
-    /* Crumble trigger from player.js when the wisp lands on a stone. */
-    Levels.stepOn = function (id) {
-      for (var i = 0; i < crumbles.length; i++) {
-        var c = crumbles[i];
-        if (c.id === id && c.state === 'idle') {
-          c.state = 'shaking';
-          c.stateT = 0;
-          return true;
-        }
-      }
-      return false;
-    };
-    Levels.getSolids = function () { return solids; };
-    /* Subagent D: live collider list (movers mutate in place, crumbles
-     * toggle .active) — refresh the published contract in place so the
-     * controller (created later, at first step) collides live. */
-    Levels._liveSolids = solids;
-    try {
-      if (window.StV_PlatformLevel) window.StV_PlatformLevel.solids = solids;
-    } catch (eLive) { /* static snapshot stands */ }
-    Levels.resetDynamics = function () {
-      for (var i = 0; i < crumbles.length; i++) {
-        var c = crumbles[i];
-        c.state = 'idle'; c.stateT = 0; c.active = true;
-        c.mesh.visible = true;
-        c.mesh.position.set(c.cx, c.top - 0.55, 0);
-        c.mesh.scale.set(1, 1, 1);
-      }
-      for (var m = 0; m < movers.length; m++) {
-        movers[m].dx = 0; movers[m].dy = 0;
-      }
-    };
-
-    /* ---- Zone 2: rotating clockwork gears (decorative + kinetic) ---- */
-    var gears = [];
-    var brassMat = new THREE.MeshStandardMaterial({
-      color: 0xc89858, metalness: 0.85, roughness: 0.35, envMapIntensity: 1.0
-    });
-    var gearSpots = [
-      { x: 62, y: 9, z: -2.5, s: 5.5, v: 0.5 },
-      { x: 70, y: 12, z: -3.5, s: 7.5, v: -0.32 },
-      { x: 78, y: 9, z: -2.5, s: 5.5, v: 0.5 },
-      { x: 88, y: 7, z: -2, s: 4.0, v: -0.7 }
-    ];
-    for (var gz = 0; gz < gearSpots.length; gz++) {
-      (function (sp) {
-        function mountGear(obj, fitted) {
-          if (!fitted) {
-            obj = new THREE.Mesh(Levels.createGearFallback(2, 12, 0.6), brassMat);
+        root.traverse(function (o) {
+          if (!o || !o.material || typeof o.material.name !== "string") { return; }
+          var m = o.material;
+          var nm = m.name.toLowerCase();
+          if (nm.indexOf("moonshaft") >= 0) { grabUnique(m, moonMats); softenShaft(m); }
+          else if (nm.indexOf("glass") >= 0 && nm.indexOf("lantern") < 0) {
+            grabUnique(m, glassMats);
+            // Night moonlit glass: the authored pale diffuse (0x9eb7cc)
+            // blows out baby-blue under the torch. Darken the diffuse,
+            // keep a faint blue emissive so panes read moonlit, and sync
+            // baseEmissive (the flash hook rewrites intensity per frame).
+            m.color.setHex(0x141c26);
+            m.emissive.setHex(0x0b1322);
+            m.emissiveIntensity = 0.6;
+            m.userData.baseEmissive = 0.6;
           }
-          obj.position.set(sp.x, sp.y, sp.z);
-          if (fitted) Levels.fitGlb(obj, sp.s, null);
-          obj.traverse ? obj.traverse(function (n) {
-            if (n.isMesh) { n.castShadow = false; n.receiveShadow = false; }
-          }) : 0;
-          play.add(obj);
-          gears.push({ obj: obj, v: sp.v });
-        }
-        Levels.loadGlb(Levels.ASSETS.gear,
-          function (root) { mountGear(root, true); },
-          function () { mountGear(null, false); });
-      })(gearSpots[gz]);
-    }
-
-    /* ---- Zone 3: chain of 5 soul lanterns + sanctuary bell ---- */
-    var lanterns = [];
-    var glowTexShared = Levels.makeGlowSprite('rgba(255,240,200,1)', 'rgba(255,170,90,0.4)');
-    /* Subagent D: shared with toPlatformLevel() — visuals and dash-reset
-     * logic can never drift apart. */
-    var lanternSpots = Levels.LANTERN_SPOTS || [
-      { x: 116, y: 8 }, { x: 124, y: 13 }, { x: 132, y: 18 },
-      { x: 140, y: 23 }, { x: 147, y: 28 }
-    ];
-    for (var li = 0; li < lanternSpots.length; li++) {
-      (function (sp, idx) {
-        var holder = new THREE.Group();
-        holder.position.set(sp.x, sp.y, 0.8);
-        play.add(holder);
-        function glowFallback() {
-          var sm = new THREE.SpriteMaterial({
-            map: glowTexShared, color: 0xffd9a0, transparent: true,
-            blending: THREE.AdditiveBlending, depthWrite: false
-          });
-          var spr = new THREE.Sprite(sm);
-          spr.scale.set(2.6, 2.6, 1);
-          holder.add(spr);
-        }
-        Levels.loadGlb(Levels.ASSETS.lantern, function (root) {
-          Levels.fitGlb(root, 1.6, null);
-          holder.add(root);
-          var halo = new THREE.Sprite(new THREE.SpriteMaterial({
-            map: glowTexShared, color: 0xffc98a, transparent: true,
-            opacity: 0.55, blending: THREE.AdditiveBlending, depthWrite: false
-          }));
-          halo.scale.set(3.4, 3.4, 1);
-          holder.add(halo);
-          lanterns.push({ holder: holder, halo: halo, phase: idx * 1.3, baseY: sp.y });
-        }, function () {
-          glowFallback();
-          lanterns.push({ holder: holder, halo: holder.children[0], phase: idx * 1.3, baseY: sp.y });
+          else if (nm.indexOf("flame") >= 0) { grabUnique(m, flameMats); }
+          else if (nm.indexOf("stone") >= 0 || nm.indexOf("brick") >= 0) {
+            // Amplify the authored relief: plaster-tinted stone normals
+            // are subtle; x1.6 makes carving read under dim torch light.
+            if (m.normalScale) { m.normalScale.set(1.6, 1.6); }
+            // HN2 fix: stamp real 1K Rock035 PBR (dark gothic masonry)
+            // over the flat authored tints. Vertex-color soot is kept.
+            if (!m.userData.stvPbrStone) {
+              try {
+                var sm = stoneMaps();
+                m.map = sm.map;
+                m.normalMap = sm.normalMap;
+                m.roughnessMap = sm.roughnessMap;
+                m.color.setHex(0x4a4640);
+                m.needsUpdate = true;
+                m.userData.stvPbrStone = true;
+              } catch (eStone) { /* keep authored maps */ }
+            }
+          }
         });
-        // Real lights only on 2 of 5 (perf); the rest read via bloom halos.
-        if (idx === 1 || idx === 3) {
-          var pl = new THREE.PointLight(0xffb96a, 1.1, 22, 2);
-          pl.position.set(sp.x, sp.y, 2.5);
-          scene.add(pl);
-          lanterns.push({ light: pl, phase: idx * 1.3, isLight: true });
-        }
-      })(lanternSpots[li], li);
+      } catch (eTrav) { /* keep whatever the named node gave us */ }
     }
+    // x, z, ry — frame origins 10cm inboard of the wall planes.
+    var KIT_WINDOWS = [
+      [-6, -8.90, 0], [6, -8.90, 0],                 // N wall
+      [-8, 8.90, Math.PI], [8, 8.90, Math.PI],       // S wall
+      [-11.90, -2, Math.PI / 2], [-11.90, 3.5, Math.PI / 2],   // W wall
+      [11.90, -2, -Math.PI / 2], [11.90, 3.5, -Math.PI / 2]    // E wall
+    ];
+    var WIN_Y = 0.70, WIN_SC = 0.62;      // sill 1.15, crown 3.07
+    var SHAFT_Y = 2.6, SHAFT_IN = 0.13;   // glass head + frame front face
+    var WINDOW_FB = [1.6, 2.2, 0x4a6a8a]; // load-failure impostor only
 
-    /* Sanctuary bell: swings gently, rung by game.js via Levels.ringBell(). */
-    var bellPivot = new THREE.Group();
-    bellPivot.position.set(150, 33.5, 0);
-    play.add(bellPivot);
-    var bellState = { amp: 0.16, boost: 0 };
-    Levels.ringBell = function () { bellState.boost = 1; };
-    Levels.loadGlb(Levels.ASSETS.bell, function (root) {
-      Levels.fitGlb(root, 3.2, null);
-      root.position.y = -1.4;
-      bellPivot.add(root);
+    /* ---------- chapel door (locked teaser) at C=(0,-9) ---------- */
+    var chapelDoor = new THREE.Group();
+    chapelDoor.position.set(0, 0, -9);
+    chapelDoor.userData.locked = true;
+    // HN2: photogrammetry castle-door leaf inside the SAME group (game.js
+    // contract intact: doorPos reads group world pos, unlock swings
+    // rotation.y, tintDoor finds the MeshBasicMaterial slit below).
+    // The locked wall-band collider above is untouched. Fallback slab only
+    // materializes if the .glb 404s.
+    loadWithCatch(U_DOOR, function (doorRoot) {
+      doorRoot.position.set(0, 0, 0.05);
+      doorRoot.rotation.y = 0;
+      chapelDoor.add(doorRoot);
     }, function () {
-      var bm = new THREE.Mesh(Levels.createBellFallback(1.3, 1.9),
-        new THREE.MeshStandardMaterial({
-          color: 0xd8b46a, metalness: 0.9, roughness: 0.28, envMapIntensity: 1.2
-        }));
-      bm.position.y = -1.6;
-      bm.castShadow = true;
-      bellPivot.add(bm);
-    });
-    var bellLight = new THREE.PointLight(0xffe2b0, 0.9, 26, 2);
-    bellLight.position.set(150, 31, 3);
-    scene.add(bellLight);
-    // Bell arch frame: two posts + lintel from slab geometry (level architecture).
-    var frameMat = Levels.surfaceMaterial('rock', { color: 0x6a7a86, roughness: 0.8 });
-    var post1 = new THREE.Mesh(Levels.createSlabGeometry(0.9, 9, 0.9, 0.3), frameMat);
-    post1.position.set(146.5, 28.5, 0); post1.castShadow = true; play.add(post1);
-    var post2 = post1.clone(); post2.position.x = 153.5; play.add(post2);
-    var lintel = new THREE.Mesh(Levels.createSlabGeometry(8.5, 1.0, 1.0, 0.3), frameMat);
-    lintel.position.set(150, 33.4, 0); lintel.castShadow = true; play.add(lintel);
+      var doorSlab = new THREE.Mesh(unitPlane, doorMat);
+      doorSlab.scale.set(2.2, 2.7, 1);
+      doorSlab.position.set(0, 1.35, 0.05);
+      chapelDoor.add(doorSlab);
+    }, 2.6);
+    var trimL = new THREE.Mesh(unitPlane, trimMat);
+    trimL.scale.set(0.25, 2.9, 1);
+    trimL.position.set(-1.225, 1.45, 0.05);
+    chapelDoor.add(trimL);
+    var trimR = new THREE.Mesh(unitPlane, trimMat);
+    trimR.scale.set(0.25, 2.9, 1);
+    trimR.position.set(1.225, 1.45, 0.05);
+    chapelDoor.add(trimR);
+    var trimT = new THREE.Mesh(unitPlane, trimMat);
+    trimT.scale.set(2.7, 0.35, 1);
+    trimT.position.set(0, 2.875, 0.05);
+    chapelDoor.add(trimT);
+    var slitMat = new THREE.MeshBasicMaterial({ color: 0x7a9fc0, side: THREE.DoubleSide });
+    var slit = new THREE.Mesh(unitPlane, slitMat);
+    slit.scale.set(2.0, 0.06, 1);
+    slit.position.set(0, 0.04, 0.06);
+    chapelDoor.add(slit);
+    scene.add(chapelDoor);
 
-    /* Checkpoint totems: small glowing markers (sprite + slab base). */
-    var checkSprites = [];
-    var checkTex = Levels.makeGlowSprite('rgba(200,255,235,1)', 'rgba(125,249,212,0.4)');
-    for (var ci = 0; ci < Levels.CHECKPOINTS.length; ci++) {
-      (function (cp) {
-        var base = new THREE.Mesh(Levels.createSlabGeometry(0.7, 1.6, 0.7, 0.4), stoneMat);
-        base.position.set(cp.x, cp.y + 0.8, -0.6);
-        base.castShadow = true;
-        play.add(base);
-        var spr = new THREE.Sprite(new THREE.SpriteMaterial({
-          map: checkTex, color: 0x7df9d4, transparent: true,
-          blending: THREE.AdditiveBlending, depthWrite: false, opacity: 0.8
-        }));
-        spr.scale.set(1.8, 1.8, 1);
-        spr.position.set(cp.x, cp.y + 2.2, -0.4);
-        scene.add(spr);
-        checkSprites.push(spr);
-      })(Levels.CHECKPOINTS[ci]);
-    }
-
-    /* ================= LAYER 5a: Verlet hanging vines =================
-     * True Verlet integration (gravity + wind + player push, 3 relaxation
-     * passes), rendered as tapered camera-facing ribbons. */
-    var vines = [];
-    var vineMat = new THREE.MeshStandardMaterial({
-      color: 0x2e7a5c, roughness: 0.85, metalness: 0.0,
-      emissive: 0x0d3a2c, emissiveIntensity: 0.7, side: THREE.DoubleSide
-    });
-    var vineDefs = [
-      { x: -8, top: 18, len: 9 }, { x: 4, top: 22, len: 11 },
-      { x: 20, top: 16, len: 7 }, { x: 36, top: 20, len: 10 },
-      { x: 50, top: 17, len: 8 }, { x: 92, top: 18, len: 9 },
-      { x: 101, top: 22, len: 11 }, { x: 112, top: 19, len: 8 },
-      { x: 128, top: 24, len: 10 }, { x: 138, top: 26, len: 9 },
-      { x: 152, top: 36, len: 7 }, { x: 26, top: 15, len: 6 }
-    ];
-    function buildVine(def) {
-      var SEG = 10;
-      var pts = [], prev = [];
-      var segLen = def.len / SEG;
-      for (var i = 0; i <= SEG; i++) {
-        pts.push({ x: def.x, y: def.top - i * segLen });
-        prev.push({ x: def.x, y: def.top - i * segLen });
-      }
-      var geo = new THREE.BufferGeometry();
-      var posArr = new Float32Array((SEG + 1) * 2 * 3);
-      var uvArr = new Float32Array((SEG + 1) * 2 * 2);
-      var idx = [];
-      for (var v = 0; v <= SEG; v++) {
-        uvArr[(v * 2) * 2] = 0; uvArr[(v * 2) * 2 + 1] = 1 - v / SEG;
-        uvArr[(v * 2 + 1) * 2] = 1; uvArr[(v * 2 + 1) * 2 + 1] = 1 - v / SEG;
-        if (v < SEG) {
-          var b = v * 2;
-          idx.push(b, b + 1, b + 3, b, b + 3, b + 2);
-        }
-      }
-      geo.setAttribute('position', new THREE.BufferAttribute(posArr, 3));
-      geo.setAttribute('uv', new THREE.BufferAttribute(uvArr, 2));
-      geo.setIndex(idx);
-      var mesh = new THREE.Mesh(geo, vineMat);
-      mesh.frustumCulled = false;
-      scene.add(mesh);
-      vines.push({ def: def, seg: SEG, segLen: segLen, pts: pts, prev: prev, mesh: mesh });
-    }
-    for (var vi = 0; vi < vineDefs.length; vi++) buildVine(vineDefs[vi]);
-
-    function updateVines(dt, t, px, py) {
-      for (var i = 0; i < vines.length; i++) {
-        var vn = vines[i];
-        var dx = Math.abs(vn.x - px);
-        vn.mesh.visible = dx < 26;
-        if (!vn.mesh.visible) continue;
-        var nearBoost = (dx < 2.2 && py <= vn.top && py >= vn.top - vn.len) ? 0.16 : 0;
-        vn.mesh.rotation.z = Math.sin(t * 1.6 + i * 1.3) * (0.045 + nearBoost);
-      }
-    }
-
-    /* ============ LAYER 5b: 300 reactive bioluminescent tufts ============
-     * InstancedMesh of tapered blades; wind-sway + player-proximity bend
-     * in one onBeforeCompile vertex shader (uTime + uPlayerPos). */
-    var TUFTS = 300;
-    var tuftUniforms = {
-      uTime: { value: 0 },
-      uPlayerPos: { value: new THREE.Vector3(0, 0, 0) },
-      uBladeH: { value: 0.9 }
-    };
-    var tuftMesh = (function buildTufts() {
-      var bladeGeo = Levels.createBladeGeometry(0.9, 0.16);
-      var mat = new THREE.MeshStandardMaterial({
-        vertexColors: true, roughness: 0.7, metalness: 0.05,
-        emissive: 0x1a6a58, emissiveIntensity: 0.6, side: THREE.DoubleSide
+    /* ---------- lantern flames: soft sprites + halo + flicker ----------
+     * Core = additive teardrop THREE.Sprite (always camera-facing, no hard
+     * plane edges from any angle) + a larger faint halo glow sprite.
+     * Registry contract unchanged: { mat, light, base, phase } drives the
+     * update loop; sprite entries add { sprite, halo } for stretch/breathe.
+     * Altar entries (mat:null -> shared ConventFlame) keep the emissive path. */
+    var flickers = [];
+    var FLAME_W = 0.34, FLAME_H = 0.5, HALO_S = 1.1, HALO_A = 0.55;
+    function addFlame(x, y, z, light, base) {
+      var coreMat = new THREE.SpriteMaterial({
+        map: flameTex, color: 0xffc37a, transparent: true,
+        blending: THREE.AdditiveBlending, depthWrite: false
       });
-      mat.onBeforeCompile = function (shader) {
-        shader.uniforms.uTime = tuftUniforms.uTime;
-        shader.uniforms.uPlayerPos = tuftUniforms.uPlayerPos;
-        shader.uniforms.uBladeH = tuftUniforms.uBladeH;
-        shader.vertexShader =
-          'uniform float uTime;\nuniform vec3 uPlayerPos;\nuniform float uBladeH;\n' +
-          shader.vertexShader.replace('#include <begin_vertex>', [
-            '#include <begin_vertex>',
-            'float hFrac = clamp(position.y / max(uBladeH, 0.001), 0.0, 1.0);',
-            'float bendW = hFrac * hFrac;',
-            'vec4 tuftWorld = vec4(position, 1.0);',
-            '#ifdef USE_INSTANCING',
-            '  tuftWorld = instanceMatrix * tuftWorld;',
-            '#endif',
-            'float wave = sin(tuftWorld.x * 0.5 + uTime * 2.1) * cos(tuftWorld.z * 0.4 + uTime * 1.6);',
-            'float gust = sin(tuftWorld.x * 0.13 - uTime * 2.6) * 0.4;',
-            'transformed.x += (wave + gust) * 0.16 * bendW;',
-            'transformed.z += (wave * 0.6) * 0.1 * bendW;',
-            'vec2 toBlade = tuftWorld.xz - uPlayerPos.xz;',
-            'float pd = length(toBlade);',
-            'if (pd < 3.0 && pd > 0.001) {',
-            '  vec2 pushDir = toBlade / pd;',
-            '  float pushF = (3.0 - pd) / 3.0 * 0.85 * bendW;',
-            '  transformed.x += pushDir.x * pushF;',
-            '  transformed.z += pushDir.y * pushF;',
-            '  transformed.y -= pushF * 0.25;',
-            '}'
-          ].join('\n'));
-      };
-      var im = new THREE.InstancedMesh(bladeGeo, mat, TUFTS);
-      im.name = 'HollowLightReactiveTufts';
-      im.frustumCulled = false;
-      im.receiveShadow = true;
-      var dummy = new THREE.Object3D();
-      var placed = 0, guard = 0;
-      while (placed < TUFTS && guard++ < TUFTS * 40) {
-        var rx = W.minX + 2 + Math.random() * (W.maxX - W.minX - 4);
-        var base = Levels.groundTopAt(rx);
-        if (base < -50) continue;
-        // Some tufts ride floating platforms too.
-        var ry = base;
-        if (Math.random() < 0.25) {
-          var cand = Levels.PLATFORMS[Math.floor(Math.random() * Levels.PLATFORMS.length)];
-          if (Math.abs(rx - cand.x) < cand.w / 2) ry = cand.top;
-          else continue;
+      var core = new THREE.Sprite(coreMat);
+      core.scale.set(FLAME_W, FLAME_H, 1);
+      core.position.set(x, y, z);
+      scene.add(core);
+      var haloMat = new THREE.SpriteMaterial({
+        map: haloTex, color: 0xff9a3c, transparent: true, opacity: HALO_A,
+        blending: THREE.AdditiveBlending, depthWrite: false
+      });
+      var halo = new THREE.Sprite(haloMat);
+      halo.scale.set(HALO_S, HALO_S, 1);
+      halo.position.set(x, y, z);
+      scene.add(halo);
+      flickers.push({
+        mat: coreMat, light: light, base: base, phase: x * 2.1 + z * 1.3,
+        sprite: core, halo: halo
+      });
+    }
+    addFlame(0, 2.42, 7, P1, 1.1);
+    addFlame(-8, 2.42, 3.5, P2, 1.0);
+    addFlame(0, 2.42, -7.5, P3, 1.1);
+    addFlame(-5, 2.42, -2, P4, 1.0);
+    addFlame(0, 2.6, -8.6, P5, 0.9);
+    // L6 in Class B stays unlit: dark key hunt, no flame, no light.
+
+    /* ---------- prop loading with plane-cross fallbacks ---------- */
+    function makeImpostor(wid, hei, color) {
+      var g = new THREE.Group();
+      var m = new THREE.MeshBasicMaterial({ color: color, side: THREE.DoubleSide });
+      var p1 = new THREE.Mesh(unitPlane, m);
+      p1.scale.set(wid, hei, 1);
+      g.add(p1);
+      var p2 = new THREE.Mesh(unitPlane, m);
+      p2.scale.set(wid, hei, 1);
+      p2.rotation.y = Math.PI / 2;
+      g.add(p2);
+      return g;
+    }
+    function loadWithCatch(url, ok, fail, len, raw) {
+      try {
+        if (!WR || typeof WR.loadGlbModel !== "function") { fail(new Error("no loader")); return; }
+        // raw: autoGround:false — no bbox normalize, GLB author coords used
+        // verbatim (windows/shafts mount at exact wall transforms instead).
+        var lo = raw ? { autoGround: false, onError: fail }
+                     : { targetLength: len, onError: fail };
+        var pr = WR.loadGlbModel(url, ok, lo);
+        if (pr && typeof pr.catch === "function") {
+          pr.catch(function () { /* handled through onError */ });
         }
-        dummy.position.set(rx, ry + 0.02, -1.6 + Math.random() * 3.2);
-        dummy.rotation.set(0, Math.random() * Math.PI * 2, 0);
-        var s = 0.7 + Math.random() * 0.9;
-        dummy.scale.set(s, s * (0.9 + Math.random() * 0.5), s);
-        dummy.updateMatrix();
-        im.setMatrixAt(placed, dummy.matrix);
-        placed++;
-      }
-      im.count = placed;
-      im.instanceMatrix.needsUpdate = true;
-      scene.add(im);
-      return im;
-    })();
-
-    /* ================= LAYER 6: mirror water, y=-1.2 =================
-     * High-metalness plane fed by scene.environment (HDR IBL) for true
-     * mirror reflection + vertex ripple waves via uTime. */
-    var waterUniforms = { uTime: { value: 0 } };
-    var waterMat = new THREE.MeshStandardMaterial({
-      color: 0x030912, metalness: 0.55, roughness: 0.28,
-      transparent: true, opacity: 0.92, envMapIntensity: 0.35
-    });
-    waterMat.onBeforeCompile = function (shader) {
-      shader.uniforms.uTime = waterUniforms.uTime;
-      shader.vertexShader = 'uniform float uTime;\n' + shader.vertexShader.replace(
-        '#include <begin_vertex>', [
-          '#include <begin_vertex>',
-          'vec4 wpos4 = vec4(transformed, 1.0);',
-          '#ifdef USE_INSTANCING',
-          '  wpos4 = instanceMatrix * wpos4;',
-          '#endif',
-          'wpos4 = modelMatrix * wpos4;',
-          'float rip = sin(wpos4.x * 1.4 + uTime * 2.2) * 0.045',
-          '  + sin(wpos4.x * 3.1 - uTime * 3.0 + wpos4.z * 1.7) * 0.028;',
-          'transformed.y += rip;'
-        ].join('\n'));
-    };
-    var waterGeo = new THREE.PlaneGeometry(190, 3.4, 120, 6);
-    var water = new THREE.Mesh(waterGeo, waterMat);
-    water.rotation.x = -Math.PI / 2;
-    water.position.set(70, Levels.WATER_Y, -1.6);
-    water.receiveShadow = true;
-    scene.add(water);
-    // Soft shoreline glow strip where water meets the banks.
-    var foamTex = Levels.makeGlowSprite('rgba(160,255,225,0.9)', 'rgba(60,180,160,0.25)');
-    var foamMat = new THREE.MeshBasicMaterial({
-      map: foamTex, transparent: true, opacity: 0.35,
-      blending: THREE.AdditiveBlending, depthWrite: false
-    });
-    var foam = new THREE.Mesh(new THREE.PlaneGeometry(190, 1.6), foamMat);
-    foam.rotation.x = -Math.PI / 2;
-    foam.position.set(70, Levels.WATER_Y + 0.06, -1.2);
-    scene.add(foam);
-
-    /* ============ LAYER 7: 500 Gaussian fireflies / spores ============ */
-    var FLIES = 500;
-    var flyGeo = new THREE.BufferGeometry();
-    var flyPos = new Float32Array(FLIES * 3);
-    var flyCol = new Float32Array(FLIES * 3);
-    var flySeed = new Float32Array(FLIES * 4);
-    for (var fi2 = 0; fi2 < FLIES; fi2++) {
-      var fx = W.minX + Math.random() * (W.maxX - W.minX);
-      var fy = 0.5 + Math.random() * 19;
-      var fz = -4 + Math.random() * 7;
-      flyPos[fi2 * 3] = fx; flyPos[fi2 * 3 + 1] = fy; flyPos[fi2 * 3 + 2] = fz;
-      var gold = Math.random() < 0.3;
-      flyCol[fi2 * 3] = gold ? 1.0 : 0.55;
-      flyCol[fi2 * 3 + 1] = gold ? 0.82 : 1.0;
-      flyCol[fi2 * 3 + 2] = gold ? 0.5 : 0.82;
-      flySeed[fi2 * 4] = fx; flySeed[fi2 * 4 + 1] = fy;
-      flySeed[fi2 * 4 + 2] = 0.4 + Math.random() * 1.2;
-      flySeed[fi2 * 4 + 3] = Math.random() * Math.PI * 2;
+      } catch (eLoad) { fail(eLoad); }
     }
-    flyGeo.setAttribute('position', new THREE.BufferAttribute(flyPos, 3));
-    flyGeo.setAttribute('color', new THREE.BufferAttribute(flyCol, 3));
-    var flyMat = new THREE.PointsMaterial({
-      size: 0.55, map: Levels.makeGlowSprite('rgba(255,255,255,1)', 'rgba(150,255,220,0.4)'),
-      transparent: true, opacity: 0.9, vertexColors: true,
-      blending: THREE.AdditiveBlending, depthWrite: false, sizeAttenuation: true
-    });
-    var flies = new THREE.Points(flyGeo, flyMat);
-    flies.frustumCulled = false;
-    flies.renderOrder = 5;
-    scene.add(flies);
-
-    /* Tight player-snapped shadow light (follows the wisp). */
-    var shadowLight = null;
-    scene.traverse(function (n) {
-      if (n.isDirectionalLight && n.castShadow && !shadowLight) shadowLight = n;
-    });
-    if (shadowLight && shadowLight.shadow && shadowLight.shadow.camera) {
-      var sc = shadowLight.shadow.camera;
-      sc.left = -28; sc.right = 28; sc.top = 28; sc.bottom = -28;
-      sc.near = 5; sc.far = 160;
-      sc.updateProjectionMatrix();
-    }
-
-    /* ================= World handle + per-frame update ================= */
-    var rig = new Levels.CameraRig(camera);
-    rig.focus.set(0, 2.3, 0);
-    rig.lockedY = 2.3;
-
-    function updateCrumbles(dt) {
-      for (var i = 0; i < crumbles.length; i++) {
-        var c = crumbles[i];
-        if (c.state === 'idle') continue;
-        c.stateT += dt;
-        if (c.state === 'shaking') {
-          var j = Math.min(1, c.stateT / 0.55);
-          c.mesh.position.x = c.cx + (Math.random() - 0.5) * 0.14 * j;
-          c.mesh.position.y = (c.top - 0.55) + (Math.random() - 0.5) * 0.08 * j;
-          if (c.stateT >= 0.55) { c.state = 'falling'; c.stateT = 0; c.active = false; }
-        } else if (c.state === 'falling') {
-          c.mesh.position.y -= dt * (4 + c.stateT * 14);
-          c.mesh.rotation.z += dt * 1.5;
-          if (c.stateT >= 0.8) { c.state = 'gone'; c.stateT = 0; c.mesh.visible = false; }
-        } else if (c.state === 'gone') {
-          if (c.stateT >= 2.2) {
-            c.state = 'respawn'; c.stateT = 0;
-            c.mesh.visible = true; c.active = true;
-            c.mesh.position.set(c.cx, c.top - 0.55, 0);
-            c.mesh.rotation.z = 0;
+    /* Lit lanterns glow through their glass (verified mat name
+     * "Lantern_01_glass"); L6 passes glow:false to stay dark. */
+    function lightLanternGlass(root) {
+      try {
+        root.traverse(function (o) {
+          var m = o && o.material;
+          if (m && m.emissive && typeof m.name === "string" &&
+              m.name.toLowerCase().indexOf("glass") >= 0) {
+            m.emissive.setHex(0xffa63e);
+            m.emissiveIntensity = 1.6;
           }
-        } else if (c.state === 'respawn') {
-          // Scale-pop ease-out-back over 0.35s.
-          var u = Math.min(1, c.stateT / 0.35);
-          var back = 1 + 2.2 * Math.pow(u - 1, 3) + 1.2 * Math.pow(u - 1, 2);
-          c.mesh.scale.set(back, back, back);
-          if (u >= 1) { c.mesh.scale.set(1, 1, 1); c.state = 'idle'; c.stateT = 0; }
-        }
+        });
+      } catch (eGlow) { /* model variant without named glass */ }
+    }
+    /* Weathered convent wood for crates/chests (prop-polish).
+     * First principles: a GLB material's .color is a linear multiplier
+     * over its albedo map, so stamping dark walnut drags cartoon-orange
+     * wood to aged convent timber while keeping grain detail; roughness
+     * 0.85 kills the plastic sheen. Runs ONLY on crate/chest roots via
+     * onRoot (lantern glass/flames never pass through here); unmapped
+     * materials are kept and tinted the same way. Idempotent setHex, so
+     * shared clone materials can't double-darken. */
+    var WALNUT_HEX = 0x241a10;
+    function weatherWood(root) {
+      try {
+        root.traverse(function (o) {
+          var mats = o && o.material;
+          if (!mats) { return; }
+          if (!mats.length) { mats = [mats]; }
+          for (var k = 0; k < mats.length; k++) {
+            var m = mats[k];
+            if (!m) { continue; }
+            var nm = (typeof m.name === "string") ? m.name.toLowerCase() : "";
+            if (nm.indexOf("lantern") >= 0 || nm.indexOf("glass") >= 0 ||
+                nm.indexOf("flame") >= 0) { continue; }
+            if (m.color) { m.color.setHex(WALNUT_HEX); }
+            if (typeof m.roughness === "number") { m.roughness = 0.85; }
+            m.needsUpdate = true;
+          }
+        });
+      } catch (eWood) { /* cosmetic only */ }
+    }
+    function placeProp(def) {
+      if (def.hw) {
+        colliders.push({
+          x0: def.x - def.hw, z0: def.z - def.hd,
+          x1: def.x + def.hw, z1: def.z + def.hd
+        });
       }
+      // HN2: visual-only grounding disc (never a collider).
+      if (def.shadow) { addContactShadow(def.x, def.z, def.shadow[0], def.shadow[1]); }
+      loadWithCatch(def.url, function (root) {
+        // Keep vendor XZ-centering + grounding offsets, then move to the spot.
+        root.position.x += def.x;
+        root.position.y += def.y;
+        root.position.z += def.z;
+        if (def.sxyz) { root.scale.set(def.sxyz[0], def.sxyz[1], def.sxyz[2]); }
+        else if (typeof def.sc === "number") { root.scale.multiplyScalar(def.sc); }
+        root.rotation.y = def.ry || 0;
+        if (def.lean) { root.rotation.z = def.lean; }
+        if (def.glow) { lightLanternGlass(root); }
+        if (def.onRoot) { try { def.onRoot(root); } catch (eHook) { /* cosmetic */ } }
+        scene.add(root);
+      }, function () {
+        if (def.noFb) { return; } // shafts are light: silent when missing
+        var fb = makeImpostor(def.fb[0], def.fb[1], def.fb[2]);
+        fb.position.set(def.x, def.y + def.fb[1] / 2, def.z);
+        fb.rotation.y = def.ry || 0;
+        scene.add(fb);
+      }, def.len, def.raw);
     }
 
-    function updateMovers(t) {
-      for (var i = 0; i < movers.length; i++) {
-        var m = movers[i];
-        var ph = (t / m.period) * Math.PI * 2 + (m.phase || 0);
-        var off = Math.sin(ph) * m.range;
-        var nx = m.baseCx, ny = m.top;
-        if (m.axis === 'x') nx += off; else ny += off;
-        m.dx = (nx - m.cx); m.dy = (ny - m.top);
-        m.cx = nx; m.top = ny; m.y1 = ny; m.y0 = ny - 1.1;
-        m.x0 = nx - m.w / 2; m.x1 = nx + m.w / 2;
-        m.mesh.position.set(nx, ny - 0.55, 0);
-      }
+    var LANTERN_FB = [0.34, 0.5, 0xffb14e];
+    var LANTERNS = [
+      [0, 2.2, 7], [-8, 2.2, 3.5], [0, 2.2, -7.5],
+      [-5, 2.2, -2], [0, 2.4, -8.6], [5, 2.2, -2]
+    ];
+    for (i = 0; i < LANTERNS.length; i++) {
+      placeProp({
+        url: U_LANTERN, x: LANTERNS[i][0], y: LANTERNS[i][1], z: LANTERNS[i][2],
+        len: 0.45, fb: LANTERN_FB, glow: i < 5
+      });
+    }
+    var CHESTS = [[-11.2, 0.5], [-10, 7]]; // C1 nudged W so the 3m hall keeps a 1.6m pass
+    // HN2: photogrammetry treasure_chest on the SAME spots with the SAME
+    // hw/hd (identical collider rects). No weatherWood: the scan ships
+    // graded and a walnut stamp would flatten its PBR.
+    for (i = 0; i < CHESTS.length; i++) {
+      placeProp({
+        url: U_TREAS, x: CHESTS[i][0], y: 0, z: CHESTS[i][1],
+        len: 0.9, hw: 0.48, hd: 0.3, fb: [0.8, 0.6, 0x7a5a34],
+        shadow: [1.0, 0.65]
+      });
+    }
+    // 5 crates: 2-high stack at H1, 1 key-desk under K1, 2 at H5.
+    var CRATES = [
+      [-7.7, 0, -4.6, true], [-7.7, 0.64, -4.6, false],
+      [6.5, 0, -4.5, true], [-3.2, 0, 7.9, true], [-2.5, 0, 8.35, true]
+    ];
+    for (i = 0; i < CRATES.length; i++) {
+      // Gothic photogrammetry instead of low-poly orange crates (same
+      // coords/colliders): commodes everywhere, treasure chest riding
+      // on top of the H1 stack. Scans ship graded — no walnut stamp.
+      var crateUrl = (i === 1) ? U_TREAS : U_COMM;
+      placeProp({
+        url: crateUrl, x: CRATES[i][0], y: CRATES[i][1], z: CRATES[i][2],
+        len: (i === 1) ? 0.9 : 1.0, hw: CRATES[i][3] ? 0.31 : 0, hd: 0.31,
+        fb: [0.55, 0.55, 0x8a6a42],
+        shadow: [0.7, 0.7]
+      });
+    }
+    var BARRELS = [[7.3, 0.3], [7.8, 0.6], [7.4, 0.9], [-6.2, 7.8], [-5.6, 8.1]];
+    for (i = 0; i < BARRELS.length; i++) {
+      placeProp({
+        url: U_BARREL, x: BARRELS[i][0], y: 0, z: BARRELS[i][1],
+        len: 0.68, hw: 0.3, hd: 0.3, fb: [0.5, 0.65, 0x6a4a2a]
+      });
+    }
+    placeProp({
+      url: U_BOX, x: 9.7, y: 0, z: 7.0, ry: 0.2,
+      len: 1.15, hw: 0.55, hd: 0.55, fb: [1.0, 0.9, 0x9a7a4a]
+    });
+    placeProp({
+      url: U_BOX, x: 10.8, y: 0, z: 6.8, ry: -0.15,
+      len: 1.15, hw: 0.55, hd: 0.55, fb: [1.0, 0.9, 0x9a7a4a]
+    });
+    placeProp({
+      url: U_LADDER, x: 11.3, y: 0, z: 5.6, lean: -0.2,
+      len: 1.9, hw: 0.3, hd: 0.5, fb: [0.5, 1.7, 0x8a7a5a]
+    });
+    placeProp({
+      url: U_BARREL01, x: -3, y: 0, z: 8.5,
+      len: 0.95, hw: 0.45, hd: 0.45, fb: [0.6, 0.9, 0x5a4a3a]
+    });
+    placeProp({
+      url: U_BARREL01, x: 3, y: 0, z: 8.5,
+      len: 0.95, hw: 0.45, hd: 0.45, fb: [0.6, 0.9, 0x5a4a3a]
+    });
+
+    /* ------ gothic kit: windows + separate moonlight shafts (flash hook) ----- */
+    for (i = 0; i < KIT_WINDOWS.length; i++) {
+      (function (wx, wz, wry) {
+        placeProp({
+          url: U_WINDOW, x: wx, y: WIN_Y, z: wz, ry: wry,
+          raw: true, sc: WIN_SC, fb: WINDOW_FB, onRoot: collectWindowMats
+        });
+        // Shaft origin mounts at the glass head, inboard of the frame face.
+        var sdx = Math.sin(wry), sdz = Math.cos(wry);
+        placeProp({
+          url: U_SHAFT, x: wx + sdx * SHAFT_IN, y: SHAFT_Y,
+          z: wz + sdz * SHAFT_IN, ry: wry,
+          raw: true, sxyz: [0.42, 1.1, 1.3],
+          noFb: true, onRoot: collectWindowMats
+        });
+      })(KIT_WINDOWS[i][0], KIT_WINDOWS[i][1], KIT_WINDOWS[i][2]);
     }
 
-    var world = {
-      rig: rig,
-      solids: solids,
-      scene: scene,
-      update: function (dt, t, player) {
-        var p = player || { x: 0, y: 2.0, vx: 0, vy: 0, grounded: false };
-        var cdt = Math.min(dt, 0.05);
-        rig.update(cdt, p);
-        var camX = rig.focus.x;
-        for (var pi2 = 0; pi2 < play.children.length; pi2++) {
-          var pch = play.children[pi2];
-          if (pch && pch.position) {
-            pch.visible = Math.abs(pch.position.x - camX) < 38;
+    /* ---------- gothic kit: pillars + vault springers ----------
+     * Model is 5.41m tall (shaft 0.7->3.3, capital 3.42->3.78, ribs
+     * 3.85->5.41); sunk to y=-1.0 the capital sits at 2.42->2.78 and the
+     * rib springers pierce the 3.2m ceiling as instructed. Ribs span local
+     * X, so Z-running door walls get ry=PI/2. Doorway flankers sit inside
+     * the wall collider band -> no new colliders, zero route impact. Only
+     * the free-standing north-corridor anchor gets a collider. */
+    var PILLAR_Y = -1.0;
+    var PILLAR_FB = [0.6, 2.6, 0x5a5a60];
+    var PILLARS = [
+      // D1/D2 flanks on the z=2 wall (gap edges +/-0.4 clear of the gaps)
+      [-6.1, 2.0, 0], [-3.9, 2.0, 0], [3.9, 2.0, 0], [6.1, 2.0, 0],
+      // D3/D4 flanks on the x=+/-9 walls
+      [-9.0, -3.1, Math.PI / 2], [-9.0, -0.9, Math.PI / 2],
+      [9.0, -3.1, Math.PI / 2], [9.0, -0.9, Math.PI / 2],
+      // D5/D6 flanks on the z=5 wall
+      [-9.1, 5.0, 0], [-6.9, 5.0, 0], [6.9, 5.0, 0], [9.1, 5.0, 0],
+      // open-arch flanks x -2..2 on the z=5 wall
+      [-2.4, 5.0, 0], [2.4, 5.0, 0]
+    ];
+    for (i = 0; i < PILLARS.length; i++) {
+      placeProp({
+        url: U_PILLAR, x: PILLARS[i][0], y: PILLAR_Y, z: PILLARS[i][1],
+        ry: PILLARS[i][2], len: undefined, fb: PILLAR_FB, onRoot: collectWindowMats
+      });
+    }
+    // Lone free-standing anchor in the north corridor (shaft +/-0.34).
+    // Route row z=-7.5 keeps 0.25m+ clearance past the expanded collider.
+    placeProp({
+      url: U_PILLAR, x: -5.0, y: PILLAR_Y, z: -6.3, ry: 0,
+      len: undefined, hw: 0.35, hd: 0.35, fb: PILLAR_FB
+    });
+
+    /* ------ HN2: photogrammetry school desks + chairs + books (all face
+     * the south board). Retires school_desk_chair kit: SchoolDesk_01 sits
+     * EXACTLY on the route-verified DESKS center (same hw 0.47 / hd 0.63
+     * rect pushed — BFS 36/36 untouched, zero route changes), SchoolChair_01
+     * tucks on the +Z side facing the desk (visual only, same rect), and an
+     * encyclopedia set rides every 3rd desktop. Aisles kept clear (as before):
+     * A: vertical x -5 lane, horizontal z -2 lane, dwell (-6,-4.5), H1 crate,
+     *    D1/D3 gaps. B: vertical x 5 lane, horizontal z -2 lane, dwell
+     *    (6,-0.5), key crate + key target (6.5,-3.5), H2 barrels, D2/D4. */
+    var DESK_FB = [0.9, 0.8, 0x6a5236];
+    var DESKS = [
+      // Classroom A east block (x -3.5/-2.6), north + south rows
+      [-3.5, -0.5], [-3.5, 0.4], [-3.5, 1.3],
+      [-2.6, -0.5], [-2.6, 0.4], [-2.6, 1.3],
+      [-3.5, -5.2], [-3.5, -4.3], [-3.5, -3.4],
+      [-2.6, -5.2], [-2.6, -4.3], [-2.6, -3.4],
+      // Classroom A west block (clear of D3 gap + route cell (-8.75,-1.75))
+      [-8.3, -0.5], [-8.3, 0.4], [-8.3, 1.3],
+      [-7.4, -0.5], [-7.4, 0.4], [-7.4, 1.3],
+      // Classroom B west-of-divider block
+      [2.0, -5.2], [2.0, -4.3], [2.0, -3.4],
+      [2.9, -5.2], [2.9, -4.3], [2.9, -3.4],
+      [2.4, -0.5], [2.4, 0.4], [2.4, 1.3],
+      [3.3, -0.5], [3.3, 0.4], [3.3, 1.3],
+      // Classroom B east column (clear of key zone + z -2 lane + D4 gap)
+      [8.3, -5.2], [8.3, -4.3], [8.3, -3.4]
+    ];
+    for (i = 0; i < DESKS.length; i++) {
+      (function (dx, dz, k) {
+        placeProp({
+          url: U_DESK2, x: dx, y: 0, z: dz, ry: 0, len: 1.1,
+          hw: 0.47, hd: 0.63, fb: DESK_FB, shadow: [1.0, 1.35]
+        });
+        placeProp({
+          url: U_CHAIR, x: dx, y: 0, z: dz + 0.42, ry: Math.PI, len: 0.9,
+          fb: [0.5, 0.8, 0x6a5236]
+        });
+        if (k % 3 === 0) {
+          placeProp({
+            url: U_BOOKS, x: dx + 0.22, y: 0.72, z: dz - 0.05, ry: 0.3,
+            len: 0.4, fb: [0.3, 0.25, 0x7a2a2a]
+          });
+        }
+      })(DESKS[i][0], DESKS[i][1], i);
+    }
+
+    /* ------ HN2: photogrammetry bookshelf walls + encyclopedias -------
+     * Retires classroom_furniture kit: 3 worn bookshelves span each 4m FURN
+     * unit (south units ry 0 face north; divider units ry -/+PI/2 face into
+     * their classroom), one encyclopedia set per unit at mid-shelf on the
+     * room face. The CENTER shelf of each unit sits EXACTLY on the FURN
+     * center and pushes the SAME hw/hd (identical collider rects). */
+    var FURN_FB = [3.6, 1.8, 0x4a4438];
+    var FURNS = [
+      // x, z, ry, hw, hd
+      [-6.2, -5.7, 0, 2.0, 0.2],            // A south wall
+      [-1.25, 0, -Math.PI / 2, 0.2, 2.0],   // A divider wall
+      [5.6, -5.7, 0, 2.0, 0.2],             // B south wall
+      [1.25, 0, Math.PI / 2, 0.2, 2.0]      // B divider wall
+    ];
+    var SHELF_OFF = [-1.25, 0, 1.25];
+    for (i = 0; i < FURNS.length; i++) {
+      (function (fx, fz, fry, fhw, fhd) {
+        var alongZ = (fhw < fhd); // divider units run along Z
+        for (var q = 0; q < SHELF_OFF.length; q++) {
+          var sx = alongZ ? fx : fx + SHELF_OFF[q];
+          var sz = alongZ ? fz + SHELF_OFF[q] : fz;
+          placeProp({
+            url: U_SHELF, x: sx, y: 0, z: sz, ry: fry, len: 1.9,
+            hw: (q === 1) ? fhw : 0, hd: fhd,
+            fb: [0.95, 1.8, 0x4a4438],
+            shadow: alongZ ? [0.6, 1.0] : [1.0, 0.6]
+          });
+        }
+        var bx = alongZ ? fx + ((fry > 0) ? 0.15 : -0.15) : fx;
+        var bz = alongZ ? fz : fz + 0.15;
+        placeProp({
+          url: U_BOOKS, x: bx, y: 1.1, z: bz, ry: fry + 0.2,
+          len: 0.4, fb: [0.3, 0.25, 0x7a2a2a]
+        });
+      })(FURNS[i][0], FURNS[i][1], FURNS[i][2], FURNS[i][3], FURNS[i][4]);
+    }
+
+    /* ------ HN2: photogrammetry pew benches (retires chapel_pew_altar) --
+     * Two painted benches per PEW rect: the FIRST sits EXACTLY on the
+     * route-verified center and pushes the SAME hw/hd (identical collider
+     * rects); the second fills the rect, visual only. The altar ends become
+     * candle nooks (brass pairs + oil lamps below) under the SAME amber
+     * PointLights; altar flicker entries stay light-only (no ConventFlame
+     * material now that the kit unit is gone — guarded by the mat check). */
+    var PEW_FB = [1.8, 1.2, 0x5a4632];
+    var PEWS = [
+      // x, z, ry, hw, hd — entrance-hall east aisle + north-chapel anchor.
+      // Hall pew hugs the x=4 wall; arch passage stays open via x=1.25.
+      [3.0, 6.3, 0, 0.95, 1.45],
+      // Chapel pew: altar end west, back 0.2 embedded in the N wall; the
+      // corridor flood passes on row z=-6.75 (0.2 clearance, BFS-verified).
+      [5.0, -8.25, Math.PI / 2, 1.45, 0.95]
+    ];
+    for (i = 0; i < PEWS.length; i++) {
+      (function (px, pz, pry, phw, phd) {
+        var deepZ = (phw < phd); // hall rect deeper in Z, chapel rect in X
+        // Altar table at the nook end (hall: z-1.1, chapel: x-1.1) pushes
+        // the SAME rect collider; ONE bench at center (visual); the old
+        // +0.7 offset second bench floated — deleted by design.
+        var tx = deepZ ? px : px - 1.1;
+        var tz = deepZ ? pz - 1.1 : pz;
+        // The scan is a LOW table (top ~0.35m) — stretch Y to true
+        // altar height (~0.74m) so it reads as an altar, not a bench.
+        placeProp({
+          url: U_TABLE, x: tx, y: 0, z: tz, ry: pry, len: 1.3,
+          sxyz: [1.1, 2.1, 1.1],
+          hw: phw, hd: phd, fb: PEW_FB,
+          shadow: deepZ ? [1.4, 0.9] : [0.9, 1.4]
+        });
+        placeProp({
+          url: U_BENCH, x: px, y: 0, z: pz, ry: pry, len: 1.8, fb: PEW_FB,
+          shadow: deepZ ? [1.9, 0.7] : [0.7, 1.9]
+        });
+      })(PEWS[i][0], PEWS[i][1], PEWS[i][2], PEWS[i][3], PEWS[i][4]);
+    }
+    // Altar candle glow (HN2: now washes the candle nooks): hall nook at
+    // (3.0, 5.2), chapel nook at (3.9, -8.25). y=1.9 floats just above the
+    // bench candles. Flicker entries stay light-only (mat:null guarded).
+    var altarA = point(3.0, 1.9, 5.2, 0xff9a3c, 0.85, 6);
+    var altarB = point(3.9, 1.9, -8.25, 0xff9a3c, 0.85, 6);
+    flickers.push({ mat: null, light: altarA, base: 0.85, phase: 9.1 });
+    flickers.push({ mat: null, light: altarB, base: 0.85, phase: 21.7 });
+
+    /* ---- HN2: chandeliers, bench candles, oil-lamp glow spots ---------
+     * Chandeliers hang below the beams (hall / north corridor / south
+     * corridor); brass pairs ride the pew benches under the altar glow;
+     * oil lamps sit on the floor as glow spots. Zero colliders here. */
+    /* Goosebump layer 1 — autonomous living props: rocking chair +
+     * swaying chandeliers. Roots collected via onRoot, animated in
+     * update() with slow sines (rot.x rock, rot.z sway). */
+    var rockers = [];
+    var swayers = [];
+    function trackRocker(root) { rockers.push({ root: root, ph: rockers.length * 1.7 }); }
+    function trackSway(root) { swayers.push({ root: root, ph: swayers.length * 2.3 }); }
+    var CHAND_FB = [0.7, 0.6, 0xd8a040];
+    placeProp({ url: U_CHAND, x: -2.2, y: 2.45, z: 7.0, len: 0.8, fb: CHAND_FB, onRoot: trackSway });
+    placeProp({ url: U_CHAND2, x: 5.5, y: 2.45, z: -7.5, len: 0.8, fb: CHAND_FB, onRoot: trackSway });
+    placeProp({ url: U_CHAND, x: 0, y: 2.45, z: 3.5, len: 0.8, fb: CHAND_FB, onRoot: trackSway });
+    var CAND_FB = [0.3, 0.3, 0xc89858];
+    placeProp({ url: U_CANDLE, x: 2.5, y: 0.46, z: 6.3, ry: 0.2, len: 0.35, fb: CAND_FB });
+    placeProp({ url: U_CANDLE, x: 3.5, y: 0.46, z: 6.3, ry: -0.2, len: 0.35, fb: CAND_FB });
+    placeProp({ url: U_CANDLE, x: 5.0, y: 0.46, z: -8.7, ry: 0.1, len: 0.35, fb: CAND_FB });
+    placeProp({ url: U_CANDLE, x: 5.0, y: 0.46, z: -7.8, ry: -0.1, len: 0.35, fb: CAND_FB });
+    // Altar-table candles ride the stretched tabletop (y≈0.70).
+    placeProp({ url: U_CANDLE, x: 2.7, y: 0.70, z: 5.2, ry: 0.3, len: 0.35, fb: CAND_FB });
+    placeProp({ url: U_CANDLE, x: 3.3, y: 0.70, z: 5.2, ry: -0.3, len: 0.35, fb: CAND_FB });
+    placeProp({ url: U_CANDLE, x: 3.9, y: 0.70, z: -8.55, ry: 0.15, len: 0.35, fb: CAND_FB });
+    placeProp({ url: U_CANDLE, x: 3.9, y: 0.70, z: -7.95, ry: -0.15, len: 0.35, fb: CAND_FB });
+    var LAMP_FB = [0.25, 0.3, 0xffc06a];
+    placeProp({ url: U_LAMP, x: 2.5, y: 0, z: 5.2, len: 0.3, fb: LAMP_FB, shadow: [0.35, 0.35] });
+    placeProp({ url: U_LAMP, x: 3.9, y: 0, z: -8.25, len: 0.3, fb: LAMP_FB, shadow: [0.35, 0.35] });
+    placeProp({ url: U_LAMP, x: 9.0, y: 0, z: 8.2, len: 0.3, fb: LAMP_FB, shadow: [0.35, 0.35] });
+
+    /* ---- HN2: clock, wardrobes, drawer, wheelchair, frames ------------
+     * Wall-hugging NEW colliders in dead zones only (BFS-audited: every
+     * previously reachable waypoint stays reachable — see handoff report).
+     * Wardrobe/drawer/chest coords feed the __stvHideSpots /
+     * __stvSearchSpots export at the bottom (game.js contract). */
+    placeProp({ url: U_CLOCK, x: -3.65, y: 0, z: 6.5, ry: Math.PI / 2,
+      len: 1.9, hw: 0.3, hd: 0.3, fb: [0.6, 1.8, 0x4a3320], shadow: [0.7, 0.6] });
+    // HIDE = [x, z, ry, hw, hd]: A-west (faces E), S-corridor (faces S),
+    // E-store south wall (faces N). E-store sits W of the S windows + boxes.
+    var HIDE = [
+      [-8.55, -4.6, Math.PI / 2, 0.32, 0.55],
+      [0, 2.42, 0, 0.55, 0.32],
+      [6.6, 8.55, Math.PI, 0.55, 0.32]
+    ];
+    for (var hc = 0; hc < HIDE.length; hc++) {
+      (function (hx, hz, hry, hhw, hhd) {
+        placeProp({ url: U_WARD, x: hx, y: 0, z: hz, ry: hry, len: 2.0,
+          hw: hhw, hd: hhd, fb: [1.0, 1.9, 0x3a2c1e],
+          shadow: (hhw < hhd) ? [0.7, 1.15] : [1.15, 0.7] });
+      })(HIDE[hc][0], HIDE[hc][1], HIDE[hc][2], HIDE[hc][3], HIDE[hc][4]);
+    }
+    var DRAWER = { x: 8.6, z: 0.5, ry: -Math.PI / 2 }; // B east wall, faces W
+    placeProp({ url: U_DRAWER, x: DRAWER.x, y: 0, z: DRAWER.z, ry: DRAWER.ry,
+      len: 1.0, hw: 0.3, hd: 0.45, fb: [0.8, 0.9, 0x5a4632], shadow: [0.65, 0.95] });
+    placeProp({ url: U_WHEEL, x: -9.3, y: 0, z: 6.0, ry: 0.5,
+      len: 1.1, hw: 0.35, hd: 0.45, fb: [0.7, 0.9, 0x6a6a70], shadow: [0.7, 0.95] });
+    placeProp({ url: U_ROCK, x: 5.4, y: 0, z: 7.8, ry: -0.6,
+      len: 0.9, hw: 0.35, hd: 0.4, fb: [0.65, 0.9, 0x5a4632], shadow: [0.7, 0.9],
+      onRoot: trackRocker });
+    var FRAME_FB = [0.6, 0.6, 0x8a7648];
+    placeProp({ url: U_FRAME, x: -2, y: 1.7, z: 8.92, ry: Math.PI, len: 0.7, fb: FRAME_FB });
+    placeProp({ url: U_FRAME, x: -8.92, y: 1.7, z: -3.2, ry: Math.PI / 2, len: 0.7, fb: FRAME_FB });
+    placeProp({ url: U_FRAME, x: 3, y: 1.7, z: -8.92, ry: 0, len: 0.7, fb: FRAME_FB });
+
+    /* ---------- ash motes: 600 wind-drifted THREE.Points ----------
+     * r128 PointsMaterial, additive at low opacity for a faint ember-dust
+     * hang in the moonbeams. Time-evaluated (no integration drift), wraps
+     * inside the 24x18 hall. BufferGeometry+Points: not a banned primitive. */
+    var ASH_N = 600;
+    var ASH_X = 11.5, ASH_Z = 8.5;
+    var ashBase = new Float32Array(ASH_N * 3);
+    var ashPos = new Float32Array(ASH_N * 3);
+    var ashSeed = new Float32Array(ASH_N * 2);
+    for (i = 0; i < ASH_N; i++) {
+      ashBase[i * 3] = (Math.random() * 2 - 1) * ASH_X;
+      ashBase[i * 3 + 1] = 0.2 + Math.random() * 2.8;
+      ashBase[i * 3 + 2] = (Math.random() * 2 - 1) * ASH_Z;
+      ashSeed[i * 2] = Math.random() * Math.PI * 2;
+      ashSeed[i * 2 + 1] = 0.3 + Math.random() * 0.7;
+    }
+    var ashGeo = new THREE.BufferGeometry();
+    ashGeo.setAttribute("position", new THREE.BufferAttribute(ashPos, 3));
+    // Per-mote tint: ~80% pale ash flakes, ~20% warm embers. Multiplied by
+    // the radial map, so every mote is a soft round disc — zero ■ squares.
+    var ashCol = new Float32Array(ASH_N * 3);
+    for (i = 0; i < ASH_N; i++) {
+      if (Math.random() < 0.2) {
+        ashCol[i * 3] = 1.0; ashCol[i * 3 + 1] = 0.52; ashCol[i * 3 + 2] = 0.2;
+      } else {
+        var g = 0.62 + Math.random() * 0.2;
+        ashCol[i * 3] = g * 0.92; ashCol[i * 3 + 1] = g * 0.96; ashCol[i * 3 + 2] = g;
+      }
+    }
+    ashGeo.setAttribute("color", new THREE.BufferAttribute(ashCol, 3));
+    var ashMat = new THREE.PointsMaterial({
+      color: 0xffffff, size: 0.05, sizeAttenuation: true, map: ashTex,
+      vertexColors: true, transparent: true, opacity: 0.55,
+      alphaTest: 0.01, blending: THREE.AdditiveBlending, depthWrite: false
+    });
+    var ash = new THREE.Points(ashGeo, ashMat);
+    ash.frustumCulled = false;
+    scene.add(ash);
+    /* ---------- live AI Environment Director state ----------
+     * Memory: ai-npc-and-environment-director.md section 2. Armed by
+     * applyAiEnvironment(order) below; every timer ticks inside the
+     * existing update(dt,t). Zero colliders, zero BFS/route impact. */
+    var aiAshTurb = 1.0;      // ash_vortex swirl/drift multiplier, decays to 1
+    var aiAshPeak = 1.0;      // armed vortex peak (linear 8s ramp reference)
+    var aiBlackoutT = 0;      // lantern_blackout seconds remaining
+    var aiBlackoutDim = 0.25; // lantern_blackout dim multiplier
+    var aiOmenT = 0;          // chapel_omen seconds remaining
+    var aiProxF = 0;          // goosebump EM proximity factor 0..1 (game.js fed)
+    var omenCrimson = new THREE.Color(0xff2a1a);
+    var omenAmber = new THREE.Color(0xff9a3c);
+    var chapelSet = [P5, altarA, altarB];
+    var chapelBase = [];
+    for (var cb = 0; cb < chapelSet.length; cb++) {
+      chapelBase.push(chapelSet[cb].color.getHex());
+    }
+    function updateAsh(t) {
+      var turb = (typeof aiAshTurb === "number") ? aiAshTurb : 1.0;
+      for (var a = 0; a < ASH_N; a++) {
+        var ph = ashSeed[a * 2], sp = ashSeed[a * 2 + 1];
+        var ax = ashBase[a * 3] + t * 0.12 * sp * turb + Math.sin(t * 0.4 * sp + ph) * 0.6 * turb;
+        var az = ashBase[a * 3 + 2] + t * 0.05 * sp * turb + Math.cos(t * 0.3 * sp + ph * 1.7) * 0.6 * turb;
+        // Wrap into the hall without branching on sign of t.
+        ax = ((ax + ASH_X) % (ASH_X * 2) + ASH_X * 2) % (ASH_X * 2) - ASH_X;
+        az = ((az + ASH_Z) % (ASH_Z * 2) + ASH_Z * 2) % (ASH_Z * 2) - ASH_Z;
+        ashPos[a * 3] = ax;
+        ashPos[a * 3 + 1] = ashBase[a * 3 + 1] + Math.sin(t * 0.5 * sp + ph) * 0.25 * turb;
+        ashPos[a * 3 + 2] = az;
+      }
+      ashGeo.attributes.position.needsUpdate = true;
+    }
+    updateAsh(0);
+
+    /* ---------- Chapel Key: sync group, model or fallback child ---------- */
+    var KEY_POS = { x: 6.5, y: 0.9, z: -4.5 };
+    var keyMesh = new THREE.Group();
+    keyMesh.position.set(KEY_POS.x, KEY_POS.y, KEY_POS.z);
+    scene.add(keyMesh);
+    loadWithCatch(U_KEY, function (root) {
+      root.rotation.y = 0.6;
+      keyMesh.add(root);
+    }, function () {
+      keyMesh.add(makeImpostor(0.3, 0.42, 0xffd75e));
+    }, 0.35);
+
+    /* ---------- lightning scheduler ---------- */
+    var strikeIn = 3.0 + Math.random() * 4.0;
+    var strikeT = -1;
+    function strikeEnvelope(s) {
+      if (s < 0.06) { return 3.0; }
+      if (s < 0.14) { return 0.5; }
+      if (s < 0.24) { return 2.2; }
+      if (s < 0.55) { return 2.2 * (1 - (s - 0.24) / 0.31); }
+      return 0;
+    }
+    function callThunder() {
+      try {
+        var A = window.StV_Audio;
+        if (A && typeof A.thunder === "function") {
+          var delay = 300 + Math.random() * 900;
+          setTimeout(function () {
+            try { A.thunder(); } catch (e2) { /* audio not ready */ }
+          }, delay);
+        }
+      } catch (e3) { /* audio file loads later */ }
+    }
+
+    /* ---------- per-frame update: flicker, lightning, key, ash ---------- */
+    function update(dt, t) {
+      var k;
+      // Late-bind the shared ConventFlame material to the altar flicker
+      // entries once the first pew .glb arrives (clones share materials).
+      if (flameMats.length > 0) {
+        for (k = 0; k < flickers.length; k++) {
+          if (flickers[k].mat === null) { flickers[k].mat = flameMats[0]; }
+        }
+      }
+      for (k = 0; k < flickers.length; k++) {
+        var fl = flickers[k];
+        var n = Math.sin(t * 13.0 + fl.phase) * 0.5 +
+          Math.sin(t * 29.0 + fl.phase * 1.7) * 0.3 +
+          Math.sin(t * 47.0 + fl.phase * 0.6) * 0.2;
+        if (fl.mat) {
+          if (fl.sprite) {
+            // Sprite flame: vertical stretch + counter-squeeze + halo
+            // breathe. Same noise n drives the light below, so core, halo,
+            // and lantern light stay in sync like one flame.
+            fl.sprite.scale.set(FLAME_W * (1 - n * 0.08), FLAME_H * (1 + n * 0.18), 1);
+            if (fl.halo) { fl.halo.material.opacity = HALO_A * (1 + n * 0.22); }
+          } else {
+            var base = (fl.mat.userData && typeof fl.mat.userData.baseEmissive === "number") ?
+              fl.mat.userData.baseEmissive : 1.5;
+            // Lantern flames pulse around 1.5; altar flames around their own
+            // glTF base (1.0) so the emissive amber never blows out.
+            var span = (base > 1.2) ? 0.45 : 0.25;
+            fl.mat.emissiveIntensity = base + n * span;
           }
         }
-        for (var mi2 = 0; mi2 < midGroup.children.length; mi2++) {
-          var mch = midGroup.children[mi2];
-          if (mch && mch.position) {
-            mch.visible = Math.abs(mch.position.x - camX) < 48;
-          }
+        // AI Director lantern_blackout: scale the stored base by the armed
+        // dim factor plus a fast guttering flicker; bases stay untouched so
+        // restore is automatic when aiBlackoutT hits zero.
+        var dim = 1.0;
+        if (aiBlackoutT > 0) {
+          var bf = Math.sin(t * 31.0 + fl.phase * 2.0) * Math.sin(t * 17.0 + fl.phase);
+          dim = aiBlackoutDim * (0.75 + 0.25 * bf);
+          if (dim < 0.02) { dim = 0.02; }
         }
-        updateCrumbles(cdt);
-        updateMovers(t);
-        updateVines(cdt, t, p.x || 0, p.y || 0);
-        // Shader clocks + reactive uniforms.
-        tuftUniforms.uTime.value = t;
-        tuftUniforms.uPlayerPos.value.set(p.x || 0, p.y || 0, 0);
-        waterUniforms.uTime.value = t;
-        // Gears rotate; bell swings (boosted when rung).
-        for (var g = 0; g < gears.length; g++) gears[g].obj.rotation.z += gears[g].v * cdt;
-        bellState.boost = Math.max(0, bellState.boost - cdt * 0.5);
-        var amp = bellState.amp + bellState.boost * 0.5;
-        bellPivot.rotation.z = Math.sin(t * 1.6) * amp;
-        bellLight.intensity = 0.9 + Math.sin(t * 7.3) * 0.08 + bellState.boost * 0.8;
-        // Lantern bob + flicker.
-        for (var l = 0; l < lanterns.length; l++) {
-          var ln = lanterns[l];
-          if (ln.isLight) {
-            ln.light.intensity = 1.1 + Math.sin(t * 9 + ln.phase) * 0.18
-              + Math.sin(t * 23 + ln.phase * 2) * 0.08;
-          } else if (ln.holder) {
-            ln.holder.position.y = ln.baseY + Math.sin(t * 1.2 + ln.phase) * 0.22;
-            if (ln.halo) {
-              var tw = 0.5 + Math.sin(t * 8 + ln.phase * 3) * 0.1;
-              ln.halo.material.opacity = tw;
+        // Goosebump layer 2 — proximity EM flicker: game.js feeds
+        // aiProxF (0..1) from Agatha's distance; lanterns shudder at
+        // 43 rad/s as she closes in, before you ever see her.
+        var emf = 1 + Math.sin(t * 43.0 + fl.phase) * 0.35 * aiProxF;
+        fl.light.intensity = fl.base * dim * (1 + n * 0.18) * emf;
+      }
+      // Goosebump layer 1 drivers (cheap: 1 rocker + 3 chandeliers).
+      var lr;
+      for (lr = 0; lr < rockers.length; lr++) {
+        try {
+          rockers[lr].root.rotation.x = Math.sin(t * 1.4 + rockers[lr].ph) * 0.06;
+        } catch (eRock) { /* x */ }
+      }
+      for (lr = 0; lr < swayers.length; lr++) {
+        try {
+          swayers[lr].root.rotation.z = Math.sin(t * 0.9 + swayers[lr].ph) * 0.025;
+        } catch (eSway) { /* x */ }
+      }
+      var env = 0;
+      if (strikeT < 0) {
+        strikeIn -= dt;
+        if (strikeIn <= 0) {
+          strikeT = 0;
+          callThunder();
+        }
+      } else {
+        strikeT += dt;
+        env = strikeEnvelope(strikeT);
+        if (strikeT > 0.6) {
+          strikeT = -1;
+          strikeIn = 4 + Math.random() * 7;
+          env = 0;
+        }
+      }
+      bolt.intensity = env;
+      var glow = env / 3;
+      if (glow < 0) { glow = 0; } else if (glow > 1) { glow = 1; }
+      // Lightning path: volumetric MoonShafts flare hard, moon-glass lifts
+      // mildly. Same 0..1 glow still feeds scene.userData.stvFlash for VFX.
+      for (k = 0; k < moonMats.length; k++) {
+        var mm = moonMats[k];
+        mm.emissiveIntensity = mm.userData.baseEmissive + glow * 3.0;
+      }
+      for (k = 0; k < glassMats.length; k++) {
+        var gm = glassMats[k];
+        gm.emissiveIntensity = gm.userData.baseEmissive + glow * 1.5;
+      }
+      scene.userData.stvFlash = glow;
+      // AI Director timers: blackout countdown, ash turbulence decay back
+      // to 1.0 (~8s exponential), chapel omen crimson-amber pulse + restore.
+      try {
+        if (aiBlackoutT > 0) {
+          aiBlackoutT -= dt;
+          if (aiBlackoutT <= 0) { aiBlackoutT = 0; }
+        }
+        if (aiAshTurb > 1.0) {
+          var span = aiAshPeak - 1.0;
+          if (!(span > 0)) { span = 1.5; }
+          aiAshTurb -= dt * span / 8;
+          if (aiAshTurb <= 1.0) { aiAshTurb = 1.0; }
+        }
+        if (aiOmenT > 0) {
+          aiOmenT -= dt;
+          var om = 0.5 + 0.5 * Math.sin(t * 2.4);
+          for (var oc = 0; oc < chapelSet.length; oc++) {
+            chapelSet[oc].color.copy(omenCrimson).lerp(omenAmber, om);
+          }
+          if (aiOmenT <= 0) {
+            aiOmenT = 0;
+            for (var oj = 0; oj < chapelSet.length; oj++) {
+              chapelSet[oj].color.setHex(chapelBase[oj]);
             }
           }
         }
-        // Checkpoint shimmer + god-ray breathing.
-        for (var c2 = 0; c2 < checkSprites.length; c2++) {
-          checkSprites[c2].material.opacity = 0.65 + Math.sin(t * 2.4 + c2 * 1.7) * 0.2;
+      } catch (eAiTick) { /* cosmetic timers never break the frame */ }
+      keyMesh.rotation.y += dt * 1.4;
+      keyMesh.position.y = KEY_POS.y + Math.sin(t * 2.2) * 0.06;
+      updateAsh(t);
+    }
+
+    /* ---------- live AI Environment Director entry point ----------
+     * order = { envEvent, fogDensity, lightDim, ashTurbulence } from
+     * POST /api/studio/ai/director (see ai-npc-and-environment-director
+     * memory section 2). Fog density is ALWAYS applied (clamped); the
+     * envEvent arms a time-driven effect consumed by update(dt,t). */
+    function applyAiEnvironment(order) {
+      try {
+        if (!order) { return; }
+        if (typeof order.fogDensity === "number") {
+          var fd = order.fogDensity;
+          if (fd < 0.038) { fd = 0.038; }
+          else if (fd > 0.065) { fd = 0.065; }
+          if (scene.fog) { scene.fog.density = fd; }
         }
-        shaftMat.opacity = 0.42 + Math.sin(t * 0.7) * 0.08;
-        foamMat.opacity = 0.3 + Math.sin(t * 1.8) * 0.08;
-        // Firefly drift (seeded wander, no per-frame allocation).
-        var arr = flyGeo.getAttribute('position').array;
-        for (var f = 0; f < FLIES; f++) {
-          var sx0 = flySeed[f * 4], sy0 = flySeed[f * 4 + 1];
-          var sp = flySeed[f * 4 + 2], ph2 = flySeed[f * 4 + 3];
-          arr[f * 3] = sx0 + Math.sin(t * sp * 0.5 + ph2) * 1.6
-            + Math.sin(t * sp * 1.7 + ph2 * 2) * 0.4;
-          arr[f * 3 + 1] = sy0 + Math.sin(t * sp * 0.7 + ph2 * 1.3) * 0.9;
+        var ev = order.envEvent;
+        if (ev === "lantern_blackout") {
+          var ld = (typeof order.lightDim === "number") ? order.lightDim : 0.25;
+          if (ld < 0.05) { ld = 0.05; } else if (ld > 1) { ld = 1; }
+          aiBlackoutDim = ld;
+          aiBlackoutT = 5;
+        } else if (ev === "storm_surge") {
+          strikeT = 0;
+          try { callThunder(); } catch (eTh) { /* audio not ready */ }
+          try {
+            if (scene.fog) {
+              var sd = scene.fog.density + 0.008;
+              if (sd > 0.065) { sd = 0.065; }
+              scene.fog.density = sd;
+            }
+          } catch (eFg) { /* fog shift is cosmetic */ }
+        } else if (ev === "ash_vortex") {
+          var tb = (typeof order.ashTurbulence === "number") ? order.ashTurbulence : 2.5;
+          if (tb < 1) { tb = 1; } else if (tb > 4) { tb = 4; }
+          aiAshTurb = tb;
+          aiAshPeak = tb;
+        } else if (ev === "chapel_omen") {
+          aiOmenT = 6;
         }
-        flyGeo.getAttribute('position').needsUpdate = true;
-        // Backdrop follows camera X (true parallax comes from depth).
-        skyPlane.position.x = rig.focus.x * 0.92 + 70 * 0.08;
-        stripNear.position.x = 70 + (rig.focus.x - 70) * 0.35;
-        stripFar.position.x = 70 + (rig.focus.x - 70) * 0.15;
-        // Shadow frustum snaps to the player.
-        if (shadowLight) {
-          shadowLight.position.set((p.x || 0) + 30, 45, 28);
-          shadowLight.target.position.set(p.x || 0, 5, 0);
-          shadowLight.target.updateMatrixWorld();
-        }
-        return world;
-      }
-    };
-
-    return world;
-  };
-
-  /* Pre-warm helper so game.js can build with one call. */
-  Levels.init = function (container, rendererOpts) {
-    var el = (typeof container === 'string')
-      ? document.querySelector(container)
-      : (container || document.getElementById('canvas-container') || document.body);
-    var w = el.clientWidth || window.innerWidth;
-    var h = el.clientHeight || window.innerHeight;
-    var renderer = new THREE.WebGLRenderer(
-      Object.assign({ antialias: true, powerPreference: 'high-performance' }, rendererOpts || {})
-    );
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
-    renderer.setSize(w, h);
-    el.appendChild(renderer.domElement);
-    var scene = new THREE.Scene();
-    scene.fog = new THREE.FogExp2(0x0a2022, 0.0045);
-    var cam = Levels.createCamera(w / h);
-    var world = Levels.buildWorld(scene, cam, renderer);
-    return { renderer: renderer, scene: scene, camera: cam, world: world, el: el };
-  };
-
-  /* ============ Subagent D integration: platformer level contract =======
-   * Publishes window.StV_PlatformLevel {solids, soulLanterns, orbs,
-   * hazards, spawn, bounds} from the zone tables above so StV_Platformer
-   * collides with THIS world (never its fallback course). Orb shard
-   * visuals (additive radial sprites — QA-safe, zero square particles)
-   * are built by buildOrbLayer(scene) at boot; game.js hides them via
-   * collectOrbAt() as the wisp collects. Hazard points sit ~1.2m BELOW
-   * the neighbouring deck tops so edge-runs never false-trigger. */
-  Levels.ORBS = [
-    { x: -8, y: 1.6 }, { x: 11, y: 3.8 }, { x: 18, y: 3.4 },
-    { x: 28, y: 7.2 }, { x: 37, y: 7.8 }, { x: 41, y: 9.8 },
-    { x: 52, y: 6.2 }, { x: 63, y: 4.6 }, { x: 71, y: 6.6 },
-    { x: 87, y: 8.6 }, { x: 99, y: 10.2 }, { x: 121, y: 7.2 },
-    { x: 131, y: 14.2 }, { x: 141, y: 21.2 }, { x: 148, y: 28.2 },
-    { x: 153, y: 31.5 }
-  ];
-
-  Levels.LANTERN_SPOTS = [
-    { x: 116, y: 8 }, { x: 124, y: 13 }, { x: 132, y: 18 },
-    { x: 140, y: 23 }, { x: 147, y: 28 }
-  ];
-
-  Levels.toPlatformLevel = function () {
-    var i, s;
-    if (Levels._liveSolids && Levels._liveSolids.length > 0) {
-      s = Levels._liveSolids;
-    } else {
-      s = [];
-      for (i = 0; i < Levels.GROUND_RUNS.length; i++) {
-        var g = Levels.GROUND_RUNS[i];
-        s.push({ x0: g.x0, y0: g.top - 6, x1: g.x1, y1: g.top,
-          type: 'solid', active: true });
-      }
-      for (i = 0; i < Levels.PLATFORMS.length; i++) {
-        var p = Levels.PLATFORMS[i];
-        s.push({ x0: p.x - p.w / 2, y0: p.top - 1.1,
-          x1: p.x + p.w / 2, y1: p.top,
-          type: p.type || 'solid', active: true });
-      }
+      } catch (eAi) { /* director orders never break the world */ }
     }
-    var soulLanterns = [];
-    for (i = 0; i < Levels.LANTERN_SPOTS.length; i++) {
-      soulLanterns.push({ x: Levels.LANTERN_SPOTS[i].x, y: Levels.LANTERN_SPOTS[i].y });
-    }
-    var orbs = [];
-    for (i = 0; i < Levels.ORBS.length; i++) {
-      orbs.push({ x: Levels.ORBS[i].x, y: Levels.ORBS[i].y });
-    }
-    /* Water spans sampled every ~0.9m, sunk below deck tops. */
-    var spans = [
-      { x0: 8, x1: 14, y: -1.0 },
-      { x0: 60, x1: 80, y: 1.0 },
-      { x0: 118, x1: 150, y: 1.0 }
-    ];
-    var hazards = [];
-    for (i = 0; i < spans.length; i++) {
-      var sp = spans[i];
-      for (var hx = sp.x0 + 0.4; hx < sp.x1; hx += 0.9) {
-        hazards.push({ x: hx, y: sp.y, r: 0.55 });
-      }
-    }
-    return {
-      solids: s,
-      soulLanterns: soulLanterns,
-      orbs: orbs,
-      hazards: hazards,
-      spawn: { x: -14, y: 1.2 },
-      bounds: { x0: -20, y0: -8, x1: 160, y1: 45 }
-    };
-  };
 
-  try {
-    if (!window.StV_PlatformLevel) window.StV_PlatformLevel = Levels.toPlatformLevel();
-  } catch (e) { /* game.js falls back to the built-in course */ }
-
-  Levels._orbSprites = null;
-
-  Levels.buildOrbLayer = function (scene) {
-    if (Levels._orbSprites) return Levels._orbSprites;
-    var tex = null;
+    /* ---------- HN2 hide/search spot export (game.js contract) ----------
+     * hideSpots=[{x,z,ry,name}] (enterHide numbers), searchSpots=[{x,z,name}]
+     * + searched flag. Coords match the wardrobes/drawer/chests above. */
+    /* ---------- Quarantine Sector 7: Explosive Barrels, Supply Crates & Triage Scans ---------- */
     try {
-      tex = Levels.makeGlowSprite('rgba(235,245,255,1)', 'rgba(150,170,255,0.35)');
-    } catch (e) { tex = null; }
-    var list = [];
-    for (var i = 0; i < Levels.ORBS.length; i++) {
-      var spr = new THREE.Sprite(new THREE.SpriteMaterial({
-        map: tex, color: 0xbfd4ff, transparent: true, opacity: 0.95,
-        blending: THREE.AdditiveBlending, depthWrite: false
-      }));
-      spr.scale.set(1.15, 1.15, 1);
-      spr.position.set(Levels.ORBS[i].x, Levels.ORBS[i].y, 0.5);
-      scene.add(spr);
-      list.push({ spr: spr, taken: false });
-    }
-    Levels._orbSprites = list;
-    return list;
-  };
+      if (window.THREE && window.THREE.RGBELoader) {
+        new window.THREE.RGBELoader().load(
+          "/studio/assets/polyhaven/kloppenheim_06_puresky/kloppenheim_06_puresky_1k.hdr",
+          function (hdrTex) {
+            if (!hdrTex) return;
+            hdrTex.mapping = THREE.EquirectangularReflectionMapping;
+            scene.environment = hdrTex;
+          }
+        );
+      }
+    } catch (eHdr) {}
 
-  /* Hide the nearest visible shard to a collection point. */
-  Levels.collectOrbAt = function (x, y) {
-    var list = Levels._orbSprites;
-    if (!list) return false;
-    var best = -1, bd = 1.44;
-    for (var i = 0; i < list.length; i++) {
-      if (list[i].taken) continue;
-      var dx = list[i].spr.position.x - x;
-      var dy = list[i].spr.position.y - y;
-      var d2 = dx * dx + dy * dy;
-      if (d2 < bd) { bd = d2; best = i; }
-    }
-    if (best < 0) return false;
-    list[best].taken = true;
-    list[best].spr.visible = false;
-    return true;
-  };
+    var qBarrels = [];
+    var qSupplies = [];
+    try {
+      var BARREL_SPOTS = [
+        [0.0, 5.2],
+        [-4.2, -1.2],
+        [4.2, -1.2],
+        [-7.2, -4.4],
+        [7.2, -4.4],
+        [0.0, -5.8]
+      ];
+      var ringGeo = new THREE.TorusGeometry(0.42, 0.035, 8, 24);
+      var ringMat = new THREE.MeshStandardMaterial({
+        color: 0xff2a2a,
+        emissive: 0xff1e1e,
+        emissiveIntensity: 2.4,
+        roughness: 0.25
+      });
+      for (var bi = 0; bi < BARREL_SPOTS.length; bi++) {
+        (function (bx, bz, idx) {
+          var bGrp = new THREE.Group();
+          bGrp.position.set(bx, 0, bz);
+          scene.add(bGrp);
+          var rMesh = new THREE.Mesh(ringGeo, ringMat);
+          rMesh.rotation.x = Math.PI / 2;
+          rMesh.position.y = 0.06;
+          bGrp.add(rMesh);
+          var bRec = {
+            id: idx,
+            x: bx,
+            z: bz,
+            group: bGrp,
+            ring: rMesh,
+            alive: true,
+            respawnT: 0
+          };
+          qBarrels.push(bRec);
+          loadProp(U_BARREL01, 0.88, function (root) {
+            if (!root) return;
+            root.traverse(function (n) {
+              if (n && n.isMesh && n.material) {
+                n.material = n.material.clone();
+                if (n.material.color) n.material.color.setHex(0xc82828);
+                if (n.material.emissive) {
+                  n.material.emissive.setHex(0x660808);
+                  n.material.emissiveIntensity = 0.55;
+                }
+              }
+            });
+            bGrp.add(root);
+          });
+        })(BARREL_SPOTS[bi][0], BARREL_SPOTS[bi][1], bi);
+      }
 
-  Levels.resetOrbs = function () {
-    var list = Levels._orbSprites;
-    if (!list) return;
-    for (var i = 0; i < list.length; i++) {
-      list[i].taken = false;
-      list[i].spr.visible = true;
-    }
-  };
+      var SUPPLY_SPOTS = [
+        [-2.4, 6.4, "ammo", "AMMO CRATE (+60 ROUNDS)"],
+        [2.4, 6.4, "medkit", "TRIAGE MEDKIT (+45 HP)"],
+        [-6.2, -2.2, "ammo", "ARMORY SUPPLY (+60 ROUNDS)"],
+        [6.2, -2.2, "medkit", "FIELD MED-STATION (+45 HP)"]
+      ];
+      for (var si = 0; si < SUPPLY_SPOTS.length; si++) {
+        (function (sx, sz, stype, slabel) {
+          var sGrp = new THREE.Group();
+          sGrp.position.set(sx, 0, sz);
+          scene.add(sGrp);
+          var col = stype === "ammo" ? 0x22d3ee : 0x34d399;
+          var sRing = new THREE.Mesh(
+            new THREE.TorusGeometry(0.48, 0.03, 8, 24),
+            new THREE.MeshStandardMaterial({
+              color: col,
+              emissive: col,
+              emissiveIntensity: 2.2,
+              roughness: 0.2
+            })
+          );
+          sRing.rotation.x = Math.PI / 2;
+          sRing.position.y = 0.05;
+          sGrp.add(sRing);
+          qSupplies.push({
+            x: sx,
+            z: sz,
+            type: stype,
+            name: slabel,
+            group: sGrp,
+            ring: sRing,
+            cd: 0
+          });
+        })(SUPPLY_SPOTS[si][0], SUPPLY_SPOTS[si][1], SUPPLY_SPOTS[si][2], SUPPLY_SPOTS[si][3]);
+      }
 
+      // Load abandoned quarantine wheelchairs & concrete barriers
+      loadProp("/studio/assets/polyhaven/wheelchair_01/wheelchair_01_1k.glb", 0.95, function (wc) {
+        if (!wc) return;
+        wc.position.set(-2.1, 0, 4.6);
+        wc.rotation.y = 0.7;
+        scene.add(wc);
+      });
+      loadProp("/studio/assets/polyhaven/concrete_road_barrier_02/concrete_road_barrier_02_1k.glb", 1.6, function (cb) {
+        if (!cb) return;
+        cb.position.set(-2.2, 0, 7.6);
+        cb.rotation.y = 0.25;
+        scene.add(cb);
+      });
+      window.__stvBarrels = qBarrels;
+      window.__stvSupplyCrates = qSupplies;
+    } catch (eQuar) {}
+
+    try {
+      window.__stvHideSpots = [
+        { x: HIDE[0][0], z: HIDE[0][1], ry: HIDE[0][2], name: "Classroom A wardrobe" },
+        { x: HIDE[1][0], z: HIDE[1][1], ry: HIDE[1][2], name: "South corridor wardrobe" },
+        { x: HIDE[2][0], z: HIDE[2][1], ry: HIDE[2][2], name: "East store wardrobe" }
+      ];
+      window.__stvSearchSpots = [
+        { x: DRAWER.x, z: DRAWER.z, name: "Classroom B drawer cabinet", searched: false },
+        { x: CHESTS[0][0], z: CHESTS[0][1], name: "West nook chest", searched: false },
+        { x: CHESTS[1][0], z: CHESTS[1][1], name: "South-west store chest", searched: false }
+      ];
+    } catch (eSpots) { /* guarded: game plays identically without spots */ }
+
+    return {
+      colliders: colliders,
+      spawn: { x: 0, z: 8.5, ry: 0 },
+      bounds: { x0: -12, z0: -9, x1: 12, z1: 9 },
+      update: update,
+      applyAiEnvironment: applyAiEnvironment,
+      setThreatFactor: function (f) {
+        aiProxF = Math.max(0, Math.min(1, +f || 0));
+      },
+      keyMesh: keyMesh,
+      chapelDoor: chapelDoor
+    };
+  }
+
+  window.StV_Levels = { buildWorld: buildWorld, VERSION: VERSION };
 })();

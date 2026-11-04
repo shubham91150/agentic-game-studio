@@ -1316,6 +1316,127 @@
     /* ---------- HN2 hide/search spot export (game.js contract) ----------
      * hideSpots=[{x,z,ry,name}] (enterHide numbers), searchSpots=[{x,z,name}]
      * + searched flag. Coords match the wardrobes/drawer/chests above. */
+    /* ---------- Quarantine Sector 7: Explosive Barrels, Supply Crates & Triage Scans ---------- */
+    try {
+      if (window.THREE && window.THREE.RGBELoader) {
+        new window.THREE.RGBELoader().load(
+          "/studio/assets/polyhaven/kloppenheim_06_puresky/kloppenheim_06_puresky_1k.hdr",
+          function (hdrTex) {
+            if (!hdrTex) return;
+            hdrTex.mapping = THREE.EquirectangularReflectionMapping;
+            scene.environment = hdrTex;
+          }
+        );
+      }
+    } catch (eHdr) {}
+
+    var qBarrels = [];
+    var qSupplies = [];
+    try {
+      var BARREL_SPOTS = [
+        [0.0, 5.2],
+        [-4.2, -1.2],
+        [4.2, -1.2],
+        [-7.2, -4.4],
+        [7.2, -4.4],
+        [0.0, -5.8]
+      ];
+      var ringGeo = new THREE.TorusGeometry(0.42, 0.035, 8, 24);
+      var ringMat = new THREE.MeshStandardMaterial({
+        color: 0xff2a2a,
+        emissive: 0xff1e1e,
+        emissiveIntensity: 2.4,
+        roughness: 0.25
+      });
+      for (var bi = 0; bi < BARREL_SPOTS.length; bi++) {
+        (function (bx, bz, idx) {
+          var bGrp = new THREE.Group();
+          bGrp.position.set(bx, 0, bz);
+          scene.add(bGrp);
+          var rMesh = new THREE.Mesh(ringGeo, ringMat);
+          rMesh.rotation.x = Math.PI / 2;
+          rMesh.position.y = 0.06;
+          bGrp.add(rMesh);
+          var bRec = {
+            id: idx,
+            x: bx,
+            z: bz,
+            group: bGrp,
+            ring: rMesh,
+            alive: true,
+            respawnT: 0
+          };
+          qBarrels.push(bRec);
+          loadProp(U_BARREL01, 0.88, function (root) {
+            if (!root) return;
+            root.traverse(function (n) {
+              if (n && n.isMesh && n.material) {
+                n.material = n.material.clone();
+                if (n.material.color) n.material.color.setHex(0xc82828);
+                if (n.material.emissive) {
+                  n.material.emissive.setHex(0x660808);
+                  n.material.emissiveIntensity = 0.55;
+                }
+              }
+            });
+            bGrp.add(root);
+          });
+        })(BARREL_SPOTS[bi][0], BARREL_SPOTS[bi][1], bi);
+      }
+
+      var SUPPLY_SPOTS = [
+        [-2.4, 6.4, "ammo", "AMMO CRATE (+60 ROUNDS)"],
+        [2.4, 6.4, "medkit", "TRIAGE MEDKIT (+45 HP)"],
+        [-6.2, -2.2, "ammo", "ARMORY SUPPLY (+60 ROUNDS)"],
+        [6.2, -2.2, "medkit", "FIELD MED-STATION (+45 HP)"]
+      ];
+      for (var si = 0; si < SUPPLY_SPOTS.length; si++) {
+        (function (sx, sz, stype, slabel) {
+          var sGrp = new THREE.Group();
+          sGrp.position.set(sx, 0, sz);
+          scene.add(sGrp);
+          var col = stype === "ammo" ? 0x22d3ee : 0x34d399;
+          var sRing = new THREE.Mesh(
+            new THREE.TorusGeometry(0.48, 0.03, 8, 24),
+            new THREE.MeshStandardMaterial({
+              color: col,
+              emissive: col,
+              emissiveIntensity: 2.2,
+              roughness: 0.2
+            })
+          );
+          sRing.rotation.x = Math.PI / 2;
+          sRing.position.y = 0.05;
+          sGrp.add(sRing);
+          qSupplies.push({
+            x: sx,
+            z: sz,
+            type: stype,
+            name: slabel,
+            group: sGrp,
+            ring: sRing,
+            cd: 0
+          });
+        })(SUPPLY_SPOTS[si][0], SUPPLY_SPOTS[si][1], SUPPLY_SPOTS[si][2], SUPPLY_SPOTS[si][3]);
+      }
+
+      // Load abandoned quarantine wheelchairs & concrete barriers
+      loadProp("/studio/assets/polyhaven/wheelchair_01/wheelchair_01_1k.glb", 0.95, function (wc) {
+        if (!wc) return;
+        wc.position.set(-2.1, 0, 4.6);
+        wc.rotation.y = 0.7;
+        scene.add(wc);
+      });
+      loadProp("/studio/assets/polyhaven/concrete_road_barrier_02/concrete_road_barrier_02_1k.glb", 1.6, function (cb) {
+        if (!cb) return;
+        cb.position.set(-2.2, 0, 7.6);
+        cb.rotation.y = 0.25;
+        scene.add(cb);
+      });
+      window.__stvBarrels = qBarrels;
+      window.__stvSupplyCrates = qSupplies;
+    } catch (eQuar) {}
+
     try {
       window.__stvHideSpots = [
         { x: HIDE[0][0], z: HIDE[0][1], ry: HIDE[0][2], name: "Classroom A wardrobe" },
