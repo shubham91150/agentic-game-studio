@@ -1381,6 +1381,23 @@ const server = http.createServer(async (req, res) => {
     return sendFile(res, target);
   }
 
+  const mcpIconMatch = pathname.match(
+    /^\/studio\/icons\/mcp\/([\w.\-]+\.(?:svg|ico|png))$/,
+  );
+  if (mcpIconMatch) {
+    const target = path.resolve(
+      PUBLIC_DIR,
+      "icons",
+      "mcp",
+      mcpIconMatch[1],
+    );
+    if (!target.startsWith(path.resolve(PUBLIC_DIR, "icons", "mcp"))) {
+      res.writeHead(403, { "content-type": "text/plain" });
+      return res.end("Forbidden");
+    }
+    return sendFile(res, target);
+  }
+
   // ---------- PWA offline (manifest, icon, service worker — no build step) ----------
   const pwaMatch = pathname.match(
     /^\/studio\/(sw\.js|manifest\.webmanifest|icon\.svg)$/,
