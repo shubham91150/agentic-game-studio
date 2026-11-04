@@ -16,6 +16,8 @@
 <a href="https://spurcode.duckdns.org/studio/hackathon.html">▶ Judges Brief</a>
 <br/><br/>
 <a href="https://spurcode.duckdns.org/studio/live-preview/index.html">▶ Play Ashes of St. Vermilion</a>
+<br/><br/>
+<a href="https://spurcode.duckdns.org/studio/assets/demo_walkthrough.mp4">▶ Demo video (2:54)</a>
 </td>
 </tr>
 </table>
