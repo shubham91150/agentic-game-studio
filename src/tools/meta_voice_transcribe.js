@@ -243,13 +243,14 @@ export class MetaVoiceTranscribeClient {
     try {
       const apiRes = await this.transcribeViaApi(resolved);
       if (apiRes.transcript) return apiRes;
-      // If clip had no spoken words (e.g. instrumental/SFX stem), return structured result with fallback note
+      // If clip had no spoken words (e.g. instrumental/SFX stem), return empty
+      // transcript so the UI shows "No speech detected" instead of inserting
+      // placeholder text into the prompt box.
       return {
         ...apiRes,
-        transcript:
-          apiRes.transcript ||
-          "[non-speech audio stem verified via muse-voice-transcribe-1.0]",
+        transcript: "",
         note: "Audio processed by Meta /v1/asr/transcribe (no spoken words detected in stem).",
+        noSpeech: true,
       };
     } catch (apiErr) {
       try {

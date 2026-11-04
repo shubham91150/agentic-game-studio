@@ -2135,7 +2135,7 @@ div.plus-flyout::-webkit-scrollbar-thumb {
   font-size: var(--fs-12);
   font-weight: 600;
   letter-spacing: 0.01em;
-  color: var(--accent);
+  color: #ffffff;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -2257,7 +2257,7 @@ div.plus-flyout::-webkit-scrollbar-thumb {
 }
 
 .git-result a {
-  color: var(--accent);
+  color: #ffffff;
 }
 
 .git-section-title {
@@ -2283,7 +2283,7 @@ div.plus-flyout::-webkit-scrollbar-thumb {
   min-width: 0;
   border: 1px solid var(--line);
   border-radius: var(--r-md);
-  background: var(--surface-2);
+  background: #121212;
   padding: 8px 10px;
 }
 
@@ -2292,7 +2292,7 @@ div.plus-flyout::-webkit-scrollbar-thumb {
   font-family: var(--font-mono);
   font-size: 11px;
   font-weight: 600;
-  color: var(--accent);
+  color: #ffffff;
   text-decoration: none;
 }
 
@@ -3109,7 +3109,6 @@ div.plus-flyout::-webkit-scrollbar-thumb {
   }
 }
 
-
 /* ==========================================================================
    Explicit User Theme Lock:
    - App BG: #000000
@@ -3296,7 +3295,9 @@ body:has(.preview-box.landscape-fullscreen) .dock {
   font-weight: 500;
   cursor: pointer;
   text-align: left;
-  transition: background 0.12s ease, color 0.12s ease;
+  transition:
+    background 0.12s ease,
+    color 0.12s ease;
 }
 .v0-nav-item svg {
   color: #a1a1aa;

@@ -155,8 +155,7 @@
       frameEl.classList.remove("hidden");
       currentPreviewUrl = url;
       previewReadOnly =
-        Boolean(readOnly) ||
-        String(url || "").indexOf("/studio/games/") === 0;
+        Boolean(readOnly) || String(url || "").indexOf("/studio/games/") === 0;
       frameEl.src = url + "?t=" + Date.now();
     }
     closeLibrary();
@@ -395,7 +394,7 @@
   function openLibrary() {
     pausePreviewGame();
     closeGit();
-    if (typeof closeSidebar === 'function') closeSidebar();
+    if (typeof closeSidebar === "function") closeSidebar();
     if (libraryDrawer) {
       libraryDrawer.classList.add("open");
       libraryDrawer.setAttribute("aria-hidden", "false");
@@ -681,11 +680,7 @@
         })
         .then(function (result) {
           if (result.status === 401) {
-            setGitResult(
-              gitSyncResult,
-              "Owner sign-in required",
-              "is-error",
-            );
+            setGitResult(gitSyncResult, "Owner sign-in required", "is-error");
             return;
           }
           if (!result.ok) {
@@ -739,11 +734,7 @@
         })
         .then(function (result) {
           if (result.status === 401) {
-            setGitResult(
-              gitExportResult,
-              "Owner sign-in required",
-              "is-error",
-            );
+            setGitResult(gitExportResult, "Owner sign-in required", "is-error");
             return;
           }
           if (!result.ok) {
@@ -1019,14 +1010,46 @@
   var activeWindowId = null;
 
   var SIDEBAR_SKILLS = [
-    { id: "game-pipeline", name: "game-pipeline", desc: "6-Stage BUILD_TODO.md 3D Game Engineering Pipeline" },
-    { id: "game-system-design", name: "game-system-design", desc: "ECS, HFSM, Marco Monster Car Physics & Quake/Celeste Feel" },
-    { id: "threejs-scene-setup", name: "threejs-scene-setup", desc: "ACESFilmic, UnrealBloomPass, PMREM IBL & 3D Grass" },
-    { id: "threejs-gltf-loading", name: "threejs-gltf-loading", desc: "Normalized GLB Loader, 20-Bone Armature & AnimationMixer" },
-    { id: "threejs-materials-lighting", name: "threejs-materials-lighting", desc: "AmbientCG 1K Normal-Mapped PBR & Volumetric Lighting" },
-    { id: "game-feel", name: "game-feel", desc: "Camera Trauma Shake, Recoil, Hit-Stop & 4-Bus Cathedral Audio" },
-    { id: "ui-taste", name: "ui-taste", desc: "Executive Dark UI, Zero-Slop HUD & Touch Ergonomics" },
-    { id: "webapp-testing", name: "webapp-testing", desc: "Playwright Headless Chromium & Hardened Visual QA Gate" }
+    {
+      id: "game-pipeline",
+      name: "game-pipeline",
+      desc: "6-Stage BUILD_TODO.md 3D Game Engineering Pipeline",
+    },
+    {
+      id: "game-system-design",
+      name: "game-system-design",
+      desc: "ECS, HFSM, Marco Monster Car Physics & Quake/Celeste Feel",
+    },
+    {
+      id: "threejs-scene-setup",
+      name: "threejs-scene-setup",
+      desc: "ACESFilmic, UnrealBloomPass, PMREM IBL & 3D Grass",
+    },
+    {
+      id: "threejs-gltf-loading",
+      name: "threejs-gltf-loading",
+      desc: "Normalized GLB Loader, 20-Bone Armature & AnimationMixer",
+    },
+    {
+      id: "threejs-materials-lighting",
+      name: "threejs-materials-lighting",
+      desc: "AmbientCG 1K Normal-Mapped PBR & Volumetric Lighting",
+    },
+    {
+      id: "game-feel",
+      name: "game-feel",
+      desc: "Camera Trauma Shake, Recoil, Hit-Stop & 4-Bus Cathedral Audio",
+    },
+    {
+      id: "ui-taste",
+      name: "ui-taste",
+      desc: "Executive Dark UI, Zero-Slop HUD & Touch Ergonomics",
+    },
+    {
+      id: "webapp-testing",
+      name: "webapp-testing",
+      desc: "Playwright Headless Chromium & Hardened Visual QA Gate",
+    },
   ];
 
   function renderSidebarSkills() {
@@ -1035,7 +1058,8 @@
     SIDEBAR_SKILLS.forEach(function (sk) {
       var btn = document.createElement("button");
       btn.type = "button";
-      var isOn = typeof activeSkills !== "undefined" && activeSkills.indexOf(sk.id) >= 0;
+      var isOn =
+        typeof activeSkills !== "undefined" && activeSkills.indexOf(sk.id) >= 0;
       btn.className = "v0-skill-row" + (isOn ? " active" : "");
       var nm = document.createElement("span");
       nm.className = "v0-skill-name";
@@ -1057,9 +1081,12 @@
 
   function setSidebarSection(sec) {
     activeSidebarSection = sec;
-    if (sidebarNavChats) sidebarNavChats.classList.toggle("active", sec === "chats");
-    if (sidebarNavSkills) sidebarNavSkills.classList.toggle("active", sec === "skills");
-    if (sidebarNavSysdesign) sidebarNavSysdesign.classList.toggle("active", sec === "sysdesign");
+    if (sidebarNavChats)
+      sidebarNavChats.classList.toggle("active", sec === "chats");
+    if (sidebarNavSkills)
+      sidebarNavSkills.classList.toggle("active", sec === "skills");
+    if (sidebarNavSysdesign)
+      sidebarNavSysdesign.classList.toggle("active", sec === "sysdesign");
 
     if (!sec) {
       if (sidebarBody) sidebarBody.classList.add("hidden");
@@ -1069,12 +1096,15 @@
     }
 
     if (sidebarBody) sidebarBody.classList.remove("hidden");
-    if (sidebarChatsPanel) sidebarChatsPanel.classList.toggle("hidden", sec !== "chats");
-    if (sidebarSkillsPanel) sidebarSkillsPanel.classList.toggle("hidden", sec !== "skills");
+    if (sidebarChatsPanel)
+      sidebarChatsPanel.classList.toggle("hidden", sec !== "chats");
+    if (sidebarSkillsPanel)
+      sidebarSkillsPanel.classList.toggle("hidden", sec !== "skills");
 
     if (sec === "chats") {
       if (sidebarSub) {
-        sidebarSub.textContent = "Inactive / unkilled terminals — click any session to resume where it left off.";
+        sidebarSub.textContent =
+          "Inactive / unkilled terminals — click any session to resume where it left off.";
       }
       showSidebarList();
       if (sidebarList) sidebarList.innerHTML = "";
@@ -1092,7 +1122,8 @@
         });
     } else if (sec === "skills") {
       if (sidebarSub) {
-        sidebarSub.textContent = "Agent skills — click to toggle active skills for the next build.";
+        sidebarSub.textContent =
+          "Agent skills — click to toggle active skills for the next build.";
       }
       renderSidebarSkills();
     } else if (sec === "sysdesign") {
@@ -1114,7 +1145,9 @@
   }
   if (sidebarNavSysdesign) {
     sidebarNavSysdesign.addEventListener("click", function () {
-      setSidebarSection(activeSidebarSection === "sysdesign" ? null : "sysdesign");
+      setSidebarSection(
+        activeSidebarSection === "sysdesign" ? null : "sysdesign",
+      );
     });
   }
   function triggerSidebarNewChat() {
@@ -1122,8 +1155,10 @@
     var topNewChat = document.getElementById("newchat-btn");
     if (topNewChat) topNewChat.click();
   }
-  if (sidebarNewchatBtn) sidebarNewchatBtn.addEventListener("click", triggerSidebarNewChat);
-  if (sidebarNewchatMore) sidebarNewchatMore.addEventListener("click", triggerSidebarNewChat);
+  if (sidebarNewchatBtn)
+    sidebarNewchatBtn.addEventListener("click", triggerSidebarNewChat);
+  if (sidebarNewchatMore)
+    sidebarNewchatMore.addEventListener("click", triggerSidebarNewChat);
 
   function fmtChatSize(bytes) {
     var n = Number(bytes) || 0;
@@ -1159,7 +1194,8 @@
     if (!chats.length) {
       var empty = document.createElement("div");
       empty.className = "sidebar-empty";
-      empty.textContent = "No inactive terminals yet — click New Chat to spawn a background terminal.";
+      empty.textContent =
+        "No inactive terminals yet — click New Chat to spawn a background terminal.";
       sidebarList.appendChild(empty);
       return;
     }
@@ -1171,7 +1207,9 @@
       title.className = "sidebar-item-title";
       title.textContent =
         c.transcript === false
-          ? "Terminal " + (c.windowId || "") + (c.windowActive ? " (active)" : " (inactive / resumable)")
+          ? "Terminal " +
+            (c.windowId || "") +
+            (c.windowActive ? " (active)" : " (inactive / resumable)")
           : c.id || "terminal";
       item.appendChild(title);
       var meta = document.createElement("p");
@@ -1185,7 +1223,9 @@
         var live = document.createElement("p");
         live.className = "sidebar-item-meta";
         live.textContent =
-          "● UNKILLED " + (c.windowId || "") + (c.windowActive ? " · current" : " · ready to resume");
+          "● UNKILLED " +
+          (c.windowId || "") +
+          (c.windowActive ? " · current" : " · ready to resume");
         item.appendChild(live);
       }
       if (c.preview) {
@@ -1232,8 +1272,7 @@
         activeChatContent =
           data && typeof data.content === "string" ? data.content : "";
         activeGameId = data && data.gameId ? data.gameId : null;
-        activeGameTitle =
-          data && data.gameTitle ? String(data.gameTitle) : "";
+        activeGameTitle = data && data.gameTitle ? String(data.gameTitle) : "";
         activeWindowId = data && data.windowId ? data.windowId : null;
         if (sidebarMeta)
           sidebarMeta.textContent =
@@ -1299,82 +1338,82 @@
       // server switches straight to it (and activates its linked game).
       // Only dead/unlinked chats use the legacy context-seeding flow below.
       var legacyContinue = function () {
-      var prompt =
-        "Continuing from a previous chat (archived " +
-        activeChatId +
-        "). Key context:\n" +
-        String(activeChatContent || "").slice(0, 1500) +
-        "\n---\nUser will now continue.";
-      loadTerminalInline();
-      // Restore this chat's linked game into the live preview FIRST so
-      // the session continues with the same game + context it archived.
-      var restore = Promise.resolve(false);
-      var readOnlyHit = false;
-      if (activeGameId) {
-        setStatus(
-          'Restoring "' + (activeGameTitle || activeGameId) + '"…',
-        );
-        restore = fetch(
-          "/api/studio/games/" + encodeURIComponent(activeGameId) + "/activate",
-          { method: "POST" },
-        )
-          .then(function (res) {
-            if (!res.ok) throw new Error("activate failed: " + res.status);
-            return res.json();
+        var prompt =
+          "Continuing from a previous chat (archived " +
+          activeChatId +
+          "). Key context:\n" +
+          String(activeChatContent || "").slice(0, 1500) +
+          "\n---\nUser will now continue.";
+        loadTerminalInline();
+        // Restore this chat's linked game into the live preview FIRST so
+        // the session continues with the same game + context it archived.
+        var restore = Promise.resolve(false);
+        var readOnlyHit = false;
+        if (activeGameId) {
+          setStatus('Restoring "' + (activeGameTitle || activeGameId) + '"…');
+          restore = fetch(
+            "/api/studio/games/" +
+              encodeURIComponent(activeGameId) +
+              "/activate",
+            { method: "POST" },
+          )
+            .then(function (res) {
+              if (!res.ok) throw new Error("activate failed: " + res.status);
+              return res.json();
+            })
+            .then(function (data) {
+              playPreview(
+                (data && data.url) || "/studio/live-preview/index.html",
+                (data && data.title) || activeGameTitle || "Game Preview",
+              );
+              return true;
+            })
+            .catch(function () {
+              setStatus(
+                "Saved game missing — continuing with chat context only.",
+                "warn",
+              );
+              return false;
+            });
+        }
+        restore
+          .then(function (gameRestored) {
+            return fetch("/api/studio/terminal/send", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                prompt: prompt,
+                scope: scopeEl ? scopeEl.value : "game",
+                skills: activeSkills.slice(),
+              }),
+            }).then(function (res) {
+              if (res.status === 401) {
+                readOnlyHit = true;
+                return gameRestored;
+              }
+              if (!res.ok) throw new Error("send failed: " + res.status);
+              return gameRestored;
+            });
           })
-          .then(function (data) {
-            playPreview(
-              (data && data.url) || "/studio/live-preview/index.html",
-              (data && data.title) || activeGameTitle || "Game Preview",
+          .then(function (gameRestored) {
+            closeSidebar();
+            if (readOnlyHit) {
+              setStatus(READ_ONLY_MSG, "warn");
+              return;
+            }
+            setStatus(
+              gameRestored
+                ? "Game + context restored — continue in the live terminal."
+                : "Context sent — continue in the live terminal.",
+              "ok",
             );
-            return true;
           })
           .catch(function () {
-            setStatus(
-              "Saved game missing — continuing with chat context only.",
-              "warn",
-            );
-            return false;
+            setStatus("Could not send context to the live terminal.", "error");
+          })
+          .then(function () {
+            sidebarContinue.disabled = false;
           });
-      }
-      restore
-        .then(function (gameRestored) {
-          return fetch("/api/studio/terminal/send", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              prompt: prompt,
-              scope: scopeEl ? scopeEl.value : "game",
-              skills: activeSkills.slice(),
-            }),
-          }).then(function (res) {
-            if (res.status === 401) {
-              readOnlyHit = true;
-              return gameRestored;
-            }
-            if (!res.ok) throw new Error("send failed: " + res.status);
-            return gameRestored;
-          });
-        })
-        .then(function (gameRestored) {
-          closeSidebar();
-          if (readOnlyHit) {
-            setStatus(READ_ONLY_MSG, "warn");
-            return;
-          }
-          setStatus(
-            gameRestored
-              ? "Game + context restored — continue in the live terminal."
-              : "Context sent — continue in the live terminal.",
-            "ok",
-          );
-        })
-        .catch(function () {
-          setStatus("Could not send context to the live terminal.", "error");
-        })
-        .then(function () {
-          sidebarContinue.disabled = false;
-        });
       };
       fetch(
         "/api/studio/chats/" + encodeURIComponent(activeChatId) + "/continue",
@@ -2113,7 +2152,8 @@
   }
   function openFlyout(row, panel) {
     if (!row || !panel) return;
-    if (openSub && openSub.panel !== panel) setSubOpen(openSub.row, openSub.panel, false);
+    if (openSub && openSub.panel !== panel)
+      setSubOpen(openSub.row, openSub.panel, false);
     setSubOpen(row, panel, true);
     positionFlyout(row, panel);
     openSub = { row: row, panel: panel };
@@ -2152,10 +2192,7 @@
   window.addEventListener(
     "scroll",
     function (event) {
-      if (
-        openSub &&
-        openSub.panel.contains(event.target)
-      ) {
+      if (openSub && openSub.panel.contains(event.target)) {
         return; // scrolling inside the flyout is fine
       }
       closeFlyout();
@@ -2402,7 +2439,8 @@
       }
       function hueFromId(str) {
         var h = 0;
-        for (var i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) >>> 0;
+        for (var i = 0; i < str.length; i++)
+          h = (h * 31 + str.charCodeAt(i)) >>> 0;
         return h % 360;
       }
       var MCP_ICON_MAP = {
@@ -2575,7 +2613,17 @@
   var metaMic = { recording: false, rec: null, chunks: [], stream: null };
   function insertDictation(text) {
     if (!text) return;
-    promptEl.value = (promptEl.value ? promptEl.value + " " : "") + text;
+    var clean = String(text).trim();
+    if (!clean) return;
+    // Never insert non-speech placeholder stems into the prompt box.
+    if (/^\[non-speech audio stem/i.test(clean)) return;
+    var current = promptEl.value || "";
+    // Avoid double-insert when the same transcript arrives twice.
+    if (current.indexOf(clean) !== -1) {
+      promptEl.focus();
+      return;
+    }
+    promptEl.value = (current ? current + " " : "") + clean;
     scheduleDraftSave();
     promptEl.focus();
   }
@@ -2645,7 +2693,12 @@
       })
       .then(function (data) {
         if (!data) return;
-        insertDictation(data.transcript || "");
+        var t = String(data.transcript || "").trim();
+        if (!t || /^\[non-speech audio stem/i.test(t)) {
+          setStatus("No speech detected — try again.", "warn");
+          return;
+        }
+        insertDictation(t);
         setStatus("Transcribed via muse-voice-transcribe-1.0.", "ok");
       })
       .catch(function () {
@@ -2671,11 +2724,16 @@
         } catch (e) {
           mime = "";
         }
-        var rec = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream);
+        var rec = mime
+          ? new MediaRecorder(stream, { mimeType: mime })
+          : new MediaRecorder(stream);
         metaMic.rec = rec;
         metaMic.recording = true;
         micBtn.classList.add("busy");
-        setStatus("Listening… (muse-voice-transcribe-1.0, 5s — click mic to cancel)", "ok");
+        setStatus(
+          "Listening… (muse-voice-transcribe-1.0, 5s — click mic to cancel)",
+          "ok",
+        );
         rec.addEventListener("dataavailable", function (ev) {
           if (ev.data && ev.data.size) metaMic.chunks.push(ev.data);
         });
@@ -2711,8 +2769,8 @@
   if (micBtn) {
     var canMetaMic = Boolean(
       navigator.mediaDevices &&
-        navigator.mediaDevices.getUserMedia &&
-        window.MediaRecorder,
+      navigator.mediaDevices.getUserMedia &&
+      window.MediaRecorder,
     );
     if (canMetaMic || SpeechRec) micBtn.classList.remove("hidden");
     micBtn.addEventListener("click", function () {
