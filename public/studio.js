@@ -2405,33 +2405,43 @@
         for (var i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) >>> 0;
         return h % 360;
       }
+      var MCP_ICON_MAP = {
+        context7: "/studio/icons/mcp/context7.ico",
+        playwright: "/studio/icons/mcp/playwright.svg",
+        shadcn: "/studio/icons/mcp/shadcn.svg",
+        "sequential-thinking": "/studio/icons/mcp/default.svg",
+        "studio-3d-tools": "/studio/icons/mcp/studio-3d-tools.svg",
+      };
+      function brandIconSrc(name) {
+        var key = (name || "").toLowerCase();
+        if (MCP_ICON_MAP[key]) return MCP_ICON_MAP[key];
+        var mark = Object.keys(MCP_ICON_MAP).filter(function (k) {
+          return key.indexOf(k) !== -1;
+        });
+        return mark.length ? MCP_ICON_MAP[mark[0]] : "";
+      }
       function makeMcpIcon(srv) {
         var holder = document.createElement("span");
         holder.className = "mcp-badge";
         var hue = hueFromId(srv.name || "mcp");
-        try {
-          var host = srv.url ? new URL(srv.url).hostname : "";
-          if (host) {
-            var img = document.createElement("img");
-            img.className = "mcp-badge-img";
-            img.alt = "";
-            img.loading = "lazy";
-            img.src =
-              "https://www.google.com/s2/favicons?domain=" +
-              encodeURIComponent(host) +
-              "&sz=32";
-            img.addEventListener("error", function () {
-              img.remove();
-              holder.style.background = "hsl(" + hue + ", 65%, 45%)";
-            });
-            holder.appendChild(img);
-            return holder;
-          }
-        } catch (e) {}
-        holder.style.background = "hsl(" + hue + ", 65%, 45%)";
-        var letter = document.createElement("span");
-        letter.textContent = (srv.name || "m").charAt(0).toUpperCase();
-        holder.appendChild(letter);
+        function fallbackLetter() {
+          holder.style.background = "hsl(" + hue + ", 65%, 45%)";
+          var letter = document.createElement("span");
+          letter.textContent = (srv.name || "m").charAt(0).toUpperCase();
+          holder.appendChild(letter);
+        }
+        var src = brandIconSrc(srv.name);
+        if (src) {
+          var img = document.createElement("img");
+          img.className = "mcp-badge-img";
+          img.alt = "";
+          img.loading = "lazy";
+          img.addEventListener("error", fallbackLetter);
+          img.src = src;
+          holder.appendChild(img);
+          return holder;
+        }
+        fallbackLetter();
         return holder;
       }
       servers.forEach(function (srv) {
