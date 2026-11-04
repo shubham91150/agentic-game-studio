@@ -15,8 +15,8 @@
   var Levels = window.Levels;
 
   /* ---------------- World constants (Stage 1 locked goal) ---------------- */
-  Levels.WORLD = { minX: -20, maxX: 160, minY: 0, maxY: 45, cameraZ: 16 };
-  Levels.WATER_Y = -1.2;
+  Levels.WORLD = { minX: -20, maxX: 160, minY: 0, maxY: 45, cameraZ: 12.2 };
+  Levels.WATER_Y = -1.5;
   Levels.KILL_Y = -8;
   Levels.GOAL = { x0: 150, y0: 28, x1: 160, y1: 40 };
 
@@ -425,8 +425,8 @@
    * or is grounded). Trauma shake S = T^2 (GMTK 6-DOF-lite). */
   Levels.CameraRig = function (camera) {
     this.camera = camera;
-    this.focus = new THREE.Vector3(0, 6, 0);
-    this.lockedY = 6;
+    this.focus = new THREE.Vector3(0, 2.3, 0);
+    this.lockedY = 2.3;
     this.trauma = 0;
     this.shakeT = 0;
     this.smoothK = 5.5;
@@ -446,10 +446,10 @@
     tx = Math.max(W.minX + 6, Math.min(W.maxX - 6, tx));
     this.focus.x += (tx - this.focus.x) * k;
     // Vertical platform-lock.
-    if (p.grounded || Math.abs(p.y - this.lockedY) > 2.5) {
-      this.lockedY += ((p.y + 2.2) - this.lockedY) * (1 - Math.exp(-3.2 * dt));
+    if (p.grounded || Math.abs(p.y - this.lockedY) > 1.8) {
+      this.lockedY += ((p.y + 1.55) - this.lockedY) * (1 - Math.exp(-3.8 * dt));
     }
-    this.lockedY = Math.max(3.2, Math.min(34, this.lockedY));
+    this.lockedY = Math.max(1.9, Math.min(34, this.lockedY));
     this.focus.y += (this.lockedY - this.focus.y) * k;
     // Trauma shake (decays ~1.2/s), smooth multi-sine noise.
     this.trauma = Math.max(0, this.trauma - dt * 1.2);
@@ -507,32 +507,39 @@
       }
     } catch (e) { /* headless-safe */ }
 
-    /* ---- Cavern sky, 3-point lighting, PMREM room IBL ---- */
-    var skyHandle = null;
-    try {
-      if (WR.createRealisticSkyAndLighting) {
-        skyHandle = WR.createRealisticSkyAndLighting(scene, renderer, {
-          exposure: 1.1,
-          skyTopColor: 0x0a1430,
-          skyMidColor: 0x0e3a3c,
-          skyHorizonColor: 0x1d6a5e,
-          sunDiskColor: 0xbfffe4,
-          groundColor: 0x0a201c,
-          sunPosition: [40, 80, 55]
-        });
-      }
-    } catch (e) { skyHandle = null; }
-    if (!skyHandle) {
-      scene.background = new THREE.Color(0x06181a);
-      var amb = new THREE.AmbientLight(0x3a6a62, 0.7);
-      scene.add(amb);
-      var key = new THREE.DirectionalLight(0xbfffe4, 1.1);
-      key.position.set(30, 60, 40);
-      key.castShadow = true;
-      scene.add(key);
-      var rim = new THREE.DirectionalLight(0x4a5aff, 0.35);
-      rim.position.set(-40, 20, -30);
-      scene.add(rim);
+    /* ---- Ori / Hollow Knight Deep Midnight Bioluminescent Cavern Lighting ---- */
+    scene.background = new THREE.Color(0x040914);
+    scene.fog = new THREE.FogExp2(0x040914, 0.012);
+    var hemi = new THREE.HemisphereLight(0x38bdf8, 0x090d16, 0.65);
+    hemi.position.set(0, 40, 0);
+    scene.add(hemi);
+    var key = new THREE.DirectionalLight(0x9be8ff, 1.25);
+    key.position.set(24, 48, 28);
+    key.castShadow = true;
+    if (key.shadow) {
+      key.shadow.mapSize.set(2048, 2048);
+      key.shadow.bias = -0.0005;
+    }
+    scene.add(key);
+    var warmRim = new THREE.DirectionalLight(0xffb454, 0.65);
+    warmRim.position.set(-30, 18, 14);
+    scene.add(warmRim);
+    // Bioluminescent cavern point lights along the path
+    var bioSpots = [
+      [-6, 3.5, 3, 0x38f9d4, 2.2, 18],
+      [6, 3.2, 3, 0xffaa44, 2.0, 16],
+      [20, 4.8, 3, 0x38bdf8, 2.2, 18],
+      [36, 7.5, 3, 0xa855f7, 2.0, 18],
+      [55, 5.5, 3, 0xffaa44, 2.2, 20],
+      [88, 6.5, 3, 0x38f9d4, 2.2, 20],
+      [125, 12.0, 3, 0x38bdf8, 2.4, 24],
+      [154, 33.0, 3, 0xffd166, 2.8, 26]
+    ];
+    for (var bi = 0; bi < bioSpots.length; bi++) {
+      var bs = bioSpots[bi];
+      var pl = new THREE.PointLight(bs[3], bs[4], bs[5], 1.6);
+      pl.position.set(bs[0], bs[1], bs[2]);
+      scene.add(pl);
     }
 
     /* ---- Masterpiece pass: bloom + grade + vignette + contact shadows ---- */
@@ -540,12 +547,12 @@
     try {
       if (WR.enableMasterpieceRendering) {
         masterpiece = WR.enableMasterpieceRendering(renderer, scene, camera, {
-          bloom: { strength: 0.55, radius: 0.5, threshold: 0.72 },
+          bloom: { strength: 0.38, radius: 0.42, threshold: 0.82 },
           grade: {
             shadow: [0.03, 0.09, 0.10], highlight: [0.95, 1.0, 0.9],
             vignette: 0.34
           },
-          env: { top: 0x9dffdf, mid: 0x14424a, bottom: 0x020606 },
+          env: { top: 0x1e4e5c, mid: 0x0a1c26, bottom: 0x020508 },
           contactShadow: { opacity: 0.5 }
         });
       }
@@ -564,21 +571,7 @@
       } catch (e) { /* x */ }
     };
 
-    /* ---- Real HDR night-sky IBL (kloppenheim pure sky) over the room env ---- */
-    try {
-      if (THREE.RGBELoader && THREE.PMREMGenerator) {
-        new THREE.RGBELoader().load(Levels.POLY.hdr, function (tex) {
-          try {
-            var pmrem = new THREE.PMREMGenerator(renderer);
-            pmrem.compileEquirectangularShader();
-            var rt = pmrem.fromEquirectangular(tex);
-            if (rt && rt.texture) scene.environment = rt.texture;
-            if (tex.dispose) tex.dispose();
-            if (pmrem.dispose) pmrem.dispose();
-          } catch (e2) { /* keep room env */ }
-        }, undefined, function () { /* keep room env */ });
-      }
-    } catch (e) { /* keep room env */ }
+    /* Keep dark bioluminescent cavern PMREM IBL from enableMasterpieceRendering */
 
     /* ================= LAYER 1: cavern backdrop, z=-28 ================= */
     var skyTex = null;
@@ -593,7 +586,7 @@
     if (!skyTex) skyTex = Levels.makeCavernFallback();
     var skyPlane = new THREE.Mesh(
       new THREE.PlaneGeometry(280, 95),
-      new THREE.MeshBasicMaterial({ map: skyTex, fog: false, depthWrite: false })
+      new THREE.MeshBasicMaterial({ map: skyTex, color: 0x3c6278, fog: false, depthWrite: false })
     );
     skyPlane.position.set(70, 20, -28);
     skyPlane.renderOrder = -10;
@@ -684,20 +677,64 @@
     /* ================= LAYER 4: playable plane, z=0 ================= */
     var play = new THREE.Group();
     scene.add(play);
-    var groundMat = Levels.surfaceMaterial('grass', { color: 0x8fd8b8, roughness: 0.9 });
-    var stoneMat = Levels.surfaceMaterial('rock', { color: 0xa8bcb2, roughness: 0.85 });
-    var gearZoneMat = Levels.surfaceMaterial('concrete', { color: 0xc8b490, roughness: 0.8 });
-    var bellZoneMat = Levels.surfaceMaterial('brick', { color: 0x9a8fd0, roughness: 0.85 });
+    var tLoader = new THREE.TextureLoader();
+    function load1kPbr(diffUrl, norUrl, rx, ry, tintHex, rough) {
+      var diff = tLoader.load(diffUrl);
+      var nor = tLoader.load(norUrl);
+      diff.wrapS = diff.wrapT = THREE.RepeatWrapping;
+      nor.wrapS = nor.wrapT = THREE.RepeatWrapping;
+      diff.repeat.set(rx, ry);
+      nor.repeat.set(rx, ry);
+      if (THREE.sRGBEncoding !== undefined) diff.encoding = THREE.sRGBEncoding;
+      return new THREE.MeshStandardMaterial({
+        map: diff,
+        normalMap: nor,
+        normalScale: new THREE.Vector2(1.3, 1.3),
+        color: tintHex,
+        roughness: rough || 0.68,
+        metalness: 0.14,
+        envMapIntensity: 1.25
+      });
+    }
+    var groundMat = load1kPbr(
+      '/studio/assets/ambientcg/Rock035/Rock035_1K-JPG_Color.jpg',
+      '/studio/assets/ambientcg/Rock035/Rock035_1K-JPG_NormalGL.jpg',
+      4, 2, 0x283842, 0.62
+    );
+    var stoneMat = load1kPbr(
+      '/studio/assets/ambientcg/Rock035/Rock035_1K-JPG_Color.jpg',
+      '/studio/assets/ambientcg/Rock035/Rock035_1K-JPG_NormalGL.jpg',
+      2, 1, 0x2e444e, 0.58
+    );
+    var gearZoneMat = load1kPbr(
+      '/studio/assets/ambientcg/Wood096/Wood096_1K-JPG_Color.jpg',
+      '/studio/assets/ambientcg/Wood096/Wood096_1K-JPG_NormalGL.jpg',
+      3, 1, 0x5c4632, 0.55
+    );
+    var bellZoneMat = load1kPbr(
+      '/studio/assets/ambientcg/Rock035/Rock035_1K-JPG_Color.jpg',
+      '/studio/assets/ambientcg/Rock035/Rock035_1K-JPG_NormalGL.jpg',
+      3, 1, 0x3b325c, 0.58
+    );
+    var runeRimMat = new THREE.MeshStandardMaterial({
+      color: 0x38f9d4,
+      emissive: 0x22d3ee,
+      emissiveIntensity: 1.65,
+      roughness: 0.25,
+      metalness: 0.2
+    });
 
     // Live collider list for player.js: {id,x0,y0,x1,y1,top,type,active,mesh,...}
     var solids = [];
     var solidSeq = 0;
     function addSolid(cx, topY, w, h, depth, mat, type, extra) {
-      var geo = Levels.createSlabGeometry(w, h, depth, 0.22);
+      var slimD = Math.min(depth, 1.8);
+      var geo = Levels.createSlabGeometry(w, h, slimD, 0.28);
       var mesh = new THREE.Mesh(geo, mat);
       mesh.position.set(cx, topY - h / 2, 0);
       mesh.castShadow = true;
       mesh.receiveShadow = true;
+      /* Clean 1K Rock035 dark stone surface on top & front */
       play.add(mesh);
       var s = {
         id: solidSeq++, x0: cx - w / 2, y0: topY - h, x1: cx + w / 2, y1: topY,
@@ -709,13 +746,44 @@
       return s;
     }
 
-    // Ground runs (deep slabs so fall-through reads as earth, not paper).
+    // Ground runs + organic Photogrammetry Boulder Ledges along every ground run!
     for (var gi = 0; gi < Levels.GROUND_RUNS.length; gi++) {
       var gr = Levels.GROUND_RUNS[gi];
       var gw = gr.x1 - gr.x0;
       var zone = Levels.zoneAt((gr.x0 + gr.x1) / 2);
       var gmat = zone === 0 ? groundMat : (zone === 1 ? gearZoneMat : bellZoneMat);
-      addSolid((gr.x0 + gr.x1) / 2, gr.top, gw, 6, 7, gmat, 'solid');
+      addSolid((gr.x0 + gr.x1) / 2, gr.top, gw, 6, 1.8, gmat, 'solid');
+    }
+    // Dress the front/edges of the ground ledges with real Polyhaven photogrammetry rock formations & lanterns so it looks like a natural rocky cavern, never a flat slab!
+    if (window.WorldRealism && window.WorldRealism.loadGlbModel) {
+      window.WorldRealism.loadGlbModel('/studio/assets/polyhaven/namaqualand_boulders_01/namaqualand_boulders_01_1k.glb', function (rockProto) {
+        if (!rockProto) return;
+        var ledgeXs = [-16, -9, -2, 5, 17, 25, 35, 42, 49, 57, 84, 93, 101, 111];
+        for (var li2 = 0; li2 < ledgeXs.length; li2++) {
+          var lx = ledgeXs[li2];
+          var ly = Levels.groundTopAt(lx);
+          if (ly < -10) continue;
+          var rk = rockProto.clone(true);
+          rk.traverse(function (n) {
+            if (n && n.isMesh && n.material) {
+              n.material = n.material.clone();
+              if (n.material.color) n.material.color.setHex(0x2c4248);
+            }
+          });
+          rk.position.set(lx, ly - 0.55, -0.85);
+          rk.rotation.y = (li2 * 1.7) % 6.28;
+          play.add(rk);
+        }
+      }, { targetLength: 4.8 });
+      window.WorldRealism.loadGlbModel('/studio/assets/polyhaven/Lantern_01/Lantern_01_1k.glb', function (lanProto) {
+        if (!lanProto) return;
+        var lanSpots = [[-11, 0], [3, 0], [19, 0], [34, 2], [48, 2], [85, 2], [109, 2]];
+        for (var lsi = 0; lsi < lanSpots.length; lsi++) {
+          var lc = lanProto.clone(true);
+          lc.position.set(lanSpots[lsi][0], lanSpots[lsi][1] + 0.02, 0.55);
+          play.add(lc);
+        }
+      }, { targetLength: 0.85 });
     }
     // Floating platforms.
     var crumbles = [], movers = [];
@@ -1073,8 +1141,8 @@
      * mirror reflection + vertex ripple waves via uTime. */
     var waterUniforms = { uTime: { value: 0 } };
     var waterMat = new THREE.MeshStandardMaterial({
-      color: 0x0e3a46, metalness: 0.92, roughness: 0.14,
-      transparent: true, opacity: 0.94, envMapIntensity: 1.25
+      color: 0x030912, metalness: 0.55, roughness: 0.28,
+      transparent: true, opacity: 0.92, envMapIntensity: 0.35
     });
     waterMat.onBeforeCompile = function (shader) {
       shader.uniforms.uTime = waterUniforms.uTime;
@@ -1091,10 +1159,10 @@
           'transformed.y += rip;'
         ].join('\n'));
     };
-    var waterGeo = new THREE.PlaneGeometry(190, 24, 120, 12);
+    var waterGeo = new THREE.PlaneGeometry(190, 3.4, 120, 6);
     var water = new THREE.Mesh(waterGeo, waterMat);
     water.rotation.x = -Math.PI / 2;
-    water.position.set(70, Levels.WATER_Y, -4);
+    water.position.set(70, Levels.WATER_Y, 0.8);
     water.receiveShadow = true;
     scene.add(water);
     // Soft shoreline glow strip where water meets the banks.

@@ -2172,17 +2172,45 @@
     if (!platformMode() || !platCtl || !scene || !window.THREE) return;
     try {
       if (!heroRig) {
-        heroRig = { group: new THREE.Group() };
+        heroRig = { group: new THREE.Group(), mixer: null, actions: {}, activeAct: "" };
         scene.add(heroRig.group);
-        var heroUrl = "./assets/spirit_hero.glb";
-        try {
-          if (window.Levels && window.Levels.ASSETS && window.Levels.ASSETS.hero) {
-            heroUrl = window.Levels.ASSETS.hero;
+        var heroLight = new THREE.PointLight(0x38f9d4, 2.2, 9.5, 1.6);
+        heroLight.position.set(0, 1.1, 0.8);
+        heroRig.group.add(heroLight);
+        new THREE.GLTFLoader().load(
+          "/studio/assets/models/characters/RobotExpressive.glb",
+          function (gltf) {
+            var root = gltf.scene || (gltf.scenes && gltf.scenes[0]);
+            if (!root) return;
+            if (window.Levels && window.Levels.fitGlb) {
+              window.Levels.fitGlb(root, 1.45, 0);
+            }
+            root.rotation.y = Math.PI / 2;
+            root.traverse(function (n) {
+              if (n && n.isMesh && n.material) {
+                n.castShadow = true;
+                n.material = n.material.clone();
+                if (n.material.color) n.material.color.setHex(0x162636);
+                if (n.material.emissive) {
+                  n.material.emissive.setHex(0x22d3ee);
+                  n.material.emissiveIntensity = 0.45;
+                }
+              }
+            });
+            heroRig.group.add(root);
+            if (gltf.animations && gltf.animations.length && THREE.AnimationMixer) {
+              heroRig.mixer = new THREE.AnimationMixer(root);
+              for (var ai = 0; ai < gltf.animations.length; ai++) {
+                var clip = gltf.animations[ai];
+                heroRig.actions[clip.name] = heroRig.mixer.clipAction(clip);
+              }
+              if (heroRig.actions.Idle) {
+                heroRig.actions.Idle.play();
+                heroRig.activeAct = "Idle";
+              }
+            }
           }
-        } catch (eH) {
-          /* default stands */
-        }
-        platActorLoad(heroRig, heroUrl, 1.15, 0x9fe8ff, 1.7);
+        );
       }
       if (!wraithRig) {
         wraithRig = { group: new THREE.Group() };
@@ -2204,8 +2232,17 @@
       } catch (eBob) {
         bob = 0;
       }
-      heroRig.group.position.set(p.x, p.y - 0.1 + bob, 0.6);
+      heroRig.group.position.set(p.x, p.y - 0.55, 0.2);
       heroRig.group.scale.x = st.face >= 0 ? 1 : -1;
+      if (heroRig.mixer) {
+        var wantAct = !st.grounded ? "Jump" : (Math.abs(st.vx) > 0.8 ? "Running" : "Idle");
+        if (wantAct !== heroRig.activeAct && heroRig.actions[wantAct]) {
+          if (heroRig.actions[heroRig.activeAct]) heroRig.actions[heroRig.activeAct].fadeOut(0.12);
+          heroRig.actions[wantAct].reset().fadeIn(0.12).play();
+          heroRig.activeAct = wantAct;
+        }
+        heroRig.mixer.update(1 / 60);
+      }
       try {
         if (platWraith && wraithRig) {
           var ws = platWraith.getState();
