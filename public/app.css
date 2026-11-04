@@ -3368,3 +3368,14 @@ body:has(.preview-box.landscape-fullscreen) .dock {
   text-overflow: ellipsis;
 }
 
+.v0-nav-item #library-count {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  color: #ffffff !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  padding: 0 2px !important;
+  min-width: 0 !important;
+  height: auto !important;
+}
