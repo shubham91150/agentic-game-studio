@@ -2100,17 +2100,22 @@
     if (left + width + 8 > window.innerWidth) {
       left = Math.max(8, rect.left - width - 8);
     }
-    var top = Math.min(rect.top, Math.max(8, window.innerHeight - 160));
+    var pad = 16;
+    var height = panel.offsetHeight || 240;
+    var top = rect.top;
+    if (top + height + pad > window.innerHeight) {
+      top = Math.max(pad, window.innerHeight - height - pad);
+    }
     panel.style.left = left + "px";
     panel.style.top = top + "px";
     panel.style.maxHeight =
-      Math.max(180, window.innerHeight - top - 24) + "px";
+      Math.max(180, window.innerHeight - top - pad) + "px";
   }
   function openFlyout(row, panel) {
     if (!row || !panel) return;
     if (openSub && openSub.panel !== panel) setSubOpen(openSub.row, openSub.panel, false);
-    positionFlyout(row, panel);
     setSubOpen(row, panel, true);
+    positionFlyout(row, panel);
     openSub = { row: row, panel: panel };
   }
   function closeFlyout() {
@@ -2339,7 +2344,7 @@
       item.setAttribute("role", "menuitem");
       item.title = s.description || s.id;
       var name = document.createElement("span");
-      name.textContent = "@" + s.id;
+      name.textContent = s.id;
       item.appendChild(name);
       if (activeSkills.indexOf(s.id) !== -1) {
         var tick = document.createElement("span");
@@ -2395,11 +2400,47 @@
         hint.textContent = "No MCP servers connected yet.";
         plusMcps.appendChild(hint);
       }
+      function hueFromId(str) {
+        var h = 0;
+        for (var i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) >>> 0;
+        return h % 360;
+      }
+      function makeMcpIcon(srv) {
+        var holder = document.createElement("span");
+        holder.className = "mcp-badge";
+        var hue = hueFromId(srv.name || "mcp");
+        try {
+          var host = srv.url ? new URL(srv.url).hostname : "";
+          if (host) {
+            var img = document.createElement("img");
+            img.className = "mcp-badge-img";
+            img.alt = "";
+            img.loading = "lazy";
+            img.src =
+              "https://www.google.com/s2/favicons?domain=" +
+              encodeURIComponent(host) +
+              "&sz=32";
+            img.addEventListener("error", function () {
+              img.remove();
+              holder.style.background = "hsl(" + hue + ", 65%, 45%)";
+            });
+            holder.appendChild(img);
+            return holder;
+          }
+        } catch (e) {}
+        holder.style.background = "hsl(" + hue + ", 65%, 45%)";
+        var letter = document.createElement("span");
+        letter.textContent = (srv.name || "m").charAt(0).toUpperCase();
+        holder.appendChild(letter);
+        return holder;
+      }
       servers.forEach(function (srv) {
         var row = document.createElement("div");
         row.className = "plus-item plus-mcp-row";
+        row.appendChild(makeMcpIcon(srv));
         var name = document.createElement("span");
-        name.textContent = "● " + srv.name;
+        name.className = "mcp-name";
+        name.textContent = srv.name;
         name.title = srv.url || srv.transport || "";
         row.appendChild(name);
         var del = document.createElement("button");
