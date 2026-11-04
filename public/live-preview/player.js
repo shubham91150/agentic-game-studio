@@ -163,8 +163,14 @@
           new window.THREE.GLTFLoader().load('./assets/tactical_pulse_rifle.glb', function (gltf) {
             var root = gltf && (gltf.scene || (gltf.scenes && gltf.scenes[0]));
             if (!root) return;
-            root.scale.setScalar(0.78);
-            root.rotation.set(0, 0, 0);
+            var box = new THREE.Box3().setFromObject(root);
+            var sz = box.getSize(new THREE.Vector3());
+            var mDim = Math.max(sz.x, Math.max(sz.y, sz.z));
+            if (mDim > 0.01) root.scale.setScalar(0.68 / mDim);
+            box.setFromObject(root);
+            var ctr = box.getCenter(new THREE.Vector3());
+            root.position.set(-ctr.x, -ctr.y, -ctr.z);
+            root.rotation.set(0, Math.PI, 0);
             root.traverse(function (o) {
               if (o && o.isMesh) {
                 o.castShadow = false;

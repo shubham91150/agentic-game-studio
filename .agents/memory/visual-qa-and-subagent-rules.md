@@ -25,3 +25,23 @@ type: project
    - In first-person games, attach a **real 3D held viewmodel** (e.g., `Lantern_01_1k.glb` held in the bottom-right of the camera) with spring look-sway and walk-bob inertia!
 4. **Phase 4 — Multi-Subagent Verification (`visual_qa_gate.js` + Headless Chromium Critique)**:
    - Run `node src/verifier/visual_qa_gate.js public/live-preview`, capture in-game screenshots, and verify that rooms look richly furnished, atmospheric, and AAA-crafted.
+
+
+## 🚨 IRONCLAD ZERO-SHORTCUT & PER-STAGE SELF-CONFIRMATION LAW (PERMANENT)
+
+1. **ZERO SHORTCUTS — NEVER REUSE ANOTHER GAME'S WORLD OR HOUSE**:
+   - When building a new game, it is **STRICTLY FORBIDDEN** to copy or reuse another game's `levels.js`, house, rooms, corridors, or enemy setup (e.g., never reuse *Ashes of St. Vermilion*'s convent school rooms for a Zombie Survival Shooter).
+   - Every game MUST have a **100% original 3D world layout, setting, lighting, sky/environment, and architecture** built specifically for its genre.
+
+2. **MANDATORY RESEARCH BEFORE BUILDING (STAGE 1)**:
+   - Before writing any game code or selecting any 3D asset, research the genre's top AAA references (environment topology, camera framing, lighting contrast, enemy anatomy, weapon feel, HUD layout) and inventory all candidate 3D `.glb` assets.
+
+3. **INDIVIDUAL 3D ASSET VISUAL AUDIT BEFORE SCENE INTEGRATION (STAGE 2)**:
+   - Never blindly drop a `.glb` model into a game by filename alone.
+   - Render and inspect candidate character/enemy/weapon `.glb` models first and ask: *"Does this actually look like a terrifying human zombie / realistic weapon / intended prop, or does it look like a pig/blob/box?"* If it looks wrong, reject it immediately and use/build an anatomically accurate human/prop model.
+
+4. **MANDATORY PER-STAGE CONFIRMATION GATE (STAGES 1 -> 2 -> 3 -> 4)**:
+   - At the end of **EVERY** stage, stop and verify with concrete visual proof (screenshots + metrics):
+     1. *What did I actually do in this stage?*
+     2. *Is it 100% faithful to our goal with zero shortcuts, or did I fake/reuse anything?*
+   - Never advance to the next stage until the current stage passes 100% honest visual confirmation.

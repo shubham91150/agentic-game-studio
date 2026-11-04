@@ -1,0 +1,137 @@
+{
+  "id": "4ef25194-fc3e-4074-8411-60f8c540cf7c",
+  "assetBaseId": "7a82a68e-7941-42e9-a4be-85aaa2ea5def",
+  "slug": "assault_rifle_gun_7a82a68e",
+  "name": "Assault Rifle GUN",
+  "assetType": "model",
+  "category": "military-sci-fi",
+  "author": "ALEX SAMUSENKO",
+  "license": "royalty_free",
+  "isFree": true,
+  "score": 1800.0,
+  "ratingsAverage": {
+    "bookmarks": 0.9880952380952381,
+    "workingHours": 20.0,
+    "quality": 9.0,
+    "virtualPrice": null
+  },
+  "description": "Highly detailed modern assault rifle 3D model designed for real-time applications, game development, and cinematic rendering.\r\n\r\nThe weapon features a classic military rifle design with a detachable curved magazine, iron sights, ergonomic grip, and detailed mechanical components. The model includes realistic metal surfaces with subtle wear, scratches, and material variation to create a believable used firearm appearance.\r\n\r\nClean topology and optimized geometry make the asset suitable for both real-time engines and high-quality renders.\r\n\r\nPerfect for:\r\n\r\nFPS and shooter games\r\n\r\nmilitary and tactical scenes\r\n\r\ncinematic animations\r\n\r\nVR / AR projects\r\n\r\nweapon collections and prop libraries\r\n\r\nThe model is built as a game-ready asset and can be easily integrated into modern game engines.",
+  "tags": [
+    "Gun",
+    "Game",
+    "Weapon"
+  ],
+  "parameters": {
+    "dimensionX": 0.0852,
+    "dimensionY": 0.9639,
+    "dimensionZ": 0.3091,
+    "dimensionsMeters": {
+      "width": 0.0852,
+      "depth": 0.9639,
+      "height": 0.3091
+    },
+    "boundingBox": {
+      "min": [
+        -0.0346,
+        -0.5866,
+        0.011
+      ],
+      "max": [
+        0.0506,
+        0.3774,
+        0.3201
+      ]
+    },
+    "faceCount": 31140,
+    "faceCountRender": 31140,
+    "objectCount": 1,
+    "nodeCount": 19,
+    "meshPolyType": "quad_dominant",
+    "materials": [
+      "[Assault GUN]"
+    ],
+    "shaders": [
+      "[principled]"
+    ],
+    "modifiers": [
+      "[bevel]"
+    ],
+    "pbrType": "metallic",
+    "purePbr": true,
+    "procedural": false,
+    "uv": true,
+    "animated": null,
+    "rig": false,
+    "modelStyle": "realistic",
+    "condition": "used",
+    "designVariant": null,
+    "textureResolutionMax": 2048,
+    "engines": [
+      "[cycles]"
+    ]
+  },
+  "availableFiles": [
+    {
+      "fileType": "blend",
+      "uuid": "be17f02d-a88b-4668-9ee6-e9e7d8036707",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/be17f02d-a88b-4668-9ee6-e9e7d8036707/",
+      "fileUploadSize": 14033673
+    },
+    {
+      "fileType": "gltf",
+      "uuid": "aa56110f-4f16-4f52-bb51-3374f7f24964",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/aa56110f-4f16-4f52-bb51-3374f7f24964/",
+      "fileUploadSize": 951020
+    },
+    {
+      "fileType": "gltf_godot",
+      "uuid": "9796f0f2-21c6-4e0b-b7fe-fd7d7c46e1fb",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/9796f0f2-21c6-4e0b-b7fe-fd7d7c46e1fb/",
+      "fileUploadSize": 5746312
+    },
+    {
+      "fileType": "resolution_0_5K",
+      "uuid": "847b8d79-0fe9-41ba-bf49-2cea90886394",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/847b8d79-0fe9-41ba-bf49-2cea90886394/",
+      "fileUploadSize": 1721962
+    },
+    {
+      "fileType": "resolution_1K",
+      "uuid": "6919de00-574b-44ee-8109-ce2abddef083",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/6919de00-574b-44ee-8109-ce2abddef083/",
+      "fileUploadSize": 2319305
+    },
+    {
+      "fileType": "resolution_2K",
+      "uuid": "bb81ae89-97f3-4864-a23e-77774848542d",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/bb81ae89-97f3-4864-a23e-77774848542d/",
+      "fileUploadSize": 4550279
+    },
+    {
+      "fileType": "thumbnail",
+      "uuid": "3de21499-1103-48a9-98e0-9abf98edf352",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/3de21499-1103-48a9-98e0-9abf98edf352/",
+      "fileUploadSize": 276971
+    }
+  ],
+  "downloaded": {
+    "thumbnail": {
+      "file": "public/assets/blenderkit/assault_rifle_gun_7a82a68e/thumbnail.jpg",
+      "url": "/studio/assets/blenderkit/assault_rifle_gun_7a82a68e/thumbnail.jpg",
+      "bytes": 91115,
+      "sourceUrl": "https://public.blenderkit.com/thumbnails/assets/4ef25194fc3e4074841160f8c540cf7c/files/thumbnail_4583adb4-6575-4b76-8719-be69cdad765c.jpg.1024x1024_q85_crop-%2C.jpg"
+    },
+    "glb": {
+      "file": "public/assets/blenderkit/assault_rifle_gun_7a82a68e/assault_rifle_gun_7a82a68e.glb",
+      "url": "/studio/assets/blenderkit/assault_rifle_gun_7a82a68e/assault_rifle_gun_7a82a68e.glb",
+      "bytes": 951020,
+      "fileType": "gltf"
+    },
+    "blend": {
+      "file": "public/assets/blenderkit/assault_rifle_gun_7a82a68e/assault_rifle_gun_7a82a68e_resolution_0_5K.blend",
+      "url": "/studio/assets/blenderkit/assault_rifle_gun_7a82a68e/assault_rifle_gun_7a82a68e_resolution_0_5K.blend",
+      "bytes": 1721962,
+      "fileType": "resolution_0_5K"
+    }
+  }
+}

@@ -1,0 +1,132 @@
+{
+  "id": "f73c9e92-6069-417f-8170-35cf2381c343",
+  "assetBaseId": "b0d9ee91-54b1-4aec-b548-cac621f70b76",
+  "slug": "assault_rifle_b0d9ee91",
+  "name": "Assault rifle",
+  "assetType": "model",
+  "category": "equipment",
+  "author": "foehn N",
+  "license": "royalty_free",
+  "isFree": true,
+  "score": 3060.0,
+  "ratingsAverage": {
+    "bookmarks": 0.971830985915493,
+    "workingHours": 34.0,
+    "quality": 9.0,
+    "virtualPrice": null
+  },
+  "description": "This is a 3D model of a futuristic assault rifle. The main body is dark gray, with red decorative lines. The gun body features a unique geometric shape and texture, exuding a sense of futurism and mechanical toughness. It might be used for the creation of weapon props in virtual scenes such as games and films.",
+  "tags": [
+    "Gun",
+    "weapon",
+    "AssaultRifle",
+    "war"
+  ],
+  "parameters": {
+    "dimensionX": 0.08,
+    "dimensionY": 0.9132,
+    "dimensionZ": 0.34,
+    "dimensionsMeters": {
+      "width": 0.08,
+      "depth": 0.9132,
+      "height": 0.34
+    },
+    "boundingBox": {
+      "min": [
+        -0.0403,
+        -0.545,
+        0.0
+      ],
+      "max": [
+        0.0397,
+        0.3682,
+        0.34
+      ]
+    },
+    "faceCount": 9992,
+    "faceCountRender": 9992,
+    "objectCount": 2,
+    "nodeCount": 8,
+    "meshPolyType": "quad_dominant",
+    "materials": [
+      "[Material.001]"
+    ],
+    "shaders": [
+      "[principled]"
+    ],
+    "modifiers": [
+      "[]"
+    ],
+    "pbrType": null,
+    "purePbr": null,
+    "procedural": false,
+    "uv": true,
+    "animated": null,
+    "rig": false,
+    "modelStyle": "realistic",
+    "condition": "new",
+    "designVariant": null,
+    "textureResolutionMax": 1024,
+    "engines": [
+      "[cycles]"
+    ]
+  },
+  "availableFiles": [
+    {
+      "fileType": "blend",
+      "uuid": "14717984-e07f-4968-ac22-e9eb2a4a43ea",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/14717984-e07f-4968-ac22-e9eb2a4a43ea/",
+      "fileUploadSize": 7829010
+    },
+    {
+      "fileType": "gltf",
+      "uuid": "cdbd3282-c7a9-4edf-91ac-506873489ea4",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/cdbd3282-c7a9-4edf-91ac-506873489ea4/",
+      "fileUploadSize": 255356
+    },
+    {
+      "fileType": "gltf_godot",
+      "uuid": "8c38ef05-2e27-4439-b217-11524b0bfc22",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/8c38ef05-2e27-4439-b217-11524b0bfc22/",
+      "fileUploadSize": 872132
+    },
+    {
+      "fileType": "resolution_0_5K",
+      "uuid": "90392246-936b-4f4f-8845-93c5e6f770b3",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/90392246-936b-4f4f-8845-93c5e6f770b3/",
+      "fileUploadSize": 702239
+    },
+    {
+      "fileType": "resolution_1K",
+      "uuid": "352105c6-9311-4ee8-a575-aaeb1acae7a3",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/352105c6-9311-4ee8-a575-aaeb1acae7a3/",
+      "fileUploadSize": 1508857
+    },
+    {
+      "fileType": "thumbnail",
+      "uuid": "52b6541f-02fc-4c64-8d09-b28e122d562f",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/52b6541f-02fc-4c64-8d09-b28e122d562f/",
+      "fileUploadSize": 826958
+    }
+  ],
+  "downloaded": {
+    "thumbnail": {
+      "file": "public/assets/blenderkit/assault_rifle_b0d9ee91/thumbnail.jpg",
+      "url": "/studio/assets/blenderkit/assault_rifle_b0d9ee91/thumbnail.jpg",
+      "bytes": 38457,
+      "sourceUrl": "https://public.blenderkit.com/thumbnails/assets/f73c9e926069417f817035cf2381c343/files/thumbnail_52b6541f-02fc-4c64-8d09-b28e122d562f.png.1024x1024_q85_crop-%2C.jpg"
+    },
+    "glb": {
+      "file": "public/assets/blenderkit/assault_rifle_b0d9ee91/assault_rifle_b0d9ee91.glb",
+      "url": "/studio/assets/blenderkit/assault_rifle_b0d9ee91/assault_rifle_b0d9ee91.glb",
+      "bytes": 255356,
+      "fileType": "gltf"
+    },
+    "blend": {
+      "file": "public/assets/blenderkit/assault_rifle_b0d9ee91/assault_rifle_b0d9ee91_resolution_0_5K.blend",
+      "url": "/studio/assets/blenderkit/assault_rifle_b0d9ee91/assault_rifle_b0d9ee91_resolution_0_5K.blend",
+      "bytes": 702239,
+      "fileType": "resolution_0_5K"
+    }
+  }
+}

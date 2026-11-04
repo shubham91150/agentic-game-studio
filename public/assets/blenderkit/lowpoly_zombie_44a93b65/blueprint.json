@@ -1,0 +1,156 @@
+{
+  "id": "f74f3d6c-8165-4a8a-8286-a21f88e1cee5",
+  "assetBaseId": "44a93b65-bf51-40bc-ba0c-07d49255f485",
+  "slug": "lowpoly_zombie_44a93b65",
+  "name": "Lowpoly Zombie",
+  "assetType": "model",
+  "category": "man",
+  "author": "United Crews ",
+  "license": "royalty_free",
+  "isFree": true,
+  "score": 350.0,
+  "ratingsAverage": {
+    "bookmarks": null,
+    "workingHours": 5.0,
+    "quality": 7.0,
+    "virtualPrice": null
+  },
+  "description": "Stylized Lowpoly Riggedd Ghost ready to make spooky render for halloweens!",
+  "tags": [
+    "game",
+    "lowpoly",
+    "character",
+    "halloween",
+    "spooky",
+    "lucifer",
+    "scary",
+    "cute",
+    "rigged",
+    "cartoon"
+  ],
+  "parameters": {
+    "dimensionX": 1.7342,
+    "dimensionY": 0.3448,
+    "dimensionZ": 1.8302,
+    "dimensionsMeters": {
+      "width": 1.7342,
+      "depth": 0.3448,
+      "height": 1.8302
+    },
+    "boundingBox": {
+      "min": [
+        -0.8671,
+        -0.1621,
+        -0.0009
+      ],
+      "max": [
+        0.8671,
+        0.1826,
+        1.8293
+      ]
+    },
+    "faceCount": 1614,
+    "faceCountRender": 1614,
+    "objectCount": 3,
+    "nodeCount": 0,
+    "meshPolyType": "quad_dominant",
+    "materials": [
+      "[Character]"
+    ],
+    "shaders": [
+      "[]"
+    ],
+    "modifiers": [
+      "[armature]"
+    ],
+    "pbrType": "metallic",
+    "purePbr": true,
+    "procedural": true,
+    "uv": true,
+    "animated": null,
+    "rig": true,
+    "modelStyle": "lowpoly",
+    "condition": "new",
+    "designVariant": null,
+    "textureResolutionMax": null,
+    "engines": [
+      "[cycles]"
+    ]
+  },
+  "availableFiles": [
+    {
+      "fileType": "blend",
+      "uuid": "45d3a527-c03a-4977-83a2-9c289962c463",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/45d3a527-c03a-4977-83a2-9c289962c463/",
+      "fileUploadSize": 812548
+    },
+    {
+      "fileType": "gltf",
+      "uuid": "4f2331d6-1dce-4ced-b33c-939516272ab1",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/4f2331d6-1dce-4ced-b33c-939516272ab1/",
+      "fileUploadSize": 296124
+    },
+    {
+      "fileType": "gltf_godot",
+      "uuid": "e862b436-d4d9-4c89-8c77-078a811413c2",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/e862b436-d4d9-4c89-8c77-078a811413c2/",
+      "fileUploadSize": 569728
+    },
+    {
+      "fileType": "resolution_0_5K",
+      "uuid": "da3f8be8-37bc-4764-8cab-c1b3001e501e",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/da3f8be8-37bc-4764-8cab-c1b3001e501e/",
+      "fileUploadSize": 463272
+    },
+    {
+      "fileType": "resolution_1K",
+      "uuid": "59dc4602-91d9-4343-ae68-c5d31d0a24c5",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/59dc4602-91d9-4343-ae68-c5d31d0a24c5/",
+      "fileUploadSize": 510213
+    },
+    {
+      "fileType": "resolution_2K",
+      "uuid": "92fd09a5-b3b1-4350-b8be-945e9470a884",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/92fd09a5-b3b1-4350-b8be-945e9470a884/",
+      "fileUploadSize": 610557
+    },
+    {
+      "fileType": "resolution_4K",
+      "uuid": "18a509fa-0a5c-4773-98a1-a2dacc06e6ab",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/18a509fa-0a5c-4773-98a1-a2dacc06e6ab/",
+      "fileUploadSize": 811611
+    },
+    {
+      "fileType": "thumbnail",
+      "uuid": "09b4ba5e-c991-429a-8c21-c9ed1e3b0107",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/09b4ba5e-c991-429a-8c21-c9ed1e3b0107/",
+      "fileUploadSize": 297063
+    },
+    {
+      "fileType": "prxc",
+      "uuid": "8f02e25f-987a-4819-a8b8-a5fb01fe5614",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/8f02e25f-987a-4819-a8b8-a5fb01fe5614/",
+      "fileUploadSize": 16996
+    }
+  ],
+  "downloaded": {
+    "thumbnail": {
+      "file": "public/assets/blenderkit/lowpoly_zombie_44a93b65/thumbnail.jpg",
+      "url": "/studio/assets/blenderkit/lowpoly_zombie_44a93b65/thumbnail.jpg",
+      "bytes": 56419,
+      "sourceUrl": "https://public.blenderkit.com/thumbnails/assets/f74f3d6c81654a8a8286a21f88e1cee5/files/thumbnail_0b6095d2-1a7c-46ef-adf6-8c5926421e16.jpg.1024x1024_q85_crop-%2C.jpg"
+    },
+    "glb": {
+      "file": "public/assets/blenderkit/lowpoly_zombie_44a93b65/lowpoly_zombie_44a93b65.glb",
+      "url": "/studio/assets/blenderkit/lowpoly_zombie_44a93b65/lowpoly_zombie_44a93b65.glb",
+      "bytes": 296124,
+      "fileType": "gltf"
+    },
+    "blend": {
+      "file": "public/assets/blenderkit/lowpoly_zombie_44a93b65/lowpoly_zombie_44a93b65_resolution_0_5K.blend",
+      "url": "/studio/assets/blenderkit/lowpoly_zombie_44a93b65/lowpoly_zombie_44a93b65_resolution_0_5K.blend",
+      "bytes": 463272,
+      "fileType": "resolution_0_5K"
+    }
+  }
+}

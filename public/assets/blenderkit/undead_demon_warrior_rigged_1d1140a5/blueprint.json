@@ -1,0 +1,154 @@
+{
+  "id": "8c237ed1-8e73-4148-a47a-85a06ac1bf2d",
+  "assetBaseId": "1d1140a5-6d87-4b3f-a15f-52404a59f54d",
+  "slug": "undead_demon_warrior_rigged_1d1140a5",
+  "name": "Undead Demon Warrior Rigged",
+  "assetType": "model",
+  "category": "monster-creature",
+  "author": "Silent Wolf",
+  "license": "royalty_free",
+  "isFree": true,
+  "score": 16200.0,
+  "ratingsAverage": {
+    "bookmarks": 0.9767441860465116,
+    "workingHours": 180.0,
+    "quality": 9.0,
+    "virtualPrice": null
+  },
+  "description": "\ud83e\udde9 Asset Undead Demon Warrior Rigged  Game Ready | Pure PBR | Optimized \ud83d\udcbe |\r\n\u200b\r\n\u26a1 Type: Realistic \u2013 Low-poly\r\n\ud83c\udfa8 Style: Realistic\r\n\ud83d\udcdd Description:\r\nThis is a low-poly .\r\nIt is optimized for real-time use in games, VR, and animation projects.\r\nThe design is stylized but with enough detail to work well in both cinematic and gameplay contexts.\r\nReady to import into Unity, Unreal Engine, and Blender.\r\n\u200b\r\n\ud83d\udcd0 Technical Details:\r\n- Polycount:24.789\r\n- Rig: Yes (basic humanoid rig) Auto -Rig Pro 3.77.38\r\n+ Retargeting capability in Unreal\r\n- UVs: Unwrapped / No  overlapping\r\n- Textures: 4k PBR (Base Color, Normal, Roughness, Metallic, Alpha, SSS, )\r\n- Materials: 3 main material\r\n4k+1\r\n\u200b\r\n\r\n\r\n\r\nIn this link you can tell me what additional characters you need so that I can produce more characters of your desired theme:\r\nhttps://docs.google.com/forms/d/e/1FAIpQLSfMTH7iTdVrcTAfTNs_xmU4vVlDsObfBPWtqI-XuAWDcsMRZQ/viewform?usp=header",
+  "tags": [
+    "Demon",
+    "Boss",
+    "Unreal",
+    "Rigged",
+    "Warrior",
+    "Skeleton",
+    "Human",
+    "fantasy"
+  ],
+  "parameters": {
+    "dimensionX": 1.3659,
+    "dimensionY": 2.0443,
+    "dimensionZ": 2.2314,
+    "dimensionsMeters": {
+      "width": 1.3659,
+      "depth": 2.0443,
+      "height": 2.2314
+    },
+    "boundingBox": {
+      "min": [
+        -0.5883,
+        -1.4503,
+        -0.0022
+      ],
+      "max": [
+        0.7776,
+        0.594,
+        2.2293
+      ]
+    },
+    "faceCount": 24789,
+    "faceCountRender": 30275,
+    "objectCount": 15,
+    "nodeCount": 41,
+    "meshPolyType": "tri_dominant",
+    "materials": [
+      "[Material.007 Material Material.009]"
+    ],
+    "shaders": [
+      "[principled]"
+    ],
+    "modifiers": [
+      "[mirror armature]"
+    ],
+    "pbrType": "metallic",
+    "purePbr": true,
+    "procedural": false,
+    "uv": true,
+    "animated": null,
+    "rig": true,
+    "modelStyle": "realistic",
+    "condition": "new",
+    "designVariant": null,
+    "textureResolutionMax": 4096,
+    "engines": [
+      "[cycles]"
+    ]
+  },
+  "availableFiles": [
+    {
+      "fileType": "blend",
+      "uuid": "ca2dddad-cec6-4b11-9f34-f38213874a31",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/ca2dddad-cec6-4b11-9f34-f38213874a31/",
+      "fileUploadSize": 37834680
+    },
+    {
+      "fileType": "gltf",
+      "uuid": "6ae4379f-c9a0-4760-8571-bd421372e50f",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/6ae4379f-c9a0-4760-8571-bd421372e50f/",
+      "fileUploadSize": 2665408
+    },
+    {
+      "fileType": "gltf_godot",
+      "uuid": "5949099c-2023-469d-90e5-7ab02ac17f21",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/5949099c-2023-469d-90e5-7ab02ac17f21/",
+      "fileUploadSize": 5652948
+    },
+    {
+      "fileType": "resolution_0_5K",
+      "uuid": "11bbfd48-56c6-4cf9-8f9d-b5ae8bf9f4cd",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/11bbfd48-56c6-4cf9-8f9d-b5ae8bf9f4cd/",
+      "fileUploadSize": 2194634
+    },
+    {
+      "fileType": "resolution_1K",
+      "uuid": "28b2f04a-a1d4-4070-924d-192955925e65",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/28b2f04a-a1d4-4070-924d-192955925e65/",
+      "fileUploadSize": 3542741
+    },
+    {
+      "fileType": "resolution_2K",
+      "uuid": "56f6ef6e-8025-48e6-888c-3f29e09f4086",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/56f6ef6e-8025-48e6-888c-3f29e09f4086/",
+      "fileUploadSize": 8218217
+    },
+    {
+      "fileType": "resolution_4K",
+      "uuid": "1166150f-84bd-4c12-a13c-293bc45fc3df",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/1166150f-84bd-4c12-a13c-293bc45fc3df/",
+      "fileUploadSize": 24949684
+    },
+    {
+      "fileType": "thumbnail",
+      "uuid": "8dfdde92-efed-4d3e-a9a2-8773fcd4b0f3",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/8dfdde92-efed-4d3e-a9a2-8773fcd4b0f3/",
+      "fileUploadSize": 1569522
+    },
+    {
+      "fileType": "prxc",
+      "uuid": "67b639ba-87e9-4021-8464-b5416ec9cc21",
+      "downloadUrl": "https://www.blenderkit.com/api/v1/downloads/67b639ba-87e9-4021-8464-b5416ec9cc21/",
+      "fileUploadSize": 21886
+    }
+  ],
+  "downloaded": {
+    "thumbnail": {
+      "file": "public/assets/blenderkit/undead_demon_warrior_rigged_1d1140a5/thumbnail.jpg",
+      "url": "/studio/assets/blenderkit/undead_demon_warrior_rigged_1d1140a5/thumbnail.jpg",
+      "bytes": 166632,
+      "sourceUrl": "https://public.blenderkit.com/thumbnails/assets/8c237ed18e734148a47a85a06ac1bf2d/files/thumbnail_f9fe24a5-3479-47c1-bf15-a4e6f74eef61.jpg.1024x1024_q85_crop-%2C.jpg"
+    },
+    "glb": {
+      "file": "public/assets/blenderkit/undead_demon_warrior_rigged_1d1140a5/undead_demon_warrior_rigged_1d1140a5.glb",
+      "url": "/studio/assets/blenderkit/undead_demon_warrior_rigged_1d1140a5/undead_demon_warrior_rigged_1d1140a5.glb",
+      "bytes": 2665408,
+      "fileType": "gltf"
+    },
+    "blend": {
+      "file": "public/assets/blenderkit/undead_demon_warrior_rigged_1d1140a5/undead_demon_warrior_rigged_1d1140a5_resolution_0_5K.blend",
+      "url": "/studio/assets/blenderkit/undead_demon_warrior_rigged_1d1140a5/undead_demon_warrior_rigged_1d1140a5_resolution_0_5K.blend",
+      "bytes": 2194634,
+      "fileType": "resolution_0_5K"
+    }
+  }
+}

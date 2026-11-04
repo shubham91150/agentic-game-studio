@@ -15,7 +15,7 @@
       }
     ],
     OBJECTIVES: [
-      'Purge Infected (0/8) & Find Bio-Key in Lab B',
+      'Purge Infected (0/8) & Secure Bio-Key at Police Barricade',
       'Bio-Key Secured — Purge Horde & Unlock North Extraction Gate [E]',
       'WARNING: ALPHA BLOODFANG MUTANT INBOUND — AIM FOR THE HEAD!'
     ],

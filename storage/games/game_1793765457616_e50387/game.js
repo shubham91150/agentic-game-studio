@@ -1539,11 +1539,11 @@
   function initZombieHorde() {
     if (!scene || hordeZombies.length > 0) return;
     var SPAWNS = [
-      { x: 0.0, z: 4.4, patrol: [[0.0, 4.4], [-3.8, 3.5], [3.8, 3.5]] },
-      { x: 5.5, z: -1.5, patrol: [[5.5, -1.5], [8.5, -3.5], [4.5, -4.5]] },
-      { x: -5.5, z: -1.5, patrol: [[-5.5, -1.5], [-8.5, -3.5], [-4.5, -4.5]] },
-      { x: -6.5, z: -6.8, patrol: [[-6.5, -6.8], [0, -7.2], [6.5, -6.8]] },
-      { x: 6.5, z: 3.5, patrol: [[6.5, 3.5], [9.2, 3.5], [5.0, 1.5]] }
+      { x: -0.45, z: 4.3, patrol: [[-0.45, 4.3], [-3.2, 3.2], [2.8, 3.5]] },
+      { x:  1.65, z: 2.2, patrol: [[ 1.65, 2.2], [ 4.2, -1.2], [1.2, -1.5]] },
+      { x: -2.4,  z: 0.2, patrol: [[-2.4,  0.2], [-4.8, -2.5], [0.0, -3.2]] },
+      { x: -5.2,  z: -5.8, patrol: [[-5.2, -5.8], [0, -6.8], [5.2, -5.8]] },
+      { x:  5.2,  z:  3.2, patrol: [[5.2, 3.2], [7.2, 1.5], [4.2, -2.5]] }
     ];
     for (var i = 0; i < SPAWNS.length; i++) {
       (function (sp, idx) {
@@ -1560,8 +1560,9 @@
             depthWrite: false
           })
         );
-        eyeSp.position.set(0, 1.22, 0.25);
-        eyeSp.scale.set(0.24, 0.10, 1);
+        eyeSp.position.set(0, 1.62, 0.18);
+        eyeSp.scale.set(0.14, 0.06, 1);
+        eyeSp.visible = false;
         grp.add(eyeSp);
 
         var hitBox = new THREE.Mesh(
@@ -1596,7 +1597,14 @@
         if (window.THREE._agathaDraco) {
           try { gl.setDRACOLoader(window.THREE._agathaDraco); } catch (eD) {}
         }
-        var zUrl = (idx === 0) ? "./assets/zombie_walker.glb" : "/studio/assets/models/characters/RobotExpressive.glb";
+        var zModels = [
+          "./assets/chained_zombie.glb",
+          "./assets/faceless_zombie.glb",
+          "./assets/undead_warrior_boss.glb",
+          "./assets/chained_zombie.glb",
+          "./assets/faceless_zombie.glb"
+        ];
+        var zUrl = zModels[idx % zModels.length];
         gl.load(zUrl, function (gltf) {
           var root = gltf && (gltf.scene || (gltf.scenes && gltf.scenes[0]));
           if (!root) return;
@@ -1606,17 +1614,17 @@
           if (maxDim > 0.01) root.scale.setScalar(1.72 / maxDim);
           box.setFromObject(root);
           root.position.y -= box.min.y;
+          zRec.bones = {};
           root.traverse(function (n) {
             if (n && n.isMesh) {
               n.userData.hordeZombie = zRec;
-              if (n.material && idx % 2 === 1) {
-                n.material = n.material.clone();
-                if (n.material.color) n.material.color.setHex(0x4a1212);
-                if (n.material.emissive) {
-                  n.material.emissive.setHex(0x3a0606);
-                  n.material.emissiveIntensity = 0.45;
-                }
-              }
+            }
+            if (n && n.isBone && n.name) {
+              var bn = n.name.toLowerCase();
+              if (!zRec.bones.thighL && (bn === "thigh.l" || bn === "thigh_fk.l" || bn.indexOf("upleg") >= 0 && bn.indexOf("l") >= 0)) zRec.bones.thighL = n;
+              if (!zRec.bones.thighR && (bn === "thigh.r" || bn === "thigh_fk.r" || bn.indexOf("upleg") >= 0 && bn.indexOf("r") >= 0)) zRec.bones.thighR = n;
+              if (!zRec.bones.armL && (bn === "arm.l" || bn === "arm_fk.l" || bn === "upper_arm.l")) zRec.bones.armL = n;
+              if (!zRec.bones.armR && (bn === "arm.r" || bn === "arm_fk.r" || bn === "upper_arm.r")) zRec.bones.armR = n;
             }
           });
           grp.add(root);
@@ -1986,8 +1994,15 @@
         }
         hz.yaw = Math.atan2(mvx, mvz);
       }
-      hz.group.position.set(hz.x, 0, hz.z);
+      hz.phase = (hz.phase || (zi * 1.3)) + dt * (chasing ? 9.5 : 5.2);
+      var sw = Math.sin(hz.phase);
+      if (hz.bones) {
+        if (hz.bones.thighL) hz.bones.thighL.rotation.x = sw * 0.45;
+        if (hz.bones.thighR) hz.bones.thighR.rotation.x = -sw * 0.45;
+      }
+      hz.group.position.set(hz.x, Math.abs(sw) * 0.045, hz.z);
       hz.group.rotation.y = hz.yaw;
+      hz.group.rotation.z = sw * 0.055;
 
       if (zdist <= 1.15 && hz.atkCd <= 0 && !isHiddenNow()) {
         hz.atkCd = 1.4;

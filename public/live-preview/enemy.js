@@ -150,7 +150,7 @@
   var OZ = -9;
   var BODY_R = 0.35;
   var ARRIVE_R = 0.4;
-  var AGATHA_URL = "./assets/zombie_walker.glb";
+  var AGATHA_URL = "./assets/undead_warrior_boss.glb";
 
   function clampNum(v, lo, hi) {
     return v < lo ? lo : v > hi ? hi : v;

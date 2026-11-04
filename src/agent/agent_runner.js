@@ -1,3 +1,4 @@
+// [IRONCLAD ZERO-SHORTCUT & PER-STAGE CONFIRMATION LAW: Never copy/reuse another game's house or levels.js. Research first, render & visually audit every 3D asset in isolation before scene integration, and confirm at every stage that what was built 100% matches the goal.]
 /**
  * Agent Runner - Real Orchestrator with Live Event Streaming
  *
