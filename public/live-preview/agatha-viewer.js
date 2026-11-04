@@ -118,6 +118,7 @@
     }
     if (walkClip) {
       walkAction = mixer.clipAction(walkClip);
+      walkAction.timeScale = 0.55;
       walkAction.play();
     }
     mixerOk = true;
@@ -238,10 +239,19 @@
   });
 
   var lastT = performance.now();
+  window.__agathaManualStep = function (fixedDt, yawVal) {
+    window.__agathaManual = true;
+    if (typeof yawVal === "number") camYaw = yawVal;
+    stepViewer(fixedDt || (1 / 30));
+  };
   function animate(now) {
     requestAnimationFrame(animate);
+    if (window.__agathaManual) return;
     var dt = Math.min(0.05, Math.max(0.001, (now - lastT) * 0.001));
     lastT = now;
+    stepViewer(dt);
+  }
+  function stepViewer(dt) {
 
     var mode = modeName();
     if (mixerOk && (mode === "blend" || mode === "walk" || mode === "idle")) {
@@ -256,7 +266,7 @@
       }
     } else if (mode === "procedural") {
       /* Legacy procedural limb driver (fallback / comparison). */
-      walkPhase += dt * 5.2;
+      walkPhase += dt * 2.8;
       var s = Math.sin(walkPhase);
       var c = Math.cos(walkPhase);
       if (legL && legR) {

@@ -84,5 +84,5 @@
 
 3. **AUTONOMOUS MULTI-HOUR EXECUTION & EXPLICIT TIME-EXTENSION REQUESTS**:
    - Agents are expected to work autonomously for hours against `BUILD_TODO.md` to achieve **Elite AAA quality (never basic/placeholder quality)**.
-   - **Never rush or take a shortcut when time runs low**: If an agent needs more time to finish a stage or polish an asset to 10/10 quality, it MUST explicitly inform the user: *"मुझे इस काम को Elite लेवल पर पूरा करने के लिए अभी और समय चाहिए — मैं बिना किसी शॉर्टकट के `BUILD_TODO.md` के हिसाब से इसे पूरा कर रहा हूँ"* and continue working methodically until every item is truly complete.
+   - **Never rush or take a shortcut when time runs low**: If an agent needs more time to finish a stage or polish an asset to 10/10 quality, it MUST explicitly inform the user: *"I need additional time to complete this stage at Elite AAA quality without shortcuts — continuing methodically against BUILD_TODO.md"* and continue working methodically until every item is truly complete.
 

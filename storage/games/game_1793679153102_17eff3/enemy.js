@@ -1556,6 +1556,7 @@
           }
           if (walkClip) {
             walkAction = mixer.clipAction(walkClip);
+            walkAction.timeScale = 0.62;
             walkAction.setEffectiveWeight(0);
             walkAction.play();
           }

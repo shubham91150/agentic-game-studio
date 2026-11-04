@@ -997,7 +997,60 @@
   var sidebarTranscript = document.getElementById("sidebar-transcript");
   var sidebarContinue = document.getElementById("sidebar-continue");
   var sidebarSub = document.getElementById("sidebar-sub");
+  var sidebarHeadTitle = document.getElementById("sidebar-head-title");
+  var sidebarMindmap = document.getElementById("sidebar-mindmap");
+  var sidebarChatsPanel = document.getElementById("sidebar-chats-panel");
+  var sidebarTabMindmap = document.getElementById("sidebar-tab-mindmap");
+  var sidebarTabChats = document.getElementById("sidebar-tab-chats");
   var activeChatId = null;
+
+  function setSidebarSection(sec) {
+    var isChats = sec === "chats";
+    if (sidebarMindmap) sidebarMindmap.classList.toggle("hidden", isChats);
+    if (sidebarChatsPanel) sidebarChatsPanel.classList.toggle("hidden", !isChats);
+    if (sidebarTabMindmap) {
+      sidebarTabMindmap.classList.toggle("active", !isChats);
+      sidebarTabMindmap.setAttribute("aria-selected", isChats ? "false" : "true");
+    }
+    if (sidebarTabChats) {
+      sidebarTabChats.classList.toggle("active", isChats);
+      sidebarTabChats.setAttribute("aria-selected", isChats ? "true" : "false");
+    }
+    if (sidebarHeadTitle) {
+      sidebarHeadTitle.textContent = isChats ? "Chat History" : "Pipeline Mind Map";
+    }
+    if (sidebarSub) {
+      sidebarSub.textContent = isChats
+        ? "Archived terminal transcripts & live tmux windows. Click a session to view or resume."
+        : "6-Stage Meta AI Agentic 3D Game Pipeline · 9 Meta Models · 18 MCP Tools · gVisor Sandbox.";
+    }
+    if (isChats) {
+      showSidebarList();
+      if (sidebarList) sidebarList.innerHTML = "";
+      var loading = document.createElement("div");
+      loading.className = "sidebar-empty";
+      loading.textContent = "Loading chats…";
+      if (sidebarList) sidebarList.appendChild(loading);
+      fetch("/api/studio/chats")
+        .then(function (res) {
+          return res.ok ? res.json() : [];
+        })
+        .then(renderSidebarList)
+        .catch(function () {
+          renderSidebarList([]);
+        });
+    }
+  }
+  if (sidebarTabMindmap) {
+    sidebarTabMindmap.addEventListener("click", function () {
+      setSidebarSection("mindmap");
+    });
+  }
+  if (sidebarTabChats) {
+    sidebarTabChats.addEventListener("click", function () {
+      setSidebarSection("chats");
+    });
+  }
   var activeChatContent = "";
   var activeGameId = null;
   var activeGameTitle = "";
@@ -1143,20 +1196,7 @@
       sidebar.setAttribute("aria-hidden", "false");
     }
     if (sidebarOverlay) sidebarOverlay.classList.remove("hidden");
-    showSidebarList();
-    if (sidebarList) sidebarList.innerHTML = "";
-    var loading = document.createElement("div");
-    loading.className = "sidebar-empty";
-    loading.textContent = "Loading chats…";
-    if (sidebarList) sidebarList.appendChild(loading);
-    fetch("/api/studio/chats")
-      .then(function (res) {
-        return res.ok ? res.json() : [];
-      })
-      .then(renderSidebarList)
-      .catch(function () {
-        renderSidebarList([]);
-      });
+    setSidebarSection("mindmap");
   }
 
   function closeSidebar() {

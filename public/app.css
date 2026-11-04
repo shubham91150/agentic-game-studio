@@ -3062,3 +3062,143 @@ body:has(.preview-box.landscape-fullscreen) .dock {
     display: none !important;
   }
 }
+
+/* ---------- Sidebar Pipeline Mind Map & Segmented Tabs ---------- */
+.sidebar-history {
+  width: min(440px, 92vw) !important;
+}
+.sidebar-nav-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  padding: 10px 16px 6px;
+  background: #000000;
+}
+.sidebar-nav-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  height: 32px;
+  border-radius: 7px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: #0d0d10;
+  color: #a1a1aa;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.sidebar-nav-btn:hover {
+  color: #f4f4f5;
+  border-color: rgba(255, 255, 255, 0.25);
+}
+.sidebar-nav-btn.active {
+  background: #141822;
+  color: #ffffff;
+  border-color: rgba(56, 189, 248, 0.6);
+  box-shadow: 0 0 14px rgba(56, 189, 248, 0.18);
+}
+.sidebar-mindmap {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  padding: 4px 2px 18px;
+}
+.mm-node {
+  background: #0c0e14;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  padding: 10px 12px;
+  position: relative;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+}
+.mm-root {
+  border-color: rgba(56, 189, 248, 0.45);
+}
+.mm-final {
+  border-color: rgba(52, 211, 153, 0.48);
+}
+.mm-connector {
+  width: 2px;
+  height: 14px;
+  background: linear-gradient(180deg, rgba(56, 189, 248, 0.7), rgba(168, 85, 247, 0.7));
+  margin: 0 auto;
+  position: relative;
+}
+.mm-connector::after {
+  content: "";
+  position: absolute;
+  bottom: -3px;
+  left: -3px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #38bdf8;
+  box-shadow: 0 0 8px #38bdf8;
+}
+.mm-badge {
+  display: inline-block;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  padding: 2px 8px;
+  border-radius: 999px;
+  margin-bottom: 5px;
+}
+.mm-badge-cyan { background: rgba(56, 189, 248, 0.15); color: #7dd3fc; border: 1px solid rgba(56, 189, 248, 0.38); }
+.mm-badge-amber { background: rgba(251, 191, 36, 0.15); color: #fcd34d; border: 1px solid rgba(251, 191, 36, 0.38); }
+.mm-badge-purple { background: rgba(168, 85, 247, 0.15); color: #d8b4fe; border: 1px solid rgba(168, 85, 247, 0.38); }
+.mm-badge-emerald { background: rgba(16, 185, 129, 0.15); color: #6ee7b7; border: 1px solid rgba(16, 185, 129, 0.38); }
+.mm-badge-crimson { background: rgba(244, 63, 94, 0.15); color: #fda4af; border: 1px solid rgba(244, 63, 94, 0.38); }
+.mm-badge-green { background: rgba(34, 197, 94, 0.16); color: #86efac; border: 1px solid rgba(34, 197, 94, 0.42); }
+.mm-title {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #f4f4f5;
+  margin-bottom: 6px;
+}
+.mm-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.mm-chip {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 10.5px;
+  padding: 2px 7px;
+  border-radius: 5px;
+  background: #161923;
+  color: #cbd5e1;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+.mm-desc {
+  margin: 6px 0 0;
+  font-size: 11px;
+  line-height: 1.4;
+  color: #9ca3af;
+}
+.mm-branch-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  margin-top: 4px;
+}
+.mm-subnode {
+  background: #141720;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 7px;
+  padding: 6px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.mm-subnode strong {
+  font-size: 11px;
+  color: #e2e8f0;
+}
+.mm-subnode span {
+  font-size: 10px;
+  color: #94a3b8;
+  line-height: 1.35;
+}

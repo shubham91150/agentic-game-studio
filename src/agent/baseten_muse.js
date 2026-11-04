@@ -2,7 +2,7 @@
  * Baseten Client - Meta Muse Spark Open Runner
  *
  * Drives Meta's official open-weight coding & reasoning model (Muse Spark Open)
- * using the $100 Baseten Hackathon credits over the OpenAI-compatible API.
+ * using the $100 Baseten Hackathon credits over the standard chat-completions HTTP API.
  */
 
 import { execFileSync } from "node:child_process";

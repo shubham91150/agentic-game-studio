@@ -295,12 +295,12 @@
         </div>
       </aside>
 
-      <!-- Chat history sidebar (LEFT slide-over: archived transcripts) -->
+      <!-- Left Sidebar: Pipeline Mind Map (default) + Click-to-open Chats -->
       <div class="sidebar-overlay hidden" id="sidebar-overlay"></div>
       <aside
         class="sidebar-history"
         id="sidebar-history"
-        aria-label="Chat history"
+        aria-label="Pipeline Mind Map and Chats"
         aria-hidden="true"
       >
         <div class="drawer-head">
@@ -308,13 +308,13 @@
             <span class="window-dots" aria-hidden="true">
               <span></span><span></span><span></span>
             </span>
-            <span class="terminal-title">Chat history</span>
+            <span class="terminal-title" id="sidebar-head-title">Pipeline Mind Map</span>
           </div>
           <button
             type="button"
             id="sidebar-close"
             class="icon-btn"
-            aria-label="Close chat history"
+            aria-label="Close sidebar"
           >
             <svg
               width="15"
@@ -331,31 +331,149 @@
             </svg>
           </button>
         </div>
+
+        <div class="sidebar-nav-tabs" role="tablist" aria-label="Sidebar sections">
+          <button
+            type="button"
+            class="sidebar-nav-btn active"
+            id="sidebar-tab-mindmap"
+            role="tab"
+            aria-selected="true"
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="12" cy="5" r="3" />
+              <circle cx="5" cy="19" r="3" />
+              <circle cx="19" cy="19" r="3" />
+              <path d="M10.5 7.5 6.5 16.5" />
+              <path d="M13.5 7.5 17.5 16.5" />
+            </svg>
+            Pipeline Mind Map
+          </button>
+          <button
+            type="button"
+            class="sidebar-nav-btn"
+            id="sidebar-tab-chats"
+            role="tab"
+            aria-selected="false"
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+            </svg>
+            Chats
+          </button>
+        </div>
+
         <p class="drawer-sub" id="sidebar-sub">
-          Archived terminal transcripts. Resume = view + seed the live terminal
-          with context.
+          6-Stage Meta AI Agentic 3D Game Pipeline · 9 Meta Models · 18 MCP Tools · gVisor Sandbox.
         </p>
+
         <div class="sidebar-body" id="sidebar-body">
-          <div class="sidebar-list" id="sidebar-list"></div>
-          <div class="sidebar-view hidden" id="sidebar-view">
-            <div class="sidebar-view-top">
-              <button type="button" class="sidebar-back" id="sidebar-back">
-                ← Back
-              </button>
-              <p class="sidebar-meta" id="sidebar-meta"></p>
+          <!-- Interactive Pipeline Mind Map (Default View) -->
+          <div class="sidebar-mindmap" id="sidebar-mindmap">
+            <div class="mm-node mm-root">
+              <div class="mm-badge mm-badge-cyan">INPUT &amp; SAFETY</div>
+              <div class="mm-title">User Prompt · Voice Mic · Reference Upload</div>
+              <div class="mm-chips">
+                <span class="mm-chip">muse-voice-transcribe-1.0</span>
+                <span class="mm-chip">16kHz WAV</span>
+                <span class="mm-chip">Safety Shield</span>
+              </div>
             </div>
-            <pre
-              class="sidebar-transcript"
-              id="sidebar-transcript"
-              tabindex="0"
-            ></pre>
-            <button
-              type="button"
-              class="sidebar-continue"
-              id="sidebar-continue"
-            >
-              Continue from here
-            </button>
+
+            <div class="mm-connector"></div>
+
+            <div class="mm-node">
+              <div class="mm-badge mm-badge-amber">STAGE 1 · ARCHITECT &amp; RESEARCH</div>
+              <div class="mm-title">High-Reasoning Spec &amp; Master BUILD_TODO.md</div>
+              <div class="mm-chips">
+                <span class="mm-chip">muse-wonder-1.0</span>
+                <span class="mm-chip">muse-spark-open-1026 (Baseten)</span>
+                <span class="mm-chip">Elite Imagination Engine</span>
+              </div>
+              <p class="mm-desc">4-agent swarm researches AAA references, HFSM states, and spatial metrics before writing BUILD_TODO.md.</p>
+            </div>
+
+            <div class="mm-connector"></div>
+
+            <div class="mm-node">
+              <div class="mm-badge mm-badge-purple">STAGE 2 · 4-AGENT 3D ASSET SWARM</div>
+              <div class="mm-title">Curated Photogrammetry &amp; Rigged 3D Kit (.glb)</div>
+              <div class="mm-branch-grid">
+                <div class="mm-subnode">
+                  <strong>Vision &amp; 3D Recon</strong>
+                  <span>muse-image-1.0 · sam-3.1 Cutouts · SAM 3D Objects · VGGT-1B</span>
+                </div>
+                <div class="mm-subnode">
+                  <strong>Blender 3.4 MCP + Scans</strong>
+                  <span>20-Bone Armature Rig · Idle/Walk NLA · Polyhaven 1K · AmbientCG PBR</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="mm-connector"></div>
+
+            <div class="mm-node">
+              <div class="mm-badge mm-badge-emerald">STAGE 3 · 3D WORLD &amp; MASTERPIECE RENDER</div>
+              <div class="mm-title">SceneScript WFC + Cinema Post-Processing</div>
+              <div class="mm-chips">
+                <span class="mm-chip">Meta SceneScript DSL</span>
+                <span class="mm-chip">ACESFilmic + UnrealBloomPass</span>
+                <span class="mm-chip">1K HDRI IBL</span>
+                <span class="mm-chip">3D Instanced Grass</span>
+              </div>
+            </div>
+
+            <div class="mm-connector"></div>
+
+            <div class="mm-node">
+              <div class="mm-badge mm-badge-crimson">STAGE 4 &amp; 5 · AI DIRECTOR &amp; 4-BUS AUDIO</div>
+              <div class="mm-title">Systemic Gameplay · HFSM + A* · Cathedral Reverb</div>
+              <div class="mm-chips">
+                <span class="mm-chip">muse-spark-1.3 CLI</span>
+                <span class="mm-chip">facebook/musicgen-small</span>
+                <span class="mm-chip">POST /api/studio/ai/director</span>
+                <span class="mm-chip">Unity C# Export</span>
+              </div>
+              <p class="mm-desc">Live runtime AI Director polls telemetry every 14s to adapt stalker tactics, whispers, and lantern blackouts.</p>
+            </div>
+
+            <div class="mm-connector"></div>
+
+            <div class="mm-node mm-final">
+              <div class="mm-badge mm-badge-green">STAGE 6 · SANDBOX &amp; DETERMINISTIC QA GATES</div>
+              <div class="mm-title">Zero-Tolerance Verification &amp; Judge Isolation</div>
+              <div class="mm-chips">
+                <span class="mm-chip">Google gVisor (runsc 4.19)</span>
+                <span class="mm-chip">Visual QA (6/6 · 0 Primitives)</span>
+                <span class="mm-chip">Physics QA (CCD + BFS)</span>
+                <span class="mm-chip">81/81 Tests PASS</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Chats Panel (Hidden until user clicks the Chats button!) -->
+          <div class="sidebar-chats-panel hidden" id="sidebar-chats-panel">
+            <div class="sidebar-list" id="sidebar-list"></div>
+            <div class="sidebar-view hidden" id="sidebar-view">
+              <div class="sidebar-view-top">
+                <button type="button" class="sidebar-back" id="sidebar-back">
+                  ← Back
+                </button>
+                <p class="sidebar-meta" id="sidebar-meta"></p>
+              </div>
+              <pre
+                class="sidebar-transcript"
+                id="sidebar-transcript"
+                tabindex="0"
+              ></pre>
+              <button
+                type="button"
+                class="sidebar-continue"
+                id="sidebar-continue"
+              >
+                Continue from here
+              </button>
+            </div>
           </div>
         </div>
       </aside>
