@@ -2435,7 +2435,6 @@
           var img = document.createElement("img");
           img.className = "mcp-badge-img";
           img.alt = "";
-          img.loading = "lazy";
           img.addEventListener("error", fallbackLetter);
           img.src = src;
           holder.appendChild(img);
