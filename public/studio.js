@@ -1008,7 +1008,6 @@
   var sidebarBody = document.getElementById("sidebar-body");
   var sidebarChatsPanel = document.getElementById("sidebar-chats-panel");
   var sidebarSkillsPanel = document.getElementById("sidebar-skills-panel");
-  var sidebarSysdesignPanel = document.getElementById("sidebar-sysdesign-panel");
   var sidebarSkillsList = document.getElementById("sidebar-skills-list");
   var sidebarNavChats = document.getElementById("sidebar-nav-chats");
   var sidebarNavSkills = document.getElementById("sidebar-nav-skills");
@@ -1105,7 +1104,6 @@
       if (sidebarBody) sidebarBody.classList.add("hidden");
       if (sidebarChatsPanel) sidebarChatsPanel.classList.add("hidden");
       if (sidebarSkillsPanel) sidebarSkillsPanel.classList.add("hidden");
-      if (sidebarSysdesignPanel) sidebarSysdesignPanel.classList.add("hidden");
       return;
     }
 
@@ -1114,8 +1112,6 @@
       sidebarChatsPanel.classList.toggle("hidden", sec !== "chats");
     if (sidebarSkillsPanel)
       sidebarSkillsPanel.classList.toggle("hidden", sec !== "skills");
-    if (sidebarSysdesignPanel)
-      sidebarSysdesignPanel.classList.toggle("hidden", sec !== "sysdesign");
 
     if (sec === "chats") {
       if (sidebarSub) {
@@ -1143,10 +1139,8 @@
       }
       renderSidebarSkills();
     } else if (sec === "sysdesign") {
-      if (sidebarSub) {
-        sidebarSub.textContent =
-          "App pipeline: prompt to playable game. Built in code, monochrome by design.";
-      }
+      openPipelineModal();
+      return;
     }
   }
 
@@ -1162,11 +1156,34 @@
   }
   if (sidebarNavSysdesign) {
     sidebarNavSysdesign.addEventListener("click", function () {
-      setSidebarSection(
-        activeSidebarSection === "sysdesign" ? null : "sysdesign",
-      );
+      closeSidebar();
+      openPipelineModal();
     });
   }
+  var pipelineModal = document.getElementById("pipeline-modal");
+  var pipelineOverlay = document.getElementById("pipeline-overlay");
+  var pipelineClose = document.getElementById("pipeline-close");
+  function openPipelineModal() {
+    pausePreviewGame();
+    if (pipelineModal) {
+      pipelineModal.classList.remove("hidden");
+      pipelineModal.setAttribute("aria-hidden", "false");
+    }
+    if (pipelineOverlay) pipelineOverlay.classList.remove("hidden");
+  }
+  function closePipelineModal() {
+    if (pipelineModal) {
+      pipelineModal.classList.add("hidden");
+      pipelineModal.setAttribute("aria-hidden", "true");
+    }
+    if (pipelineOverlay) pipelineOverlay.classList.add("hidden");
+  }
+  if (pipelineClose) pipelineClose.addEventListener("click", closePipelineModal);
+  if (pipelineOverlay)
+    pipelineOverlay.addEventListener("click", closePipelineModal);
+  document.addEventListener("keydown", function (event) {
+    if (event.key === "Escape") closePipelineModal();
+  });
   function triggerSidebarNewChat() {
     closeSidebar();
     var topNewChat = document.getElementById("newchat-btn");
@@ -1217,18 +1234,39 @@
       return;
     }
     chats.forEach(function (c) {
+      var isLive = !!c.live;
+      var isActive = !!c.windowActive;
       var item = document.createElement("button");
       item.type = "button";
-      item.className = "sidebar-item";
+      item.className =
+        "sidebar-item" +
+        (isLive ? " is-live" : "") +
+        (isActive ? " is-active" : "");
+      var head = document.createElement("div");
+      head.className = "sidebar-item-head";
+      var dot = document.createElement("span");
+      dot.className = "sidebar-status-dot" + (isLive ? " on" : "");
+      dot.setAttribute("aria-hidden", "true");
+      head.appendChild(dot);
       var title = document.createElement("p");
       title.className = "sidebar-item-title";
-      title.textContent =
+      var name =
         c.transcript === false
-          ? "Terminal " +
-            (c.windowId || "") +
-            (c.windowActive ? " (active)" : " (inactive / resumable)")
-          : c.id || "terminal";
-      item.appendChild(title);
+          ? "Terminal " + (c.windowId || "")
+          : "Session " +
+            String(c.id || "terminal")
+              .replace(/^chat_/, "")
+              .slice(0, 19);
+      title.textContent = name || "terminal";
+      title.title = c.id || "";
+      head.appendChild(title);
+      if (isLive) {
+        var badge = document.createElement("span");
+        badge.className = "sidebar-live-badge" + (isActive ? " current" : "");
+        badge.textContent = isActive ? "CURRENT" : "LIVE";
+        head.appendChild(badge);
+      }
+      item.appendChild(head);
       var meta = document.createElement("p");
       meta.className = "sidebar-item-meta";
       meta.textContent =
@@ -1236,15 +1274,6 @@
           .filter(Boolean)
           .join(" · ") || "unkilled tmux terminal";
       item.appendChild(meta);
-      if (c.live) {
-        var live = document.createElement("p");
-        live.className = "sidebar-item-meta";
-        live.textContent =
-          "● UNKILLED " +
-          (c.windowId || "") +
-          (c.windowActive ? " · current" : " · ready to resume");
-        item.appendChild(live);
-      }
       if (c.preview) {
         var prev = document.createElement("p");
         prev.className = "sidebar-item-preview";
@@ -1252,14 +1281,24 @@
         item.appendChild(prev);
       }
       if (c.gameId) {
-        var gm = document.createElement("p");
-        gm.className = "sidebar-item-preview";
-        gm.textContent = "Game: " + (c.gameTitle || c.gameId);
+        var gm = document.createElement("div");
+        gm.className = "sidebar-game-chip";
+        var gmDot = document.createElement("span");
+        gmDot.className = "sidebar-game-dot";
+        gmDot.textContent = "◆";
+        gmDot.setAttribute("aria-hidden", "true");
+        gm.appendChild(gmDot);
+        var gmName = document.createElement("span");
+        gmName.className = "sidebar-game-name";
+        gmName.textContent = c.gameTitle || c.gameId;
+        gm.appendChild(gmName);
         item.appendChild(gm);
       }
       var view = document.createElement("span");
       view.className = "sidebar-item-view";
-      view.textContent = "Resume terminal →";
+      view.textContent = isActive
+        ? "Open live terminal →"
+        : "Resume terminal →";
       item.appendChild(view);
       item.addEventListener(
         "click",

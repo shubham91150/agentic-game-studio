@@ -2748,7 +2748,7 @@ div.plus-flyout::-webkit-scrollbar-thumb {
 .sidebar-item-view {
   font-size: var(--fs-12);
   font-weight: 600;
-  color: var(--accent);
+  color: #ffffff;
 }
 
 .sidebar-view {
@@ -3629,56 +3629,159 @@ body:has(.preview-box.landscape-fullscreen) .dock {
   height: auto !important;
 }
 
-/* ---------- Sidebar Pipeline Mind Map (monochrome, code-built) ---------- */
-.sidebar-sysdesign-panel {
+/* ---------- Chats list: status cards ---------- */
+.sidebar-item-head {
   display: flex;
-  flex-direction: column;
-  min-height: 0;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
 }
-.pl-flow {
+.sidebar-item-head .sidebar-item-title {
+  flex: 1 1 auto;
+}
+.sidebar-status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #52525b;
+  flex-shrink: 0;
+}
+.sidebar-status-dot.on {
+  background: #4ade80;
+  box-shadow: 0 0 8px rgba(74, 222, 128, 0.7);
+}
+.sidebar-item.is-live {
+  border-color: rgba(74, 222, 128, 0.28);
+}
+.sidebar-item.is-live:hover {
+  border-color: rgba(74, 222, 128, 0.55);
+}
+.sidebar-item.is-active {
+  border-color: rgba(74, 222, 128, 0.55);
+  box-shadow:
+    0 0 0 1px rgba(74, 222, 128, 0.15),
+    0 6px 18px rgba(0, 0, 0, 0.5);
+}
+.sidebar-live-badge {
+  margin-left: auto;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: #86efac;
+  border: 1px solid rgba(74, 222, 128, 0.4);
+  border-radius: 999px;
+  padding: 1px 7px;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+.sidebar-live-badge.current {
+  background: rgba(74, 222, 128, 0.14);
+  color: #bbf7d0;
+}
+.sidebar-game-chip {
   display: flex;
-  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  margin: 2px 0;
+  background: #101014;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  padding: 5px 9px;
+}
+.sidebar-game-dot {
+  color: #d4d4d8;
+  font-size: 10px;
+  flex-shrink: 0;
+}
+.sidebar-game-name {
+  font-size: var(--fs-12);
+  font-weight: 600;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ---------- Pipeline Modal (5-column System Design flow, monochrome) ---------- */
+.pipeline-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.72);
+  z-index: 90;
+}
+.pipeline-modal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(1280px, 94vw);
+  max-height: 88vh;
+  overflow-y: auto;
+  background: #000000;
+  border: 1px solid #26262c;
+  border-radius: 14px;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.8);
+  z-index: 91;
+  padding: 20px 22px 24px;
+}
+.pipeline-modal-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.pipeline-eyebrow {
+  margin: 0 0 2px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #8e8e99;
+}
+.pipeline-title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  color: #f4f4f5;
+}
+.pipeline-grid {
+  display: grid;
+  grid-template-columns: 1fr 28px 1fr 28px 1fr 28px 1fr 28px 1fr;
+  align-items: start;
   gap: 0;
-  padding: 2px 2px 18px;
+  min-width: 1060px;
 }
-.pl-stage {
+.plm-col {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  padding: 10px 0 12px 12px;
-  border-left: 1px solid #26262c;
-  margin-left: 5px;
-  position: relative;
+  gap: 7px;
+  min-width: 0;
+  border: 1px solid #232329;
+  border-radius: 10px;
+  padding: 10px;
+  background: #060608;
 }
-.pl-stage:first-child {
-  padding-top: 4px;
-}
-.pl-stage:last-child {
-  padding-bottom: 2px;
-}
-.pl-stage-head {
-  font-size: 10.5px;
+.plm-col-head {
+  font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.1em;
   color: #f4f4f5;
   background: #141417;
   border: 1px solid #2e2e35;
   border-radius: 6px;
-  padding: 5px 9px;
-  margin-left: -18px;
-  align-self: flex-start;
-  position: relative;
+  padding: 6px 9px;
+  text-align: center;
 }
-.pl-stage-head::before {
-  content: "";
-  position: absolute;
-  left: -6px;
-  top: 50%;
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: #f4f4f5;
-  transform: translateY(-50%);
+.plm-arrow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 120px;
+  color: #52525b;
+  font-size: 18px;
+  user-select: none;
 }
 .pl-box {
   background: #0c0c0e;
@@ -3713,4 +3816,14 @@ body:has(.preview-box.landscape-fullscreen) .dock {
   border: 1px solid #232329;
   border-radius: 4px;
   padding: 0 4px;
+}
+@media (max-width: 1100px) {
+  .pipeline-grid {
+    grid-template-columns: 1fr;
+    min-width: 0;
+  }
+  .plm-arrow {
+    padding: 2px 0;
+    transform: rotate(90deg);
+  }
 }
