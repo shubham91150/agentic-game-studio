@@ -1284,7 +1284,7 @@ button.icon-btn {
   flex-direction: column;
   border: 1px solid var(--line);
   border-radius: var(--r-md);
-  background: #000;
+  background: #121212;
   box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6);
   padding: 6px;
 }
