@@ -2007,6 +2007,7 @@
   // skills, instructions, MCPs — all loaded live from backend)
   function closePlusMenu() {
     if (plusMenu) plusMenu.classList.add("hidden");
+    closeFlyout();
   }
   function setSubOpen(toggle, panel, open) {
     if (!toggle || !panel) return;
@@ -2016,14 +2017,88 @@
   function isSubOpen(panel) {
     return !!panel && !panel.classList.contains("hidden");
   }
-  function toggleSub(toggle, panel) {
-    var open = !isSubOpen(panel);
-    setSubOpen(plusSkillsToggle, plusSkills, false);
-    setSubOpen(plusInstructionsToggle, plusInstructions, false);
-    setSubOpen(plusMcpsToggle, plusMcps, false);
-    setSubOpen(plusPermissionsToggle, plusPermissions, false);
-    setSubOpen(toggle, panel, open);
+
+  /* Floating second-level panels (flyouts beside the row; hover on desktop, click on touch) */
+  var PLUS_SUBS = [
+    [plusSkillsToggle, plusSkills],
+    [plusInstructionsToggle, plusInstructions],
+    [plusMcpsToggle, plusMcps],
+    [plusPermissionsToggle, plusPermissions],
+  ];
+  var openSub = null;
+  var flyoutTimer = null;
+  // Reparent panels to <body> so the parent menu's scroll/overflow never clips them
+  PLUS_SUBS.forEach(function (pair) {
+    if (pair[1] && pair[1].parentNode !== document.body) {
+      document.body.appendChild(pair[1]);
+      pair[1].classList.add("plus-flyout");
+    }
+  });
+  function positionFlyout(row, panel) {
+    var rect = row.getBoundingClientRect();
+    var width = panel.offsetWidth || 240;
+    var left = rect.right + 8;
+    if (left + width + 8 > window.innerWidth) {
+      left = Math.max(8, rect.left - width - 8);
+    }
+    var top = Math.min(rect.top, Math.max(8, window.innerHeight - 160));
+    panel.style.left = left + "px";
+    panel.style.top = top + "px";
+    panel.style.maxHeight =
+      Math.max(180, window.innerHeight - top - 24) + "px";
   }
+  function openFlyout(row, panel) {
+    if (!row || !panel) return;
+    if (openSub && openSub.panel !== panel) setSubOpen(openSub.row, openSub.panel, false);
+    positionFlyout(row, panel);
+    setSubOpen(row, panel, true);
+    openSub = { row: row, panel: panel };
+  }
+  function closeFlyout() {
+    if (openSub) {
+      setSubOpen(openSub.row, openSub.panel, false);
+      openSub = null;
+    }
+  }
+  function scheduleFlyoutClose() {
+    clearTimeout(flyoutTimer);
+    flyoutTimer = setTimeout(closeFlyout, 180);
+  }
+  function toggleSub(toggle, panel) {
+    var wasOpen = isSubOpen(panel);
+    closeFlyout();
+    if (!wasOpen) openFlyout(toggle, panel);
+  }
+  if (window.matchMedia && window.matchMedia("(hover: hover)").matches) {
+    PLUS_SUBS.forEach(function (pair) {
+      var row = pair[0];
+      var panel = pair[1];
+      if (!row || !panel) return;
+      row.addEventListener("mouseenter", function () {
+        clearTimeout(flyoutTimer);
+        openFlyout(row, panel);
+      });
+      row.addEventListener("mouseleave", scheduleFlyoutClose);
+      panel.addEventListener("mouseenter", function () {
+        clearTimeout(flyoutTimer);
+      });
+      panel.addEventListener("mouseleave", scheduleFlyoutClose);
+    });
+  }
+  window.addEventListener(
+    "scroll",
+    function (event) {
+      if (
+        openSub &&
+        openSub.panel.contains(event.target)
+      ) {
+        return; // scrolling inside the flyout is fine
+      }
+      closeFlyout();
+    },
+    true,
+  );
+  window.addEventListener("resize", closeFlyout);
   if (attachBtn) {
     attachBtn.addEventListener("click", function (event) {
       event.stopPropagation();
@@ -2052,10 +2127,14 @@
     });
   }
   document.addEventListener("click", function (event) {
+    var inFlyout = PLUS_SUBS.some(function (pair) {
+      return pair[1] && pair[1].contains(event.target);
+    });
     if (
       plusMenu &&
       !plusMenu.classList.contains("hidden") &&
       !plusMenu.contains(event.target) &&
+      !inFlyout &&
       event.target !== attachBtn
     ) {
       closePlusMenu();
@@ -2173,43 +2252,77 @@
   }
 
   var cachedCapabilities = { skills: [], mcp: { servers: [] } };
+  var skillTerm = "";
+  function renderSkillItems() {
+    var listEl = plusSkills.querySelector(".plus-skill-list");
+    if (!listEl) return;
+    listEl.innerHTML = "";
+    var term = skillTerm.toLowerCase();
+    var shown = cachedCapabilities.skills.filter(function (s) {
+      if (!term) return true;
+      return (
+        (s.id || "").toLowerCase().indexOf(term) !== -1 ||
+        (s.description || "").toLowerCase().indexOf(term) !== -1
+      );
+    });
+    if (!shown.length) {
+      var none = document.createElement("div");
+      none.className = "plus-hint";
+      none.textContent = term
+        ? "No skills match this search."
+        : "No skills found in this workspace.";
+      listEl.appendChild(none);
+    }
+    shown.forEach(function (s) {
+      var item = document.createElement("button");
+      item.type = "button";
+      item.className = "plus-item";
+      item.setAttribute("role", "menuitem");
+      item.title = s.description || s.id;
+      var name = document.createElement("span");
+      name.textContent = "@" + s.id;
+      item.appendChild(name);
+      if (activeSkills.indexOf(s.id) !== -1) {
+        var tick = document.createElement("span");
+        tick.className = "tick";
+        tick.textContent = "✓";
+        item.appendChild(tick);
+      }
+      item.addEventListener("click", function () {
+        if (activeSkills.indexOf(s.id) === -1) {
+          activeSkills.push(s.id);
+        } else {
+          activeSkills = activeSkills.filter(function (x) {
+            return x !== s.id;
+          });
+        }
+        renderSkillChips();
+        renderPlusMenu();
+      });
+      listEl.appendChild(item);
+    });
+  }
+  function ensureSkillsShell() {
+    if (plusSkills.querySelector(".plus-skill-list")) return;
+    var search = document.createElement("input");
+    search.type = "text";
+    search.className = "plus-search";
+    search.placeholder = "Search skills…";
+    search.setAttribute("aria-label", "Search skills");
+    search.maxLength = 40;
+    search.addEventListener("input", function () {
+      skillTerm = search.value || "";
+      renderSkillItems();
+    });
+    var list = document.createElement("div");
+    list.className = "plus-skill-list";
+    plusSkills.appendChild(search);
+    plusSkills.appendChild(list);
+  }
   function renderPlusMenu() {
     if (plusSkills) {
-      plusSkills.innerHTML = "";
-      if (!cachedCapabilities.skills.length) {
-        var none = document.createElement("div");
-        none.className = "plus-hint";
-        none.textContent = "No skills found in this workspace.";
-        plusSkills.appendChild(none);
-      }
-      cachedCapabilities.skills.forEach(function (s) {
-        var item = document.createElement("button");
-        item.type = "button";
-        item.className = "plus-item";
-        item.setAttribute("role", "menuitem");
-        item.title = s.description || s.id;
-        var name = document.createElement("span");
-        name.textContent = "@" + s.id;
-        item.appendChild(name);
-        if (activeSkills.indexOf(s.id) !== -1) {
-          var tick = document.createElement("span");
-          tick.className = "tick";
-          tick.textContent = "✓";
-          item.appendChild(tick);
-        }
-        item.addEventListener("click", function () {
-          if (activeSkills.indexOf(s.id) === -1) {
-            activeSkills.push(s.id);
-          } else {
-            activeSkills = activeSkills.filter(function (x) {
-              return x !== s.id;
-            });
-          }
-          renderSkillChips();
-          renderPlusMenu();
-        });
-        plusSkills.appendChild(item);
-      });
+      ensureSkillsShell();
+      renderSkillItems();
     }
     if (plusMcps) {
       plusMcps.innerHTML = "";

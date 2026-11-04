@@ -1389,8 +1389,6 @@ button.icon-btn {
 }
 
 .plus-sub:not(.hidden) {
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
-  margin-top: 2px;
   padding-top: 4px;
 }
 
@@ -1637,6 +1635,66 @@ button.icon-btn {
 .plus-row[aria-expanded="true"] .plus-chev {
   transform: rotate(90deg);
   color: #ffffff;
+}
+
+/* Floating second-level container (flyout beside the row) */
+div.plus-flyout {
+  position: fixed;
+  z-index: 210;
+  width: 240px;
+  max-width: calc(100vw - 24px);
+  max-height: min(420px, 62vh);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 14px;
+  background: #121212;
+  box-shadow:
+    0 8px 24px rgba(0, 0, 0, 0.55),
+    0 24px 64px rgba(0, 0, 0, 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  padding: 6px;
+  margin: 0;
+  animation: menu-in 0.16s ease-out;
+}
+
+div.plus-flyout::-webkit-scrollbar {
+  width: 8px;
+}
+
+div.plus-flyout::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  border: 2px solid #121212;
+}
+
+.plus-search {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: transparent;
+  border-radius: 8px;
+  color: var(--ink);
+  font: inherit;
+  font-size: 12px;
+  padding: 7px 9px;
+  margin: 2px 4px 6px;
+  outline: none;
+  min-width: 0;
+}
+
+.plus-search:focus {
+  border-color: rgba(255, 255, 255, 0.18);
+}
+
+.plus-search::placeholder {
+  color: #6b6b76;
+}
+
+.plus-skill-list {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
 }
 
 .plus-perm-list {
