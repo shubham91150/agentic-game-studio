@@ -3150,6 +3150,12 @@
 
   // Terminal inline preview: loads directly in-app, no sign-in gate.
   // The iframe always renders; no connect card or manual load button.
+  // Auth guard (CSP fix): GitHub login refuses framing (frame-ancestors),
+  // so the iframe src is only set when an owner session exists. Logged-out
+  // visitors get a compact sign-in link (top-level tab, never framed) that
+  // auto-loads the terminal the moment the session appears — the blocked
+  // "Framing 'https://github.com/' violates default-src 'self'" frame
+  // can never occur.
   var terminalInlineBound = false;
   function showInlineTerminal() {
     var frame = document.getElementById("cli-frame");
@@ -3162,13 +3168,83 @@
     if (!frame.getAttribute("src")) {
       frame.src = TERMINAL_URL;
     }
+    var signin = document.getElementById("terminal-signin");
+    if (signin && signin.parentNode) signin.parentNode.removeChild(signin);
     frame.classList.remove("hidden");
     if (!terminalInlineBound) {
       terminalInlineBound = true;
       frame.addEventListener("load", showInlineTerminal);
     }
   }
-  loadTerminalInline();
+  function showTerminalSignin() {
+    var frame = document.getElementById("cli-frame");
+    if (frame) frame.classList.add("hidden");
+    var box = document.querySelector(".terminal-section .terminal-box");
+    if (!box || document.getElementById("terminal-signin")) return;
+    var wrap = document.createElement("div");
+    wrap.id = "terminal-signin";
+    wrap.className = "terminal-connect";
+    var mark = document.createElement("div");
+    mark.className = "connect-mark";
+    mark.setAttribute("aria-hidden", "true");
+    wrap.appendChild(mark);
+    var text = document.createElement("p");
+    text.className = "terminal-connect-text";
+    text.textContent =
+      "Sign in with GitHub to load the live terminal. It opens in a new tab; the terminal appears here automatically.";
+    wrap.appendChild(text);
+    var actions = document.createElement("div");
+    actions.className = "terminal-connect-actions";
+    var link = document.createElement("a");
+    link.className = "terminal-btn terminal-btn-primary";
+    link.href = "https://spurcode.duckdns.org/terminal/";
+    link.target = "_blank";
+    link.rel = "noreferrer";
+    link.textContent = "Sign in with GitHub";
+    link.addEventListener("click", function () {
+      var poll = setInterval(function () {
+        fetch("/api/studio/git/status", { cache: "no-store" })
+          .then(function (res) {
+            if (res.ok) {
+              clearInterval(poll);
+              loadTerminalInline();
+            }
+          })
+          .catch(function () {});
+      }, 3000);
+      setTimeout(function () {
+        clearInterval(poll);
+      }, 120000);
+    });
+    actions.appendChild(link);
+    wrap.appendChild(actions);
+    box.appendChild(wrap);
+  }
+  function initInlineTerminal() {
+    // Direct open: set the iframe src immediately for everyone.
+    loadTerminalInline();
+    // Downgrade-only probe (CSP fix): GitHub login refuses framing
+    // (frame-ancestors), so a logged-out iframe ends in a CSP-blocked
+    // "Framing 'https://github.com/' violates default-src 'self'" page.
+    // Same-origin terminal pages stay readable — anything else means the
+    // session is missing, so swap the dead frame for the sign-in link
+    // instead of ever showing the browser's blocked-content error.
+    setTimeout(function () {
+      var frame = document.getElementById("cli-frame");
+      if (!frame || !frame.getAttribute("src")) return;
+      var readable = false;
+      try {
+        var doc =
+          frame.contentDocument ||
+          (frame.contentWindow && frame.contentWindow.document);
+        if (doc) readable = true;
+      } catch (e) {
+        readable = false;
+      }
+      if (!readable) showTerminalSignin();
+    }, 4000);
+  }
+  initInlineTerminal();
 
   // PWA offline (ui-taste: silent, no UI chrome): register the service
   // worker only where it can work — https or localhost. No inline scripts
