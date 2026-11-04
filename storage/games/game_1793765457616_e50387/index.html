@@ -6,7 +6,7 @@
       name="viewport"
       content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"
     />
-    <title>Hollow Light — Whispering Roots</title>
+    <title>Veil of the Hollow Lantern</title>
     <link rel="icon" href="data:," />
     <style>
       :root {
@@ -216,8 +216,14 @@
         z-index: 8;
         pointer-events: none;
       }
-      body.touch #touch-controls {
+      body.touch #touch-controls,
+      body.playing #touch-controls {
         display: flex;
+      }
+      .tbtn {
+        cursor: pointer;
+        user-select: none;
+        -webkit-user-select: none;
       }
       #dpad {
         display: grid;
@@ -308,13 +314,14 @@
       <div class="hud-chip"><span id="val-hearts">3</span><span>hearts</span></div>
       <div class="hud-chip"><span id="val-timer">00:00.0</span></div>
       <div class="hud-chip" id="dash-indicator"><span class="dot"></span><span>dash</span></div>
+      <button class="hud-chip" id="btn-pause-hud" type="button" style="margin-left:auto;pointer-events:auto;cursor:pointer;background:rgba(4,16,18,0.85);color:#7df9d4;border:1px solid rgba(125,249,212,0.45);">❚❚ PAUSE</button>
     </div>
     <div id="checkpoint-banner"></div>
     <div id="banner" class="hidden"></div>
 
     <div id="menu" class="overlay">
       <div class="card">
-        <h1>HOLLOW LIGHT</h1>
+        <h1>VEIL OF THE HOLLOW LANTERN</h1>
         <p id="story-line">Guide the last wisp through the Whispering Roots, the Clockwork Aqueducts, and the Belltower Chasm.</p>
         <p class="keys">Move: A/D or arrows &middot; Jump: Space/W &middot; Dash: Shift/K &middot; Act: E/J &middot; Pause: P</p>
         <button class="btn" id="btn-start" type="button">BEGIN</button>

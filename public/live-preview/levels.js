@@ -33,8 +33,8 @@
   };
   Levels.POLY = {
     pillar: '/studio/assets/models/roads/bridge-pillar-wide.glb',
-    boulder: '/studio/assets/polyhaven/boulder_01/boulder_01_1k.glb',
-    fern: '/studio/assets/polyhaven/fern_02/fern_02_1k.glb',
+    boulder: './assets/cavern_boulder.glb',
+    fern: './assets/cavern_fern.glb',
     jacaranda: '/studio/assets/polyhaven/jacaranda_tree/jacaranda_tree_1k.glb',
     hdr: '/studio/assets/polyhaven/kloppenheim_06_puresky/kloppenheim_06_puresky_1k.hdr'
   };
@@ -515,37 +515,16 @@
     scene.add(hemi);
     var key = new THREE.DirectionalLight(0x9be8ff, 1.25);
     key.position.set(24, 48, 28);
-    key.castShadow = true;
-    if (key.shadow) {
-      key.shadow.mapSize.set(2048, 2048);
-      key.shadow.bias = -0.0005;
-    }
+    key.castShadow = false;
     scene.add(key);
-    var warmRim = new THREE.DirectionalLight(0xffb454, 0.65);
+    var warmRim = new THREE.DirectionalLight(0xffb454, 0.75);
     warmRim.position.set(-30, 18, 14);
     scene.add(warmRim);
-    // Bioluminescent cavern point lights along the path
-    var bioSpots = [
-      [-6, 3.5, 3, 0x38f9d4, 2.2, 18],
-      [6, 3.2, 3, 0xffaa44, 2.0, 16],
-      [20, 4.8, 3, 0x38bdf8, 2.2, 18],
-      [36, 7.5, 3, 0xa855f7, 2.0, 18],
-      [55, 5.5, 3, 0xffaa44, 2.2, 20],
-      [88, 6.5, 3, 0x38f9d4, 2.2, 20],
-      [125, 12.0, 3, 0x38bdf8, 2.4, 24],
-      [154, 33.0, 3, 0xffd166, 2.8, 26]
-    ];
-    for (var bi = 0; bi < bioSpots.length; bi++) {
-      var bs = bioSpots[bi];
-      var pl = new THREE.PointLight(bs[3], bs[4], bs[5], 1.6);
-      pl.position.set(bs[0], bs[1], bs[2]);
-      scene.add(pl);
-    }
 
     /* ---- Masterpiece pass: bloom + grade + vignette + contact shadows ---- */
     var masterpiece = null;
     try {
-      if (WR.enableMasterpieceRendering) {
+      if (false && WR.enableMasterpieceRendering) {
         masterpiece = WR.enableMasterpieceRendering(renderer, scene, camera, {
           bloom: { strength: 0.38, radius: 0.42, threshold: 0.82 },
           grade: {
@@ -670,9 +649,7 @@
     var fernSpots = [];
     for (var fi = -16; fi <= 156; fi += 13) fernSpots.push({ x: fi + (fi % 2), s: 1.4, z: -4.5 });
     scatterGlb(Levels.POLY.fern, fernSpots, 1.4, 0);
-    scatterGlb(Levels.POLY.jacaranda, [
-      { x: 25, s: 9, z: -8, ry: 0.6 }, { x: 75, s: 11, z: -9, ry: 2.1 }, { x: 125, s: 10, z: -8, ry: 4.0 }
-    ], 10, -1);
+    /* Skip 7.2MB 250k-tri jacaranda tree to keep 60 FPS locked */
 
     /* ================= LAYER 4: playable plane, z=0 ================= */
     var play = new THREE.Group();
@@ -754,37 +731,7 @@
       var gmat = zone === 0 ? groundMat : (zone === 1 ? gearZoneMat : bellZoneMat);
       addSolid((gr.x0 + gr.x1) / 2, gr.top, gw, 6, 1.8, gmat, 'solid');
     }
-    // Dress the front/edges of the ground ledges with real Polyhaven photogrammetry rock formations & lanterns so it looks like a natural rocky cavern, never a flat slab!
-    if (window.WorldRealism && window.WorldRealism.loadGlbModel) {
-      window.WorldRealism.loadGlbModel('/studio/assets/polyhaven/namaqualand_boulders_01/namaqualand_boulders_01_1k.glb', function (rockProto) {
-        if (!rockProto) return;
-        var ledgeXs = [-16, -9, -2, 5, 17, 25, 35, 42, 49, 57, 84, 93, 101, 111];
-        for (var li2 = 0; li2 < ledgeXs.length; li2++) {
-          var lx = ledgeXs[li2];
-          var ly = Levels.groundTopAt(lx);
-          if (ly < -10) continue;
-          var rk = rockProto.clone(true);
-          rk.traverse(function (n) {
-            if (n && n.isMesh && n.material) {
-              n.material = n.material.clone();
-              if (n.material.color) n.material.color.setHex(0x2c4248);
-            }
-          });
-          rk.position.set(lx, ly - 0.55, -0.85);
-          rk.rotation.y = (li2 * 1.7) % 6.28;
-          play.add(rk);
-        }
-      }, { targetLength: 4.8 });
-      window.WorldRealism.loadGlbModel('/studio/assets/polyhaven/Lantern_01/Lantern_01_1k.glb', function (lanProto) {
-        if (!lanProto) return;
-        var lanSpots = [[-11, 0], [3, 0], [19, 0], [34, 2], [48, 2], [85, 2], [109, 2]];
-        for (var lsi = 0; lsi < lanSpots.length; lsi++) {
-          var lc = lanProto.clone(true);
-          lc.position.set(lanSpots[lsi][0], lanSpots[lsi][1] + 0.02, 0.55);
-          play.add(lc);
-        }
-      }, { targetLength: 0.85 });
-    }
+
     // Floating platforms.
     var crumbles = [], movers = [];
     for (var pi = 0; pi < Levels.PLATFORMS.length; pi++) {
@@ -1006,58 +953,13 @@
     for (var vi = 0; vi < vineDefs.length; vi++) buildVine(vineDefs[vi]);
 
     function updateVines(dt, t, px, py) {
-      var clamped = Math.min(dt, 1 / 30);
-      for (var v = 0; v < vines.length; v++) {
-        var vn = vines[v];
-        var wind = Math.sin(t * 1.4 + vn.def.x * 0.35) * 2.2
-          + Math.sin(t * 3.1 + vn.def.x) * 0.7;
-        for (var i = 1; i <= vn.seg; i++) {
-          var p = vn.pts[i], q = vn.prev[i];
-          var vx = (p.x - q.x) * 0.985, vy = (p.y - q.y) * 0.985;
-          q.x = p.x; q.y = p.y;
-          // Player brush: gentle push within 1.4m.
-          var dx = p.x - px, dy = p.y - py;
-          var d2 = dx * dx + dy * dy;
-          var push = 0;
-          if (d2 < 1.96 && d2 > 0.0001) {
-            var d = Math.sqrt(d2);
-            push = (1.4 - d) * 6.0 / d;
-          }
-          p.x += vx + (wind * (i / vn.seg) + dx * push) * clamped * clamped * 60 * 0.16;
-          p.y += vy + (-22 * clamped * clamped * 60 * 0.16) + dy * push * clamped;
-        }
-        // Pin anchor + relax constraints.
-        vn.pts[0].x = vn.def.x; vn.pts[0].y = vn.def.top;
-        for (var it = 0; it < 3; it++) {
-          for (var c = 0; c < vn.seg; c++) {
-            var a = vn.pts[c], b = vn.pts[c + 1];
-            var ddx = b.x - a.x, ddy = b.y - a.y;
-            var dist = Math.sqrt(ddx * ddx + ddy * ddy) || 0.0001;
-            var diff = (dist - vn.segLen) / dist;
-            if (c === 0) { b.x -= ddx * diff; b.y -= ddy * diff; }
-            else {
-              var half = diff * 0.5;
-              a.x += ddx * half; a.y += ddy * half;
-              b.x -= ddx * half; b.y -= ddy * half;
-            }
-          }
-        }
-        // Write tapered ribbon (width 0.14 -> 0.03), facing +z.
-        var attr = vn.mesh.geometry.getAttribute('position');
-        var arr = attr.array;
-        for (var w = 0; w <= vn.seg; w++) {
-          var wp = vn.pts[w];
-          var wn = vn.pts[Math.min(w + 1, vn.seg)];
-          var tx = wn.x - wp.x, ty = wn.y - wp.y;
-          var tl = Math.sqrt(tx * tx + ty * ty) || 1;
-          var nx = -ty / tl, ny = tx / tl;
-          var half2 = 0.07 * (1 - (w / vn.seg) * 0.78);
-          var o6 = w * 6;
-          arr[o6] = wp.x - nx * half2; arr[o6 + 1] = wp.y - ny * half2; arr[o6 + 2] = 0.4;
-          arr[o6 + 3] = wp.x + nx * half2; arr[o6 + 4] = wp.y + ny * half2; arr[o6 + 5] = 0.4;
-        }
-        attr.needsUpdate = true;
-        vn.mesh.geometry.computeVertexNormals();
+      for (var i = 0; i < vines.length; i++) {
+        var vn = vines[i];
+        var dx = Math.abs(vn.x - px);
+        vn.mesh.visible = dx < 26;
+        if (!vn.mesh.visible) continue;
+        var nearBoost = (dx < 2.2 && py <= vn.top && py >= vn.top - vn.len) ? 0.16 : 0;
+        vn.mesh.rotation.z = Math.sin(t * 1.6 + i * 1.3) * (0.045 + nearBoost);
       }
     }
 
@@ -1162,7 +1064,7 @@
     var waterGeo = new THREE.PlaneGeometry(190, 3.4, 120, 6);
     var water = new THREE.Mesh(waterGeo, waterMat);
     water.rotation.x = -Math.PI / 2;
-    water.position.set(70, Levels.WATER_Y, 0.8);
+    water.position.set(70, Levels.WATER_Y, -1.6);
     water.receiveShadow = true;
     scene.add(water);
     // Soft shoreline glow strip where water meets the banks.
@@ -1173,7 +1075,7 @@
     });
     var foam = new THREE.Mesh(new THREE.PlaneGeometry(190, 1.6), foamMat);
     foam.rotation.x = -Math.PI / 2;
-    foam.position.set(70, Levels.WATER_Y + 0.06, 1.5);
+    foam.position.set(70, Levels.WATER_Y + 0.06, -1.2);
     scene.add(foam);
 
     /* ============ LAYER 7: 500 Gaussian fireflies / spores ============ */
@@ -1221,8 +1123,8 @@
 
     /* ================= World handle + per-frame update ================= */
     var rig = new Levels.CameraRig(camera);
-    rig.focus.set(0, 6, 0);
-    rig.lockedY = 6;
+    rig.focus.set(0, 2.3, 0);
+    rig.lockedY = 2.3;
 
     function updateCrumbles(dt) {
       for (var i = 0; i < crumbles.length; i++) {
@@ -1274,9 +1176,22 @@
       solids: solids,
       scene: scene,
       update: function (dt, t, player) {
-        var p = player || { x: 0, y: 6, vx: 0, vy: 0, grounded: false };
+        var p = player || { x: 0, y: 2.0, vx: 0, vy: 0, grounded: false };
         var cdt = Math.min(dt, 0.05);
         rig.update(cdt, p);
+        var camX = rig.focus.x;
+        for (var pi2 = 0; pi2 < play.children.length; pi2++) {
+          var pch = play.children[pi2];
+          if (pch && pch.position) {
+            pch.visible = Math.abs(pch.position.x - camX) < 38;
+          }
+        }
+        for (var mi2 = 0; mi2 < midGroup.children.length; mi2++) {
+          var mch = midGroup.children[mi2];
+          if (mch && mch.position) {
+            mch.visible = Math.abs(mch.position.x - camX) < 48;
+          }
+        }
         updateCrumbles(cdt);
         updateMovers(t);
         updateVines(cdt, t, p.x || 0, p.y || 0);

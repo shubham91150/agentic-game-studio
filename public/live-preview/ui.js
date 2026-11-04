@@ -836,20 +836,12 @@
   }
 
   function updateTouchVisibility() {
-    var coarse = false;
-    try {
-      coarse = window.matchMedia &&
-        window.matchMedia('(pointer: coarse)').matches;
-    } catch (err) { coarse = false; }
-    var show = coarse || touchSeen;
-    var ids = ['joy', 'btn-torch', 'btn-crouch', 'btn-act', 'btn-jump', 'btn-dash', 'touch-ui'];
-    var i;
-    for (i = 0; i < ids.length; i++) {
+    var ids = ['btn-act', 'btn-jump', 'btn-dash', 'btn-left', 'btn-right', 'btn-down'];
+    for (var i = 0; i < ids.length; i++) {
       var el = $(ids[i]);
-      if (!el) continue;
-      try {
-        el.style.display = show ? '' : 'none';
-      } catch (err) { /* x */ }
+      if (el) {
+        try { el.style.display = 'flex'; } catch (err) {}
+      }
     }
   }
 

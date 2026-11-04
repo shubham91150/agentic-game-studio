@@ -17,8 +17,8 @@
   "use strict";
 
   var FIXED = 1 / 60;
-  var MAX_STEPS = 3;
-  var CLAMP_DT = 0.05;
+  var MAX_STEPS = 15;
+  var CLAMP_DT = 0.25;
   var KEY_RADIUS = 1.6;
   var DOOR_RADIUS = 2.2;
   var AUTO_FPS = 45;
@@ -298,6 +298,7 @@
   ].join("\n");
 
   function postWanted() {
+    if (platformMode()) return false;
     try {
       return String(settings.quality || "").toLowerCase() !== "low";
     } catch (err) {
@@ -397,6 +398,16 @@
   }
 
   function show(name) {
+    try {
+      if (document && document.body && document.body.classList) {
+        document.body.classList.toggle("playing", name === "playing");
+        document.body.classList.add("touch");
+      }
+      var tc = $("touch-controls");
+      if (tc) tc.style.display = name === "playing" ? "flex" : "none";
+    } catch (e0) {
+      /* x */
+    }
     if (UI && UI.show) {
       try {
         UI.show(name);
@@ -1718,10 +1729,10 @@
   var wraithRig = null;
   var ZONE_WPS = [
     [
-      [-6, 1.6],
-      [10, 1.6],
-      [24, 4],
-      [36, 6],
+      [22, 3.8],
+      [30, 5.2],
+      [38, 6.2],
+      [46, 4.5],
     ],
     [
       [50, 4],
@@ -2183,17 +2194,17 @@
             var root = gltf.scene || (gltf.scenes && gltf.scenes[0]);
             if (!root) return;
             if (window.Levels && window.Levels.fitGlb) {
-              window.Levels.fitGlb(root, 1.45, 0);
+              window.Levels.fitGlb(root, 1.85, 0);
             }
             root.rotation.y = Math.PI / 2;
             root.traverse(function (n) {
               if (n && n.isMesh && n.material) {
                 n.castShadow = true;
                 n.material = n.material.clone();
-                if (n.material.color) n.material.color.setHex(0x162636);
+                if (n.material.color) n.material.color.setHex(0x38f9d4);
                 if (n.material.emissive) {
                   n.material.emissive.setHex(0x22d3ee);
-                  n.material.emissiveIntensity = 0.45;
+                  n.material.emissiveIntensity = 0.85;
                 }
               }
             });
@@ -2617,9 +2628,14 @@
       } catch (err) {
         rm = false;
       }
-      if (!rm) sway = Math.sin(elapsed * 0.25) * 0.12;
-      camera.position.set(spawn.x, 1.6, spawn.z);
-      camera.rotation.set(-0.03, (spawn.ry || 0) + sway, 0);
+      if (!rm) sway = Math.sin(elapsed * 0.45) * 0.6;
+      if (platformMode()) {
+        camera.position.set(sway, 2.5, 12.2);
+        camera.lookAt(sway * 0.5, 2.0, 0);
+      } else {
+        camera.position.set(spawn.x, 1.6, spawn.z);
+        camera.rotation.set(-0.03, (spawn.ry || 0) + sway * 0.2, 0);
+      }
     }
 
     try {
@@ -2880,7 +2896,8 @@
     container.addEventListener(
       "click",
       function () {
-        if (state === "playing") requestLock();
+        try { window.focus(); } catch (e) { /* x */ }
+        if (state === "playing" && !platformMode()) requestLock();
       },
       false,
     );
@@ -3251,7 +3268,18 @@
 
     window.game = {
       scene: scene,
-      player: player,
+      player: player || {
+        pos: function () {
+          if (platCtl && platCtl.pos) {
+            var p = platCtl.pos();
+            return { x: p.x, y: p.y, z: 0 };
+          }
+          return { x: 0, y: 0, z: 0 };
+        },
+        state: function () {
+          return platCtl && platCtl.state ? platCtl.state() : {};
+        }
+      },
       enemy: enemy,
       world: world,
       getState: function () {
@@ -3315,6 +3343,51 @@
 
     wireKeys();
     wireCanvasClick();
+
+    /* Wire all on-screen D-pad & action buttons for both touch and mouse */
+    function bindHold(id, code, onPress) {
+      var el = $(id);
+      if (!el) return;
+      function down(ev) {
+        try { ev.preventDefault(); ev.stopPropagation(); } catch (e) {}
+        try { window.focus(); } catch (e2) {}
+        if (code) keys[code] = true;
+        if (onPress) onPress();
+      }
+      function up(ev) {
+        try { if (ev) ev.preventDefault(); } catch (e) {}
+        if (code) keys[code] = false;
+      }
+      el.addEventListener("pointerdown", down, false);
+      el.addEventListener("pointerup", up, false);
+      el.addEventListener("pointercancel", up, false);
+      el.addEventListener("pointerleave", up, false);
+      el.addEventListener("touchstart", down, { passive: false });
+      el.addEventListener("touchend", up, false);
+      el.addEventListener("touchcancel", up, false);
+      el.addEventListener("mousedown", down, false);
+      el.addEventListener("mouseup", up, false);
+    }
+    bindHold("btn-left", "ArrowLeft", null);
+    bindHold("btn-right", "ArrowRight", null);
+    bindHold("btn-down", "ArrowDown", null);
+    bindHold("btn-jump", "Space", function () { platJumpQueued = true; });
+    bindHold("btn-dash", "ShiftLeft", function () { platDashQueued = true; });
+    bindHold("btn-act", "KeyE", function () { doInteract(); });
+    var bPauseHud = $("btn-pause-hud");
+    if (bPauseHud) {
+      bPauseHud.addEventListener("click", function (ev) {
+        try { ev.preventDefault(); ev.stopPropagation(); } catch (e) {}
+        togglePause();
+      }, false);
+    }
+    var bAgain = $("btn-again");
+    if (bAgain) {
+      bAgain.addEventListener("click", function () {
+        restartGame();
+      }, false);
+    }
+
     started = true;
     lastT = performance.now();
     renderer.setAnimationLoop(frame);
