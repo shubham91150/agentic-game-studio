@@ -113,7 +113,19 @@
             href="https://github.com/shubham91150/agentic-game-studio"
             target="_blank"
             rel="noreferrer"
-            >GitHub</a
+            title="Open on GitHub"
+            aria-label="Open on GitHub"
+            ><svg
+              width="15"
+              height="15"
+              viewBox="0 0 24 24"
+              fill="currentColor"
+              aria-hidden="true"
+            >
+              <path
+                d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"
+              />
+            </svg></a
           >
         </div>
       </header>
@@ -427,6 +439,159 @@
           <!-- Skills Panel: Studio Agent Skills -->
           <div class="sidebar-skills-panel hidden" id="sidebar-skills-panel">
             <div class="v0-skills-list" id="sidebar-skills-list"></div>
+          </div>
+
+          <!-- System Design Panel: App Pipeline Mind Map (code-built, monochrome) -->
+          <div class="sidebar-sysdesign-panel hidden" id="sidebar-sysdesign-panel">
+            <div class="pl-flow" id="sidebar-pipeline-map">
+              <div class="pl-stage">
+                <div class="pl-stage-head">INPUT</div>
+                <div class="pl-box">
+                  <strong>USER prompt box</strong>
+                  <span>model + scope + skills + attach</span>
+                </div>
+                <div class="pl-box">
+                  <strong>Voice mic</strong>
+                  <span>muse-voice-transcribe-1.0 → prompt</span>
+                  <em>meta</em>
+                </div>
+                <div class="pl-box">
+                  <strong>terminal/send + generate</strong>
+                  <span>SSE stream + upload/session/chats</span>
+                  <em>tool</em>
+                </div>
+                <div class="pl-box">
+                  <strong>Live Muse CLI tmux</strong>
+                  <span>muse-studio, ttyd frame</span>
+                  <em>tool</em>
+                </div>
+              </div>
+
+              <div class="pl-stage">
+                <div class="pl-stage-head">BRAIN · reasoning</div>
+                <div class="pl-box">
+                  <strong>0 Safety shield</strong>
+                  <span>local rules</span>
+                </div>
+                <div class="pl-box">
+                  <strong>1 Wonder 1.0 architect</strong>
+                  <span>game JSON: title/biome/physics</span>
+                  <em>meta</em>
+                </div>
+                <div class="pl-box">
+                  <strong>1 Baseten spark-open-1026</strong>
+                  <span>focal asset enrich (open)</span>
+                  <em>meta</em>
+                </div>
+                <div class="pl-box">
+                  <strong>Muse CLI exec --json</strong>
+                  <span>thinking + tool:write_file</span>
+                  <em>meta</em>
+                </div>
+              </div>
+
+              <div class="pl-stage">
+                <div class="pl-stage-head">ASSETS · tools</div>
+                <div class="pl-box">
+                  <strong>1b Muse Image 1.0</strong>
+                  <span>concept/key art, cached</span>
+                  <em>meta</em>
+                </div>
+                <div class="pl-box">
+                  <strong>SAM 3.1 segment_image</strong>
+                  <span>boxes + masks → cutout</span>
+                  <em>meta</em>
+                </div>
+                <div class="pl-box">
+                  <strong>SAM 3D Objects Modal</strong>
+                  <span>shipped — backend sam3d</span>
+                  <em>meta</em>
+                </div>
+                <div class="pl-box">
+                  <strong>VGGT-1B metric scene</strong>
+                  <span>pointcloud + mesh recon</span>
+                  <em>meta</em>
+                </div>
+                <div class="pl-box">
+                  <strong>depth / warp / projection</strong>
+                  <span>depth_map + novel_view + blender</span>
+                  <em>tool</em>
+                </div>
+                <div class="pl-box">
+                  <strong>Blender cleanup</strong>
+                  <span>decimate + merge → .glb</span>
+                  <em>tool</em>
+                </div>
+                <div class="pl-box">
+                  <strong>MusicGen soundtrack</strong>
+                  <span>musicgen-small 32kHz stems</span>
+                  <em>meta</em>
+                </div>
+                <div class="pl-box">
+                  <strong>NPC dialogue Spark Open</strong>
+                  <span>npc_dialogue.js via Baseten</span>
+                  <em>meta</em>
+                </div>
+              </div>
+
+              <div class="pl-stage">
+                <div class="pl-stage-head">BUILD · deterministic</div>
+                <div class="pl-box">
+                  <strong>3 Terrain + layout</strong>
+                  <span>grid + orbs/obstacles</span>
+                  <em>tool</em>
+                </div>
+                <div class="pl-box">
+                  <strong>4 Three.js + Unity + Godot</strong>
+                  <span>webgl + C# + ref</span>
+                  <em>tool</em>
+                </div>
+                <div class="pl-box">
+                  <strong>5 Physics QA gate</strong>
+                  <span>local math, BFS reach</span>
+                  <em>tool</em>
+                </div>
+                <div class="pl-box">
+                  <strong>Visual QA gate · 6 checks</strong>
+                  <span>0 primitive fakes allowed</span>
+                  <em>tool</em>
+                </div>
+                <div class="pl-box">
+                  <strong>Live AI Director</strong>
+                  <span>14s telemetry poll, tactics + env</span>
+                  <em>meta</em>
+                </div>
+                <div class="pl-box">
+                  <strong>Judge sandbox gVisor</strong>
+                  <span>runsc 4.19, read-only, isolated</span>
+                  <em>tool</em>
+                </div>
+              </div>
+
+              <div class="pl-stage">
+                <div class="pl-stage-head">PLAY + STORE</div>
+                <div class="pl-box">
+                  <strong>6 Library storage/games</strong>
+                  <span>manifest + html + unity</span>
+                  <em>tool</em>
+                </div>
+                <div class="pl-box">
+                  <strong>Preview pane + drawer</strong>
+                  <span>live-preview + play + library</span>
+                  <em>tool</em>
+                </div>
+                <div class="pl-box">
+                  <strong>Read routes</strong>
+                  <span>preview-state/games/mcp/chats</span>
+                  <em>tool</em>
+                </div>
+                <div class="pl-box">
+                  <strong>Judge audit log</strong>
+                  <span>token ping + visit/prompt log</span>
+                  <em>tool</em>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 

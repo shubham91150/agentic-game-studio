@@ -876,6 +876,14 @@ body {
   border-color: #fff;
 }
 
+#terminal-signin .terminal-btn {
+  gap: 8px;
+}
+
+#terminal-signin .terminal-btn svg {
+  flex: 0 0 auto;
+}
+
 /* ---------- Prompt composer ---------- */
 
 .dock {
@@ -3380,4 +3388,90 @@ body:has(.preview-box.landscape-fullscreen) .dock {
   padding: 0 2px !important;
   min-width: 0 !important;
   height: auto !important;
+}
+
+/* ---------- Sidebar Pipeline Mind Map (monochrome, code-built) ---------- */
+.sidebar-sysdesign-panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.pl-flow {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 2px 2px 18px;
+}
+.pl-stage {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 0 12px 12px;
+  border-left: 1px solid #26262c;
+  margin-left: 5px;
+  position: relative;
+}
+.pl-stage:first-child {
+  padding-top: 4px;
+}
+.pl-stage:last-child {
+  padding-bottom: 2px;
+}
+.pl-stage-head {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: #f4f4f5;
+  background: #141417;
+  border: 1px solid #2e2e35;
+  border-radius: 6px;
+  padding: 5px 9px;
+  margin-left: -18px;
+  align-self: flex-start;
+  position: relative;
+}
+.pl-stage-head::before {
+  content: "";
+  position: absolute;
+  left: -6px;
+  top: 50%;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #f4f4f5;
+  transform: translateY(-50%);
+}
+.pl-box {
+  background: #0c0c0e;
+  border: 1px solid #1f1f23;
+  border-radius: 7px;
+  padding: 7px 9px;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  position: relative;
+}
+.pl-box strong {
+  font-size: 12px;
+  font-weight: 600;
+  color: #e4e4e7;
+  padding-right: 34px;
+}
+.pl-box span {
+  font-size: 10.5px;
+  color: #8e8e99;
+  line-height: 1.35;
+}
+.pl-box em {
+  position: absolute;
+  top: 6px;
+  right: 7px;
+  font-style: normal;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 9px;
+  letter-spacing: 0.04em;
+  color: #63636e;
+  border: 1px solid #232329;
+  border-radius: 4px;
+  padding: 0 4px;
 }
