@@ -3008,3 +3008,31 @@ body,
 .prompt-bar {
   background: transparent !important;
 }
+
+/* Ensure drawers (Library, Git, History) ALWAYS sit above the prompt dock,
+   and hide the prompt dock whenever any drawer is open or when on Preview tab! */
+.drawer-overlay,
+.sidebar-overlay,
+#git-drawer-overlay {
+  z-index: 300 !important;
+}
+
+.library-drawer,
+.git-drawer,
+.sidebar-history {
+  z-index: 310 !important;
+}
+
+body:has(.library-drawer.open) .dock,
+body:has(.git-drawer.open) .dock,
+body:has(.sidebar-history.open) .dock,
+body:has(.preview-box.landscape-fullscreen) .dock {
+  display: none !important;
+}
+
+@media (max-width: 960px) {
+  .workspace-split[data-active-pane="preview"] .pane-left,
+  .workspace-split[data-active-pane="preview"] .dock {
+    display: none !important;
+  }
+}
