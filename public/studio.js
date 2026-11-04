@@ -395,6 +395,7 @@
   function openLibrary() {
     pausePreviewGame();
     closeGit();
+    if (typeof closeSidebar === 'function') closeSidebar();
     if (libraryDrawer) {
       libraryDrawer.classList.add("open");
       libraryDrawer.setAttribute("aria-hidden", "false");
@@ -1001,39 +1002,85 @@
   var sidebarTranscript = document.getElementById("sidebar-transcript");
   var sidebarContinue = document.getElementById("sidebar-continue");
   var sidebarSub = document.getElementById("sidebar-sub");
-  var sidebarHeadTitle = document.getElementById("sidebar-head-title");
-  var sidebarMindmap = document.getElementById("sidebar-mindmap");
+  var sidebarBody = document.getElementById("sidebar-body");
   var sidebarChatsPanel = document.getElementById("sidebar-chats-panel");
-  var sidebarTabMindmap = document.getElementById("sidebar-tab-mindmap");
-  var sidebarTabChats = document.getElementById("sidebar-tab-chats");
+  var sidebarSkillsPanel = document.getElementById("sidebar-skills-panel");
+  var sidebarSkillsList = document.getElementById("sidebar-skills-list");
+  var sidebarNavChats = document.getElementById("sidebar-nav-chats");
+  var sidebarNavSkills = document.getElementById("sidebar-nav-skills");
+  var sidebarNavSysdesign = document.getElementById("sidebar-nav-sysdesign");
+  var sidebarNewchatBtn = document.getElementById("sidebar-newchat-btn");
+  var sidebarNewchatMore = document.getElementById("sidebar-newchat-more");
+  var activeSidebarSection = null;
   var activeChatId = null;
+  var activeChatContent = "";
+  var activeGameId = null;
+  var activeGameTitle = "";
+  var activeWindowId = null;
+
+  var SIDEBAR_SKILLS = [
+    { id: "game-pipeline", name: "game-pipeline", desc: "6-Stage BUILD_TODO.md 3D Game Engineering Pipeline" },
+    { id: "game-system-design", name: "game-system-design", desc: "ECS, HFSM, Marco Monster Car Physics & Quake/Celeste Feel" },
+    { id: "threejs-scene-setup", name: "threejs-scene-setup", desc: "ACESFilmic, UnrealBloomPass, PMREM IBL & 3D Grass" },
+    { id: "threejs-gltf-loading", name: "threejs-gltf-loading", desc: "Normalized GLB Loader, 20-Bone Armature & AnimationMixer" },
+    { id: "threejs-materials-lighting", name: "threejs-materials-lighting", desc: "AmbientCG 1K Normal-Mapped PBR & Volumetric Lighting" },
+    { id: "game-feel", name: "game-feel", desc: "Camera Trauma Shake, Recoil, Hit-Stop & 4-Bus Cathedral Audio" },
+    { id: "ui-taste", name: "ui-taste", desc: "Executive Dark UI, Zero-Slop HUD & Touch Ergonomics" },
+    { id: "webapp-testing", name: "webapp-testing", desc: "Playwright Headless Chromium & Hardened Visual QA Gate" }
+  ];
+
+  function renderSidebarSkills() {
+    if (!sidebarSkillsList) return;
+    sidebarSkillsList.innerHTML = "";
+    SIDEBAR_SKILLS.forEach(function (sk) {
+      var btn = document.createElement("button");
+      btn.type = "button";
+      var isOn = typeof activeSkills !== "undefined" && activeSkills.indexOf(sk.id) >= 0;
+      btn.className = "v0-skill-row" + (isOn ? " active" : "");
+      var nm = document.createElement("span");
+      nm.className = "v0-skill-name";
+      nm.textContent = "⚡ " + sk.name + (isOn ? " (active)" : "");
+      var ds = document.createElement("span");
+      ds.className = "v0-skill-desc";
+      ds.textContent = sk.desc;
+      btn.appendChild(nm);
+      btn.appendChild(ds);
+      btn.addEventListener("click", function () {
+        if (typeof toggleSkill === "function") {
+          toggleSkill(sk.id);
+        }
+        renderSidebarSkills();
+      });
+      sidebarSkillsList.appendChild(btn);
+    });
+  }
 
   function setSidebarSection(sec) {
-    var isChats = sec === "chats";
-    if (sidebarMindmap) sidebarMindmap.classList.toggle("hidden", isChats);
-    if (sidebarChatsPanel) sidebarChatsPanel.classList.toggle("hidden", !isChats);
-    if (sidebarTabMindmap) {
-      sidebarTabMindmap.classList.toggle("active", !isChats);
-      sidebarTabMindmap.setAttribute("aria-selected", isChats ? "false" : "true");
+    activeSidebarSection = sec;
+    if (sidebarNavChats) sidebarNavChats.classList.toggle("active", sec === "chats");
+    if (sidebarNavSkills) sidebarNavSkills.classList.toggle("active", sec === "skills");
+    if (sidebarNavSysdesign) sidebarNavSysdesign.classList.toggle("active", sec === "sysdesign");
+
+    if (!sec) {
+      if (sidebarBody) sidebarBody.classList.add("hidden");
+      if (sidebarChatsPanel) sidebarChatsPanel.classList.add("hidden");
+      if (sidebarSkillsPanel) sidebarSkillsPanel.classList.add("hidden");
+      return;
     }
-    if (sidebarTabChats) {
-      sidebarTabChats.classList.toggle("active", isChats);
-      sidebarTabChats.setAttribute("aria-selected", isChats ? "true" : "false");
-    }
-    if (sidebarHeadTitle) {
-      sidebarHeadTitle.textContent = isChats ? "Chat History" : "Pipeline Mind Map";
-    }
-    if (sidebarSub) {
-      sidebarSub.textContent = isChats
-        ? "Archived terminal transcripts & live tmux windows. Click a session to view or resume."
-        : "6-Stage Meta AI Agentic 3D Game Pipeline · 9 Meta Models · 18 MCP Tools · gVisor Sandbox.";
-    }
-    if (isChats) {
+
+    if (sidebarBody) sidebarBody.classList.remove("hidden");
+    if (sidebarChatsPanel) sidebarChatsPanel.classList.toggle("hidden", sec !== "chats");
+    if (sidebarSkillsPanel) sidebarSkillsPanel.classList.toggle("hidden", sec !== "skills");
+
+    if (sec === "chats") {
+      if (sidebarSub) {
+        sidebarSub.textContent = "Inactive / unkilled terminals — click any session to resume where it left off.";
+      }
       showSidebarList();
       if (sidebarList) sidebarList.innerHTML = "";
       var loading = document.createElement("div");
       loading.className = "sidebar-empty";
-      loading.textContent = "Loading chats…";
+      loading.textContent = "Loading terminals…";
       if (sidebarList) sidebarList.appendChild(loading);
       fetch("/api/studio/chats")
         .then(function (res) {
@@ -1043,22 +1090,40 @@
         .catch(function () {
           renderSidebarList([]);
         });
+    } else if (sec === "skills") {
+      if (sidebarSub) {
+        sidebarSub.textContent = "Agent skills — click to toggle active skills for the next build.";
+      }
+      renderSidebarSkills();
+    } else if (sec === "sysdesign") {
+      if (sidebarSub) {
+        sidebarSub.textContent = "System Design & Pipeline";
+      }
     }
   }
-  if (sidebarTabMindmap) {
-    sidebarTabMindmap.addEventListener("click", function () {
-      setSidebarSection("mindmap");
+
+  if (sidebarNavChats) {
+    sidebarNavChats.addEventListener("click", function () {
+      setSidebarSection(activeSidebarSection === "chats" ? null : "chats");
     });
   }
-  if (sidebarTabChats) {
-    sidebarTabChats.addEventListener("click", function () {
-      setSidebarSection("chats");
+  if (sidebarNavSkills) {
+    sidebarNavSkills.addEventListener("click", function () {
+      setSidebarSection(activeSidebarSection === "skills" ? null : "skills");
     });
   }
-  var activeChatContent = "";
-  var activeGameId = null;
-  var activeGameTitle = "";
-  var activeWindowId = null;
+  if (sidebarNavSysdesign) {
+    sidebarNavSysdesign.addEventListener("click", function () {
+      setSidebarSection(activeSidebarSection === "sysdesign" ? null : "sysdesign");
+    });
+  }
+  function triggerSidebarNewChat() {
+    closeSidebar();
+    var topNewChat = document.getElementById("newchat-btn");
+    if (topNewChat) topNewChat.click();
+  }
+  if (sidebarNewchatBtn) sidebarNewchatBtn.addEventListener("click", triggerSidebarNewChat);
+  if (sidebarNewchatMore) sidebarNewchatMore.addEventListener("click", triggerSidebarNewChat);
 
   function fmtChatSize(bytes) {
     var n = Number(bytes) || 0;
@@ -1085,9 +1150,6 @@
     activeWindowId = null;
     if (sidebarView) sidebarView.classList.add("hidden");
     if (sidebarList) sidebarList.classList.remove("hidden");
-    if (sidebarSub)
-      sidebarSub.textContent =
-        "Archived terminal transcripts. Resume = view + seed the live terminal with context.";
   }
 
   function renderSidebarList(list) {
@@ -1097,8 +1159,7 @@
     if (!chats.length) {
       var empty = document.createElement("div");
       empty.className = "sidebar-empty";
-      empty.textContent =
-        "No archived chats yet — use New chat to archive this session.";
+      empty.textContent = "No inactive terminals yet — click New Chat to spawn a background terminal.";
       sidebarList.appendChild(empty);
       return;
     }
@@ -1110,21 +1171,21 @@
       title.className = "sidebar-item-title";
       title.textContent =
         c.transcript === false
-          ? "Live terminal " + (c.windowId || "")
-          : c.id || "chat";
+          ? "Terminal " + (c.windowId || "") + (c.windowActive ? " (active)" : " (inactive / resumable)")
+          : c.id || "terminal";
       item.appendChild(title);
       var meta = document.createElement("p");
       meta.className = "sidebar-item-meta";
       meta.textContent =
         [fmtChatTime(c.createdAt), fmtChatSize(c.size)]
           .filter(Boolean)
-          .join(" · ") || "archived chat";
+          .join(" · ") || "unkilled tmux terminal";
       item.appendChild(meta);
       if (c.live) {
         var live = document.createElement("p");
         live.className = "sidebar-item-meta";
         live.textContent =
-          "● LIVE " + (c.windowId || "") + (c.windowActive ? " · active" : "");
+          "● UNKILLED " + (c.windowId || "") + (c.windowActive ? " · current" : " · ready to resume");
         item.appendChild(live);
       }
       if (c.preview) {
@@ -1141,8 +1202,7 @@
       }
       var view = document.createElement("span");
       view.className = "sidebar-item-view";
-      view.textContent =
-        c.transcript === false ? "Open →" : "View transcript →";
+      view.textContent = "Resume terminal →";
       item.appendChild(view);
       item.addEventListener(
         "click",
@@ -1162,7 +1222,6 @@
     if (sidebarTranscript) sidebarTranscript.textContent = "Loading…";
     if (sidebarList) sidebarList.classList.add("hidden");
     if (sidebarView) sidebarView.classList.remove("hidden");
-    if (sidebarSub) sidebarSub.textContent = "Archived transcript (read-only).";
     fetch("/api/studio/chats/" + encodeURIComponent(id))
       .then(function (res) {
         if (!res.ok) throw new Error("chat load failed: " + res.status);
@@ -1182,14 +1241,14 @@
         if (sidebarTranscript)
           sidebarTranscript.textContent =
             data && data.transcript === false
-              ? "(Live terminal — no archived transcript yet. Continue switches straight to it.)"
+              ? "(Unkilled background terminal — click Continue terminal to switch straight back to it.)"
               : activeChatContent || "(empty)";
         if (sidebarTranscript) sidebarTranscript.scrollTop = 0;
       })
       .catch(function () {
         if (sidebarTranscript)
-          sidebarTranscript.textContent = "Could not load this transcript.";
-        setStatus("Could not load chat transcript.", "error");
+          sidebarTranscript.textContent = "Could not load this terminal.";
+        setStatus("Could not load terminal.", "error");
       });
   }
 
@@ -1200,7 +1259,7 @@
       sidebar.setAttribute("aria-hidden", "false");
     }
     if (sidebarOverlay) sidebarOverlay.classList.remove("hidden");
-    setSidebarSection("mindmap");
+    setSidebarSection(null);
   }
 
   function closeSidebar() {
