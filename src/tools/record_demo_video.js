@@ -96,7 +96,7 @@ async function ch1_studio(browser) {
 
   // Replace the login gate placeholder in the left terminal pane with the live Muse Code CLI 1.4.14 terminal actively coding!
   await page.evaluate(() => {
-    const gate = document.getElementById('term-gate');
+    const gate = document.getElementById('terminal-connect');
     if (!gate) return;
     gate.style.cssText = 'position:absolute;inset:0;background:#000000;color:#e4e4e7;font:12.5px/1.55 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;padding:14px 16px;overflow:hidden;display:flex;flex-direction:column;justify-content:flex-start;align-items:stretch;text-align:left;';
     gate.innerHTML = `
