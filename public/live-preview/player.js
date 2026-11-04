@@ -163,7 +163,8 @@
           new window.THREE.GLTFLoader().load('./assets/tactical_pulse_rifle.glb', function (gltf) {
             var root = gltf && (gltf.scene || (gltf.scenes && gltf.scenes[0]));
             if (!root) return;
-            root.scale.setScalar(0.85);
+            root.scale.setScalar(0.78);
+            root.rotation.set(0, 0, 0);
             root.traverse(function (o) {
               if (o && o.isMesh) {
                 o.castShadow = false;

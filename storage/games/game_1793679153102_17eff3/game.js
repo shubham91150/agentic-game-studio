@@ -397,6 +397,12 @@
   }
 
   function show(name) {
+    try {
+      if (document && document.body && document.body.classList) {
+        document.body.classList.toggle("playing", name === "playing");
+        document.body.classList.add("touch");
+      }
+    } catch (e0) {}
     if (UI && UI.show) {
       try {
         UI.show(name);
@@ -506,6 +512,16 @@
     b4fired = false;
     wasInB = false;
     setJumpscare(false);
+    playerHP = 100;
+    playerHurtCd = 0;
+    zombieKills = 0;
+    WEAPONS[0].mag = 30; WEAPONS[0].reserve = 120;
+    WEAPONS[1].mag = 8;  WEAPONS[1].reserve = 40;
+    WEAPONS[2].mag = 5;  WEAPONS[2].reserve = 20;
+    reloadTimer = 0;
+    fireCd = 0;
+    initZombieHorde();
+    updateShooterHUD();
     try {
       if (window.speechSynthesis && window.speechSynthesis.cancel) {
         window.speechSynthesis.cancel();
@@ -793,6 +809,9 @@
    * then the gameover screen. */
   function handleCaught() {
     if (state !== "playing" || jumpscare) return;
+    if (typeof hurtPlayer === "function") {
+      if (hurtPlayer(28, "ALPHA BLOODFANG SLASH!")) return;
+    }
     jumpscare = true;
     jumpscareT = 0;
     if (player) player.setEnabled(false);
@@ -1229,7 +1248,758 @@
     };
   }
 
+
+  /* ============================================================================
+   * CRIMSON OUTBREAK: QUARANTINE SECTOR 7 — 3D ZOMBIE SHOOTER COMBAT ENGINE
+   * ============================================================================ */
+  var WEAPONS = [
+    { name: "M4-X PULSE CARBINE", mag: 30, maxMag: 30, reserve: 120, dmg: 45, headMult: 2.4, cd: 0.13, pellets: 1, spread: 0.010, color: 0x38f9d4 },
+    { name: "M870 BREACHER SHOTGUN", mag: 8, maxMag: 8, reserve: 40, dmg: 28, headMult: 2.0, cd: 0.52, pellets: 6, spread: 0.058, color: 0xff9933 },
+    { name: "VGGT BIO-RAILCANNON", mag: 5, maxMag: 5, reserve: 20, dmg: 175, headMult: 3.0, cd: 0.72, pellets: 1, spread: 0.002, color: 0xa855f7 }
+  ];
+  var curWep = 0;
+  var fireCd = 0;
+  var reloadTimer = 0;
+  var fireHeld = false;
+  var playerHP = 100;
+  var playerMaxHP = 100;
+  var playerHurtCd = 0;
+  var zombieKills = 0;
+  var KILL_GOAL = 8;
+  var hordeZombies = [];
+  var activeFX = [];
+  var raycaster = null;
+  var hitTimer = 0;
+  var popTimer = 0;
+  var bloodSpriteTex = null;
+
+  function getBloodSpriteTex() {
+    if (bloodSpriteTex) return bloodSpriteTex;
+    try {
+      var cv = document.createElement("canvas");
+      cv.width = 64; cv.height = 64;
+      var cx = cv.getContext("2d");
+      var g = cx.createRadialGradient(32, 32, 2, 32, 32, 30);
+      g.addColorStop(0, "rgba(255,255,255,1)");
+      g.addColorStop(0.35, "rgba(255,60,60,0.85)");
+      g.addColorStop(1, "rgba(0,0,0,0)");
+      cx.fillStyle = g;
+      cx.fillRect(0, 0, 64, 64);
+      bloodSpriteTex = new THREE.CanvasTexture(cv);
+    } catch (e) {}
+    return bloodSpriteTex;
+  }
+
+  function updateShooterHUD() {
+    try {
+      var w = WEAPONS[curWep];
+      var vw = $("val-weapon");
+      if (vw) {
+        vw.textContent = w.name;
+        vw.style.color = curWep === 1 ? "#ff9933" : (curWep === 2 ? "#c084fc" : "#38f9d4");
+      }
+      var va = $("val-ammo");
+      if (va) {
+        va.textContent = reloadTimer > 0 ? "RELOADING..." : (w.mag + " / " + w.reserve);
+      }
+      var vh = $("val-hp");
+      if (vh) {
+        vh.textContent = Math.max(0, Math.round(playerHP)) + " HP";
+        vh.style.color = playerHP > 50 ? "#34d399" : (playerHP > 25 ? "#fbbf24" : "#ef4444");
+      }
+      var hf = $("hp-bar-fill");
+      if (hf) hf.style.width = Math.max(0, Math.min(100, playerHP)) + "%";
+      var hk = $("hud-kills");
+      if (hk) hk.textContent = "KILLS: " + zombieKills + " / " + KILL_GOAL;
+    } catch (eHud) {}
+  }
+
+  function showHitmarker(isCrit) {
+    try {
+      var hm = $("hitmarker");
+      if (!hm) return;
+      hm.style.color = isCrit ? "#ffd166" : "#ff3b3b";
+      hm.style.transform = isCrit ? "translate(-50%, -50%) scale(1.35)" : "translate(-50%, -50%) scale(1.0)";
+      hm.style.opacity = "1";
+      if (hitTimer) clearTimeout(hitTimer);
+      hitTimer = setTimeout(function () {
+        hm.style.opacity = "0";
+      }, 140);
+    } catch (eHm) {}
+  }
+
+  function showCombatPopup(txt, col) {
+    try {
+      var cp = $("combat-popup");
+      if (!cp) return;
+      cp.textContent = txt;
+      cp.style.color = col || "#ffd166";
+      cp.style.opacity = "1";
+      if (popTimer) clearTimeout(popTimer);
+      popTimer = setTimeout(function () {
+        cp.style.opacity = "0";
+      }, 950);
+    } catch (eCp) {}
+  }
+
+  function playGunshotSFX(wIdx, isHead, isKill) {
+    try {
+      var AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC || settings.mute) return;
+      if (!window.__stvGunCtx) window.__stvGunCtx = new AC();
+      var ctx = window.__stvGunCtx;
+      if (ctx.state === "suspended") ctx.resume();
+      var now = ctx.currentTime;
+      var osc = ctx.createOscillator();
+      var g = ctx.createGain();
+      osc.type = wIdx === 2 ? "sawtooth" : "triangle";
+      osc.frequency.setValueAtTime(wIdx === 1 ? 120 : (wIdx === 2 ? 320 : 165), now);
+      osc.frequency.exponentialRampToValueAtTime(28, now + (wIdx === 1 ? 0.22 : 0.14));
+      g.gain.setValueAtTime(0.42 * (settings.volume || 0.8), now);
+      g.gain.exponentialRampToValueAtTime(0.001, now + (wIdx === 1 ? 0.24 : 0.15));
+      osc.connect(g);
+      g.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + (wIdx === 1 ? 0.25 : 0.16));
+
+      if (isHead || isKill) {
+        var bell = ctx.createOscillator();
+        var bg = ctx.createGain();
+        bell.type = "sine";
+        bell.frequency.setValueAtTime(isHead ? 1320 : 880, now + 0.02);
+        bell.frequency.exponentialRampToValueAtTime(isHead ? 1760 : 660, now + 0.18);
+        bg.gain.setValueAtTime(0.26 * (settings.volume || 0.8), now + 0.02);
+        bg.gain.exponentialRampToValueAtTime(0.001, now + 0.20);
+        bell.connect(bg);
+        bg.connect(ctx.destination);
+        bell.start(now + 0.02);
+        bell.stop(now + 0.21);
+      }
+    } catch (eSfx) {}
+  }
+
+  function spawnBloodOrSparks(pos, isBlood, count) {
+    try {
+      if (!scene) return;
+      var n = count || (isBlood ? 18 : 10);
+      var geo = new THREE.BufferGeometry();
+      var pArr = new Float32Array(n * 3);
+      var vels = [];
+      for (var i = 0; i < n; i++) {
+        pArr[i * 3] = pos.x;
+        pArr[i * 3 + 1] = pos.y;
+        pArr[i * 3 + 2] = pos.z;
+        vels.push({
+          vx: (Math.random() - 0.5) * 3.8,
+          vy: 0.8 + Math.random() * 2.6,
+          vz: (Math.random() - 0.5) * 3.8
+        });
+      }
+      geo.setAttribute("position", new THREE.BufferAttribute(pArr, 3));
+      var mat = new THREE.PointsMaterial({
+        size: isBlood ? 0.24 : 0.16,
+        map: getBloodSpriteTex(),
+        color: isBlood ? 0xdc2626 : 0xffbe55,
+        transparent: true,
+        opacity: 0.95,
+        blending: isBlood ? THREE.NormalBlending : THREE.AdditiveBlending,
+        depthWrite: false
+      });
+      var pts = new THREE.Points(geo, mat);
+      scene.add(pts);
+      activeFX.push({
+        type: "points",
+        obj: pts,
+        geo: geo,
+        mat: mat,
+        vels: vels,
+        age: 0,
+        life: isBlood ? 0.55 : 0.32
+      });
+    } catch (eFx) {}
+  }
+
+  function spawnTracer(p0, p1, colHex) {
+    try {
+      if (!scene) return;
+      var geo = new THREE.BufferGeometry().setFromPoints([p0, p1]);
+      var mat = new THREE.LineBasicMaterial({
+        color: colHex || 0x38f9d4,
+        transparent: true,
+        opacity: 0.92
+      });
+      var line = new THREE.Line(geo, mat);
+      scene.add(line);
+      activeFX.push({
+        type: "line",
+        obj: line,
+        geo: geo,
+        mat: mat,
+        age: 0,
+        life: 0.085
+      });
+    } catch (eTr) {}
+  }
+
+  function detonateBarrel(bRec) {
+    if (!bRec || !bRec.alive || !scene) return;
+    bRec.alive = false;
+    bRec.respawnT = 14.0;
+    if (bRec.group) bRec.group.visible = false;
+    var center = new THREE.Vector3(bRec.x, 0.7, bRec.z);
+    spawnBloodOrSparks(center, false, 36);
+    if (vfx && vfx.addTrauma) vfx.addTrauma(0.65);
+    if (Audio8 && Audio8.thunder) {
+      try { Audio8.thunder(); } catch (eT) {}
+    }
+    try {
+      var expLight = new THREE.PointLight(0xff6b22, 6.5, 16, 1.5);
+      expLight.position.copy(center);
+      scene.add(expLight);
+      var sphere = new THREE.Mesh(
+        new THREE.SphereGeometry(0.65, 14, 12),
+        new THREE.MeshBasicMaterial({
+          color: 0xff7722,
+          transparent: true,
+          opacity: 0.92,
+          blending: THREE.AdditiveBlending,
+          depthWrite: false
+        })
+      );
+      sphere.position.copy(center);
+      scene.add(sphere);
+      activeFX.push({
+        type: "explosion",
+        obj: sphere,
+        light: expLight,
+        geo: sphere.geometry,
+        mat: sphere.material,
+        age: 0,
+        life: 0.48
+      });
+    } catch (eEx) {}
+
+    var blastKills = 0;
+    for (var zi = 0; zi < hordeZombies.length; zi++) {
+      var hz = hordeZombies[zi];
+      if (!hz || hz.deadT > 0) continue;
+      var dx = hz.x - bRec.x;
+      var dz = hz.z - bRec.z;
+      if (dx * dx + dz * dz <= 4.8 * 4.8) {
+        if (damageHordeZombie(hz, 220, true)) blastKills++;
+      }
+    }
+    if (enemy && enemy.getPos && enemy.damage) {
+      var ep = enemy.getPos();
+      if (!ep.dead) {
+        var edx = ep.x - bRec.x;
+        var edz = ep.z - bRec.z;
+        if (edx * edx + edz * edz <= 4.8 * 4.8) {
+          var er = enemy.damage(220, true);
+          if (er && er.killed) {
+            blastKills++;
+            onZombieKilled(true);
+          }
+        }
+      }
+    }
+    showCombatPopup(
+      blastKills > 0
+        ? "BIO-BARREL DETONATED! +" + blastKills + " KILLS!"
+        : "BIO-BARREL DETONATED!",
+      "#ff9933"
+    );
+  }
+
+  function onZombieKilled(isBoss) {
+    zombieKills += isBoss ? 2 : 1;
+    if (zombieKills >= KILL_GOAL && !keyFound) {
+      keyFound = true;
+      if (world && world.keyMesh) {
+        try { world.keyMesh.visible = false; } catch (eK) {}
+      }
+      if (UI && UI.setKey) {
+        try { UI.setKey(true); } catch (eU) {}
+      }
+      tintDoor(true);
+      if (UI && UI.setObjective) {
+        try { UI.setObjective(Story.OBJECTIVES[1] || ""); } catch (eO) {}
+      }
+      if (UI && UI.banner) {
+        try { UI.banner("HORDE PURGED! North Extraction Gate Unlocked [Press E]", 5500); } catch (eB) {}
+      }
+    } else if (!keyFound && UI && UI.setObjective) {
+      try {
+        UI.setObjective("Purge Infected (" + Math.min(zombieKills, KILL_GOAL) + "/" + KILL_GOAL + ") & Secure Bio-Key");
+      } catch (eO2) {}
+    }
+    updateShooterHUD();
+  }
+
+  function initZombieHorde() {
+    if (!scene || hordeZombies.length > 0) return;
+    var SPAWNS = [
+      { x: 0.0, z: 4.4, patrol: [[0.0, 4.4], [-3.8, 3.5], [3.8, 3.5]] },
+      { x: 5.5, z: -1.5, patrol: [[5.5, -1.5], [8.5, -3.5], [4.5, -4.5]] },
+      { x: -5.5, z: -1.5, patrol: [[-5.5, -1.5], [-8.5, -3.5], [-4.5, -4.5]] },
+      { x: -6.5, z: -6.8, patrol: [[-6.5, -6.8], [0, -7.2], [6.5, -6.8]] },
+      { x: 6.5, z: 3.5, patrol: [[6.5, 3.5], [9.2, 3.5], [5.0, 1.5]] }
+    ];
+    for (var i = 0; i < SPAWNS.length; i++) {
+      (function (sp, idx) {
+        var grp = new THREE.Group();
+        grp.position.set(sp.x, 0, sp.z);
+        scene.add(grp);
+        var eyeSp = new THREE.Sprite(
+          new THREE.SpriteMaterial({
+            map: getBloodSpriteTex(),
+            color: 0xff1e1e,
+            transparent: true,
+            opacity: 0.95,
+            blending: THREE.AdditiveBlending,
+            depthWrite: false
+          })
+        );
+        eyeSp.position.set(0, 1.22, 0.25);
+        eyeSp.scale.set(0.24, 0.10, 1);
+        grp.add(eyeSp);
+
+        var hitBox = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.42, 0.42, 1.82, 8),
+          new THREE.MeshBasicMaterial({ visible: false })
+        );
+        hitBox.position.y = 0.91;
+        grp.add(hitBox);
+
+        var zRec = {
+          id: idx,
+          x: sp.x,
+          z: sp.z,
+          yaw: 0,
+          hp: idx === 0 ? 160 : 100,
+          maxHp: idx === 0 ? 160 : 100,
+          staggerT: 0,
+          deadT: 0,
+          atkCd: 0,
+          wpIdx: 0,
+          patrol: sp.patrol,
+          group: grp,
+          hitBox: hitBox,
+          mixer: null,
+          actions: {},
+          activeClip: ""
+        };
+        hitBox.userData.hordeZombie = zRec;
+        hordeZombies.push(zRec);
+
+        var gl = new THREE.GLTFLoader();
+        if (window.THREE._agathaDraco) {
+          try { gl.setDRACOLoader(window.THREE._agathaDraco); } catch (eD) {}
+        }
+        var zUrl = (idx === 0) ? "./assets/zombie_walker.glb" : "/studio/assets/models/characters/RobotExpressive.glb";
+        gl.load(zUrl, function (gltf) {
+          var root = gltf && (gltf.scene || (gltf.scenes && gltf.scenes[0]));
+          if (!root) return;
+          var box = new THREE.Box3().setFromObject(root);
+          var sz = box.getSize(new THREE.Vector3());
+          var maxDim = Math.max(sz.x, Math.max(sz.y, sz.z));
+          if (maxDim > 0.01) root.scale.setScalar(1.72 / maxDim);
+          box.setFromObject(root);
+          root.position.y -= box.min.y;
+          root.traverse(function (n) {
+            if (n && n.isMesh) {
+              n.userData.hordeZombie = zRec;
+              if (n.material && idx % 2 === 1) {
+                n.material = n.material.clone();
+                if (n.material.color) n.material.color.setHex(0x4a1212);
+                if (n.material.emissive) {
+                  n.material.emissive.setHex(0x3a0606);
+                  n.material.emissiveIntensity = 0.45;
+                }
+              }
+            }
+          });
+          grp.add(root);
+          if (gltf.animations && gltf.animations.length && THREE.AnimationMixer) {
+            var mx = new THREE.AnimationMixer(root);
+            zRec.mixer = mx;
+            for (var ai = 0; ai < gltf.animations.length; ai++) {
+              var cl = gltf.animations[ai];
+              var nm = (cl.name || "").toLowerCase();
+              if (!zRec.actions.idle && nm.indexOf("idle") >= 0) zRec.actions.idle = mx.clipAction(cl);
+              if (!zRec.actions.walk && nm.indexOf("walk") >= 0) zRec.actions.walk = mx.clipAction(cl);
+              if (!zRec.actions.run && nm.indexOf("run") >= 0) zRec.actions.run = mx.clipAction(cl);
+              if (!zRec.actions.hit && nm.indexOf("hit") >= 0) {
+                zRec.actions.hit = mx.clipAction(cl);
+                zRec.actions.hit.setLoop(THREE.LoopOnce, 1);
+                zRec.actions.hit.clampWhenFinished = true;
+              }
+              if (!zRec.actions.dead && nm.indexOf("dead front") >= 0) {
+                zRec.actions.dead = mx.clipAction(cl);
+                zRec.actions.dead.setLoop(THREE.LoopOnce, 1);
+                zRec.actions.dead.clampWhenFinished = true;
+              }
+            }
+            if (zRec.actions.walk) {
+              zRec.actions.walk.play();
+              zRec.activeClip = "walk";
+            }
+          }
+        });
+      })(SPAWNS[i], i);
+    }
+  }
+
+  function playZombieClip(z, name) {
+    if (!z || !z.mixer || !z.actions[name] || z.activeClip === name) return;
+    try {
+      if (z.actions[z.activeClip]) z.actions[z.activeClip].fadeOut(0.12);
+      z.actions[name].reset().fadeIn(0.12).play();
+      z.activeClip = name;
+    } catch (eC) {}
+  }
+
+  function damageHordeZombie(z, dmg, isHead) {
+    if (!z || z.deadT > 0) return false;
+    z.hp = Math.max(0, z.hp - dmg);
+    if (z.hp <= 0) {
+      z.deadT = 6.5;
+      playZombieClip(z, "dead");
+      onZombieKilled(false);
+      return true;
+    }
+    z.staggerT = isHead ? 0.55 : 0.30;
+    if (z.actions.hit) {
+      try { z.actions.hit.reset().play(); } catch (eH) {}
+    }
+    return false;
+  }
+
+  function hurtPlayer(dmg, reason) {
+    if (playerHurtCd > 0 || state !== "playing" || jumpscare) return true;
+    playerHurtCd = 1.25;
+    playerHP = Math.max(0, playerHP - (dmg || 24));
+    updateShooterHUD();
+    if (vfx && vfx.addTrauma) vfx.addTrauma(0.42);
+    try {
+      var fl = $("flash");
+      if (fl) {
+        fl.style.background = "radial-gradient(circle, rgba(220,38,38,0.15), rgba(185,28,28,0.65))";
+        fl.style.opacity = "1";
+        setTimeout(function () { fl.style.opacity = "0"; }, 220);
+      }
+    } catch (eFl) {}
+    showCombatPopup((reason || "INFECTED CLAW HIT!") + " -" + (dmg || 24) + " HP", "#ef4444");
+    if (playerHP <= 0) {
+      return false;
+    }
+    return true;
+  }
+
+  function reloadWeapon() {
+    if (state !== "playing" || reloadTimer > 0) return;
+    var w = WEAPONS[curWep];
+    if (w.mag >= w.maxMag || w.reserve <= 0) return;
+    reloadTimer = 0.85;
+    if (player && player.triggerReloadFX) player.triggerReloadFX();
+    showCombatPopup("RELOADING " + w.name + "...", "#38f9d4");
+    updateShooterHUD();
+  }
+
+  function selectWeapon(idx) {
+    var next = ((idx % WEAPONS.length) + WEAPONS.length) % WEAPONS.length;
+    if (next === curWep) return;
+    curWep = next;
+    reloadTimer = 0;
+    if (player && player.triggerReloadFX) player.triggerReloadFX();
+    showCombatPopup("EQUIPPED: " + WEAPONS[curWep].name, "#38f9d4");
+    updateShooterHUD();
+  }
+
+  function fireWeapon() {
+    if (state !== "playing" || jumpscare || !camera || !scene) return;
+    if (fireCd > 0 || reloadTimer > 0) return;
+    var w = WEAPONS[curWep];
+    if (w.mag <= 0) {
+      reloadWeapon();
+      return;
+    }
+    w.mag--;
+    fireCd = w.cd;
+    if (player && player.triggerShootFX) player.triggerShootFX(curWep);
+    if (vfx && vfx.addTrauma) vfx.addTrauma(curWep === 1 ? 0.16 : 0.07);
+    updateShooterHUD();
+
+    if (!raycaster) raycaster = new THREE.Raycaster();
+    var muzzleOrigin = new THREE.Vector3(0.16, -0.12, -0.45).applyMatrix4(camera.matrixWorld);
+    var anyHead = false;
+    var anyKill = false;
+    var anyHit = false;
+    var totalDmgDealt = 0;
+
+    for (var p = 0; p < w.pellets; p++) {
+      var sx = (p === 0 && w.pellets === 1) ? 0 : (Math.random() - 0.5) * w.spread;
+      var sy = (p === 0 && w.pellets === 1) ? 0 : (Math.random() - 0.5) * w.spread;
+      raycaster.setFromCamera({ x: sx, y: sy }, camera);
+      var hits = raycaster.intersectObjects(scene.children, true);
+      var endPt = raycaster.ray.origin.clone().add(raycaster.ray.direction.clone().multiplyScalar(26));
+      for (var hi = 0; hi < hits.length; hi++) {
+        var h = hits[hi];
+        if (!h || !h.object || h.distance < 0.45) continue;
+        var anc = h.object;
+        var isCamChild = false;
+        var hitBarrel = null;
+        var hitHorde = null;
+        var hitAlpha = false;
+        var alphaGrp = enemy && enemy.getGroup ? enemy.getGroup() : null;
+        while (anc) {
+          if (anc === camera) { isCamChild = true; break; }
+          if (anc.userData && anc.userData.hordeZombie) hitHorde = anc.userData.hordeZombie;
+          if (alphaGrp && anc === alphaGrp) hitAlpha = true;
+          if (window.__stvBarrels) {
+            for (var bi = 0; bi < window.__stvBarrels.length; bi++) {
+              if (window.__stvBarrels[bi].alive && window.__stvBarrels[bi].group === anc) {
+                hitBarrel = window.__stvBarrels[bi];
+              }
+            }
+          }
+          anc = anc.parent;
+        }
+        if (isCamChild) continue;
+        endPt = h.point.clone();
+
+        if (hitBarrel) {
+          detonateBarrel(hitBarrel);
+          anyHit = true;
+          anyKill = true;
+          break;
+        }
+        if (hitHorde && hitHorde.deadT <= 0) {
+          var isHead = h.point.y >= 1.28;
+          var dmg = Math.round(w.dmg * (isHead ? w.headMult : 1));
+          totalDmgDealt += dmg;
+          anyHit = true;
+          if (isHead) anyHead = true;
+          spawnBloodOrSparks(h.point, true, isHead ? 24 : 14);
+          if (damageHordeZombie(hitHorde, dmg, isHead)) anyKill = true;
+          break;
+        }
+        if (hitAlpha && enemy && enemy.damage) {
+          var isHeadA = h.point.y >= 1.28;
+          var dmgA = Math.round(w.dmg * (isHeadA ? w.headMult : 1));
+          totalDmgDealt += dmgA;
+          anyHit = true;
+          if (isHeadA) anyHead = true;
+          spawnBloodOrSparks(h.point, true, isHeadA ? 26 : 16);
+          var resA = enemy.damage(dmgA, isHeadA);
+          if (resA && resA.killed) {
+            anyKill = true;
+            onZombieKilled(true);
+          }
+          break;
+        }
+        if (h.object.isMesh && h.object.visible) {
+          spawnBloodOrSparks(h.point, false, 8);
+          break;
+        }
+      }
+      spawnTracer(muzzleOrigin, endPt, w.color);
+    }
+
+    playGunshotSFX(curWep, anyHead, anyKill);
+    if (anyHit) {
+      showHitmarker(anyHead || anyKill);
+      if (anyKill) {
+        showCombatPopup(anyHead ? "CRITICAL HEADSHOT KILL! +" + totalDmgDealt : "INFECTED ELIMINATED! +" + totalDmgDealt, "#ffd166");
+      } else if (anyHead) {
+        showCombatPopup("HEADSHOT! -" + totalDmgDealt, "#ffd166");
+      } else {
+        showCombatPopup("HIT -" + totalDmgDealt, "#f87171");
+      }
+    }
+    if (w.mag <= 0 && w.reserve > 0) reloadWeapon();
+  }
+
+  function updateShooterStep(dt) {
+    if (fireCd > 0) fireCd = Math.max(0, fireCd - dt);
+    if (playerHurtCd > 0) playerHurtCd = Math.max(0, playerHurtCd - dt);
+    if (reloadTimer > 0) {
+      reloadTimer -= dt;
+      if (reloadTimer <= 0) {
+        reloadTimer = 0;
+        var w = WEAPONS[curWep];
+        var need = w.maxMag - w.mag;
+        var take = Math.min(need, w.reserve);
+        w.mag += take;
+        w.reserve -= take;
+        updateShooterHUD();
+      }
+    }
+    if (fireHeld && fireCd <= 0 && reloadTimer <= 0) {
+      fireWeapon();
+    }
+
+    for (var fi = activeFX.length - 1; fi >= 0; fi--) {
+      var fx = activeFX[fi];
+      fx.age += dt;
+      var u = fx.age / fx.life;
+      if (u >= 1) {
+        if (fx.obj && scene) scene.remove(fx.obj);
+        if (fx.light && scene) scene.remove(fx.light);
+        if (fx.geo) fx.geo.dispose();
+        if (fx.mat) fx.mat.dispose();
+        activeFX.splice(fi, 1);
+        continue;
+      }
+      if (fx.type === "line") {
+        fx.mat.opacity = 1 - u;
+      } else if (fx.type === "points") {
+        var posAttr = fx.geo.getAttribute("position");
+        var arr = posAttr.array;
+        for (var pi = 0; pi < fx.vels.length; pi++) {
+          var v = fx.vels[pi];
+          v.vy -= 9.8 * dt;
+          arr[pi * 3] += v.vx * dt;
+          arr[pi * 3 + 1] = Math.max(0.05, arr[pi * 3 + 1] + v.vy * dt);
+          arr[pi * 3 + 2] += v.vz * dt;
+        }
+        posAttr.needsUpdate = true;
+        fx.mat.opacity = 1 - u;
+      } else if (fx.type === "explosion") {
+        var sc = 1 + u * 6.5;
+        fx.obj.scale.set(sc, sc, sc);
+        fx.mat.opacity = (1 - u) * 0.9;
+        if (fx.light) fx.light.intensity = 6.5 * (1 - u);
+      }
+    }
+
+    var pp = player ? player.pos() : { x: 0, z: 8.5 };
+    if (window.__stvBarrels) {
+      for (var bi = 0; bi < window.__stvBarrels.length; bi++) {
+        var b = window.__stvBarrels[bi];
+        if (!b.alive) {
+          b.respawnT -= dt;
+          if (b.respawnT <= 0) {
+            b.alive = true;
+            if (b.group) b.group.visible = true;
+          }
+        } else if (b.ring) {
+          b.ring.rotation.z += dt * 1.8;
+        }
+      }
+    }
+    if (window.__stvSupplyCrates) {
+      for (var si = 0; si < window.__stvSupplyCrates.length; si++) {
+        var sc2 = window.__stvSupplyCrates[si];
+        if (sc2.cd > 0) {
+          sc2.cd -= dt;
+          if (sc2.cd <= 0 && sc2.group) sc2.group.visible = true;
+          continue;
+        }
+        if (sc2.ring) sc2.ring.rotation.z += dt * 2.2;
+        var sdx = pp.x - sc2.x;
+        var sdz = pp.z - sc2.z;
+        if (sdx * sdx + sdz * sdz <= 1.35 * 1.35) {
+          if (sc2.type === "ammo") {
+            WEAPONS[0].reserve += 60;
+            WEAPONS[1].reserve += 16;
+            WEAPONS[2].reserve += 8;
+            sc2.cd = 18;
+            if (sc2.group) sc2.group.visible = false;
+            showCombatPopup("+AMMO RESUPPLY CRATE!", "#38f9d4");
+            updateShooterHUD();
+          } else if (sc2.type === "medkit" && playerHP < 100) {
+            playerHP = Math.min(100, playerHP + 45);
+            sc2.cd = 18;
+            if (sc2.group) sc2.group.visible = false;
+            showCombatPopup("+45 HP TRIAGE MEDKIT!", "#34d399");
+            updateShooterHUD();
+          }
+        }
+      }
+    }
+
+    for (var zi = 0; zi < hordeZombies.length; zi++) {
+      var hz = hordeZombies[zi];
+      if (!hz) continue;
+      if (hz.mixer) {
+        try { hz.mixer.update(dt); } catch (eMx) {}
+      }
+      if (hz.deadT > 0) {
+        hz.deadT -= dt;
+        hz.group.rotation.x += (-Math.PI / 2 - hz.group.rotation.x) * Math.min(1, dt * 10);
+        hz.group.position.y = 0.18;
+        if (hz.deadT <= 0) {
+          hz.hp = hz.maxHp;
+          hz.group.rotation.x = 0;
+          hz.group.position.y = 0;
+          var sp = hz.patrol[Math.floor(Math.random() * hz.patrol.length)];
+          hz.x = sp[0];
+          hz.z = sp[1];
+          hz.group.position.set(hz.x, 0, hz.z);
+          playZombieClip(hz, "walk");
+        }
+        continue;
+      }
+      if (hz.staggerT > 0) {
+        hz.staggerT -= dt;
+        hz.group.rotation.x = -0.32 * (hz.staggerT / 0.55);
+        continue;
+      }
+      hz.group.rotation.x = 0;
+      if (hz.atkCd > 0) hz.atkCd -= dt;
+      var zdx = pp.x - hz.x;
+      var zdz = pp.z - hz.z;
+      var zdist = Math.sqrt(zdx * zdx + zdz * zdz);
+      var chasing = zdist < 10.5 && !(player && player.isHidden && player.isHidden());
+      var tx = pp.x;
+      var tz = pp.z;
+      if (!chasing) {
+        var wp = hz.patrol[hz.wpIdx % hz.patrol.length];
+        tx = wp[0];
+        tz = wp[1];
+        if ((tx - hz.x) * (tx - hz.x) + (tz - hz.z) * (tz - hz.z) < 0.45) {
+          hz.wpIdx = (hz.wpIdx + 1) % hz.patrol.length;
+        }
+      }
+      playZombieClip(hz, chasing ? "run" : "walk");
+      var spd = chasing ? 3.25 : 1.55;
+      var mvx = tx - hz.x;
+      var mvz = tz - hz.z;
+      var mvd = Math.sqrt(mvx * mvx + mvz * mvz);
+      if (mvd > 0.05) {
+        var nx = hz.x + (mvx / mvd) * spd * dt;
+        var nz = hz.z + (mvz / mvd) * spd * dt;
+        var blocked = false;
+        for (var ci = 0; ci < colliders.length; ci++) {
+          var c = colliders[ci];
+          if (nx > c.x0 - 0.3 && nx < c.x1 + 0.3 && nz > c.z0 - 0.3 && nz < c.z1 + 0.3) {
+            blocked = true;
+            break;
+          }
+        }
+        if (!blocked) {
+          hz.x = nx;
+          hz.z = nz;
+        } else {
+          hz.wpIdx = (hz.wpIdx + 1) % hz.patrol.length;
+        }
+        hz.yaw = Math.atan2(mvx, mvz);
+      }
+      hz.group.position.set(hz.x, 0, hz.z);
+      hz.group.rotation.y = hz.yaw;
+
+      if (zdist <= 1.15 && hz.atkCd <= 0 && !isHiddenNow()) {
+        hz.atkCd = 1.4;
+        if (!hurtPlayer(22, "BLOODFANG ZOMBIE BITE!")) {
+          handleCaught();
+        }
+      }
+    }
+  }
+
   function step(dt) {
+    try { updateShooterStep(dt); } catch (eSh) {}
     var input = buildInput();
     timerMs += dt * 1000;
     if (player) {
@@ -1782,9 +2552,15 @@
         keys[c] = true;
         if (ev.repeat) return;
         if (c === "Escape" || c === "KeyP") togglePause();
+        else if (c === "Space" || c === "KeyF") fireWeapon();
+        else if (c === "KeyR") reloadWeapon();
+        else if (c === "Digit1") selectWeapon(0);
+        else if (c === "Digit2") selectWeapon(1);
+        else if (c === "Digit3") selectWeapon(2);
+        else if (c === "KeyQ") selectWeapon(curWep + 1);
         else if (c === "KeyE") doInteract();
         else if (c === "KeyC") toggleCrouch();
-        else if (c === "KeyT" || c === "KeyF") toggleTorch();
+        else if (c === "KeyT") toggleTorch();
         else if (c === "KeyM") toggleMute();
         else if (c === "Enter" && state === "menu") startGame();
       },
@@ -1868,12 +2644,77 @@
   function wireCanvasClick() {
     if (!container) return;
     container.addEventListener(
-      "click",
-      function () {
-        if (state === "playing") requestLock();
+      "mousedown",
+      function (ev) {
+        if (state !== "playing") return;
+        if (ev.button === 2) {
+          if (player && player.setADS) player.setADS(!player.isADS());
+          return;
+        }
+        requestLock();
+        fireHeld = true;
+        fireWeapon();
       },
       false,
     );
+    window.addEventListener("mouseup", function () { fireHeld = false; }, false);
+    container.addEventListener("contextmenu", function (ev) {
+      try { ev.preventDefault(); } catch (e) {}
+    }, false);
+
+    var bFire = $("btn-fire");
+    if (bFire) {
+      function fDown(ev) {
+        try { ev.preventDefault(); ev.stopPropagation(); } catch (e) {}
+        fireHeld = true;
+        fireWeapon();
+      }
+      function fUp(ev) {
+        try { if (ev) ev.preventDefault(); } catch (e) {}
+        fireHeld = false;
+      }
+      bFire.addEventListener("pointerdown", fDown, false);
+      bFire.addEventListener("pointerup", fUp, false);
+      bFire.addEventListener("pointercancel", fUp, false);
+      bFire.addEventListener("touchstart", fDown, { passive: false });
+      bFire.addEventListener("touchend", fUp, false);
+      bFire.addEventListener("click", function (ev) {
+        try { ev.preventDefault(); ev.stopPropagation(); } catch (e) {}
+        fireWeapon();
+      }, false);
+    }
+    var bAds = $("btn-ads");
+    if (bAds) {
+      bAds.addEventListener("click", function (ev) {
+        try { ev.preventDefault(); ev.stopPropagation(); } catch (e) {}
+        if (player && player.setADS) {
+          var nextAds = !player.isADS();
+          player.setADS(nextAds);
+          bAds.classList.toggle("on", nextAds);
+        }
+      }, false);
+    }
+    var bRel = $("btn-reload");
+    if (bRel) {
+      bRel.addEventListener("click", function (ev) {
+        try { ev.preventDefault(); ev.stopPropagation(); } catch (e) {}
+        reloadWeapon();
+      }, false);
+    }
+    var bWep = $("btn-weapon");
+    if (bWep) {
+      bWep.addEventListener("click", function (ev) {
+        try { ev.preventDefault(); ev.stopPropagation(); } catch (e) {}
+        selectWeapon(curWep + 1);
+      }, false);
+    }
+    var bPauseHud = $("btn-pause-hud");
+    if (bPauseHud) {
+      bPauseHud.addEventListener("click", function (ev) {
+        try { ev.preventDefault(); ev.stopPropagation(); } catch (e) {}
+        togglePause();
+      }, false);
+    }
   }
 
   function boot() {
@@ -2193,6 +3034,19 @@
       player: player,
       enemy: enemy,
       world: world,
+      fire: fireWeapon,
+      reload: reloadWeapon,
+      switchWeapon: selectWeapon,
+      getShooterStats: function () {
+        return {
+          hp: playerHP,
+          kills: zombieKills,
+          weapon: WEAPONS[curWep].name,
+          mag: WEAPONS[curWep].mag,
+          reserve: WEAPONS[curWep].reserve,
+          hordeCount: hordeZombies.length
+        };
+      },
       getState: function () {
         return state;
       },

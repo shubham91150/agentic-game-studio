@@ -34,8 +34,8 @@
   var STRIDE_RUN = 2.3;
   var TORCH_BASE = 1.6;
   var LANTERN_URL = '/studio/assets/polyhaven/Lantern_01/Lantern_01_1k.glb';
-  var LANTERN_BASE_X = 0.28;
-  var LANTERN_BASE_Y = -0.26;
+  var LANTERN_BASE_X = -0.27;
+  var LANTERN_BASE_Y = -0.28;
   var LANTERN_BASE_Z = -0.45;
   var LANTERN_LEN = 0.22;
   var SWAY_MAX = 0.03;
@@ -111,11 +111,73 @@
       torch.target = torchTarget;
       camera.add(torch);
 
-      /* Lower-right first-person hand rig; the .glb docks here on load. */
+      /* Left off-hand bio-lantern rig + Right main-hand 3D Tactical Rifle rig */
       lanternRig = new THREE.Group();
       lanternRig.position.set(LANTERN_BASE_X, LANTERN_BASE_Y, LANTERN_BASE_Z);
       camera.add(lanternRig);
       loadLanternViewmodel();
+
+      var WEAPON_BASE_X = 0.22;
+      var WEAPON_BASE_Y = -0.20;
+      var WEAPON_BASE_Z = -0.42;
+      var weaponRig = new THREE.Group();
+      weaponRig.position.set(WEAPON_BASE_X, WEAPON_BASE_Y, WEAPON_BASE_Z);
+      camera.add(weaponRig);
+
+      var recoilZ = 0;
+      var recoilPitch = 0;
+      var reloadT = 0;
+      var adsOn = false;
+      var adsK = 0;
+      var muzzleT = 0;
+      var muzzleLight = new THREE.PointLight(0xffaa33, 0, 10, 2);
+      muzzleLight.position.set(0, 0.03, -0.68);
+      weaponRig.add(muzzleLight);
+
+      var muzzleFlare = null;
+      try {
+        var mfCv = document.createElement('canvas');
+        mfCv.width = 64; mfCv.height = 64;
+        var mfCtx = mfCv.getContext('2d');
+        var mfG = mfCtx.createRadialGradient(32, 32, 1, 32, 32, 30);
+        mfG.addColorStop(0, 'rgba(255,255,230,1)');
+        mfG.addColorStop(0.35, 'rgba(255,165,40,0.92)');
+        mfG.addColorStop(0.75, 'rgba(255,60,20,0.35)');
+        mfG.addColorStop(1, 'rgba(0,0,0,0)');
+        mfCtx.fillStyle = mfG;
+        mfCtx.fillRect(0, 0, 64, 64);
+        var mfTex = new THREE.CanvasTexture(mfCv);
+        muzzleFlare = new THREE.Sprite(new THREE.SpriteMaterial({
+          map: mfTex, color: 0xffd27a, transparent: true, opacity: 0,
+          blending: THREE.AdditiveBlending, depthWrite: false
+        }));
+        muzzleFlare.position.set(0, 0.025, -0.66);
+        muzzleFlare.scale.set(0.28, 0.28, 1);
+        weaponRig.add(muzzleFlare);
+      } catch (eMf) { muzzleFlare = null; }
+
+      var holoMats = [];
+      (function loadRifleViewmodel() {
+        try {
+          if (!window.THREE || !window.THREE.GLTFLoader) return;
+          new window.THREE.GLTFLoader().load('./assets/tactical_pulse_rifle.glb', function (gltf) {
+            var root = gltf && (gltf.scene || (gltf.scenes && gltf.scenes[0]));
+            if (!root) return;
+            root.scale.setScalar(0.78);
+            root.rotation.set(0, 0, 0);
+            root.traverse(function (o) {
+              if (o && o.isMesh) {
+                o.castShadow = false;
+                o.receiveShadow = false;
+                if (o.material && o.material.name && o.material.name.indexOf('Holo') >= 0) {
+                  holoMats.push(o.material);
+                }
+              }
+            });
+            weaponRig.add(root);
+          });
+        } catch (eWf) {}
+      })();
 
       /* Glass material entries {m, offH, offI}; mesh materials are cloned
        * first so the world lanterns sharing the cached .glb keep their own. */
@@ -335,6 +397,23 @@
         onStep: null,
 
         pos: function () { return camera.position; },
+        getAngles: function () { return { yaw: yaw, pitch: pitch }; },
+        setADS: function (on) { adsOn = !!on; },
+        isADS: function () { return !!adsOn; },
+        triggerReloadFX: function () { reloadT = 0.85; },
+        triggerShootFX: function (wIdx) {
+          recoilZ = Math.min(0.11, recoilZ + (wIdx === 1 ? 0.085 : (wIdx === 2 ? 0.095 : 0.048)));
+          recoilPitch = Math.min(0.18, recoilPitch + (wIdx === 1 ? 0.13 : (wIdx === 2 ? 0.14 : 0.065)));
+          muzzleT = 0.075;
+          var colHex = wIdx === 1 ? 0xff9933 : (wIdx === 2 ? 0x38f9ff : 0xffd27a);
+          if (muzzleLight) muzzleLight.color.setHex(colHex);
+          if (muzzleFlare && muzzleFlare.material) muzzleFlare.material.color.setHex(colHex);
+          for (var hi = 0; hi < holoMats.length; hi++) {
+            try {
+              if (holoMats[hi].emissive) holoMats[hi].emissive.setHex(colHex);
+            } catch (eH) {}
+          }
+        },
 
         setTorch: function (on) {
           if (hidden) {
@@ -602,6 +681,47 @@
               }
             }
           }
+          if (weaponRig) {
+            var adsTarget = (adsOn && !hidden) ? 1 : 0;
+            adsK += (adsTarget - adsK) * (1 - Math.exp(-14 * dt));
+            try {
+              var wantFov = 72 - adsK * 20;
+              if (Math.abs((camera.fov || 72) - wantFov) > 0.05) {
+                camera.fov = wantFov;
+                camera.updateProjectionMatrix();
+              }
+            } catch (eFov) {}
+            recoilZ *= Math.exp(-16 * dt);
+            recoilPitch *= Math.exp(-15 * dt);
+            if (reloadT > 0) reloadT = Math.max(0, reloadT - dt);
+            var relSin = reloadT > 0 ? Math.sin((reloadT / 0.85) * Math.PI) : 0;
+            var wxBase = WEAPON_BASE_X * (1 - adsK);
+            var wyBase = WEAPON_BASE_Y + adsK * 0.088 - relSin * 0.14;
+            var wzBase = WEAPON_BASE_Z + adsK * 0.10 + recoilZ;
+            var wWalkX = (planar > 0.3 ? Math.cos(bobPhase * 0.5) * 0.004 * (1 - adsK * 0.7) : 0);
+            var wWalkY = (planar > 0.3 ? Math.sin(bobPhase) * 0.005 * (1 - adsK * 0.7) : 0);
+            weaponRig.position.set(wxBase + wWalkX, wyBase + wWalkY, wzBase);
+            weaponRig.rotation.set(
+              recoilPitch - relSin * 0.65,
+              -smYawV * 0.008 * (1 - adsK * 0.6),
+              relSin * 0.45
+            );
+            if (muzzleT > 0) {
+              muzzleT = Math.max(0, muzzleT - dt);
+              var mFrac = muzzleT / 0.075;
+              if (muzzleLight) muzzleLight.intensity = 4.2 * mFrac;
+              if (muzzleFlare && muzzleFlare.material) {
+                muzzleFlare.material.opacity = mFrac;
+                var mSc = 0.22 + (1 - mFrac) * 0.16;
+                muzzleFlare.scale.set(mSc, mSc, 1);
+              }
+            } else {
+              if (muzzleLight && muzzleLight.intensity > 0) muzzleLight.intensity = 0;
+              if (muzzleFlare && muzzleFlare.material && muzzleFlare.material.opacity > 0) {
+                muzzleFlare.material.opacity = 0;
+              }
+            }
+          }
 
           var nTarget = 0;
           if (!hidden && planar > 0.3) {
@@ -622,448 +742,6 @@
       };
 
       api.reset(px, pz, 0);
-      return api;
-    }
-  };
-
-  /* ================================================================
-   * StV_Platformer — Celeste-grade frame-perfect side-view (XY, y-up)
-   * controller + Ori soul-lantern dash reset (Subagent C, additive).
-   * Level import contract (provided by the platform build of levels.js
-   * as window.StV_PlatformLevel; EVERYTHING optional, code is defensive):
-   *   { solids: [{x0,y0,x1,y1}], soulLanterns: [{x,y}],
-   *     orbs: [{x,y}], hazards: [{x,y,r}], spawn: {x,y},
-   *     bounds: {x0,y0,x1,y1} }
-   * Missing contract => built-in fallback course (FALLBACK_* below) so the
-   * controller is playable standalone. Physics runs at FIXED = 1/60 driven
-   * by the game loop; step() clamps stray dt. Zero heap allocs in step().
-   * Math: doc 02 Celeste (derived g, 3-phase gravity, coyote 110ms,
-   * buffer 120ms, variable jump, apex hang, wall-slide/jump, 8-dir dash).
-   * ================================================================ */
-  var PLAT_FIXED = 1 / 60;
-  var PLAT_JUMP_H = 2.05;
-  var PLAT_T_APEX = 0.36;
-  var PLAT_G_UP = (-2 * PLAT_JUMP_H) / (PLAT_T_APEX * PLAT_T_APEX);
-  var PLAT_V_JUMP = Math.abs(PLAT_G_UP) * PLAT_T_APEX;
-  var PLAT_MAX_RUN = 7.2;
-  var PLAT_GROUND_ACCEL = 65;
-  var PLAT_GROUND_FRICTION = 55;
-  var PLAT_AIR_ACCEL = 42;
-  var PLAT_TERMINAL = -23;
-  var PLAT_APEX_V = 1.8;
-  var PLAT_COYOTE = 0.11;
-  var PLAT_BUFFER = 0.12;
-  var PLAT_WALL_SLIDE_V = -2.4;
-  var PLAT_WALL_JUMP_X = 7.6;
-  var PLAT_WALL_LOCK = 0.14;
-  var PLAT_DASH_T = 0.15;
-  var PLAT_DASH_SPD = 16.5;
-  var PLAT_DASH_END_KEEP = 0.45;
-  var PLAT_LANTERN_R = 2.2;
-  var PLAT_LANTERN_CD = 0.6;
-  var PLAT_ORB_R = 0.55;
-  var PLAT_HW = 0.2;
-  var PLAT_HH = 0.34;
-
-  var FALLBACK_SOLIDS = [
-    { x0: -14, y0: -1.2, x1: 14, y1: 0 },
-    { x0: -14, y0: 0, x1: -11.5, y1: 7 },
-    { x0: 11.5, y0: 0, x1: 14, y1: 7 },
-    { x0: -6.5, y0: 1.7, x1: -3.5, y1: 2.1 },
-    { x0: 0.5, y0: 2.9, x1: 3.5, y1: 3.3 },
-    { x0: 5.5, y0: 4.1, x1: 8.5, y1: 4.5 },
-    { x0: -9.5, y0: 4.6, x1: -6.5, y1: 5.0 },
-    { x0: -3.5, y0: 6.1, x1: 3.5, y1: 6.5 }
-  ];
-  var FALLBACK_LANTERNS = [{ x: 2, y: 4.4 }, { x: -5, y: 3.2 }];
-  var FALLBACK_ORBS = [
-    { x: -5, y: 2.9 }, { x: 2, y: 4.1 }, { x: 7, y: 5.3 },
-    { x: -8, y: 5.8 }, { x: 0, y: 7.3 }
-  ];
-  var FALLBACK_SPAWN = { x: -9, y: 1.2 };
-  var FALLBACK_BOUNDS = { x0: -14, y0: -3, x1: 14, y1: 10 };
-
-  function platNum(v, dflt) {
-    return (typeof v === 'number' && isFinite(v)) ? v : dflt;
-  }
-
-  function platLevelData() {
-    var L = null;
-    try { L = window.StV_PlatformLevel || null; } catch (e) { L = null; }
-    function arr(v, fb) {
-      if (v && v.length !== undefined && v.length > 0) return v;
-      return fb;
-    }
-    var solids = arr(L && L.solids, FALLBACK_SOLIDS);
-    var lanterns = arr(L && L.soulLanterns, FALLBACK_LANTERNS);
-    var orbs = arr(L && L.orbs, FALLBACK_ORBS);
-    var spawn = (L && L.spawn) || FALLBACK_SPAWN;
-    var bounds = (L && L.bounds) || FALLBACK_BOUNDS;
-    /* Subagent D: the contract documents hazards but levelData() never
-     * returned them — water/death zones were silently harmless. */
-    var hazards = (L && L.hazards && L.hazards.length > 0) ? L.hazards : [];
-    return { solids: solids, lanterns: lanterns, orbs: orbs, hazards: hazards, spawn: spawn, bounds: bounds };
-  }
-
-  window.StV_Platformer = {
-    FIXED: PLAT_FIXED,
-    VERSION: 'celeste-ori-1.0.0',
-    levelData: platLevelData,
-    create: function (opts) {
-      opts = opts || {};
-      var D = platLevelData();
-      var solids = opts.solids || D.solids;
-      var bounds = opts.bounds || D.bounds;
-      var spawn = opts.spawn || D.spawn;
-      var hw = platNum(opts.halfW, PLAT_HW);
-      var hh = platNum(opts.halfH, PLAT_HH);
-
-      var lanterns = [];
-      var orbs = [];
-      var hazards = opts.hazards || D.hazards || [];
-      var i;
-      var srcL = opts.soulLanterns || D.lanterns;
-      for (i = 0; i < srcL.length; i++) {
-        lanterns.push({ x: platNum(srcL[i].x, 0), y: platNum(srcL[i].y, 2), cd: 0 });
-      }
-      var srcO = opts.orbs || D.orbs;
-      for (i = 0; i < srcO.length; i++) {
-        orbs.push({ x: platNum(srcO[i].x, 0), y: platNum(srcO[i].y, 2), taken: false });
-      }
-
-      var x = platNum(spawn.x, FALLBACK_SPAWN.x);
-      var y = platNum(spawn.y, FALLBACK_SPAWN.y);
-      var vx = 0;
-      var vy = 0;
-      var face = 1;
-      var grounded = false;
-      var wallDir = 0;
-      var coyote = 0;
-      var buffer = 0;
-      var wallLock = 0;
-      var dashT = 0;
-      var dashDX = 1;
-      var dashDY = 0;
-      var dashUsed = false;
-      var canDouble = true;
-      var ghostAcc = 0;
-      var hurtCd = 0;
-      var stepAcc = 0;
-      var orbCount = 0;
-      var jumps = 0;
-
-      function overlaps(s) {
-        /* Subagent D: fallen crumble stones (levels.js .active=false)
-         * never collide invisibly. */
-        if (s.active === false) return false;
-        return x + hw > s.x0 && x - hw < s.x1 && y + hh > s.y0 && y - hh < s.y1;
-      }
-
-      function collideX() {
-        var s;
-        for (var k = 0; k < solids.length; k++) {
-          s = solids[k];
-          if (!overlaps(s)) continue;
-          if (vx > 0) { x = s.x0 - hw; wallDir = 1; }
-          else if (vx < 0) { x = s.x1 + hw; wallDir = -1; }
-          else {
-            var pl = (x + hw) - s.x0;
-            var pr = s.x1 - (x - hw);
-            if (pl < pr) { x = s.x0 - hw; wallDir = 1; }
-            else { x = s.x1 + hw; wallDir = -1; }
-          }
-          vx = 0;
-        }
-      }
-
-      function collideY() {
-        var s;
-        for (var k = 0; k < solids.length; k++) {
-          s = solids[k];
-          if (!overlaps(s)) continue;
-          if (vy <= 0) {
-            /* Land: snap feet to the top face. */
-            if (y > (s.y0 + s.y1) / 2) {
-              y = s.y1 + hh;
-              if (!grounded && vy < -9 && api.onLand) api.onLand(vy);
-              vy = 0;
-              grounded = true;
-            } else {
-              y = s.y0 - hh;
-              vy = 0;
-            }
-          } else {
-            y = s.y0 - hh;
-            vy = 0;
-          }
-        }
-      }
-
-      function quantizeDash(dx, dy) {
-        if (dx === 0 && dy === 0) { dx = face; dy = 0; }
-        var ang = Math.atan2(dy, dx);
-        var snap = Math.round(ang / (Math.PI / 4)) * (Math.PI / 4);
-        return [Math.cos(snap), Math.sin(snap)];
-      }
-
-      var api = {
-        onJump: null,
-        onLand: null,
-        onDash: null,
-        onDashGhost: null,
-        onWallSlide: null,
-        onWallJump: null,
-        onReset: null,
-        onOrb: null,
-        onHazard: null,
-        onStep: null,
-
-        reset: function (rx, ry) {
-          x = platNum(rx, platNum(spawn.x, FALLBACK_SPAWN.x));
-          y = platNum(ry, platNum(spawn.y, FALLBACK_SPAWN.y));
-          vx = 0; vy = 0; face = 1;
-          grounded = false; wallDir = 0;
-          coyote = 0; buffer = 0; wallLock = 0;
-          dashT = 0; dashUsed = false; canDouble = true;
-          ghostAcc = 0; hurtCd = 0; stepAcc = 0;
-          var k;
-          for (k = 0; k < lanterns.length; k++) lanterns[k].cd = 0;
-          for (k = 0; k < orbs.length; k++) orbs[k].taken = false;
-          orbCount = 0;
-        },
-
-        pos: function () { return { x: x, y: y }; },
-        vel: function () { return { x: vx, y: vy }; },
-
-        /* Subagent D additive: moving-platform carry (frame delta) and
-         * debug/QA teleport. Neither touches orbs, lanterns, or lives. */
-        nudge: function (dx, dy) {
-          if (typeof dx === 'number' && isFinite(dx)) x += dx;
-          if (typeof dy === 'number' && isFinite(dy)) y += dy;
-        },
-        teleport: function (nx, ny) {
-          if (typeof nx === 'number' && isFinite(nx)) x = nx;
-          if (typeof ny === 'number' && isFinite(ny)) y = ny;
-          vx = 0; vy = 0;
-          dashT = 0;
-          grounded = false; wallDir = 0;
-        },
-        state: function () {
-          return {
-            x: x, y: y, vx: vx, vy: vy, face: face,
-            grounded: grounded, wallDir: wallDir,
-            dashReady: !dashUsed, doubleReady: canDouble,
-            dashing: dashT > 0, orbs: orbCount, jumps: jumps
-          };
-        },
-        lanterns: function () { return lanterns; },
-        orbList: function () { return orbs; },
-
-        step: function (dt, input) {
-          if (!(dt > 0)) return;
-          if (dt > 0.05) dt = 0.05;
-          input = input || {};
-          var move = platNum(input.move, 0);
-          if (move > 1) move = 1;
-          else if (move < -1) move = -1;
-
-          var wasGrounded = grounded;
-          var k;
-
-          /* --- dash state: fixed velocity, zero gravity, ghost ticks --- */
-          if (dashT > 0) {
-            dashT -= dt;
-            vx = dashDX * PLAT_DASH_SPD;
-            vy = dashDY * PLAT_DASH_SPD;
-            ghostAcc += dt;
-            if (ghostAcc >= 0.025) {
-              ghostAcc = 0;
-              if (api.onDashGhost) api.onDashGhost(x, y, dashDX, dashDY);
-            }
-            if (dashT <= 0) {
-              vx = dashDX * PLAT_DASH_SPD * PLAT_DASH_END_KEEP;
-              vy = dashDY * PLAT_DASH_SPD * PLAT_DASH_END_KEEP;
-              if (dashDY > 0.5 && vy > 4) vy = 4;
-            }
-          }
-
-          /* --- timers --- */
-          if (grounded) coyote = PLAT_COYOTE;
-          else if (coyote > 0) { coyote -= dt; if (coyote < 0) coyote = 0; }
-          if (input.jumpPressed) buffer = PLAT_BUFFER;
-          else if (buffer > 0) { buffer -= dt; if (buffer < 0) buffer = 0; }
-          if (wallLock > 0) wallLock -= dt;
-          if (hurtCd > 0) hurtCd -= dt;
-          for (k = 0; k < lanterns.length; k++) {
-            if (lanterns[k].cd > 0) lanterns[k].cd -= dt;
-          }
-
-          /* --- horizontal: accel toward wish, friction on idle --- */
-          if (dashT <= 0) {
-            if (move !== 0) face = move > 0 ? 1 : -1;
-            var wish = move * PLAT_MAX_RUN;
-            var nearApex = !grounded && Math.abs(vy) < PLAT_APEX_V;
-            var acc = grounded
-              ? (move !== 0 ? PLAT_GROUND_ACCEL : PLAT_GROUND_FRICTION)
-              : PLAT_AIR_ACCEL * (nearApex ? 1.25 : 1.0);
-            if (wallLock > 0 && ((wallDir > 0 && move > 0) || (wallDir < 0 && move < 0))) {
-              acc = 0;
-            }
-            var dv = wish - vx;
-            var md = acc * dt;
-            if (dv > md) vx += md;
-            else if (dv < -md) vx -= md;
-            else vx = wish;
-          }
-
-          /* --- wall slide: clamp sink, spark hook --- */
-          var sliding = false;
-          if (!grounded && dashT <= 0 && wallDir !== 0 && vy < 0) {
-            var pressing = (wallDir > 0 && move > 0) || (wallDir < 0 && move < 0);
-            if (pressing) {
-              sliding = true;
-              if (vy < PLAT_WALL_SLIDE_V) vy = PLAT_WALL_SLIDE_V;
-              if (api.onWallSlide) api.onWallSlide(x + wallDir * hw, y, wallDir);
-            }
-          }
-
-          /* --- jumps: buffered ground/coyote, wall, double --- */
-          if (buffer > 0 && dashT <= 0) {
-            if (coyote > 0) {
-              vy = PLAT_V_JUMP;
-              grounded = false; coyote = 0; buffer = 0;
-              jumps++;
-              if (api.onJump) api.onJump(x, y, 'ground');
-            } else if (sliding || (wallDir !== 0 && !grounded && wallLock <= 0 &&
-                ((wallDir > 0 && move >= 0) || (wallDir < 0 && move <= 0)))) {
-              var wd = wallDir !== 0 ? wallDir : (move !== 0 ? (move > 0 ? 1 : -1) : -face);
-              vx = -wd * PLAT_WALL_JUMP_X;
-              vy = PLAT_V_JUMP * 0.92;
-              face = -wd;
-              wallLock = PLAT_WALL_LOCK;
-              wallDir = 0;
-              buffer = 0;
-              jumps++;
-              if (api.onWallJump) api.onWallJump(x, y, wd);
-            } else if (canDouble) {
-              canDouble = false;
-              vy = PLAT_V_JUMP * 0.85;
-              buffer = 0;
-              jumps++;
-              if (api.onJump) api.onJump(x, y, 'double');
-            }
-          }
-
-          /* --- 8-dir air/ground dash --- */
-          if (input.dashPressed && dashT <= 0 && !dashUsed) {
-            var ddx = platNum(input.dashX, 0);
-            var ddy = platNum(input.dashY, 0);
-            if (ddx === 0 && ddy === 0) {
-              ddx = move !== 0 ? move : face;
-              ddy = 0;
-            }
-            var q = quantizeDash(ddx, ddy);
-            dashDX = q[0]; dashDY = q[1];
-            if (Math.abs(dashDX) > 0.1) face = dashDX > 0 ? 1 : -1;
-            dashT = PLAT_DASH_T;
-            dashUsed = true;
-            ghostAcc = 0.025;
-            if (api.onDash) api.onDash(x, y, dashDX, dashDY);
-          }
-
-          /* --- 3-phase asymmetric gravity (variable height + apex hang) --- */
-          if (dashT <= 0) {
-            var g = PLAT_G_UP;
-            if (sliding) {
-              g = 0;
-              if (vy < PLAT_WALL_SLIDE_V) vy = PLAT_WALL_SLIDE_V;
-            } else if (vy > PLAT_APEX_V) {
-              g = input.jumpHeld ? PLAT_G_UP : PLAT_G_UP * 2.6;
-            } else if (Math.abs(vy) <= PLAT_APEX_V && !grounded) {
-              g = PLAT_G_UP * 0.5;
-            } else {
-              g = PLAT_G_UP * 1.65;
-            }
-            vy += g * dt;
-            if (vy < PLAT_TERMINAL) vy = PLAT_TERMINAL;
-          }
-
-          /* --- integrate + axis-separated collide --- */
-          wallDir = 0;
-          grounded = false;
-          x += vx * dt;
-          collideX();
-          y += vy * dt;
-          collideY();
-          if (x < bounds.x0 + hw) { x = bounds.x0 + hw; if (vx < 0) vx = 0; }
-          if (x > bounds.x1 - hw) { x = bounds.x1 - hw; if (vx > 0) vx = 0; }
-          if (y < bounds.y0 + hh) { y = bounds.y0 + hh; vy = 0; grounded = true; }
-          if (y > bounds.y1 - hh) { y = bounds.y1 - hh; if (vy > 0) vy = 0; }
-
-          /* --- landing refill + run footsteps --- */
-          if (grounded) {
-            var landed = !wasGrounded;
-            dashUsed = false;
-            canDouble = true;
-            if (landed && api.onLand) api.onLand(vy);
-            if (Math.abs(vx) > 1.2) {
-              stepAcc += Math.abs(vx) * dt;
-              if (stepAcc >= 2.1) {
-                stepAcc = 0;
-                if (api.onStep) api.onStep(Math.abs(vx) > 5.5);
-              }
-            } else {
-              stepAcc = 0;
-            }
-          }
-
-          /* --- Ori soul-lantern reset: 2.2m refill + hook (game.js adds
-           * 35ms hit-stop, shockwave ring, bell chord) --- */
-          for (k = 0; k < lanterns.length; k++) {
-            var L = lanterns[k];
-            if (L.cd > 0) continue;
-            if (dashUsed === false && canDouble === true) break;
-            var ldx = x - L.x;
-            var ldy = y - L.y;
-            if (ldx * ldx + ldy * ldy <= PLAT_LANTERN_R * PLAT_LANTERN_R) {
-              dashUsed = false;
-              canDouble = true;
-              L.cd = PLAT_LANTERN_CD;
-              if (api.onReset) api.onReset(L.x, L.y);
-            }
-          }
-
-          /* --- orbs: pentatonic combo steps --- */
-          for (k = 0; k < orbs.length; k++) {
-            var O = orbs[k];
-            if (O.taken) continue;
-            var odx = x - O.x;
-            var ody = y - O.y;
-            if (odx * odx + ody * ody <= PLAT_ORB_R * PLAT_ORB_R) {
-              O.taken = true;
-              var idx = orbCount;
-              orbCount++;
-              if (api.onOrb) api.onOrb(O.x, O.y, idx);
-            }
-          }
-
-          /* --- hazards: hook with 1s hurt cooldown --- */
-          if (hurtCd <= 0 && hazards) {
-            for (k = 0; k < hazards.length; k++) {
-              var Hz = hazards[k];
-              var hr = platNum(Hz.r, 0.4) + 0.25;
-              var hdx = x - platNum(Hz.x, 0);
-              var hdy = y - platNum(Hz.y, 0);
-              if (hdx * hdx + hdy * hdy <= hr * hr) {
-                hurtCd = 1.0;
-                if (api.onHazard) api.onHazard(Hz.x, Hz.y);
-                break;
-              }
-            }
-          }
-        }
-      };
-
       return api;
     }
   };

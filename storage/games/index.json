@@ -1,7 +1,7 @@
 [
   {
     "id": "game_1793679153102_17eff3",
-    "title": "Ashes of St. Vermilion — Stage 3",
+    "title": "Ashes of St. Vermilion \u2014 Stage 3",
     "prompt": "",
     "biome": "gothic-horror",
     "metaModel": "hand-made",
@@ -20,12 +20,12 @@
   },
   {
     "id": "game_1793765457616_e50387",
-    "title": "Veil of the Hollow Lantern",
-    "prompt": "Ori/Hollow Knight 2D precision platformer: guide the last wisp through Whispering Roots, Clockwork Aqueducts and Belltower Chasm",
-    "biome": "bioluminescent-2d",
+    "title": "Crimson Outbreak: Quarantine Sector 7",
+    "prompt": "3D First-Person Zombie Shooter Survival: wield M4-X Pulse Carbine, M870 Shotgun & Bio-Railcannon against Bloodfang zombies and the Undead Butcher Boss",
+    "biome": "zombie-shooter-3d",
     "metaModel": "hand-made",
     "enrichmentModel": null,
-    "objective": "Gather 16 light shards, outrun the shadow wraith, ring the sanctuary bell",
+    "objective": "Purge Infected (0/8), detonate Biohazard Barrels & unlock the North Extraction Gate",
     "createdAt": "2026-11-04T04:10:57.720Z",
     "updatedAt": "2026-11-04T06:31:06.808Z",
     "playUrl": "/studio/games/game_1793765457616_e50387/index.html",

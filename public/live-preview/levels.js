@@ -1334,7 +1334,7 @@
     var qSupplies = [];
     try {
       var BARREL_SPOTS = [
-        [0.0, 5.2],
+        [1.05, 4.8],
         [-4.2, -1.2],
         [4.2, -1.2],
         [-7.2, -4.4],
@@ -1367,20 +1367,29 @@
             respawnT: 0
           };
           qBarrels.push(bRec);
-          loadProp(U_BARREL01, 0.88, function (root) {
-            if (!root) return;
-            root.traverse(function (n) {
-              if (n && n.isMesh && n.material) {
-                n.material = n.material.clone();
-                if (n.material.color) n.material.color.setHex(0xc82828);
-                if (n.material.emissive) {
-                  n.material.emissive.setHex(0x660808);
-                  n.material.emissiveIntensity = 0.55;
+          if (window.THREE && window.THREE.GLTFLoader) {
+            new window.THREE.GLTFLoader().load(U_BARREL01, function (gltf) {
+              var root = gltf && (gltf.scene || (gltf.scenes && gltf.scenes[0]));
+              if (!root) return;
+              var box = new THREE.Box3().setFromObject(root);
+              var sz = box.getSize(new THREE.Vector3());
+              var mDim = Math.max(sz.x, Math.max(sz.y, sz.z));
+              if (mDim > 0.01) root.scale.setScalar(0.86 / mDim);
+              box.setFromObject(root);
+              root.position.y -= box.min.y;
+              root.traverse(function (n) {
+                if (n && n.isMesh && n.material) {
+                  n.material = n.material.clone();
+                  if (n.material.color) n.material.color.setHex(0xdc2626);
+                  if (n.material.emissive) {
+                    n.material.emissive.setHex(0x550606);
+                    n.material.emissiveIntensity = 0.45;
+                  }
                 }
-              }
+              });
+              bGrp.add(root);
             });
-            bGrp.add(root);
-          });
+          }
         })(BARREL_SPOTS[bi][0], BARREL_SPOTS[bi][1], bi);
       }
 

@@ -222,7 +222,7 @@
         if (name === 'playing' || name === 'paused') unhide(hud);
         else hide(hud);
       }
-      /* Agatha indicator lives only inside live play. */
+      /* Butcher Boss indicator lives only inside live play. */
       var he = $('hud-enemy');
       if (he) {
         if (name === 'playing') unhide(he);
@@ -373,7 +373,7 @@
       }
     },
 
-    /* Stage 2 additive: Agatha alert indicator (state + distance). */
+    /* Stage 2 additive: Butcher Boss alert indicator (state + distance). */
     setEnemy: function (state, distM) {
       var el = $('hud-enemy');
       if (!el) return;
@@ -386,8 +386,8 @@
       var lbl = query('.lbl', el);
       if (lbl) {
         var names = {
-          patrol: 'AGATHA · CALM', suspicious: 'AGATHA · SUSPICIOUS',
-          chase: 'AGATHA · CHASE', search: 'AGATHA · SEARCHING',
+          patrol: 'BUTCHER BOSS · CALM', suspicious: 'BUTCHER BOSS · SUSPICIOUS',
+          chase: 'BUTCHER BOSS · CHASE', search: 'BUTCHER BOSS · SEARCHING',
           caught: 'PAKDA GAYA'
         };
         lbl.textContent = names[s] || names.patrol;

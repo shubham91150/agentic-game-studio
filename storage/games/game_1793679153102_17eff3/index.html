@@ -414,15 +414,15 @@
       }
       #shooter-hud-bottom {
         position: fixed;
-        left: 168px;
-        right: 190px;
-        bottom: 18px;
+        left: 50%;
+        bottom: 16px;
+        transform: translateX(-50%);
         z-index: 7;
         display: none;
-        justify-content: space-between;
-        align-items: flex-end;
+        justify-content: center;
+        align-items: stretch;
         pointer-events: none;
-        gap: 12px;
+        gap: 14px;
       }
       body.playing #shooter-hud-bottom {
         display: flex;
@@ -567,7 +567,7 @@
     <div id="hud">
       <div id="hud-obj">Find the Chapel Key</div>
       <div id="hud-enemy" data-state="patrol">
-        <span class="dot"></span><span class="lbl">AGATHA · CALM</span
+        <span class="dot"></span><span class="lbl">ALPHA MUTANT · ROAMING</span
         ><span class="dist">--m</span>
       </div>
       <div id="noise-wrap">
@@ -628,7 +628,7 @@
         />
       </div>
       <div class="opt-row">
-        <label for="opt-difficulty">Agatha</label>
+        <label for="opt-difficulty">Horde</label>
         <select id="opt-difficulty">
           <option value="Easy">Easy</option>
           <option value="Normal" selected>Normal</option>

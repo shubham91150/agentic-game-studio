@@ -17,8 +17,8 @@
   "use strict";
 
   var FIXED = 1 / 60;
-  var MAX_STEPS = 15;
-  var CLAMP_DT = 0.25;
+  var MAX_STEPS = 3;
+  var CLAMP_DT = 0.05;
   var KEY_RADIUS = 1.6;
   var DOOR_RADIUS = 2.2;
   var AUTO_FPS = 45;
@@ -298,7 +298,6 @@
   ].join("\n");
 
   function postWanted() {
-    if (platformMode()) return false;
     try {
       return String(settings.quality || "").toLowerCase() !== "low";
     } catch (err) {
@@ -403,25 +402,13 @@
         document.body.classList.toggle("playing", name === "playing");
         document.body.classList.add("touch");
       }
-      var tc = $("touch-controls");
-      if (tc) tc.style.display = name === "playing" ? "flex" : "none";
-    } catch (e0) {
-      /* x */
-    }
+    } catch (e0) {}
     if (UI && UI.show) {
       try {
         UI.show(name);
       } catch (err) {
         /* x */
       }
-    }
-    /* Subagent D: the KINDLING veil (index.html) has no other owner —
-     * drop it the moment any overlay state paints. */
-    try {
-      var l = $("loading");
-      if (l) l.classList.add("hidden");
-    } catch (err) {
-      /* x */
     }
   }
 
@@ -492,52 +479,6 @@
   }
 
   function resetRun() {
-    /* Subagent D: Hollow Lantern run reset — lives, checkpoint, win
-     * flag, crumble/mover dynamics, shard visuals, wraith zone. */
-    if (platformMode()) {
-      timerMs = 0;
-      keys = {};
-      alertTick = 0;
-      platLives = 3;
-      platWon = false;
-      platCheckpoint = null;
-      platZone = 0;
-      platCamInit = false;
-      platPosCache = null;
-      platHudT = 99;
-      try {
-        if (window.Levels && window.Levels.resetDynamics) {
-          window.Levels.resetDynamics();
-        }
-      } catch (eDyn) {
-        /* x */
-      }
-      try {
-        if (window.Levels && window.Levels.resetOrbs) window.Levels.resetOrbs();
-      } catch (eOrb) {
-        /* x */
-      }
-      try {
-        if (platCtl) platCtl.reset();
-      } catch (eCtl) {
-        /* x */
-      }
-      try {
-        if (platWraith) {
-          if (platWraith.rehome) platWraith.rehome(ZONE_WPS[0]);
-          else platWraith.reset();
-        }
-      } catch (eWr) {
-        /* x */
-      }
-      try {
-        if (vfx && vfx.reset) vfx.reset();
-      } catch (eVfx) {
-        /* x */
-      }
-      platHud();
-      return;
-    }
     timerMs = 0;
     keyFound = false;
     /* HN2: search spots reset to unsearched with the rest of run state. */
@@ -571,6 +512,16 @@
     b4fired = false;
     wasInB = false;
     setJumpscare(false);
+    playerHP = 100;
+    playerHurtCd = 0;
+    zombieKills = 0;
+    WEAPONS[0].mag = 30; WEAPONS[0].reserve = 120;
+    WEAPONS[1].mag = 8;  WEAPONS[1].reserve = 40;
+    WEAPONS[2].mag = 5;  WEAPONS[2].reserve = 20;
+    reloadTimer = 0;
+    fireCd = 0;
+    initZombieHorde();
+    updateShooterHUD();
     try {
       if (window.speechSynthesis && window.speechSynthesis.cancel) {
         window.speechSynthesis.cancel();
@@ -668,23 +619,10 @@
     state = "playing";
     if (player) player.setEnabled(true);
     show("playing");
-    /* Subagent D: side-view needs no pointer lock; greet with the zone hint. */
-    if (!platformMode()) requestLock();
+    requestLock();
     if (UI && UI.banner) {
       try {
-        if (platformMode()) {
-          var hint0 = "Follow the fireflies. Mind the still water.";
-          try {
-            if (window.Levels && window.Levels.zones && window.Levels.zones[0]) {
-              hint0 = window.Levels.zones[0].hint || hint0;
-            }
-          } catch (eHint) {
-            /* default stands */
-          }
-          UI.banner(hint0, 5000);
-        } else {
-          UI.banner(Story.OBJECTIVES[0] || "", 5000);
-        }
+        UI.banner(Story.OBJECTIVES[0] || "", 5000);
       } catch (err) {
         /* x */
       }
@@ -724,7 +662,7 @@
     }
     if (player) player.setEnabled(true);
     show("playing");
-    if (!platformMode()) requestLock();
+    requestLock();
   }
 
   function restartGame() {
@@ -751,7 +689,7 @@
     state = "playing";
     if (player) player.setEnabled(true);
     show("playing");
-    if (!platformMode()) requestLock();
+    requestLock();
   }
 
   function syncTouchBtn() {
@@ -871,6 +809,9 @@
    * then the gameover screen. */
   function handleCaught() {
     if (state !== "playing" || jumpscare) return;
+    if (typeof hurtPlayer === "function") {
+      if (hurtPlayer(28, "ALPHA BLOODFANG SLASH!")) return;
+    }
     jumpscare = true;
     jumpscareT = 0;
     if (player) player.setEnabled(false);
@@ -1118,11 +1059,6 @@
   }
 
   function doInteract() {
-    /* Subagent C additive: E rings the soul bell in platform mode. */
-    if (platformMode()) {
-      if (state === "playing") platRingBell();
-      return;
-    }
     if (state !== "playing" || jumpscare || !player || !tmpV) return;
     /* HN2: hidden E always steps out (never grabs key/door remotely). */
     if (isHiddenNow()) {
@@ -1312,18 +1248,758 @@
     };
   }
 
-  function step(dt) {
-    /* Subagent C additive: platformer layer owns the fixed step when
-     * the platform build opts in; horror path below is untouched. */
-    if (platformMode()) {
-      timerMs += dt * 1000;
-      try {
-        platTick(dt);
-      } catch (err) {
-        /* x */
+
+  /* ============================================================================
+   * CRIMSON OUTBREAK: QUARANTINE SECTOR 7 — 3D ZOMBIE SHOOTER COMBAT ENGINE
+   * ============================================================================ */
+  var WEAPONS = [
+    { name: "M4-X PULSE CARBINE", mag: 30, maxMag: 30, reserve: 120, dmg: 45, headMult: 2.4, cd: 0.13, pellets: 1, spread: 0.010, color: 0x38f9d4 },
+    { name: "M870 BREACHER SHOTGUN", mag: 8, maxMag: 8, reserve: 40, dmg: 28, headMult: 2.0, cd: 0.52, pellets: 6, spread: 0.058, color: 0xff9933 },
+    { name: "VGGT BIO-RAILCANNON", mag: 5, maxMag: 5, reserve: 20, dmg: 175, headMult: 3.0, cd: 0.72, pellets: 1, spread: 0.002, color: 0xa855f7 }
+  ];
+  var curWep = 0;
+  var fireCd = 0;
+  var reloadTimer = 0;
+  var fireHeld = false;
+  var playerHP = 100;
+  var playerMaxHP = 100;
+  var playerHurtCd = 0;
+  var zombieKills = 0;
+  var KILL_GOAL = 8;
+  var hordeZombies = [];
+  var activeFX = [];
+  var raycaster = null;
+  var hitTimer = 0;
+  var popTimer = 0;
+  var bloodSpriteTex = null;
+
+  function getBloodSpriteTex() {
+    if (bloodSpriteTex) return bloodSpriteTex;
+    try {
+      var cv = document.createElement("canvas");
+      cv.width = 64; cv.height = 64;
+      var cx = cv.getContext("2d");
+      var g = cx.createRadialGradient(32, 32, 2, 32, 32, 30);
+      g.addColorStop(0, "rgba(255,255,255,1)");
+      g.addColorStop(0.35, "rgba(255,60,60,0.85)");
+      g.addColorStop(1, "rgba(0,0,0,0)");
+      cx.fillStyle = g;
+      cx.fillRect(0, 0, 64, 64);
+      bloodSpriteTex = new THREE.CanvasTexture(cv);
+    } catch (e) {}
+    return bloodSpriteTex;
+  }
+
+  function updateShooterHUD() {
+    try {
+      var w = WEAPONS[curWep];
+      var vw = $("val-weapon");
+      if (vw) {
+        vw.textContent = w.name;
+        vw.style.color = curWep === 1 ? "#ff9933" : (curWep === 2 ? "#c084fc" : "#38f9d4");
       }
+      var va = $("val-ammo");
+      if (va) {
+        va.textContent = reloadTimer > 0 ? "RELOADING..." : (w.mag + " / " + w.reserve);
+      }
+      var vh = $("val-hp");
+      if (vh) {
+        vh.textContent = Math.max(0, Math.round(playerHP)) + " HP";
+        vh.style.color = playerHP > 50 ? "#34d399" : (playerHP > 25 ? "#fbbf24" : "#ef4444");
+      }
+      var hf = $("hp-bar-fill");
+      if (hf) hf.style.width = Math.max(0, Math.min(100, playerHP)) + "%";
+      var hk = $("hud-kills");
+      if (hk) hk.textContent = "KILLS: " + zombieKills + " / " + KILL_GOAL;
+    } catch (eHud) {}
+  }
+
+  function showHitmarker(isCrit) {
+    try {
+      var hm = $("hitmarker");
+      if (!hm) return;
+      hm.style.color = isCrit ? "#ffd166" : "#ff3b3b";
+      hm.style.transform = isCrit ? "translate(-50%, -50%) scale(1.35)" : "translate(-50%, -50%) scale(1.0)";
+      hm.style.opacity = "1";
+      if (hitTimer) clearTimeout(hitTimer);
+      hitTimer = setTimeout(function () {
+        hm.style.opacity = "0";
+      }, 140);
+    } catch (eHm) {}
+  }
+
+  function showCombatPopup(txt, col) {
+    try {
+      var cp = $("combat-popup");
+      if (!cp) return;
+      cp.textContent = txt;
+      cp.style.color = col || "#ffd166";
+      cp.style.opacity = "1";
+      if (popTimer) clearTimeout(popTimer);
+      popTimer = setTimeout(function () {
+        cp.style.opacity = "0";
+      }, 950);
+    } catch (eCp) {}
+  }
+
+  function playGunshotSFX(wIdx, isHead, isKill) {
+    try {
+      var AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC || settings.mute) return;
+      if (!window.__stvGunCtx) window.__stvGunCtx = new AC();
+      var ctx = window.__stvGunCtx;
+      if (ctx.state === "suspended") ctx.resume();
+      var now = ctx.currentTime;
+      var osc = ctx.createOscillator();
+      var g = ctx.createGain();
+      osc.type = wIdx === 2 ? "sawtooth" : "triangle";
+      osc.frequency.setValueAtTime(wIdx === 1 ? 120 : (wIdx === 2 ? 320 : 165), now);
+      osc.frequency.exponentialRampToValueAtTime(28, now + (wIdx === 1 ? 0.22 : 0.14));
+      g.gain.setValueAtTime(0.42 * (settings.volume || 0.8), now);
+      g.gain.exponentialRampToValueAtTime(0.001, now + (wIdx === 1 ? 0.24 : 0.15));
+      osc.connect(g);
+      g.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + (wIdx === 1 ? 0.25 : 0.16));
+
+      if (isHead || isKill) {
+        var bell = ctx.createOscillator();
+        var bg = ctx.createGain();
+        bell.type = "sine";
+        bell.frequency.setValueAtTime(isHead ? 1320 : 880, now + 0.02);
+        bell.frequency.exponentialRampToValueAtTime(isHead ? 1760 : 660, now + 0.18);
+        bg.gain.setValueAtTime(0.26 * (settings.volume || 0.8), now + 0.02);
+        bg.gain.exponentialRampToValueAtTime(0.001, now + 0.20);
+        bell.connect(bg);
+        bg.connect(ctx.destination);
+        bell.start(now + 0.02);
+        bell.stop(now + 0.21);
+      }
+    } catch (eSfx) {}
+  }
+
+  function spawnBloodOrSparks(pos, isBlood, count) {
+    try {
+      if (!scene) return;
+      var n = count || (isBlood ? 18 : 10);
+      var geo = new THREE.BufferGeometry();
+      var pArr = new Float32Array(n * 3);
+      var vels = [];
+      for (var i = 0; i < n; i++) {
+        pArr[i * 3] = pos.x;
+        pArr[i * 3 + 1] = pos.y;
+        pArr[i * 3 + 2] = pos.z;
+        vels.push({
+          vx: (Math.random() - 0.5) * 3.8,
+          vy: 0.8 + Math.random() * 2.6,
+          vz: (Math.random() - 0.5) * 3.8
+        });
+      }
+      geo.setAttribute("position", new THREE.BufferAttribute(pArr, 3));
+      var mat = new THREE.PointsMaterial({
+        size: isBlood ? 0.24 : 0.16,
+        map: getBloodSpriteTex(),
+        color: isBlood ? 0xdc2626 : 0xffbe55,
+        transparent: true,
+        opacity: 0.95,
+        blending: isBlood ? THREE.NormalBlending : THREE.AdditiveBlending,
+        depthWrite: false
+      });
+      var pts = new THREE.Points(geo, mat);
+      scene.add(pts);
+      activeFX.push({
+        type: "points",
+        obj: pts,
+        geo: geo,
+        mat: mat,
+        vels: vels,
+        age: 0,
+        life: isBlood ? 0.55 : 0.32
+      });
+    } catch (eFx) {}
+  }
+
+  function spawnTracer(p0, p1, colHex) {
+    try {
+      if (!scene) return;
+      var geo = new THREE.BufferGeometry().setFromPoints([p0, p1]);
+      var mat = new THREE.LineBasicMaterial({
+        color: colHex || 0x38f9d4,
+        transparent: true,
+        opacity: 0.92
+      });
+      var line = new THREE.Line(geo, mat);
+      scene.add(line);
+      activeFX.push({
+        type: "line",
+        obj: line,
+        geo: geo,
+        mat: mat,
+        age: 0,
+        life: 0.085
+      });
+    } catch (eTr) {}
+  }
+
+  function detonateBarrel(bRec) {
+    if (!bRec || !bRec.alive || !scene) return;
+    bRec.alive = false;
+    bRec.respawnT = 14.0;
+    if (bRec.group) bRec.group.visible = false;
+    var center = new THREE.Vector3(bRec.x, 0.7, bRec.z);
+    spawnBloodOrSparks(center, false, 36);
+    if (vfx && vfx.addTrauma) vfx.addTrauma(0.65);
+    if (Audio8 && Audio8.thunder) {
+      try { Audio8.thunder(); } catch (eT) {}
+    }
+    try {
+      var expLight = new THREE.PointLight(0xff6b22, 6.5, 16, 1.5);
+      expLight.position.copy(center);
+      scene.add(expLight);
+      var sphere = new THREE.Mesh(
+        new THREE.SphereGeometry(0.65, 14, 12),
+        new THREE.MeshBasicMaterial({
+          color: 0xff7722,
+          transparent: true,
+          opacity: 0.92,
+          blending: THREE.AdditiveBlending,
+          depthWrite: false
+        })
+      );
+      sphere.position.copy(center);
+      scene.add(sphere);
+      activeFX.push({
+        type: "explosion",
+        obj: sphere,
+        light: expLight,
+        geo: sphere.geometry,
+        mat: sphere.material,
+        age: 0,
+        life: 0.48
+      });
+    } catch (eEx) {}
+
+    var blastKills = 0;
+    for (var zi = 0; zi < hordeZombies.length; zi++) {
+      var hz = hordeZombies[zi];
+      if (!hz || hz.deadT > 0) continue;
+      var dx = hz.x - bRec.x;
+      var dz = hz.z - bRec.z;
+      if (dx * dx + dz * dz <= 4.8 * 4.8) {
+        if (damageHordeZombie(hz, 220, true)) blastKills++;
+      }
+    }
+    if (enemy && enemy.getPos && enemy.damage) {
+      var ep = enemy.getPos();
+      if (!ep.dead) {
+        var edx = ep.x - bRec.x;
+        var edz = ep.z - bRec.z;
+        if (edx * edx + edz * edz <= 4.8 * 4.8) {
+          var er = enemy.damage(220, true);
+          if (er && er.killed) {
+            blastKills++;
+            onZombieKilled(true);
+          }
+        }
+      }
+    }
+    showCombatPopup(
+      blastKills > 0
+        ? "BIO-BARREL DETONATED! +" + blastKills + " KILLS!"
+        : "BIO-BARREL DETONATED!",
+      "#ff9933"
+    );
+  }
+
+  function onZombieKilled(isBoss) {
+    zombieKills += isBoss ? 2 : 1;
+    if (zombieKills >= KILL_GOAL && !keyFound) {
+      keyFound = true;
+      if (world && world.keyMesh) {
+        try { world.keyMesh.visible = false; } catch (eK) {}
+      }
+      if (UI && UI.setKey) {
+        try { UI.setKey(true); } catch (eU) {}
+      }
+      tintDoor(true);
+      if (UI && UI.setObjective) {
+        try { UI.setObjective(Story.OBJECTIVES[1] || ""); } catch (eO) {}
+      }
+      if (UI && UI.banner) {
+        try { UI.banner("HORDE PURGED! North Extraction Gate Unlocked [Press E]", 5500); } catch (eB) {}
+      }
+    } else if (!keyFound && UI && UI.setObjective) {
+      try {
+        UI.setObjective("Purge Infected (" + Math.min(zombieKills, KILL_GOAL) + "/" + KILL_GOAL + ") & Secure Bio-Key");
+      } catch (eO2) {}
+    }
+    updateShooterHUD();
+  }
+
+  function initZombieHorde() {
+    if (!scene || hordeZombies.length > 0) return;
+    var SPAWNS = [
+      { x: 0.0, z: 4.4, patrol: [[0.0, 4.4], [-3.8, 3.5], [3.8, 3.5]] },
+      { x: 5.5, z: -1.5, patrol: [[5.5, -1.5], [8.5, -3.5], [4.5, -4.5]] },
+      { x: -5.5, z: -1.5, patrol: [[-5.5, -1.5], [-8.5, -3.5], [-4.5, -4.5]] },
+      { x: -6.5, z: -6.8, patrol: [[-6.5, -6.8], [0, -7.2], [6.5, -6.8]] },
+      { x: 6.5, z: 3.5, patrol: [[6.5, 3.5], [9.2, 3.5], [5.0, 1.5]] }
+    ];
+    for (var i = 0; i < SPAWNS.length; i++) {
+      (function (sp, idx) {
+        var grp = new THREE.Group();
+        grp.position.set(sp.x, 0, sp.z);
+        scene.add(grp);
+        var eyeSp = new THREE.Sprite(
+          new THREE.SpriteMaterial({
+            map: getBloodSpriteTex(),
+            color: 0xff1e1e,
+            transparent: true,
+            opacity: 0.95,
+            blending: THREE.AdditiveBlending,
+            depthWrite: false
+          })
+        );
+        eyeSp.position.set(0, 1.22, 0.25);
+        eyeSp.scale.set(0.24, 0.10, 1);
+        grp.add(eyeSp);
+
+        var hitBox = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.42, 0.42, 1.82, 8),
+          new THREE.MeshBasicMaterial({ visible: false })
+        );
+        hitBox.position.y = 0.91;
+        grp.add(hitBox);
+
+        var zRec = {
+          id: idx,
+          x: sp.x,
+          z: sp.z,
+          yaw: 0,
+          hp: idx === 0 ? 160 : 100,
+          maxHp: idx === 0 ? 160 : 100,
+          staggerT: 0,
+          deadT: 0,
+          atkCd: 0,
+          wpIdx: 0,
+          patrol: sp.patrol,
+          group: grp,
+          hitBox: hitBox,
+          mixer: null,
+          actions: {},
+          activeClip: ""
+        };
+        hitBox.userData.hordeZombie = zRec;
+        hordeZombies.push(zRec);
+
+        var gl = new THREE.GLTFLoader();
+        if (window.THREE._agathaDraco) {
+          try { gl.setDRACOLoader(window.THREE._agathaDraco); } catch (eD) {}
+        }
+        var zUrl = (idx === 0) ? "./assets/zombie_walker.glb" : "/studio/assets/models/characters/RobotExpressive.glb";
+        gl.load(zUrl, function (gltf) {
+          var root = gltf && (gltf.scene || (gltf.scenes && gltf.scenes[0]));
+          if (!root) return;
+          var box = new THREE.Box3().setFromObject(root);
+          var sz = box.getSize(new THREE.Vector3());
+          var maxDim = Math.max(sz.x, Math.max(sz.y, sz.z));
+          if (maxDim > 0.01) root.scale.setScalar(1.72 / maxDim);
+          box.setFromObject(root);
+          root.position.y -= box.min.y;
+          root.traverse(function (n) {
+            if (n && n.isMesh) {
+              n.userData.hordeZombie = zRec;
+              if (n.material && idx % 2 === 1) {
+                n.material = n.material.clone();
+                if (n.material.color) n.material.color.setHex(0x4a1212);
+                if (n.material.emissive) {
+                  n.material.emissive.setHex(0x3a0606);
+                  n.material.emissiveIntensity = 0.45;
+                }
+              }
+            }
+          });
+          grp.add(root);
+          if (gltf.animations && gltf.animations.length && THREE.AnimationMixer) {
+            var mx = new THREE.AnimationMixer(root);
+            zRec.mixer = mx;
+            for (var ai = 0; ai < gltf.animations.length; ai++) {
+              var cl = gltf.animations[ai];
+              var nm = (cl.name || "").toLowerCase();
+              if (!zRec.actions.idle && nm.indexOf("idle") >= 0) zRec.actions.idle = mx.clipAction(cl);
+              if (!zRec.actions.walk && nm.indexOf("walk") >= 0) zRec.actions.walk = mx.clipAction(cl);
+              if (!zRec.actions.run && nm.indexOf("run") >= 0) zRec.actions.run = mx.clipAction(cl);
+              if (!zRec.actions.hit && nm.indexOf("hit") >= 0) {
+                zRec.actions.hit = mx.clipAction(cl);
+                zRec.actions.hit.setLoop(THREE.LoopOnce, 1);
+                zRec.actions.hit.clampWhenFinished = true;
+              }
+              if (!zRec.actions.dead && nm.indexOf("dead front") >= 0) {
+                zRec.actions.dead = mx.clipAction(cl);
+                zRec.actions.dead.setLoop(THREE.LoopOnce, 1);
+                zRec.actions.dead.clampWhenFinished = true;
+              }
+            }
+            if (zRec.actions.walk) {
+              zRec.actions.walk.play();
+              zRec.activeClip = "walk";
+            }
+          }
+        });
+      })(SPAWNS[i], i);
+    }
+  }
+
+  function playZombieClip(z, name) {
+    if (!z || !z.mixer || !z.actions[name] || z.activeClip === name) return;
+    try {
+      if (z.actions[z.activeClip]) z.actions[z.activeClip].fadeOut(0.12);
+      z.actions[name].reset().fadeIn(0.12).play();
+      z.activeClip = name;
+    } catch (eC) {}
+  }
+
+  function damageHordeZombie(z, dmg, isHead) {
+    if (!z || z.deadT > 0) return false;
+    z.hp = Math.max(0, z.hp - dmg);
+    if (z.hp <= 0) {
+      z.deadT = 6.5;
+      playZombieClip(z, "dead");
+      onZombieKilled(false);
+      return true;
+    }
+    z.staggerT = isHead ? 0.55 : 0.30;
+    if (z.actions.hit) {
+      try { z.actions.hit.reset().play(); } catch (eH) {}
+    }
+    return false;
+  }
+
+  function hurtPlayer(dmg, reason) {
+    if (playerHurtCd > 0 || state !== "playing" || jumpscare) return true;
+    playerHurtCd = 1.25;
+    playerHP = Math.max(0, playerHP - (dmg || 24));
+    updateShooterHUD();
+    if (vfx && vfx.addTrauma) vfx.addTrauma(0.42);
+    try {
+      var fl = $("flash");
+      if (fl) {
+        fl.style.background = "radial-gradient(circle, rgba(220,38,38,0.15), rgba(185,28,28,0.65))";
+        fl.style.opacity = "1";
+        setTimeout(function () { fl.style.opacity = "0"; }, 220);
+      }
+    } catch (eFl) {}
+    showCombatPopup((reason || "INFECTED CLAW HIT!") + " -" + (dmg || 24) + " HP", "#ef4444");
+    if (playerHP <= 0) {
+      return false;
+    }
+    return true;
+  }
+
+  function reloadWeapon() {
+    if (state !== "playing" || reloadTimer > 0) return;
+    var w = WEAPONS[curWep];
+    if (w.mag >= w.maxMag || w.reserve <= 0) return;
+    reloadTimer = 0.85;
+    if (player && player.triggerReloadFX) player.triggerReloadFX();
+    showCombatPopup("RELOADING " + w.name + "...", "#38f9d4");
+    updateShooterHUD();
+  }
+
+  function selectWeapon(idx) {
+    var next = ((idx % WEAPONS.length) + WEAPONS.length) % WEAPONS.length;
+    if (next === curWep) return;
+    curWep = next;
+    reloadTimer = 0;
+    if (player && player.triggerReloadFX) player.triggerReloadFX();
+    showCombatPopup("EQUIPPED: " + WEAPONS[curWep].name, "#38f9d4");
+    updateShooterHUD();
+  }
+
+  function fireWeapon() {
+    if (state !== "playing" || jumpscare || !camera || !scene) return;
+    if (fireCd > 0 || reloadTimer > 0) return;
+    var w = WEAPONS[curWep];
+    if (w.mag <= 0) {
+      reloadWeapon();
       return;
     }
+    w.mag--;
+    fireCd = w.cd;
+    if (player && player.triggerShootFX) player.triggerShootFX(curWep);
+    if (vfx && vfx.addTrauma) vfx.addTrauma(curWep === 1 ? 0.16 : 0.07);
+    updateShooterHUD();
+
+    if (!raycaster) raycaster = new THREE.Raycaster();
+    var muzzleOrigin = new THREE.Vector3(0.16, -0.12, -0.45).applyMatrix4(camera.matrixWorld);
+    var anyHead = false;
+    var anyKill = false;
+    var anyHit = false;
+    var totalDmgDealt = 0;
+
+    for (var p = 0; p < w.pellets; p++) {
+      var sx = (p === 0 && w.pellets === 1) ? 0 : (Math.random() - 0.5) * w.spread;
+      var sy = (p === 0 && w.pellets === 1) ? 0 : (Math.random() - 0.5) * w.spread;
+      raycaster.setFromCamera({ x: sx, y: sy }, camera);
+      var hits = raycaster.intersectObjects(scene.children, true);
+      var endPt = raycaster.ray.origin.clone().add(raycaster.ray.direction.clone().multiplyScalar(26));
+      for (var hi = 0; hi < hits.length; hi++) {
+        var h = hits[hi];
+        if (!h || !h.object || h.distance < 0.45) continue;
+        var anc = h.object;
+        var isCamChild = false;
+        var hitBarrel = null;
+        var hitHorde = null;
+        var hitAlpha = false;
+        var alphaGrp = enemy && enemy.getGroup ? enemy.getGroup() : null;
+        while (anc) {
+          if (anc === camera) { isCamChild = true; break; }
+          if (anc.userData && anc.userData.hordeZombie) hitHorde = anc.userData.hordeZombie;
+          if (alphaGrp && anc === alphaGrp) hitAlpha = true;
+          if (window.__stvBarrels) {
+            for (var bi = 0; bi < window.__stvBarrels.length; bi++) {
+              if (window.__stvBarrels[bi].alive && window.__stvBarrels[bi].group === anc) {
+                hitBarrel = window.__stvBarrels[bi];
+              }
+            }
+          }
+          anc = anc.parent;
+        }
+        if (isCamChild) continue;
+        endPt = h.point.clone();
+
+        if (hitBarrel) {
+          detonateBarrel(hitBarrel);
+          anyHit = true;
+          anyKill = true;
+          break;
+        }
+        if (hitHorde && hitHorde.deadT <= 0) {
+          var isHead = h.point.y >= 1.28;
+          var dmg = Math.round(w.dmg * (isHead ? w.headMult : 1));
+          totalDmgDealt += dmg;
+          anyHit = true;
+          if (isHead) anyHead = true;
+          spawnBloodOrSparks(h.point, true, isHead ? 24 : 14);
+          if (damageHordeZombie(hitHorde, dmg, isHead)) anyKill = true;
+          break;
+        }
+        if (hitAlpha && enemy && enemy.damage) {
+          var isHeadA = h.point.y >= 1.28;
+          var dmgA = Math.round(w.dmg * (isHeadA ? w.headMult : 1));
+          totalDmgDealt += dmgA;
+          anyHit = true;
+          if (isHeadA) anyHead = true;
+          spawnBloodOrSparks(h.point, true, isHeadA ? 26 : 16);
+          var resA = enemy.damage(dmgA, isHeadA);
+          if (resA && resA.killed) {
+            anyKill = true;
+            onZombieKilled(true);
+          }
+          break;
+        }
+        if (h.object.isMesh && h.object.visible) {
+          spawnBloodOrSparks(h.point, false, 8);
+          break;
+        }
+      }
+      spawnTracer(muzzleOrigin, endPt, w.color);
+    }
+
+    playGunshotSFX(curWep, anyHead, anyKill);
+    if (anyHit) {
+      showHitmarker(anyHead || anyKill);
+      if (anyKill) {
+        showCombatPopup(anyHead ? "CRITICAL HEADSHOT KILL! +" + totalDmgDealt : "INFECTED ELIMINATED! +" + totalDmgDealt, "#ffd166");
+      } else if (anyHead) {
+        showCombatPopup("HEADSHOT! -" + totalDmgDealt, "#ffd166");
+      } else {
+        showCombatPopup("HIT -" + totalDmgDealt, "#f87171");
+      }
+    }
+    if (w.mag <= 0 && w.reserve > 0) reloadWeapon();
+  }
+
+  function updateShooterStep(dt) {
+    if (fireCd > 0) fireCd = Math.max(0, fireCd - dt);
+    if (playerHurtCd > 0) playerHurtCd = Math.max(0, playerHurtCd - dt);
+    if (reloadTimer > 0) {
+      reloadTimer -= dt;
+      if (reloadTimer <= 0) {
+        reloadTimer = 0;
+        var w = WEAPONS[curWep];
+        var need = w.maxMag - w.mag;
+        var take = Math.min(need, w.reserve);
+        w.mag += take;
+        w.reserve -= take;
+        updateShooterHUD();
+      }
+    }
+    if (fireHeld && fireCd <= 0 && reloadTimer <= 0) {
+      fireWeapon();
+    }
+
+    for (var fi = activeFX.length - 1; fi >= 0; fi--) {
+      var fx = activeFX[fi];
+      fx.age += dt;
+      var u = fx.age / fx.life;
+      if (u >= 1) {
+        if (fx.obj && scene) scene.remove(fx.obj);
+        if (fx.light && scene) scene.remove(fx.light);
+        if (fx.geo) fx.geo.dispose();
+        if (fx.mat) fx.mat.dispose();
+        activeFX.splice(fi, 1);
+        continue;
+      }
+      if (fx.type === "line") {
+        fx.mat.opacity = 1 - u;
+      } else if (fx.type === "points") {
+        var posAttr = fx.geo.getAttribute("position");
+        var arr = posAttr.array;
+        for (var pi = 0; pi < fx.vels.length; pi++) {
+          var v = fx.vels[pi];
+          v.vy -= 9.8 * dt;
+          arr[pi * 3] += v.vx * dt;
+          arr[pi * 3 + 1] = Math.max(0.05, arr[pi * 3 + 1] + v.vy * dt);
+          arr[pi * 3 + 2] += v.vz * dt;
+        }
+        posAttr.needsUpdate = true;
+        fx.mat.opacity = 1 - u;
+      } else if (fx.type === "explosion") {
+        var sc = 1 + u * 6.5;
+        fx.obj.scale.set(sc, sc, sc);
+        fx.mat.opacity = (1 - u) * 0.9;
+        if (fx.light) fx.light.intensity = 6.5 * (1 - u);
+      }
+    }
+
+    var pp = player ? player.pos() : { x: 0, z: 8.5 };
+    if (window.__stvBarrels) {
+      for (var bi = 0; bi < window.__stvBarrels.length; bi++) {
+        var b = window.__stvBarrels[bi];
+        if (!b.alive) {
+          b.respawnT -= dt;
+          if (b.respawnT <= 0) {
+            b.alive = true;
+            if (b.group) b.group.visible = true;
+          }
+        } else if (b.ring) {
+          b.ring.rotation.z += dt * 1.8;
+        }
+      }
+    }
+    if (window.__stvSupplyCrates) {
+      for (var si = 0; si < window.__stvSupplyCrates.length; si++) {
+        var sc2 = window.__stvSupplyCrates[si];
+        if (sc2.cd > 0) {
+          sc2.cd -= dt;
+          if (sc2.cd <= 0 && sc2.group) sc2.group.visible = true;
+          continue;
+        }
+        if (sc2.ring) sc2.ring.rotation.z += dt * 2.2;
+        var sdx = pp.x - sc2.x;
+        var sdz = pp.z - sc2.z;
+        if (sdx * sdx + sdz * sdz <= 1.35 * 1.35) {
+          if (sc2.type === "ammo") {
+            WEAPONS[0].reserve += 60;
+            WEAPONS[1].reserve += 16;
+            WEAPONS[2].reserve += 8;
+            sc2.cd = 18;
+            if (sc2.group) sc2.group.visible = false;
+            showCombatPopup("+AMMO RESUPPLY CRATE!", "#38f9d4");
+            updateShooterHUD();
+          } else if (sc2.type === "medkit" && playerHP < 100) {
+            playerHP = Math.min(100, playerHP + 45);
+            sc2.cd = 18;
+            if (sc2.group) sc2.group.visible = false;
+            showCombatPopup("+45 HP TRIAGE MEDKIT!", "#34d399");
+            updateShooterHUD();
+          }
+        }
+      }
+    }
+
+    for (var zi = 0; zi < hordeZombies.length; zi++) {
+      var hz = hordeZombies[zi];
+      if (!hz) continue;
+      if (hz.mixer) {
+        try { hz.mixer.update(dt); } catch (eMx) {}
+      }
+      if (hz.deadT > 0) {
+        hz.deadT -= dt;
+        hz.group.rotation.x += (-Math.PI / 2 - hz.group.rotation.x) * Math.min(1, dt * 10);
+        hz.group.position.y = 0.18;
+        if (hz.deadT <= 0) {
+          hz.hp = hz.maxHp;
+          hz.group.rotation.x = 0;
+          hz.group.position.y = 0;
+          var sp = hz.patrol[Math.floor(Math.random() * hz.patrol.length)];
+          hz.x = sp[0];
+          hz.z = sp[1];
+          hz.group.position.set(hz.x, 0, hz.z);
+          playZombieClip(hz, "walk");
+        }
+        continue;
+      }
+      if (hz.staggerT > 0) {
+        hz.staggerT -= dt;
+        hz.group.rotation.x = -0.32 * (hz.staggerT / 0.55);
+        continue;
+      }
+      hz.group.rotation.x = 0;
+      if (hz.atkCd > 0) hz.atkCd -= dt;
+      var zdx = pp.x - hz.x;
+      var zdz = pp.z - hz.z;
+      var zdist = Math.sqrt(zdx * zdx + zdz * zdz);
+      var chasing = zdist < 10.5 && !(player && player.isHidden && player.isHidden());
+      var tx = pp.x;
+      var tz = pp.z;
+      if (!chasing) {
+        var wp = hz.patrol[hz.wpIdx % hz.patrol.length];
+        tx = wp[0];
+        tz = wp[1];
+        if ((tx - hz.x) * (tx - hz.x) + (tz - hz.z) * (tz - hz.z) < 0.45) {
+          hz.wpIdx = (hz.wpIdx + 1) % hz.patrol.length;
+        }
+      }
+      playZombieClip(hz, chasing ? "run" : "walk");
+      var spd = chasing ? 3.25 : 1.55;
+      var mvx = tx - hz.x;
+      var mvz = tz - hz.z;
+      var mvd = Math.sqrt(mvx * mvx + mvz * mvz);
+      if (mvd > 0.05) {
+        var nx = hz.x + (mvx / mvd) * spd * dt;
+        var nz = hz.z + (mvz / mvd) * spd * dt;
+        var blocked = false;
+        for (var ci = 0; ci < colliders.length; ci++) {
+          var c = colliders[ci];
+          if (nx > c.x0 - 0.3 && nx < c.x1 + 0.3 && nz > c.z0 - 0.3 && nz < c.z1 + 0.3) {
+            blocked = true;
+            break;
+          }
+        }
+        if (!blocked) {
+          hz.x = nx;
+          hz.z = nz;
+        } else {
+          hz.wpIdx = (hz.wpIdx + 1) % hz.patrol.length;
+        }
+        hz.yaw = Math.atan2(mvx, mvz);
+      }
+      hz.group.position.set(hz.x, 0, hz.z);
+      hz.group.rotation.y = hz.yaw;
+
+      if (zdist <= 1.15 && hz.atkCd <= 0 && !isHiddenNow()) {
+        hz.atkCd = 1.4;
+        if (!hurtPlayer(22, "BLOODFANG ZOMBIE BITE!")) {
+          handleCaught();
+        }
+      }
+    }
+  }
+
+  function step(dt) {
+    try { updateShooterStep(dt); } catch (eSh) {}
     var input = buildInput();
     timerMs += dt * 1000;
     if (player) {
@@ -1383,39 +2059,6 @@
       dist: (typeof esCache !== "undefined" && esCache.dist) || 99,
       survivalSec: Math.round(timerMs / 1000)
     };
-    /* Subagent D: the wisp sends its own telemetry (zone/orbs/hearts/
-     * wraith) so the director never answers with convent-horror lines. */
-    var platMode = false;
-    try {
-      platMode = platformMode();
-    } catch (ePM) {
-      platMode = false;
-    }
-    if (platMode) {
-      var pZone = "Whispering Roots";
-      var pOrbs = 0;
-      var pWraith = 99;
-      try {
-        if (window.Levels && window.Levels.zones && window.Levels.zones[platZone]) {
-          pZone = window.Levels.zones[platZone].name || pZone;
-        }
-        if (platCtl) pOrbs = platCtl.state().orbs || 0;
-        if (platWraith) pWraith = platWraith.getState().dist;
-      } catch (eTel) {
-        /* defaults stand */
-      }
-      body = {
-        mode: "platform",
-        room: pZone,
-        zone: pZone,
-        orbs: pOrbs,
-        lives: platLives,
-        won: !!platWon,
-        enemyState: "WRAITH",
-        dist: pWraith,
-        survivalSec: Math.round(timerMs / 1000)
-      };
-    }
     aiPollBusy = true;
     fetch("/api/studio/ai/director", {
       method: "POST",
@@ -1437,56 +2080,16 @@
           world.applyAiEnvironment(order);
         }
       } catch (eEnv) { /* AI env cosmetic */ }
-      /* Subagent D: convent-horror outputs stay in St. Vermilion —
-       * the platformer only takes lore / wraith-boost / weather below. */
       try {
-        if (!platMode && UI && typeof UI.aiPill === "function") {
+        if (UI && typeof UI.aiPill === "function") {
           UI.aiPill(order.tactic || "stalk_shadow", order.envEvent || "storm_surge");
         }
       } catch (ePill) { /* x */ }
       try {
-        if (!platMode && order.whisper && UI && UI.banner) {
+        if (order.whisper && UI && UI.banner) {
           UI.banner(order.whisper, 6000);
         }
       } catch (eWh) { /* x */ }
-      /* Subagent C additive: platformer director lines — Hindi/English
-       * lore caption, wraith speed hook, and weather events
-       * (spore_bloom / eclipse_mist / updraft_surge) forwarded to the
-       * world hook when present. All fail-soft offline. */
-      try {
-        if (order.lore && UI && UI.lore) {
-          UI.lore(order.lore, 6000);
-        }
-      } catch (eLore) { /* x */ }
-      try {
-        if (order.alertBoost && platWraith && platWraith.setDirectorBoost) {
-          var ab = +order.alertBoost || 0;
-          if (ab > 0) platWraith.setDirectorBoost(1 + Math.min(1.5, ab / 60), 8);
-        }
-      } catch (eBoost) { /* x */ }
-      try {
-        var pev = order.envEvent;
-        if (
-          pev === "spore_bloom" ||
-          pev === "eclipse_mist" ||
-          pev === "updraft_surge"
-        ) {
-          if (window.StV_Weather && typeof window.StV_Weather.apply === "function") {
-            window.StV_Weather.apply(order);
-          } else if (UI && UI.aiPill) {
-            UI.aiPill(order.tactic || "drift", pev);
-          }
-          if (UI && UI.lore && !order.lore) {
-            var wlore =
-              pev === "spore_bloom"
-                ? "Spore bloom… bijas tair rahe hain. (the spores drift)"
-                : pev === "eclipse_mist"
-                  ? "Eclipse mist… andhera gehra ho raha hai. (darkness deepens)"
-                  : "Updraft surge… hawa upar uthati hai! (the wind lifts!)";
-            UI.lore(wlore, 5000);
-          }
-        }
-      } catch (eWx) { /* x */ }
       try { window.__stvLastAiOrder = order; } catch (eDbg) { /* x */ }
     }).catch(function () {
       aiPollBusy = false; // offline/rate-limited: play on silently
@@ -1703,835 +2306,6 @@
   var lastT = 0;
   var pausedRendered = false;
   var loopPaused = false;
-  /* Subagent C additive: real-time hit-stop (timeScale dip that never
-   * breaks the fixed 1/60 step) + platformer-layer runtime state.
-   * Everything defaults OFF so the horror loop is byte-identical. */
-  var hitStopT = 0;
-  var hitSlow = 1;
-  var platCtl = null;
-  var platWraith = null;
-  var platJumpQueued = false;
-  var platDashQueued = false;
-  var platGhostGold = false;
-  var platSparkT = 0;
-  var platCamX = 0;
-  var platCamY = 1;
-  var platCamInit = false;
-  var platVis = null;
-  /* Subagent D integration: Hollow Lantern run state. */
-  var platPosCache = null;
-  var platCheckpoint = null;
-  var platLives = 3;
-  var platWon = false;
-  var platZone = 0;
-  var platHudT = 99;
-  var heroRig = null;
-  var wraithRig = null;
-  var ZONE_WPS = [
-    [
-      [22, 3.8],
-      [30, 5.2],
-      [38, 6.2],
-      [46, 4.5],
-    ],
-    [
-      [50, 4],
-      [66, 5],
-      [88, 6],
-      [100, 9],
-    ],
-    [
-      [110, 6],
-      [126, 11],
-      [138, 18],
-      [147, 25],
-    ],
-  ];
-
-  /* 35ms hit-stop: freeze sim briefly, restore on real-time expiry.
-   * Newest call owns the restore (overlapping hits never cut short). */
-  function triggerHitStop(ms, slow) {
-    var d = typeof ms === "number" && isFinite(ms) ? ms / 1000 : 0.035;
-    if (d < 0.005) d = 0.005;
-    if (d > 0.25) d = 0.25;
-    hitStopT = Math.max(hitStopT, d);
-    hitSlow = typeof slow === "number" && isFinite(slow) ? slow : 0.05;
-    if (hitSlow < 0) hitSlow = 0;
-    if (hitSlow > 1) hitSlow = 1;
-  }
-
-  try {
-    window.__stvHitStop = triggerHitStop;
-  } catch (err) {
-    /* x */
-  }
-
-  /* Platformer layer engages ONLY when the platform build opts in:
-   * window.__stvPlatformMode === true + StV_Platformer present. */
-  function platformMode() {
-    try {
-      return (
-        window.__stvPlatformMode === true && !!window.StV_Platformer
-      );
-    } catch (err) {
-      return false;
-    }
-  }
-
-  function platEnsure() {
-    if (platCtl || !platformMode()) return platCtl;
-    try {
-      platCtl = window.StV_Platformer.create();
-      if (window.StV_Wraith) {
-        /* Subagent D: zone-1 patrol; platTick rehomes per zone. */
-        platWraith = window.StV_Wraith.create({
-          waypoints: ZONE_WPS[0]
-        });
-      }
-      platCtl.onJump = function (jx, jy, kind) {
-        try {
-          if (Audio8 && Audio8.platJump) Audio8.platJump();
-          if (vfx && vfx.dustPuff) vfx.dustPuff(jx, jy - 0.3, 0, kind === "double" ? 5 : 3);
-        } catch (err) {
-          /* x */
-        }
-      };
-      platCtl.onLand = function (vy) {
-        try {
-          var hard = vy < -14;
-          if (Audio8 && Audio8.platLand) Audio8.platLand(hard);
-          if (vfx && vfx.dustPuff && camera) {
-            var p = platCtl.pos();
-            vfx.dustPuff(p.x, p.y - 0.3, 0, hard ? 7 : 4);
-          }
-          if (hard && vfx && vfx.addTrauma) vfx.addTrauma(0.18);
-        } catch (err) {
-          /* x */
-        }
-      };
-      platCtl.onDash = function (dx, dy, ddx, ddy) {
-        try {
-          if (Audio8 && Audio8.dashWhoosh) Audio8.dashWhoosh();
-          if (vfx && vfx.dashGhostBurst) {
-            platGhostGold = !platGhostGold;
-            vfx.dashGhostBurst(dx, dy, 0, ddx, ddy, platGhostGold);
-          }
-          if (vfx && vfx.addTrauma) vfx.addTrauma(0.12);
-        } catch (err) {
-          /* x */
-        }
-      };
-      platCtl.onDashGhost = function (gx, gy) {
-        try {
-          if (vfx && vfx.dashGhost) {
-            platGhostGold = !platGhostGold;
-            vfx.dashGhost(gx, gy, 0, platGhostGold);
-          }
-        } catch (err) {
-          /* x */
-        }
-      };
-      platCtl.onWallSlide = function (sx, sy, dir) {
-        platSparkT -= 1 / 60;
-        if (platSparkT > 0) return;
-        platSparkT = 0.09;
-        try {
-          if (vfx && vfx.wallSparks) vfx.wallSparks(sx, sy, 0, dir);
-        } catch (err) {
-          /* x */
-        }
-      };
-      platCtl.onWallJump = function (wx, wy) {
-        try {
-          if (Audio8 && Audio8.platJump) Audio8.platJump();
-          if (vfx && vfx.dustPuff) vfx.dustPuff(wx, wy, 0, 4);
-        } catch (err) {
-          /* x */
-        }
-      };
-      /* Ori reset: 35ms hit-stop + shockwave ring + bell + refill. */
-      platCtl.onReset = function (lx, ly) {
-        try {
-          triggerHitStop(35, 0.05);
-          if (vfx && vfx.shockwave) {
-            vfx.shockwave(lx, ly, 0, 0x9fe8ff);
-            vfx.shockwave(lx, ly, 0, 0xffcf6e);
-          }
-          if (Audio8 && Audio8.lanternBell) Audio8.lanternBell();
-          if (vfx && vfx.addTrauma) vfx.addTrauma(0.1);
-          platHud();
-        } catch (err) {
-          /* x */
-        }
-      };
-      platCtl.onOrb = function (ox, oy, idx) {
-        try {
-          if (Audio8 && Audio8.orbChime) Audio8.orbChime(idx);
-          if (vfx && vfx.dustPuff) vfx.dustPuff(ox, oy, 0, 5);
-          /* Subagent D: hide the collected shard sprite. */
-          try {
-            if (window.Levels && window.Levels.collectOrbAt) {
-              window.Levels.collectOrbAt(ox, oy);
-            }
-          } catch (eShard) {
-            /* x */
-          }
-          platHud();
-          platMood();
-        } catch (err) {
-          /* x */
-        }
-      };
-      /* Subagent D: hazards cost a heart and respawn at checkpoint. */
-      platCtl.onHazard = function () {
-        try {
-          platDie("hazard");
-        } catch (err) {
-          /* x */
-        }
-      };
-      platCtl.onStep = function () {
-        try {
-          if (Audio8 && Audio8.footstep) Audio8.footstep(false, false);
-        } catch (err) {
-          /* x */
-        }
-      };
-      platHud();
-      platMood();
-      platFallbackVisuals();
-      if (UI && UI.platformerTouch) {
-        try {
-          UI.platformerTouch();
-        } catch (err) {
-          /* x */
-        }
-      }
-      /* Subagent D: hidden QA hooks (screenshots, playtest warps).
-       * No UI, no gameplay effect unless called. */
-      try {
-        window.__stvPlatDebug = {
-          state: function () {
-            return platCtl ? platCtl.state() : null;
-          },
-          teleport: function (x, y) {
-            if (!platCtl || !platCtl.teleport) return false;
-            platCtl.teleport(x, y);
-            try {
-              if (world && world.rig) {
-                world.rig.focus.x = x;
-                world.rig.focus.y = y + 2;
-                world.rig.lockedY = y + 2;
-              }
-            } catch (eRig) {
-              /* x */
-            }
-            return true;
-          },
-          dash: function () {
-            platDashQueued = true;
-            return true;
-          },
-          jump: function () {
-            platJumpQueued = true;
-            return true;
-          },
-          zone: function () {
-            return platZone;
-          },
-          won: function () {
-            return !!platWon;
-          }
-        };
-      } catch (err) {
-        /* debug hook optional */
-      }
-    } catch (err) {
-      platCtl = null;
-    }
-    return platCtl;
-  }
-
-  /* Subagent D: Hollow Light HUD — drive the native index.html chips
-   * (shards / hearts / timer / dash cooldown) as the single HUD. The
-   * StV-shell pip calls stay as no-op-safe fallbacks (their nodes are
-   * never created here, so no duplicate readouts appear). */
-  function platHud() {
-    try {
-      if (platCtl) {
-        var st = platCtl.state();
-        var total = 16;
-        try {
-          var D = window.StV_Platformer.levelData();
-          if (D && D.orbs) total = D.orbs.length;
-        } catch (eD) {
-          /* 16 stands */
-        }
-        var sh = $("val-shards");
-        if (sh) sh.textContent = st.orbs + " / " + total;
-        var hh = $("val-hearts");
-        if (hh) hh.textContent = String(platLives);
-        var tt = $("val-timer");
-        if (tt) tt.textContent = fmtPlatClock(timerMs);
-        var di = $("dash-indicator");
-        if (di) {
-          if (st.dashReady) di.classList.remove("cooldown");
-          else di.classList.add("cooldown");
-        }
-      }
-      if (platCtl && UI) {
-        var st2 = platCtl.state();
-        if (UI.setDash) UI.setDash(st2.dashReady ? 1 : 0, 1);
-        if (UI.setOrbs) UI.setOrbs(st2.orbs);
-      }
-    } catch (err) {
-      /* x */
-    }
-  }
-
-  function fmtPlatClock(ms) {
-    var t = Math.max(0, ms / 1000);
-    var mins = Math.floor(t / 60);
-    var secs = Math.floor(t % 60);
-    var tenth = Math.floor((t % 1) * 10);
-    return (
-      (mins < 10 ? "0" : "") +
-      mins +
-      ":" +
-      (secs < 10 ? "0" : "") +
-      secs +
-      "." +
-      tenth
-    );
-  }
-
-  /* Subagent D: lose a heart, respawn at the last checkpoint (full
-   * orb restore — forgiving by design); 0 hearts => game-over card. */
-  function platDie(cause) {
-    platLives = Math.max(0, platLives - 1);
-    try {
-      if (vfx) {
-        if (cause === "hazard" && vfx.flashLightning) vfx.flashLightning();
-        if (vfx.addTrauma) vfx.addTrauma(0.5);
-      }
-    } catch (err) {
-      /* x */
-    }
-    if (platLives <= 0) {
-      state = "gameover";
-      try {
-        exitLock();
-      } catch (err) {
-        /* x */
-      }
-      try {
-        var orbs = platCtl ? platCtl.state().orbs : 0;
-        var gs = $("gameover-stats");
-        if (gs) {
-          gs.textContent =
-            "Shards " +
-            orbs +
-            " · Survived " +
-            fmtPlatClock(timerMs) +
-            (cause === "wraith"
-              ? " · The wraith caught you… (phir se!)"
-              : " · The dark stings… (dard hua!)");
-        }
-        var gt = $("gameover-title");
-        if (gt) gt.textContent = "THE LIGHT FADES";
-      } catch (err) {
-        /* x */
-      }
-      show("gameover");
-      try {
-        if (Audio8 && Audio8.suspendAll) Audio8.suspendAll();
-      } catch (err) {
-        /* x */
-      }
-      platHud();
-      return;
-    }
-    try {
-      if (UI && UI.banner) {
-        UI.banner(
-          cause === "wraith"
-            ? "The wraith caught you… (phir se!)"
-            : "The dark stings… (dard hua!)",
-          2500,
-        );
-      }
-    } catch (err) {
-      /* x */
-    }
-    try {
-      if (window.Levels && window.Levels.resetOrbs) {
-        window.Levels.resetOrbs();
-      }
-      if (platCtl) {
-        if (platCheckpoint) {
-          platCtl.reset(platCheckpoint.x, platCheckpoint.y + 1.2);
-        } else {
-          platCtl.reset();
-        }
-      }
-      if (platWraith) platWraith.reset();
-    } catch (err) {
-      /* x */
-    }
-    platHud();
-  }
-
-  /* Subagent D: live solid under a foot point (movers/crumbles included). */
-  function platSolidUnder(x, fy) {
-    try {
-      var list =
-        (world && world.solids) ||
-        (window.Levels && window.Levels.getSolids
-          ? window.Levels.getSolids()
-          : null);
-      if (!list) return null;
-      for (var i = 0; i < list.length; i++) {
-        var s = list[i];
-        if (!s || s.active === false) continue;
-        if (x >= s.x0 && x <= s.x1 && Math.abs(s.y1 - fy) < 0.6) return s;
-      }
-    } catch (err) {
-      /* x */
-    }
-    return null;
-  }
-
-  function makeGlowBillboard(color, size) {
-    var tex = null;
-    try {
-      if (window.Levels && window.Levels.makeGlowSprite) {
-        tex = window.Levels.makeGlowSprite(
-          "rgba(255,255,255,1)",
-          "rgba(255,255,255,0)",
-        );
-      }
-    } catch (err) {
-      tex = null;
-    }
-    var m = new THREE.SpriteMaterial({
-      map: tex,
-      color: color,
-      transparent: true,
-      blending: THREE.AdditiveBlending,
-      depthWrite: false,
-    });
-    var s = new THREE.Sprite(m);
-    s.scale.set(size, size, 1);
-    return s;
-  }
-
-  /* Subagent D: wisp + wraith actors — real .glb (A's kit), radial glow
-   * billboard until the model lands. Follows physics every step. */
-  function platActorLoad(rig, url, fitSize, glowColor, glowSize) {
-    var done = false;
-    function place(root) {
-      if (done) return;
-      done = true;
-      try {
-        if (root) {
-          if (window.Levels && window.Levels.fitGlb) {
-            window.Levels.fitGlb(root, fitSize, null);
-          }
-          rig.group.add(root);
-        } else {
-          throw new Error("glb missing");
-        }
-      } catch (err) {
-        try {
-          rig.group.add(makeGlowBillboard(glowColor, glowSize));
-        } catch (e2) {
-          /* x */
-        }
-      }
-    }
-    try {
-      if (window.Levels && window.Levels.loadGlb) {
-        window.Levels.loadGlb(
-          url,
-          function (r) {
-            place(r);
-          },
-          function () {
-            place(null);
-          },
-        );
-      } else if (window.THREE && window.THREE.GLTFLoader) {
-        new window.THREE.GLTFLoader().load(
-          url,
-          function (g) {
-            place((g && (g.scene || g)) || null);
-          },
-          undefined,
-          function () {
-            place(null);
-          },
-        );
-      } else {
-        place(null);
-      }
-    } catch (err) {
-      place(null);
-    }
-  }
-
-  function platActors() {
-    if (!platformMode() || !platCtl || !scene || !window.THREE) return;
-    try {
-      if (!heroRig) {
-        heroRig = { group: new THREE.Group(), mixer: null, actions: {}, activeAct: "" };
-        scene.add(heroRig.group);
-        var heroLight = new THREE.PointLight(0x38f9d4, 2.2, 9.5, 1.6);
-        heroLight.position.set(0, 1.1, 0.8);
-        heroRig.group.add(heroLight);
-        new THREE.GLTFLoader().load(
-          "/studio/assets/models/characters/RobotExpressive.glb",
-          function (gltf) {
-            var root = gltf.scene || (gltf.scenes && gltf.scenes[0]);
-            if (!root) return;
-            if (window.Levels && window.Levels.fitGlb) {
-              window.Levels.fitGlb(root, 1.85, 0);
-            }
-            root.rotation.y = Math.PI / 2;
-            root.traverse(function (n) {
-              if (n && n.isMesh && n.material) {
-                n.castShadow = true;
-                n.material = n.material.clone();
-                if (n.material.color) n.material.color.setHex(0x38f9d4);
-                if (n.material.emissive) {
-                  n.material.emissive.setHex(0x22d3ee);
-                  n.material.emissiveIntensity = 0.85;
-                }
-              }
-            });
-            heroRig.group.add(root);
-            if (gltf.animations && gltf.animations.length && THREE.AnimationMixer) {
-              heroRig.mixer = new THREE.AnimationMixer(root);
-              for (var ai = 0; ai < gltf.animations.length; ai++) {
-                var clip = gltf.animations[ai];
-                heroRig.actions[clip.name] = heroRig.mixer.clipAction(clip);
-              }
-              if (heroRig.actions.Idle) {
-                heroRig.actions.Idle.play();
-                heroRig.activeAct = "Idle";
-              }
-            }
-          }
-        );
-      }
-      if (!wraithRig) {
-        wraithRig = { group: new THREE.Group() };
-        scene.add(wraithRig.group);
-        platActorLoad(
-          wraithRig,
-          "./assets/shadow_wraith.glb",
-          1.35,
-          0xff5a6e,
-          1.9,
-        );
-      }
-      var p = platCtl.pos();
-      var st = platCtl.state();
-      var bob = 0;
-      try {
-        bob =
-          Math.sin(elapsed * 8) * 0.03 * Math.min(1, Math.abs(st.vx) / 7);
-      } catch (eBob) {
-        bob = 0;
-      }
-      heroRig.group.position.set(p.x, p.y - 0.55, 0.2);
-      heroRig.group.scale.x = st.face >= 0 ? 1 : -1;
-      if (heroRig.mixer) {
-        var wantAct = !st.grounded ? "Jump" : (Math.abs(st.vx) > 0.8 ? "Running" : "Idle");
-        if (wantAct !== heroRig.activeAct && heroRig.actions[wantAct]) {
-          if (heroRig.actions[heroRig.activeAct]) heroRig.actions[heroRig.activeAct].fadeOut(0.12);
-          heroRig.actions[wantAct].reset().fadeIn(0.12).play();
-          heroRig.activeAct = wantAct;
-        }
-        heroRig.mixer.update(1 / 60);
-      }
-      try {
-        if (platWraith && wraithRig) {
-          var ws = platWraith.getState();
-          wraithRig.group.visible = true;
-          wraithRig.group.position.set(ws.x, ws.gy, 0.6);
-          wraithRig.group.scale.x = ws.face >= 0 ? 1 : -1;
-        } else if (wraithRig) {
-          wraithRig.group.visible = false;
-        }
-      } catch (eW) {
-        /* x */
-      }
-    } catch (err) {
-      /* actors cosmetic */
-    }
-  }
-
-  function platMood() {
-    try {
-      if (!Audio8 || !Audio8.setPlatformMood || !platCtl) return;
-      var n = platCtl.state().orbs;
-      Audio8.setPlatformMood(n >= 4 ? "ascent" : n >= 2 ? "clockwork" : "calm");
-    } catch (err) {
-      /* x */
-    }
-  }
-
-  /* E in platform mode: ring the soul bell (swing + chord + caption). */
-  function platRingBell() {
-    try {
-      if (window.Levels && window.Levels.ringBell) window.Levels.ringBell();
-      if (Audio8 && Audio8.lanternBell) Audio8.lanternBell();
-      if (UI && UI.lore) UI.lore("Ghanti baji… the lanterns listen. (E)", 2500);
-    } catch (err) {
-      /* x */
-    }
-  }
-
-  /* Defensive fallback course visuals (PlaneGeometry PBR slabs +
-   * THREE.Points orbs/lanterns; zero banned primitives). Only builds
-   * when the platform level provides no visuals of its own. */
-  function platFallbackVisuals() {
-    if (platVis) return;
-    /* Subagent D: the Levels world ships full visuals — fallback slabs
-     * only exist for the standalone fallback course. */
-    try {
-      if (world && world.rig) {
-        platVis = { group: null, skipped: true };
-        return;
-      }
-    } catch (err) {
-      /* x */
-    }
-    try {
-      var T = window.THREE;
-      var scene = window.__stvScene || (world && world.scene) || null;
-      if (!T || !scene || !window.StV_Platformer) return;
-      var D = window.StV_Platformer.levelData();
-      var group = new T.Group();
-      var rockMat = null;
-      try {
-        if (window.WorldRealism && window.WorldRealism.createProceduralPBRMaterial) {
-          rockMat = window.WorldRealism.createProceduralPBRMaterial("rock", {});
-        } else {
-          rockMat = new T.MeshStandardMaterial({ color: 0x4a4f55, roughness: 0.9 });
-        }
-      } catch (err) {
-        rockMat = new T.MeshStandardMaterial({ color: 0x4a4f55, roughness: 0.9 });
-      }
-      var k;
-      for (k = 0; k < D.solids.length; k++) {
-        var s = D.solids[k];
-        var w = s.x1 - s.x0;
-        var h = s.y1 - s.y0;
-        if (!(w > 0) || !(h > 0)) continue;
-        var top = new T.Mesh(new T.PlaneGeometry(w, 0.6), rockMat);
-        top.rotation.x = -Math.PI / 2;
-        top.position.set((s.x0 + s.x1) / 2, s.y1, 0);
-        top.receiveShadow = true;
-        group.add(top);
-        var face = new T.Mesh(new T.PlaneGeometry(w, Math.min(1.2, h + 0.6)), rockMat);
-        face.position.set((s.x0 + s.x1) / 2, s.y1 - Math.min(1.2, h + 0.6) / 2, 0.3);
-        group.add(face);
-      }
-      scene.add(group);
-      platVis = { group: group };
-    } catch (err) {
-      platVis = null;
-    }
-  }
-
-  function platTick(dt) {
-    var ctl = platEnsure();
-    if (!ctl) return;
-    var left = !!(keys.KeyA || keys.ArrowLeft);
-    var right = !!(keys.KeyD || keys.ArrowRight);
-    var up = !!(keys.KeyW || keys.ArrowUp || keys.Space);
-    var down = !!(keys.KeyS || keys.ArrowDown);
-    var jp = platJumpQueued;
-    var dp = platDashQueued;
-    platJumpQueued = false;
-    platDashQueued = false;
-    try {
-      ctl.step(dt, {
-        move: (right ? 1 : 0) - (left ? 1 : 0),
-        jumpPressed: jp,
-        jumpHeld: up,
-        dashPressed: dp,
-        dashX: (right ? 1 : 0) - (left ? 1 : 0),
-        dashY: (up ? 1 : 0) - (down ? 1 : 0)
-      });
-    } catch (err) {
-      /* x */
-    }
-    /* Subagent D: cache the live sample for the camera rig, then run
-     * world dynamics (crumble triggers, mover carry, checkpoints,
-     * zone handoff, goal bell). */
-    try {
-      var pst = ctl.state();
-      platPosCache = {
-        x: pst.x,
-        y: pst.y,
-        vx: pst.vx,
-        vy: pst.vy,
-        grounded: pst.grounded
-      };
-      var under = platSolidUnder(pst.x, pst.y - 0.4);
-      if (under && under.type === "crumble" && window.Levels && window.Levels.stepOn) {
-        try {
-          window.Levels.stepOn(under.id);
-        } catch (eStep) {
-          /* x */
-        }
-      }
-      if (under && under.type === "moving" && (under.dx || under.dy) && ctl.nudge) {
-        try {
-          ctl.nudge(under.dx, under.dy);
-        } catch (eCarry) {
-          /* x */
-        }
-      }
-    } catch (err) {
-      /* x */
-    }
-    /* Subagent D: zone handoff — the wraith rehomes to the wisp's zone. */
-    try {
-      if (window.Levels && window.Levels.zoneAt && platWraith && platCtl) {
-        var zn = window.Levels.zoneAt(platCtl.state().x);
-        if (zn !== platZone) {
-          platZone = zn;
-          if (platWraith.rehome) {
-            platWraith.rehome(ZONE_WPS[zn] || ZONE_WPS[0]);
-          }
-          var zh =
-            window.Levels.zones && window.Levels.zones[zn]
-              ? window.Levels.zones[zn]
-              : null;
-          if (zh && UI && UI.banner) {
-            UI.banner(zh.name + " — " + zh.hint, 4200);
-          }
-        }
-      }
-    } catch (err) {
-      /* x */
-    }
-    /* Subagent D: checkpoints + summit goal. */
-    try {
-      if (platCtl && window.Levels) {
-        var cst = platCtl.state();
-        if (window.Levels.CHECKPOINTS) {
-          var cps = window.Levels.CHECKPOINTS;
-          for (var ci = 0; ci < cps.length; ci++) {
-            var cp = cps[ci];
-            if (
-              (!platCheckpoint || cp.x > platCheckpoint.x) &&
-              cst.x > cp.x - 1 &&
-              Math.abs(cst.y - (cp.y + 1)) < 3
-            ) {
-              platCheckpoint = { x: cp.x, y: cp.y };
-              if (UI && UI.banner) {
-                UI.banner("Checkpoint — the light remembers.", 2200);
-              }
-            }
-          }
-        }
-        if (!platWon && window.Levels.GOAL) {
-          var G = window.Levels.GOAL;
-          if (
-            cst.x >= G.x0 &&
-            cst.x <= G.x1 &&
-            cst.y >= G.y0 &&
-            cst.y <= G.y1
-          ) {
-            platWon = true;
-            if (window.Levels.ringBell) window.Levels.ringBell();
-            if (Audio8 && Audio8.lanternBell) Audio8.lanternBell();
-            if (vfx && vfx.shockwave) {
-              vfx.shockwave(cst.x, cst.y, 0, 0x9fe8ff);
-              vfx.shockwave(cst.x, cst.y, 0, 0xffcf6e);
-            }
-            if (UI && UI.banner) {
-              UI.banner(
-                "The sanctuary bell rings — the Hollow Lantern is lit!",
-                6000,
-              );
-            }
-            if (UI && UI.lore) {
-              UI.lore("Ghanti baj gayi… ujala laut aaya. (the light returns)", 6000);
-            }
-            if (Audio8 && Audio8.setPlatformMood) {
-              Audio8.setPlatformMood("ascent");
-            }
-          }
-        }
-      }
-    } catch (err) {
-      /* x */
-    }
-    /* Shadow wraith hunt + catch check (0.7m). */
-    try {
-      if (platWraith) {
-        var p = ctl.pos();
-        platWraith.update(dt, p.x, p.y);
-        var ws = platWraith.getState();
-        if (ws.dist < 0.7) {
-          /* Subagent D: a catch costs a heart (game over at zero). */
-          platDie("wraith");
-        }
-      }
-    } catch (err) {
-      /* x */
-    }
-    /* Side-view follow camera (FPS rig retakes it when horror runs). */
-    try {
-      /* Subagent D: the Levels CameraRig owns the camera when the real
-       * world is up (z=16, look-ahead, platform-lock, trauma); this
-       * fallback only serves the standalone fallback course. */
-      if (camera && !(world && world.rig)) {
-        var cp2 = ctl.pos();
-        var st2 = ctl.state();
-        if (!platCamInit) {
-          platCamX = cp2.x;
-          platCamY = cp2.y + 1;
-          platCamInit = true;
-        }
-        var kb = 1 - Math.exp(-6 * dt);
-        platCamX += (cp2.x + st2.face * 1.2 - platCamX) * kb;
-        platCamY += (cp2.y + 1.0 - platCamY) * kb;
-        camera.position.set(platCamX, platCamY, 9.5);
-        camera.lookAt(platCamX, platCamY - 0.2, 0);
-      }
-    } catch (err) {
-      /* x */
-    }
-    /* Subagent D: wisp + wraith actors track physics every step. */
-    try {
-      platActors();
-    } catch (err) {
-      /* x */
-    }
-    /* Subagent D: HUD + timer at 4Hz (no per-frame DOM churn). */
-    try {
-      platHudT += dt;
-      if (platHudT >= 0.25) {
-        platHudT = 0;
-        platHud();
-      }
-    } catch (err) {
-      /* x */
-    }
-    if (vfx && camera) {
-      try {
-        vfx.update(dt, camera);
-      } catch (err) {
-        /* x */
-      }
-    }
-  }
 
   function frame(now) {
     if (!started || !renderer) return;
@@ -2558,29 +2332,14 @@
     /* World ambience runs in every state except paused. */
     if (state !== "paused" && world && world.update) {
       try {
-        /* Subagent D: feed the camera rig the live wisp sample (one
-         * frame stale — platTick refreshes the cache right after). */
-        if (platformMode() && platPosCache) {
-          world.update(raw, elapsed, platPosCache);
-        } else {
-          world.update(raw, elapsed);
-        }
+        world.update(raw, elapsed);
       } catch (err) {
         /* x */
       }
     }
 
     if (state === "playing") {
-      /* Subagent C additive: hit-stop dips accumulation in real time;
-       * idle (hitStopT==0, hitSlow==1) is exactly the old `acc += raw`. */
-      if (hitStopT > 0) {
-        hitStopT -= raw;
-        if (hitStopT <= 0) {
-          hitStopT = 0;
-          hitSlow = 1;
-        }
-      }
-      acc += raw * hitSlow;
+      acc += raw;
       var n = 0;
       while (acc >= FIXED && n < MAX_STEPS) {
         step(FIXED);
@@ -2628,14 +2387,9 @@
       } catch (err) {
         rm = false;
       }
-      if (!rm) sway = Math.sin(elapsed * 0.45) * 0.6;
-      if (platformMode()) {
-        camera.position.set(sway, 2.5, 12.2);
-        camera.lookAt(sway * 0.5, 2.0, 0);
-      } else {
-        camera.position.set(spawn.x, 1.6, spawn.z);
-        camera.rotation.set(-0.03, (spawn.ry || 0) + sway * 0.2, 0);
-      }
+      if (!rm) sway = Math.sin(elapsed * 0.25) * 0.12;
+      camera.position.set(spawn.x, 1.6, spawn.z);
+      camera.rotation.set(-0.03, (spawn.ry || 0) + sway, 0);
     }
 
     try {
@@ -2797,20 +2551,16 @@
         }
         keys[c] = true;
         if (ev.repeat) return;
-        /* Subagent C additive: platformer edge queue (A/D+arrows move,
-         * W/Space jump, Shift/K dash). Horror keys map is untouched. */
-        if (platformMode()) {
-          if (c === "Space" || c === "KeyW" || c === "ArrowUp") {
-            platJumpQueued = true;
-          }
-          if (c === "ShiftLeft" || c === "ShiftRight" || c === "KeyK") {
-            platDashQueued = true;
-          }
-        }
         if (c === "Escape" || c === "KeyP") togglePause();
+        else if (c === "Space" || c === "KeyF") fireWeapon();
+        else if (c === "KeyR") reloadWeapon();
+        else if (c === "Digit1") selectWeapon(0);
+        else if (c === "Digit2") selectWeapon(1);
+        else if (c === "Digit3") selectWeapon(2);
+        else if (c === "KeyQ") selectWeapon(curWep + 1);
         else if (c === "KeyE") doInteract();
         else if (c === "KeyC") toggleCrouch();
-        else if (c === "KeyT" || c === "KeyF") toggleTorch();
+        else if (c === "KeyT") toggleTorch();
         else if (c === "KeyM") toggleMute();
         else if (c === "Enter" && state === "menu") startGame();
       },
@@ -2894,26 +2644,80 @@
   function wireCanvasClick() {
     if (!container) return;
     container.addEventListener(
-      "click",
-      function () {
-        try { window.focus(); } catch (e) { /* x */ }
-        if (state === "playing" && !platformMode()) requestLock();
+      "mousedown",
+      function (ev) {
+        if (state !== "playing") return;
+        if (ev.button === 2) {
+          if (player && player.setADS) player.setADS(!player.isADS());
+          return;
+        }
+        requestLock();
+        fireHeld = true;
+        fireWeapon();
       },
       false,
     );
+    window.addEventListener("mouseup", function () { fireHeld = false; }, false);
+    container.addEventListener("contextmenu", function (ev) {
+      try { ev.preventDefault(); } catch (e) {}
+    }, false);
+
+    var bFire = $("btn-fire");
+    if (bFire) {
+      function fDown(ev) {
+        try { ev.preventDefault(); ev.stopPropagation(); } catch (e) {}
+        fireHeld = true;
+        fireWeapon();
+      }
+      function fUp(ev) {
+        try { if (ev) ev.preventDefault(); } catch (e) {}
+        fireHeld = false;
+      }
+      bFire.addEventListener("pointerdown", fDown, false);
+      bFire.addEventListener("pointerup", fUp, false);
+      bFire.addEventListener("pointercancel", fUp, false);
+      bFire.addEventListener("touchstart", fDown, { passive: false });
+      bFire.addEventListener("touchend", fUp, false);
+      bFire.addEventListener("click", function (ev) {
+        try { ev.preventDefault(); ev.stopPropagation(); } catch (e) {}
+        fireWeapon();
+      }, false);
+    }
+    var bAds = $("btn-ads");
+    if (bAds) {
+      bAds.addEventListener("click", function (ev) {
+        try { ev.preventDefault(); ev.stopPropagation(); } catch (e) {}
+        if (player && player.setADS) {
+          var nextAds = !player.isADS();
+          player.setADS(nextAds);
+          bAds.classList.toggle("on", nextAds);
+        }
+      }, false);
+    }
+    var bRel = $("btn-reload");
+    if (bRel) {
+      bRel.addEventListener("click", function (ev) {
+        try { ev.preventDefault(); ev.stopPropagation(); } catch (e) {}
+        reloadWeapon();
+      }, false);
+    }
+    var bWep = $("btn-weapon");
+    if (bWep) {
+      bWep.addEventListener("click", function (ev) {
+        try { ev.preventDefault(); ev.stopPropagation(); } catch (e) {}
+        selectWeapon(curWep + 1);
+      }, false);
+    }
+    var bPauseHud = $("btn-pause-hud");
+    if (bPauseHud) {
+      bPauseHud.addEventListener("click", function (ev) {
+        try { ev.preventDefault(); ev.stopPropagation(); } catch (e) {}
+        togglePause();
+      }, false);
+    }
   }
 
   function boot() {
-    /* Subagent D: this shell now ships the Hollow Lantern platformer.
-     * When the StV horror world is absent but Levels exists, opt the
-     * platformer layer in BEFORE anything consults platformMode(). */
-    try {
-      if (!window.StV_Levels && window.Levels && window.Levels.buildWorld) {
-        window.__stvPlatformMode = true;
-      }
-    } catch (err) {
-      /* horror path stands */
-    }
     if (!window.THREE) {
       var msg = "THREE failed to load — check vendor script tags.";
       try {
@@ -2953,14 +2757,6 @@
     try {
       scene.fog = new THREE.FogExp2(0x060a0e, 0.045);
       scene.userData.renderer = renderer;
-    } catch (err) {
-      /* x */
-    }
-    /* Subagent D: the horror shell's dense fog (0.045) would drown the
-     * side-view world (camera z=16, backdrop z=-28) in grey soup —
-     * platform mode breathes cavern air instead. */
-    try {
-      if (platformMode()) scene.fog = new THREE.FogExp2(0x0a2022, 0.0045);
     } catch (err) {
       /* x */
     }
@@ -3006,25 +2802,6 @@
         world = null;
       }
     }
-    /* Subagent D: Hollow Lantern world (B) + orb shard layer. The rig
-     * owns the camera; game.js feeds it the live player sample. */
-    if (!world && platformMode() && window.Levels && window.Levels.buildWorld) {
-      try {
-        world = window.Levels.buildWorld(scene, camera, renderer);
-        try {
-          if (window.Levels.buildOrbLayer) window.Levels.buildOrbLayer(scene);
-        } catch (eOrb) {
-          /* shards cosmetic */
-        }
-      } catch (err) {
-        try {
-          console.error("[hollow] buildWorld failed", err);
-        } catch (e) {
-          /* x */
-        }
-        world = null;
-      }
-    }
     if (!world) {
       world = {
         colliders: [],
@@ -3041,9 +2818,7 @@
     bounds = world.bounds || bounds;
     spawn = world.spawn || spawn;
 
-    /* Subagent D: no FPS torch rig or camera-child lantern in the
-     * side-view platformer — the spirit wisp is the player. */
-    if (window.StV_Player && !platformMode()) {
+    if (window.StV_Player) {
       try {
         player = window.StV_Player.create(camera, colliders, bounds);
         player.setSensitivity(settings.sensitivity);
@@ -3086,9 +2861,7 @@
 
     /* Stage 2+3: Mother Agatha. The game boots without her rather than
      * crashing when the enemy module is missing. */
-    /* Subagent D: Mother Agatha stays in St. Vermilion — the shadow
-     * wraith (StV_Wraith, created per-zone in platEnsure) hunts here. */
-    if (window.StV_Enemy && !platformMode()) {
+    if (window.StV_Enemy) {
       try {
         enemy = window.StV_Enemy.create(scene, colliders, bounds, player);
         if (enemy) {
@@ -3138,12 +2911,6 @@
           onTorch: toggleTorch,
           onCrouch: toggleCrouch,
           onAct: doInteract,
-          onJump: function () {
-            platJumpQueued = true;
-          },
-          onDash: function () {
-            platDashQueued = true;
-          },
           onVolume: function (v) {
             if (typeof v === "number" && isFinite(v)) {
               settings.volume = Math.min(1, Math.max(0, v));
@@ -3232,12 +2999,8 @@
       }
     }
 
-    /* Subagent D: Hollow Light ships its own menu title + story line
-     * in index.html — the StV fallback must not overwrite them. */
-    if (!platformMode()) {
-      renderTitle();
-      renderIntroCards();
-    }
+    renderTitle();
+    renderIntroCards();
     resetRun();
     if (player) player.setEnabled(false);
     syncTouchBtn();
@@ -3268,20 +3031,22 @@
 
     window.game = {
       scene: scene,
-      player: player || {
-        pos: function () {
-          if (platCtl && platCtl.pos) {
-            var p = platCtl.pos();
-            return { x: p.x, y: p.y, z: 0 };
-          }
-          return { x: 0, y: 0, z: 0 };
-        },
-        state: function () {
-          return platCtl && platCtl.state ? platCtl.state() : {};
-        }
-      },
+      player: player,
       enemy: enemy,
       world: world,
+      fire: fireWeapon,
+      reload: reloadWeapon,
+      switchWeapon: selectWeapon,
+      getShooterStats: function () {
+        return {
+          hp: playerHP,
+          kills: zombieKills,
+          weapon: WEAPONS[curWep].name,
+          mag: WEAPONS[curWep].mag,
+          reserve: WEAPONS[curWep].reserve,
+          hordeCount: hordeZombies.length
+        };
+      },
       getState: function () {
         return state;
       },
@@ -3343,51 +3108,6 @@
 
     wireKeys();
     wireCanvasClick();
-
-    /* Wire all on-screen D-pad & action buttons for both touch and mouse */
-    function bindHold(id, code, onPress) {
-      var el = $(id);
-      if (!el) return;
-      function down(ev) {
-        try { ev.preventDefault(); ev.stopPropagation(); } catch (e) {}
-        try { window.focus(); } catch (e2) {}
-        if (code) keys[code] = true;
-        if (onPress) onPress();
-      }
-      function up(ev) {
-        try { if (ev) ev.preventDefault(); } catch (e) {}
-        if (code) keys[code] = false;
-      }
-      el.addEventListener("pointerdown", down, false);
-      el.addEventListener("pointerup", up, false);
-      el.addEventListener("pointercancel", up, false);
-      el.addEventListener("pointerleave", up, false);
-      el.addEventListener("touchstart", down, { passive: false });
-      el.addEventListener("touchend", up, false);
-      el.addEventListener("touchcancel", up, false);
-      el.addEventListener("mousedown", down, false);
-      el.addEventListener("mouseup", up, false);
-    }
-    bindHold("btn-left", "ArrowLeft", null);
-    bindHold("btn-right", "ArrowRight", null);
-    bindHold("btn-down", "ArrowDown", null);
-    bindHold("btn-jump", "Space", function () { platJumpQueued = true; });
-    bindHold("btn-dash", "ShiftLeft", function () { platDashQueued = true; });
-    bindHold("btn-act", "KeyE", function () { doInteract(); });
-    var bPauseHud = $("btn-pause-hud");
-    if (bPauseHud) {
-      bPauseHud.addEventListener("click", function (ev) {
-        try { ev.preventDefault(); ev.stopPropagation(); } catch (e) {}
-        togglePause();
-      }, false);
-    }
-    var bAgain = $("btn-again");
-    if (bAgain) {
-      bAgain.addEventListener("click", function () {
-        restartGame();
-      }, false);
-    }
-
     started = true;
     lastT = performance.now();
     renderer.setAnimationLoop(frame);
