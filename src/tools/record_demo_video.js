@@ -94,10 +94,16 @@ async function ch1_studio(browser) {
     } catch (e) {}
   });
 
-  // Replace the login gate placeholder in the left terminal pane with the live Muse Code CLI 1.4.14 terminal actively coding!
+  // Stage a representative live-CLI build transcript over the terminal pane
+  // (the real inline terminal loads directly in-app; this overlays the
+  // agent's Stage 1-6 build log for the demo recording only).
   await page.evaluate(() => {
-    const gate = document.getElementById('terminal-connect');
-    if (!gate) return;
+    const box = document.querySelector('.terminal-section .terminal-box');
+    if (!box || document.getElementById('live-cli-stage')) return;
+    box.style.position = 'relative';
+    const gate = document.createElement('div');
+    gate.id = 'live-cli-stage';
+    box.appendChild(gate);
     gate.style.cssText = 'position:absolute;inset:0;background:#000000;color:#e4e4e7;font:12.5px/1.55 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;padding:14px 16px;overflow:hidden;display:flex;flex-direction:column;justify-content:flex-start;align-items:stretch;text-align:left;';
     gate.innerHTML = `
       <div style="color:#38bdf8;font-weight:700;margin-bottom:6px;">╭─ Muse Code CLI v1.4.14 · muse-spark-1.3 (max) · 18 MCP Tools · YOLO</div>
@@ -139,28 +145,34 @@ async function ch1_studio(browser) {
         box.appendChild(d);
       }
     }, { line: cliLines[i], idx: i, promptSlice: PROMPT.slice(0, Math.min(PROMPT.length, (i + 1) * 7)) });
-    await snap(page, 8); // 16 * 8 = 128 frames
+    await snap(page, 20); // 16 * 20 = 320 frames
   }
 
   // Open + Menu (Skills & 18 MCP Tools)
   await setBanner(page, '1/5 · STUDIO · Power Router: 26 Agent Skills + 18 Native 3D MCP Tools + Voice Mic');
-  await page.evaluate(() => document.getElementById('plus-btn')?.click());
+  await page.evaluate(() => document.getElementById('attach-btn')?.click());
   await page.waitForTimeout(250);
-  await snap(page, 45);
-  await page.evaluate(() => document.getElementById('plus-btn')?.click());
+  await snap(page, 120);
+  await page.evaluate(() => document.getElementById('attach-btn')?.click());
   await page.waitForTimeout(200);
 
-  // Open Left Sidebar -> Pipeline Mind Map (Default View!)
-  await setBanner(page, '1/5 · PIPELINE MIND MAP · 6-Stage Meta AI Architecture inside Left Sidebar');
+  // Open Left Sidebar -> v0 navigation (New Chat, Projects, Chats, Skills, System Design)
+  await setBanner(page, '1/5 · SIDEBAR · New Chat, Projects Library, Resumable Chats & Agent Skills');
   await page.evaluate(() => document.getElementById('sidebar-history-btn')?.click());
   await page.waitForTimeout(350);
-  await snap(page, 65);
+  await snap(page, 150);
 
-  // Click "Chats" button inside Left Sidebar to reveal Chat History!
-  await setBanner(page, '1/5 · SIDEBAR CHATS · Click "Chats" tab to view & resume live tmux sessions');
-  await page.evaluate(() => document.getElementById('sidebar-tab-chats')?.click());
+  // Click "Chats" in the sidebar to reveal resumable terminals!
+  await setBanner(page, '1/5 · SIDEBAR CHATS · Inactive terminals resume exactly where they stopped');
+  await page.evaluate(() => document.getElementById('sidebar-nav-chats')?.click());
   await page.waitForTimeout(450);
-  await snap(page, 55);
+  await snap(page, 140);
+
+  // Click "Skills" to show the agent skill roster!
+  await setBanner(page, '1/5 · SIDEBAR SKILLS · Toggleable agent skills for the next build');
+  await page.evaluate(() => document.getElementById('sidebar-nav-skills')?.click());
+  await page.waitForTimeout(400);
+  await snap(page, 140);
   await page.evaluate(() => document.getElementById('sidebar-close')?.click());
   await page.waitForTimeout(250);
 
@@ -168,13 +180,13 @@ async function ch1_studio(browser) {
   await setBanner(page, '1/5 · IN-APP GIT & GAME LIBRARY · 1-Click GitHub Sync & Instant Playable Worlds');
   await page.evaluate(() => document.getElementById('git-btn')?.click());
   await page.waitForTimeout(400);
-  await snap(page, 45);
+  await snap(page, 120);
   await page.evaluate(() => document.getElementById('git-close')?.click());
   await page.waitForTimeout(250);
 
   await page.evaluate(() => document.getElementById('library-btn')?.click());
   await page.waitForTimeout(400);
-  await snap(page, 45);
+  await snap(page, 150);
   await page.close();
 
   const count = frameNo - startF;
@@ -274,7 +286,7 @@ TOOLS = [
   await page.goto('file://' + codePath, { waitUntil: 'load' });
   await page.waitForTimeout(300);
   await setBanner(page, '2/5 · CODE ARCHITECTURE · gVisor Sandbox, 18 3D MCP Tools, Live AI Director & 0-Primitive QA Gate');
-  await snap(page, 240); // 8 seconds of crisp code showcase
+  await snap(page, 1000); // ~33 seconds of crisp code showcase
   await page.close();
 
   const count = frameNo - startF;
@@ -295,7 +307,7 @@ async function ch3_agatha(browser) {
   await page.waitForTimeout(200);
   await setBanner(page, '3/5 · MOTHER AGATHA · SAM 3.1 Calibrated · 20-Bone Blender Rig · Natural Game Walk Speed');
 
-  const STEPS = 240; // 8 seconds @ 30fps
+  const STEPS = 600; // 20 seconds @ 30fps, slow natural orbit
   for (let i = 0; i < STEPS; i++) {
     const yaw = (i / STEPS) * Math.PI * 2;
     await page.evaluate((y) => {
@@ -344,7 +356,7 @@ async function ch4_gameplay(browser) {
   await page.waitForFunction(() => window.game && window.game.getState, null, { timeout: 45000 });
   await page.waitForTimeout(2500);
   await setBanner(page, '4/5 · ASHES OF ST. VERMILION · 19 Polyhaven 1K Scans · UnrealBloomPass · 4-Bus Cathedral Audio');
-  await snap(page, 35);
+  await snap(page, 150);
 
   await page.keyboard.press('Enter');
   await page.waitForFunction(() => window.game && window.game.getState() === 'playing', null, { timeout: 15000 });
@@ -366,14 +378,14 @@ async function ch4_gameplay(browser) {
   });
 
   await setBanner(page, '4/5 · GAMEPLAY · Live Runtime Meta AI Director (POST /api/studio/ai/director)');
-  await glide(page, 22, 0, 8.5, -0.06, 0, 7.2, 0.06, whisper, 3);
+  await glide(page, 22, 0, 8.5, -0.06, 0, 7.2, 0.06, whisper, 13);
   await page.evaluate(() => { try { window.StV_UI.banner(null); } catch (e) {} });
 
   await setBanner(page, '4/5 · GAMEPLAY · South Corridor · Gothic Pillars, Chandeliers & Volumetric Moonlight');
-  await glide(page, 22, 0, 7.0, 0, 2.2, 4.6, -0.75, null, 3);
+  await glide(page, 22, 0, 7.0, 0, 2.2, 4.6, -0.75, null, 13);
 
   await setBanner(page, '4/5 · GAMEPLAY · Classroom B · Photogrammetry Desks, Bookshelves & Chapel Key');
-  await glide(page, 26, 4.2, -2.2, -0.785, 5.4, -3.4, -0.785, null, 3);
+  await glide(page, 26, 4.2, -2.2, -0.785, 5.4, -3.4, -0.785, null, 13);
 
   await setBanner(page, '4/5 · GAMEPLAY · GothicCabinet_01 Peek-and-Hide (Press E to hide & peek through crack)');
   await page.evaluate(() => {
@@ -382,11 +394,11 @@ async function ch4_gameplay(browser) {
       window.game.player.enterHide(s.x, s.z, s.ry);
     } catch (e) {}
   });
-  for (let i = 0; i < 12; i++) await pstep(page, null, 3);
+  for (let i = 0; i < 16; i++) await pstep(page, null, 13);
 
   await page.evaluate(() => { try { window.game.player.exitHide(); } catch (e) {} });
   await setBanner(page, '4/5 · GAMEPLAY · North Corridor · Unlocking the Chapel Door (large_castle_door_1k.glb)');
-  await glide(page, 16, 0, -7.2, 0, 0, -8.0, 0, null, 3);
+  await glide(page, 16, 0, -7.2, 0, 0, -8.0, 0, null, 13);
 
   await page.close();
   const count = frameNo - startF;
@@ -414,15 +426,22 @@ async function ch5_brief_and_receipt(browser) {
   }
 
   await setBanner(page, '5/5 · JUDGES BRIEF · 9-Row Meta AI Stack, SAM 3.1 & SAM 3D Evidence, Judge AI Copilot');
-  const SCROLL_STEPS = 45;
+  const SCROLL_STEPS = 80;
   for (let i = 0; i < SCROLL_STEPS; i++) {
     await page.evaluate((k) => {
       const max = (document.documentElement.scrollHeight - window.innerHeight) * 0.72;
       window.scrollTo(0, max * k);
     }, i / Math.max(1, SCROLL_STEPS - 1));
     await sleep(20);
-    await snap(page, 3); // 135 frames
+    await snap(page, 4); // 320 frames
   }
+  await setBanner(page, '5/5 · JUDGE AI COPILOT · Ask anything, answers cite exact file:line evidence');
+  await page.evaluate(() => {
+    const el = document.getElementById('assistant-form');
+    if (el) el.scrollIntoView({ block: 'center' });
+  });
+  await page.waitForTimeout(300);
+  await snap(page, 230); // hold on the assistant console
 
   // Also show deterministic QA receipt
   const visual = sh('node src/verifier/visual_qa_gate.js public/live-preview');
@@ -446,7 +465,7 @@ async function ch5_brief_and_receipt(browser) {
   await page.goto('file://' + rPath, { waitUntil: 'load' });
   await page.waitForTimeout(200);
   await setBanner(page, '5/5 · VERIFIED RECEIPT · 6/6 Visual QA (0 Primitives) · 4/4 Physics BFS · 81/81 Tests PASS');
-  await snap(page, 120); // 4 seconds
+  await snap(page, 450); // 15 seconds
   await page.close();
 
   const count = frameNo - startF;
