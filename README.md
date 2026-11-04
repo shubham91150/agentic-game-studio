@@ -50,12 +50,12 @@ Built for the **Meta Global AI Developer Hackathon 2026** · Indie Developer tra
 
 ## Judging map (4 official criteria)
 
-| Criterion | Weight | Proof |
-| --- | --- | --- |
-| **Impact** | **30%** | Prompt builds games |
-| **Use of Meta AI Tooling** | **25%** | 10 Meta models live |
-| **Demo** | **25%** | Playable gothic horror |
-| **Technical Depth & Execution** | **20%** | 81/81 tests, QA gates |
+| Criterion                       | Weight  | Proof                  |
+| ------------------------------- | ------- | ---------------------- |
+| **Impact**                      | **30%** | Prompt builds games    |
+| **Use of Meta AI Tooling**      | **25%** | 10 Meta models live    |
+| **Demo**                        | **25%** | Playable gothic horror |
+| **Technical Depth & Execution** | **20%** | 81/81 tests, QA gates  |
 
 ## Complete Meta AI stack (10 Meta models & research pipelines)
 
@@ -78,25 +78,25 @@ Every model and tool below is verified in this repository with exact file paths 
 
 Registered in `~/.config/muse/settings.json` and served by `src/tools/studio_3d_mcp_server.py` (JSON-RPC 2.0 stdio), giving the live **Muse Code CLI** direct access to 17 specialized 3D, World, Audio, Voice, and QA tools:
 
-| #   | MCP Tool Name             | What it builds / verifies                                                                                                                                            | Underlying Script / Engine                                     |
-| --- | ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
-| 1   | `partnet_shapenet_build`  | Multi-part CAD-accurate `.glb` from **PartNet** anatomical part hierarchies & **ShapeNet** metric dimensions (60+ categories)                                        | `src/tools/partnet_shapenet_blueprint.py`                      |
-| 2   | `blender_pro_generate`    | Blender 3.4 procedural builders: `sapling_tree`, `arch_building` (Archimesh), `landscape` (A.N.T.), `jalebi_spiral_stack`, `carved_brick_arch`                       | `src/tools/blender_pro_builder.py`                             |
-| 3   | `blender_autorig_animate` | 7-bone Blender `Armature` auto-rigger (`root`, `spine`, `head`, `arm_L/R`, `leg_L/R`) + 3 baked NLA clips (`Idle`, `Walk`, `Wave`)                                   | `src/tools/blender_autorig_animate.py`                         |
-| 4   | `depth_to_gaussian_splat` | Back-projects 2D RGB + **Depth Anything V2** depth map into 32-byte binary **3D Gaussian Splatting** (`.splat` / `.ply`)                                             | `src/tools/depth_to_gaussian_splat.py`                         |
-| 5   | `generate_game_audio`     | Synthesizes 5 physical 44.1 kHz 16-bit PCM `.wav` stems (`bazaar_ambience`, `jalebi_sizzle`, `footstep_stone`, `collect_chime`, `impact_crash`)                      | `src/tools/generate_game_audio.py`                             |
-| 6   | `meta_musicgen_generate`  | Generates real 32 kHz AI music loops from text prompts via Meta's `facebook/musicgen-small` (300M params)                                                            | `src/tools/meta_musicgen_audio.py`                             |
-| 7   | `osm_real_world_city_3d`  | Extrudes real-world 3D city/bazaar districts (`.glb`) from **OpenStreetMap** footprints (`lucknow_hazratganj`, `monaco_harbor`, `tokyo_shibuya`, `nyc_times_square`) | `src/tools/osm_city_3d.py`                                     |
-| 8   | `objaverse_inspect_3d`    | Searches **Objaverse-XL / LVIS** 10M+ 3D dataset and inspects multi-part mesh hierarchies, vertex counts, and material slots                                         | `src/tools/search_objaverse.py`                                |
-| 9   | `blenderkit_search_free`  | Searches **BlenderKit** free 3D models, PBR materials, and HDRIs with exact metric dimensions and face counts                                                        | `src/tools/fetch_blenderkit.py`                                |
-| 10  | `fetch_cc0_pbr_or_model`  | Downloads 100% free CC0 photogrammetry 3D models & 1K PBR texture sets from **Poly Haven** or **ambientCG**                                                          | `src/tools/fetch_polyhaven.py`, `src/tools/fetch_ambientcg.py` |
-| 11  | `scenescript_wfc_build`   | Compiles **Meta SceneScript** architectural DSL (with real `manifold3d` CSG boolean openings) or **Wave Function Collapse** 3D grids to `.glb`                       | `src/tools/scenescript_wfc_world.py`                           |
-| 12  | `meta_vggt_reconstruct`   | Reconstructs a 3D metric surface mesh (`.glb`) from an image using **Meta VGGT-1B** on Modal GPU (`--backend modal`) or local fallback                               | `src/tools/meta_vggt_scene.py`                                 |
-| 13  | `gltf_transform_optimize` | Optimizes `.glb` models using `@gltf-transform/core` + `@gltf-transform/functions` (`dedup`, `weld`, `prune`, `center`)                                              | `src/tools/gltf_optimize.js`                                   |
-| 14  | `run_visual_qa_gate`      | Runs the hard **Visual QA Gate** verifying zero primitive box/cone fakes, active `GLTFLoader` `.glb` usage, 3D grass blades, and CSP                                 | `src/verifier/visual_qa_gate.js`                               |
-| 15  | `meta_voice_transcribe`   | Transcribes spoken voice prompts or audio clips via Meta's `muse-voice-transcribe-1.0` (`POST /v1/asr/transcribe` & `muse voice`)                                    | `src/tools/meta_voice_transcribe.js`                           |
-| 16  | `elite_imagination_engine` | Hitman/Resident-Evil/Hello-Neighbor-2 design engine: clockwork stealth sandboxes, multi-step puzzle chains, adaptive AI & 12 goosebump micro-detail layers        | `src/tools/elite_imagination_engine.js`                        |
-| 17  | `mega_3d_hub_search_and_fetch` | Unified 825K+ 3D-model hub search & fetch: Smithsonian 3D laser scans, Khronos glTF showcase, Poly Haven, BlenderKit (22K+ free)                          | `src/tools/fetch_mega_3d_hub.py`                               |
+| #   | MCP Tool Name                  | What it builds / verifies                                                                                                                                            | Underlying Script / Engine                                     |
+| --- | ------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
+| 1   | `partnet_shapenet_build`       | Multi-part CAD-accurate `.glb` from **PartNet** anatomical part hierarchies & **ShapeNet** metric dimensions (60+ categories)                                        | `src/tools/partnet_shapenet_blueprint.py`                      |
+| 2   | `blender_pro_generate`         | Blender 3.4 procedural builders: `sapling_tree`, `arch_building` (Archimesh), `landscape` (A.N.T.), `jalebi_spiral_stack`, `carved_brick_arch`                       | `src/tools/blender_pro_builder.py`                             |
+| 3   | `blender_autorig_animate`      | 7-bone Blender `Armature` auto-rigger (`root`, `spine`, `head`, `arm_L/R`, `leg_L/R`) + 3 baked NLA clips (`Idle`, `Walk`, `Wave`)                                   | `src/tools/blender_autorig_animate.py`                         |
+| 4   | `depth_to_gaussian_splat`      | Back-projects 2D RGB + **Depth Anything V2** depth map into 32-byte binary **3D Gaussian Splatting** (`.splat` / `.ply`)                                             | `src/tools/depth_to_gaussian_splat.py`                         |
+| 5   | `generate_game_audio`          | Synthesizes 5 physical 44.1 kHz 16-bit PCM `.wav` stems (`bazaar_ambience`, `jalebi_sizzle`, `footstep_stone`, `collect_chime`, `impact_crash`)                      | `src/tools/generate_game_audio.py`                             |
+| 6   | `meta_musicgen_generate`       | Generates real 32 kHz AI music loops from text prompts via Meta's `facebook/musicgen-small` (300M params)                                                            | `src/tools/meta_musicgen_audio.py`                             |
+| 7   | `osm_real_world_city_3d`       | Extrudes real-world 3D city/bazaar districts (`.glb`) from **OpenStreetMap** footprints (`lucknow_hazratganj`, `monaco_harbor`, `tokyo_shibuya`, `nyc_times_square`) | `src/tools/osm_city_3d.py`                                     |
+| 8   | `objaverse_inspect_3d`         | Searches **Objaverse-XL / LVIS** 10M+ 3D dataset and inspects multi-part mesh hierarchies, vertex counts, and material slots                                         | `src/tools/search_objaverse.py`                                |
+| 9   | `blenderkit_search_free`       | Searches **BlenderKit** free 3D models, PBR materials, and HDRIs with exact metric dimensions and face counts                                                        | `src/tools/fetch_blenderkit.py`                                |
+| 10  | `fetch_cc0_pbr_or_model`       | Downloads 100% free CC0 photogrammetry 3D models & 1K PBR texture sets from **Poly Haven** or **ambientCG**                                                          | `src/tools/fetch_polyhaven.py`, `src/tools/fetch_ambientcg.py` |
+| 11  | `scenescript_wfc_build`        | Compiles **Meta SceneScript** architectural DSL (with real `manifold3d` CSG boolean openings) or **Wave Function Collapse** 3D grids to `.glb`                       | `src/tools/scenescript_wfc_world.py`                           |
+| 12  | `meta_vggt_reconstruct`        | Reconstructs a 3D metric surface mesh (`.glb`) from an image using **Meta VGGT-1B** on Modal GPU (`--backend modal`) or local fallback                               | `src/tools/meta_vggt_scene.py`                                 |
+| 13  | `gltf_transform_optimize`      | Optimizes `.glb` models using `@gltf-transform/core` + `@gltf-transform/functions` (`dedup`, `weld`, `prune`, `center`)                                              | `src/tools/gltf_optimize.js`                                   |
+| 14  | `run_visual_qa_gate`           | Runs the hard **Visual QA Gate** verifying zero primitive box/cone fakes, active `GLTFLoader` `.glb` usage, 3D grass blades, and CSP                                 | `src/verifier/visual_qa_gate.js`                               |
+| 15  | `meta_voice_transcribe`        | Transcribes spoken voice prompts or audio clips via Meta's `muse-voice-transcribe-1.0` (`POST /v1/asr/transcribe` & `muse voice`)                                    | `src/tools/meta_voice_transcribe.js`                           |
+| 16  | `elite_imagination_engine`     | Hitman/Resident-Evil/Hello-Neighbor-2 design engine: clockwork stealth sandboxes, multi-step puzzle chains, adaptive AI & 12 goosebump micro-detail layers           | `src/tools/elite_imagination_engine.js`                        |
+| 17  | `mega_3d_hub_search_and_fetch` | Unified 825K+ 3D-model hub search & fetch: Smithsonian 3D laser scans, Khronos glTF showcase, Poly Haven, BlenderKit (22K+ free)                                     | `src/tools/fetch_mega_3d_hub.py`                               |
 
 ## 26 Validated Agent Skills & Persistent Memory
 
@@ -164,6 +164,7 @@ node src/server.js     # http://localhost:3030  · SSE at /api/studio/generate
 - **Live runtime AI Director**: `POST /api/studio/ai/director` streams `muse-spark-open-1026` tactics, Hindi/English whispers, and environment events (blackout, storm, ash vortex, chapel omen) into the running game every 14s.
 - **In-app Git integration**: header `#git-btn` + slide-over drawer (`GET /api/studio/git/status` public; owner-only sync & GitHub-Pages export).
 - **Baseten vs Meta Model API**: The Muse Code CLI binary cannot query Baseten directly (its model-catalog check gets HTTP 405 from Baseten's endpoint), so Baseten (`muse-spark-open-1026`) is called in the planner/dialogue layer while the CLI runs against the first-party Meta Model API (`muse-spark-1.3`).
+- **Quality honesty**: the flagship curated demo (_Ashes of St. Vermilion — Stage 3_) achieves high quality through curated photogrammetry assets, hand-tuned lighting/audio, and deterministic QA gates. Fully autonomous new generations currently produce variable quality because of present limitations in reliable high-fidelity 3D asset pipelines (topology/UV/material fidelity of image-to-3D reconstruction) — which is exactly why every build, human or agentic, must pass the zero-primitive Visual QA gate before it is shown.
 - If any external provider is unreachable, tools report exact status and fall back cleanly rather than faking silent success.
 
 ## Built during the event
