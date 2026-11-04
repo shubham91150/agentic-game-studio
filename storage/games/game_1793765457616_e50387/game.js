@@ -1598,10 +1598,10 @@
           try { gl.setDRACOLoader(window.THREE._agathaDraco); } catch (eD) {}
         }
         var zModels = [
+          "./assets/zombie_human_survivor.glb",
+          "./assets/zombie_human_patient.glb",
           "./assets/chained_zombie.glb",
-          "./assets/faceless_zombie.glb",
-          "./assets/undead_warrior_boss.glb",
-          "./assets/chained_zombie.glb",
+          "./assets/zombie_human_survivor.glb",
           "./assets/faceless_zombie.glb"
         ];
         var zUrl = zModels[idx % zModels.length];
