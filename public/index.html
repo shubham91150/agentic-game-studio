@@ -13,7 +13,7 @@
     />
     <title>Agentic Game Studio</title>
     <link rel="stylesheet" href="/studio/fonts/fonts.css" />
-    <link rel="stylesheet" href="/studio/app.css?v=16" />
+    <link rel="stylesheet" href="/studio/app.css?v=17" />
     <link rel="manifest" href="/studio/manifest.webmanifest" />
     <link rel="apple-touch-icon" href="/studio/icon.svg" />
     <link
@@ -673,6 +673,20 @@
                           </svg>
                         </span>
                         <span class="plus-label">Attach a file…</span>
+                        <span class="plus-chev" aria-hidden="true">
+                          <svg
+                            width="14"
+                            height="14"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                          >
+                            <path d="m9 18 6-6-6-6" />
+                          </svg>
+                        </span>
                       </button>
                       <button
                         type="button"
@@ -699,6 +713,20 @@
                           </svg>
                         </span>
                         <span class="plus-label">Generate images</span>
+                        <span class="plus-chev" aria-hidden="true">
+                          <svg
+                            width="14"
+                            height="14"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                          >
+                            <path d="m9 18 6-6-6-6" />
+                          </svg>
+                        </span>
                       </button>
                       <button
                         type="button"
@@ -837,6 +865,57 @@
                         </span>
                       </button>
                       <div id="plus-mcps" class="plus-sub hidden"></div>
+                      <button
+                        type="button"
+                        class="plus-item plus-row"
+                        id="plus-permissions-toggle"
+                        aria-expanded="false"
+                        aria-controls="plus-permissions"
+                      >
+                        <span class="plus-icon" aria-hidden="true">
+                          <svg
+                            width="14"
+                            height="14"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                          >
+                            <path
+                              d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"
+                            />
+                            <path d="m9 12 2 2 4-4" />
+                          </svg>
+                        </span>
+                        <span class="plus-label">Permissions</span>
+                        <span class="plus-chev" aria-hidden="true">
+                          <svg
+                            width="14"
+                            height="14"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                          >
+                            <path d="m9 18 6-6-6-6" />
+                          </svg>
+                        </span>
+                      </button>
+                      <div id="plus-permissions" class="plus-sub hidden">
+                        <div class="plus-hint">
+                          The build sandbox enforces these at all times:
+                        </div>
+                        <ul class="plus-perm-list">
+                          <li>Google gVisor sandbox with read-only mounts</li>
+                          <li>Prompt safety shield on every build</li>
+                          <li>Visual + Physics QA gates before play</li>
+                          <li>Owner routes behind AES-256-GCM auth</li>
+                        </ul>
+                      </div>
                     </div>
                   </div>
                   <input

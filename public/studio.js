@@ -20,9 +20,13 @@
     "plus-instructions-toggle",
   );
   var plusMcpsToggle = document.getElementById("plus-mcps-toggle");
+  var plusPermissionsToggle = document.getElementById(
+    "plus-permissions-toggle",
+  );
   var plusSkills = document.getElementById("plus-skills");
   var plusInstructions = document.getElementById("plus-instructions");
   var plusMcps = document.getElementById("plus-mcps");
+  var plusPermissions = document.getElementById("plus-permissions");
   var instructionInput = document.getElementById("instruction-input");
   var instructionAdd = document.getElementById("instruction-add");
   var instructionListEl = document.getElementById("instruction-list");
@@ -2017,6 +2021,7 @@
     setSubOpen(plusSkillsToggle, plusSkills, false);
     setSubOpen(plusInstructionsToggle, plusInstructions, false);
     setSubOpen(plusMcpsToggle, plusMcps, false);
+    setSubOpen(plusPermissionsToggle, plusPermissions, false);
     setSubOpen(toggle, panel, open);
   }
   if (attachBtn) {
@@ -2088,6 +2093,11 @@
   if (plusMcpsToggle) {
     plusMcpsToggle.addEventListener("click", function () {
       toggleSub(plusMcpsToggle, plusMcps);
+    });
+  }
+  if (plusPermissionsToggle) {
+    plusPermissionsToggle.addEventListener("click", function () {
+      toggleSub(plusPermissionsToggle, plusPermissions);
     });
   }
 
