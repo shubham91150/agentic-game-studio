@@ -139,19 +139,19 @@
   var roomLast = '';
   function resolveRoom(x, z) {
     if (!isFinite(x) || !isFinite(z)) return '';
-    if (x >= -3 && x <= 3 && z >= -9 && z <= -6) return 'Evacuation Gate';
-    if (z >= -9 && z <= -6) return 'Evacuation Gate';
-    if (x >= -9 && x <= -1 && z >= -6 && z <= 2) return 'Firetruck Alley';
-    if (x >= 1 && x <= 9 && z >= -6 && z <= 2) return 'Police Barricade';
+    if (x >= -3 && x <= 3 && z >= -9 && z <= -6) return 'Chapel Approach';
+    if (z >= -9 && z <= -6) return 'North Corridor';
+    if (x >= -9 && x <= -1 && z >= -6 && z <= 2) return 'Classroom A';
+    if (x >= 1 && x <= 9 && z >= -6 && z <= 2) return 'Classroom B';
     if (z >= 2 && z <= 5) return 'South Corridor';
     if (z >= 5 && z <= 9) {
-      if (x >= -4 && x <= 4) return 'Quarantine Avenue';
+      if (x >= -4 && x <= 4) return 'Entrance Hall';
       if (x < -4) return 'West Store';
       if (x > 4) return 'East Store';
     }
     /* W/E side passages (x +-9..12, z -6..2): north/south half. */
     if ((x < -9 || x > 9) && z > -6 && z < 2) {
-      return (z < -2) ? 'Evacuation Gate' : 'South Corridor';
+      return (z < -2) ? 'North Corridor' : 'South Corridor';
     }
     return '';
   }
@@ -222,7 +222,7 @@
         if (name === 'playing' || name === 'paused') unhide(hud);
         else hide(hud);
       }
-      /* Butcher Boss indicator lives only inside live play. */
+      /* Agatha indicator lives only inside live play. */
       var he = $('hud-enemy');
       if (he) {
         if (name === 'playing') unhide(he);
@@ -373,7 +373,7 @@
       }
     },
 
-    /* Stage 2 additive: Butcher Boss alert indicator (state + distance). */
+    /* Stage 2 additive: Agatha alert indicator (state + distance). */
     setEnemy: function (state, distM) {
       var el = $('hud-enemy');
       if (!el) return;
@@ -386,8 +386,8 @@
       var lbl = query('.lbl', el);
       if (lbl) {
         var names = {
-          patrol: 'BUTCHER BOSS · CALM', suspicious: 'BUTCHER BOSS · SUSPICIOUS',
-          chase: 'BUTCHER BOSS · CHASE', search: 'BUTCHER BOSS · SEARCHING',
+          patrol: 'AGATHA · CALM', suspicious: 'AGATHA · SUSPICIOUS',
+          chase: 'AGATHA · CHASE', search: 'AGATHA · SEARCHING',
           caught: 'PAKDA GAYA'
         };
         lbl.textContent = names[s] || names.patrol;

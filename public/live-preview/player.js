@@ -34,8 +34,8 @@
   var STRIDE_RUN = 2.3;
   var TORCH_BASE = 1.6;
   var LANTERN_URL = '/studio/assets/polyhaven/Lantern_01/Lantern_01_1k.glb';
-  var LANTERN_BASE_X = -0.27;
-  var LANTERN_BASE_Y = -0.28;
+  var LANTERN_BASE_X = 0.28;
+  var LANTERN_BASE_Y = -0.26;
   var LANTERN_BASE_Z = -0.45;
   var LANTERN_LEN = 0.22;
   var SWAY_MAX = 0.03;
@@ -111,79 +111,11 @@
       torch.target = torchTarget;
       camera.add(torch);
 
-      /* Left off-hand bio-lantern rig + Right main-hand 3D Tactical Rifle rig */
+      /* Lower-right first-person hand rig; the .glb docks here on load. */
       lanternRig = new THREE.Group();
       lanternRig.position.set(LANTERN_BASE_X, LANTERN_BASE_Y, LANTERN_BASE_Z);
       camera.add(lanternRig);
       loadLanternViewmodel();
-
-      var WEAPON_BASE_X = 0.22;
-      var WEAPON_BASE_Y = -0.20;
-      var WEAPON_BASE_Z = -0.42;
-      var weaponRig = new THREE.Group();
-      weaponRig.position.set(WEAPON_BASE_X, WEAPON_BASE_Y, WEAPON_BASE_Z);
-      camera.add(weaponRig);
-
-      var recoilZ = 0;
-      var recoilPitch = 0;
-      var reloadT = 0;
-      var adsOn = false;
-      var adsK = 0;
-      var muzzleT = 0;
-      var muzzleLight = new THREE.PointLight(0xffaa33, 0, 10, 2);
-      muzzleLight.position.set(0, 0.03, -0.68);
-      weaponRig.add(muzzleLight);
-
-      var muzzleFlare = null;
-      try {
-        var mfCv = document.createElement('canvas');
-        mfCv.width = 64; mfCv.height = 64;
-        var mfCtx = mfCv.getContext('2d');
-        var mfG = mfCtx.createRadialGradient(32, 32, 1, 32, 32, 30);
-        mfG.addColorStop(0, 'rgba(255,255,230,1)');
-        mfG.addColorStop(0.35, 'rgba(255,165,40,0.92)');
-        mfG.addColorStop(0.75, 'rgba(255,60,20,0.35)');
-        mfG.addColorStop(1, 'rgba(0,0,0,0)');
-        mfCtx.fillStyle = mfG;
-        mfCtx.fillRect(0, 0, 64, 64);
-        var mfTex = new THREE.CanvasTexture(mfCv);
-        muzzleFlare = new THREE.Sprite(new THREE.SpriteMaterial({
-          map: mfTex, color: 0xffd27a, transparent: true, opacity: 0,
-          blending: THREE.AdditiveBlending, depthWrite: false
-        }));
-        muzzleFlare.position.set(0, 0.025, -0.66);
-        muzzleFlare.scale.set(0.28, 0.28, 1);
-        weaponRig.add(muzzleFlare);
-      } catch (eMf) { muzzleFlare = null; }
-
-      var holoMats = [];
-      (function loadRifleViewmodel() {
-        try {
-          if (!window.THREE || !window.THREE.GLTFLoader) return;
-          new window.THREE.GLTFLoader().load('./assets/tactical_pulse_rifle.glb', function (gltf) {
-            var root = gltf && (gltf.scene || (gltf.scenes && gltf.scenes[0]));
-            if (!root) return;
-            var box = new THREE.Box3().setFromObject(root);
-            var sz = box.getSize(new THREE.Vector3());
-            var mDim = Math.max(sz.x, Math.max(sz.y, sz.z));
-            if (mDim > 0.01) root.scale.setScalar(0.68 / mDim);
-            box.setFromObject(root);
-            var ctr = box.getCenter(new THREE.Vector3());
-            root.position.set(-ctr.x, -ctr.y, -ctr.z);
-            root.rotation.set(0, Math.PI, 0);
-            root.traverse(function (o) {
-              if (o && o.isMesh) {
-                o.castShadow = false;
-                o.receiveShadow = false;
-                if (o.material && o.material.name && o.material.name.indexOf('Holo') >= 0) {
-                  holoMats.push(o.material);
-                }
-              }
-            });
-            weaponRig.add(root);
-          });
-        } catch (eWf) {}
-      })();
 
       /* Glass material entries {m, offH, offI}; mesh materials are cloned
        * first so the world lanterns sharing the cached .glb keep their own. */
@@ -403,23 +335,6 @@
         onStep: null,
 
         pos: function () { return camera.position; },
-        getAngles: function () { return { yaw: yaw, pitch: pitch }; },
-        setADS: function (on) { adsOn = !!on; },
-        isADS: function () { return !!adsOn; },
-        triggerReloadFX: function () { reloadT = 0.85; },
-        triggerShootFX: function (wIdx) {
-          recoilZ = Math.min(0.11, recoilZ + (wIdx === 1 ? 0.085 : (wIdx === 2 ? 0.095 : 0.048)));
-          recoilPitch = Math.min(0.18, recoilPitch + (wIdx === 1 ? 0.13 : (wIdx === 2 ? 0.14 : 0.065)));
-          muzzleT = 0.075;
-          var colHex = wIdx === 1 ? 0xff9933 : (wIdx === 2 ? 0x38f9ff : 0xffd27a);
-          if (muzzleLight) muzzleLight.color.setHex(colHex);
-          if (muzzleFlare && muzzleFlare.material) muzzleFlare.material.color.setHex(colHex);
-          for (var hi = 0; hi < holoMats.length; hi++) {
-            try {
-              if (holoMats[hi].emissive) holoMats[hi].emissive.setHex(colHex);
-            } catch (eH) {}
-          }
-        },
 
         setTorch: function (on) {
           if (hidden) {
@@ -684,47 +599,6 @@
                 0.03 * Math.sin(flickT * 31.3 + 1.7);
               for (var gi = 0; gi < glassMats.length; gi++) {
                 glassMats[gi].m.emissiveIntensity = GLASS_EI * fl;
-              }
-            }
-          }
-          if (weaponRig) {
-            var adsTarget = (adsOn && !hidden) ? 1 : 0;
-            adsK += (adsTarget - adsK) * (1 - Math.exp(-14 * dt));
-            try {
-              var wantFov = 72 - adsK * 20;
-              if (Math.abs((camera.fov || 72) - wantFov) > 0.05) {
-                camera.fov = wantFov;
-                camera.updateProjectionMatrix();
-              }
-            } catch (eFov) {}
-            recoilZ *= Math.exp(-16 * dt);
-            recoilPitch *= Math.exp(-15 * dt);
-            if (reloadT > 0) reloadT = Math.max(0, reloadT - dt);
-            var relSin = reloadT > 0 ? Math.sin((reloadT / 0.85) * Math.PI) : 0;
-            var wxBase = WEAPON_BASE_X * (1 - adsK);
-            var wyBase = WEAPON_BASE_Y + adsK * 0.088 - relSin * 0.14;
-            var wzBase = WEAPON_BASE_Z + adsK * 0.10 + recoilZ;
-            var wWalkX = (planar > 0.3 ? Math.cos(bobPhase * 0.5) * 0.004 * (1 - adsK * 0.7) : 0);
-            var wWalkY = (planar > 0.3 ? Math.sin(bobPhase) * 0.005 * (1 - adsK * 0.7) : 0);
-            weaponRig.position.set(wxBase + wWalkX, wyBase + wWalkY, wzBase);
-            weaponRig.rotation.set(
-              recoilPitch - relSin * 0.65,
-              -smYawV * 0.008 * (1 - adsK * 0.6),
-              relSin * 0.45
-            );
-            if (muzzleT > 0) {
-              muzzleT = Math.max(0, muzzleT - dt);
-              var mFrac = muzzleT / 0.075;
-              if (muzzleLight) muzzleLight.intensity = 4.2 * mFrac;
-              if (muzzleFlare && muzzleFlare.material) {
-                muzzleFlare.material.opacity = mFrac;
-                var mSc = 0.22 + (1 - mFrac) * 0.16;
-                muzzleFlare.scale.set(mSc, mSc, 1);
-              }
-            } else {
-              if (muzzleLight && muzzleLight.intensity > 0) muzzleLight.intensity = 0;
-              if (muzzleFlare && muzzleFlare.material && muzzleFlare.material.opacity > 0) {
-                muzzleFlare.material.opacity = 0;
               }
             }
           }
