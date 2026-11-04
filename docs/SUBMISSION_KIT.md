@@ -30,7 +30,7 @@
 - **Live agent terminal:** a real Muse Code CLI session runs in the browser with 17 native 3D/world/audio tools — CAD `.glb` builders, Blender generators, city extruders, voice transcription.
 - **Real assets, never boxes:** characters, cars, trees, and buildings load as real `.glb` models; a hard QA gate auto-rejects anything faked from boxes or cones.
 - **Living games:** a runtime AI Director adapts enemy tactics, whispers hints, and mutates the environment (blackouts, storms) as you play.
-- **Two flagship games ship in-repo:** Ashes of St. Vermilion (gothic stealth horror) and Horizon Sprint (3D sports-car racing).
+- **Two flagship games ship in-repo:** Ashes of St. Vermilion (gothic stealth horror) (3D sports-car racing).
 - **Judge-safe sandbox:** visitors build real games with zero login inside a locked-down Google gVisor container — no host access, rate-limited, credit-protected.
 - **Proof over promises:** every build passes deterministic physics + visual QA gates, and SAM 3D GPU trials are archived with logs and byte counts.
 

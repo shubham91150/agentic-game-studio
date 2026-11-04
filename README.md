@@ -125,7 +125,7 @@ Every stage below runs in the automated SSE build path (`POST /api/studio/genera
 | 8   | Physics QA: CCD zero-tunneling, camera clearance, jump arc, **BFS reachability**  | local math                                       | `src/verifier/physics_qa_gate.js`                   |
 | 9   | Persistent library with playable links                                            | VM disk + JSON index                             | `src/storage/game_store.js`                         |
 
-And when using the **interactive Live Muse Code CLI terminal** in the studio (`public/live-preview/`), the agent orchestrates parallel subagents (`subagent_spawn`), invokes the **17 MCP tools** (`studio-3d-tools`) to build real multi-part `.glb` models, animated NPCs, 3D Gaussian Splats, and AI audio stems, and verifies the output with `node src/verifier/visual_qa_gate.js`. Flagship results: **Ashes of St. Vermilion** (`public/live-preview/`) and **Horizon Sprint**.
+And when using the **interactive Live Muse Code CLI terminal** in the studio (`public/live-preview/`), the agent orchestrates parallel subagents (`subagent_spawn`), invokes the **17 MCP tools** (`studio-3d-tools`) to build real multi-part `.glb` models, animated NPCs, 3D Gaussian Splats, and AI audio stems, and verifies the output with `node src/verifier/visual_qa_gate.js`. Flagship results: **Ashes of St. Vermilion** (`public/live-preview/`).
 
 ## Try it
 
@@ -136,7 +136,6 @@ And when using the **interactive Live Muse Code CLI terminal** in the studio (`p
 Prebuilt examples (generated on the VM):
 
 - [Ashes of St. Vermilion — gothic stealth horror](https://spurcode.duckdns.org/studio/games/game_1793679153102_17eff3/index.html)
-- [Horizon Sprint — 3D sports car racing](https://spurcode.duckdns.org/studio/games/game_1793459815775_afba76/index.html)
 - Full library: `GET https://spurcode.duckdns.org/api/studio/games`
 
 ## Run it yourself
