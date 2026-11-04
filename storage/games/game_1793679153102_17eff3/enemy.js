@@ -150,7 +150,7 @@
   var OZ = -9;
   var BODY_R = 0.35;
   var ARRIVE_R = 0.4;
-  var AGATHA_URL = "./assets/zombie_walker.glb";
+  var AGATHA_URL = "./assets/agatha.glb";
 
   function clampNum(v, lo, hi) {
     return v < lo ? lo : v > hi ? hi : v;
@@ -236,13 +236,6 @@
       var mixerOk = false;
       var idleAction = null;
       var walkAction = null;
-      var runAction = null;
-      var hitAction = null;
-      var deadAction = null;
-      var alphaHP = 220;
-      var alphaMaxHP = 220;
-      var hitStaggerT = 0;
-      var deadDownT = 0;
       var headBone = null;
       var scanQ = null;
       var scanAxisY = null;
@@ -975,28 +968,6 @@
           readDifficulty();
         }
 
-        if (deadDownT > 0) {
-          deadDownT -= dt;
-          if (mixerOk && mixer) {
-            try { mixer.update(dt); } catch (eD) {}
-          }
-          if (deadDownT <= 0) {
-            alphaHP = alphaMaxHP;
-            if (deadAction) deadAction.stop();
-            var rIdx = Math.floor(Math.random() * ROUTE.length);
-            ax = ROUTE[rIdx][0];
-            az = ROUTE[rIdx][1];
-            st = "PATROL";
-            suspicion = 0;
-            group.position.set(ax, 0, az);
-          }
-          return;
-        }
-        if (hitStaggerT > 0) {
-          hitStaggerT -= dt;
-          animate(dt, 0);
-          return;
-        }
         if (st === "CAUGHT") {
           /* Frozen interrupt: face the player, keep the lantern alive. */
           var cdx = px - ax;
@@ -1324,13 +1295,7 @@
           try {
             var k = Math.max(0, Math.min(1, walkBlend));
             if (idleAction) idleAction.setEffectiveWeight(1 - k);
-            if (st === "CHASE" && runAction) {
-              if (walkAction) walkAction.setEffectiveWeight(0);
-              runAction.setEffectiveWeight(k);
-            } else {
-              if (runAction) runAction.setEffectiveWeight(0);
-              if (walkAction) walkAction.setEffectiveWeight(k);
-            }
+            if (walkAction) walkAction.setEffectiveWeight(k);
             mixer.update(dt);
           } catch (errMix) {
             useMixer = false;
@@ -1564,19 +1529,12 @@
           if (!clips) return;
           var idleClip = null;
           var walkClip = null;
-          var runClip = null;
-          var hitClip = null;
-          var deadClip = null;
           var i;
           for (i = 0; i < clips.length; i++) {
             var nm = (clips[i] && clips[i].name ? clips[i].name : "")
               .toLowerCase();
             if (!idleClip && nm.indexOf("idle") >= 0) idleClip = clips[i];
             if (!walkClip && nm.indexOf("walk") >= 0) walkClip = clips[i];
-            if (!runClip && nm.indexOf("run") >= 0) runClip = clips[i];
-            if (!hitClip && nm.indexOf("hit") >= 0) hitClip = clips[i];
-            if (!deadClip && nm.indexOf("dead front") >= 0) deadClip = clips[i];
-            else if (!deadClip && nm.indexOf("dead") >= 0) deadClip = clips[i];
           }
           if (
             window.THREE.AnimationClip &&
@@ -1600,21 +1558,6 @@
             walkAction = mixer.clipAction(walkClip);
             walkAction.setEffectiveWeight(0);
             walkAction.play();
-          }
-          if (runClip) {
-            runAction = mixer.clipAction(runClip);
-            runAction.setEffectiveWeight(0);
-            runAction.play();
-          }
-          if (hitClip) {
-            hitAction = mixer.clipAction(hitClip);
-            hitAction.setLoop(window.THREE.LoopOnce, 1);
-            hitAction.clampWhenFinished = true;
-          }
-          if (deadClip) {
-            deadAction = mixer.clipAction(deadClip);
-            deadAction.setLoop(window.THREE.LoopOnce, 1);
-            deadAction.clampWhenFinished = true;
           }
           mixerOk = true;
         } catch (err) {
@@ -1786,32 +1729,6 @@
       /* ---------- public handle (arch Section 1, verbatim shape) ---------- */
       return {
         update: update,
-        getGroup: function () { return group; },
-        getPos: function () { return { x: ax, y: 0, z: az, dead: deadDownT > 0 }; },
-        damage: function (dmg, isHead) {
-          if (deadDownT > 0) return { killed: false, hp: 0 };
-          alphaHP = Math.max(0, alphaHP - (dmg || 35));
-          suspicion = TH_CONFIRM;
-          if (st !== "CHASE") enter("CHASE", ax, az);
-          if (alphaHP <= 0) {
-            deadDownT = 5.5;
-            catchT = 0;
-            if (deadAction) {
-              try {
-                if (idleAction) idleAction.setEffectiveWeight(0);
-                if (walkAction) walkAction.setEffectiveWeight(0);
-                if (runAction) runAction.setEffectiveWeight(0);
-                deadAction.reset().play();
-              } catch (eK) {}
-            }
-            return { killed: true, hp: 0, boss: true };
-          }
-          hitStaggerT = isHead ? 0.55 : 0.28;
-          if (hitAction) {
-            try { hitAction.reset().play(); } catch (eH) {}
-          }
-          return { killed: false, hp: alphaHP, boss: true };
-        },
 
         getState: function () {
           return {

@@ -384,106 +384,17 @@
         letter-spacing: 0.1em;
       }
 
-      /* ---------- Touch & Tactical Shooter UI (Always visible while playing!) ---------- */
+      /* ---------- Touch UI ---------- */
       #touch-ui {
         display: none;
       }
-      body.playing #touch-ui,
-      body.touch #touch-ui {
-        display: block !important;
-      }
-      #btn-fire {
-        width: 82px !important;
-        height: 82px !important;
-        background: radial-gradient(circle, rgba(220, 38, 38, 0.92), rgba(110, 14, 14, 0.92)) !important;
-        border: 2px solid #ff6b6b !important;
-        color: #fff !important;
-        font-weight: bold !important;
-        font-size: 14px !important;
-        box-shadow: 0 0 22px rgba(239, 68, 68, 0.55) !important;
-        cursor: pointer;
-      }
-      #btn-fire:active {
-        transform: scale(0.92);
-        background: rgba(255, 80, 60, 0.98) !important;
-      }
-      .touch-btn {
-        cursor: pointer;
-        user-select: none;
-        -webkit-user-select: none;
-      }
-      #shooter-hud-bottom {
-        position: fixed;
-        left: 50%;
-        bottom: 16px;
-        transform: translateX(-50%);
-        z-index: 7;
-        display: none;
-        justify-content: center;
-        align-items: stretch;
-        pointer-events: none;
-        gap: 14px;
-      }
-      body.playing #shooter-hud-bottom {
-        display: flex;
-      }
-      .sh-card {
-        background: rgba(6, 10, 15, 0.84);
-        border: 1px solid rgba(255, 177, 78, 0.45);
-        border-radius: 8px;
-        padding: 8px 14px;
-        backdrop-filter: blur(4px);
-      }
-      #hp-bar-outer {
-        width: 145px;
-        height: 10px;
-        background: rgba(255, 255, 255, 0.12);
-        border-radius: 5px;
-        overflow: hidden;
-        margin-top: 4px;
-        border: 1px solid rgba(248, 113, 113, 0.45);
-      }
-      #hp-bar-fill {
-        width: 100%;
-        height: 100%;
-        background: linear-gradient(90deg, #dc2626, #ef4444, #34d399);
-        transition: width 0.15s ease;
-      }
-      #hitmarker {
-        position: fixed;
-        left: 50%;
-        top: 50%;
-        transform: translate(-50%, -50%) scale(0.8);
-        z-index: 9;
-        font-size: 26px;
-        font-weight: bold;
-        color: #ff3b3b;
-        text-shadow: 0 0 12px rgba(255, 40, 40, 0.95);
-        pointer-events: none;
-        opacity: 0;
-        transition: opacity 0.08s ease, transform 0.08s ease;
-      }
-      #combat-popup {
-        position: fixed;
-        left: 50%;
-        top: 36%;
-        transform: translate(-50%, -50%);
-        z-index: 9;
-        font-size: 18px;
-        font-weight: bold;
-        letter-spacing: 0.1em;
-        color: #ffd166;
-        text-shadow: 0 0 16px rgba(255, 80, 30, 0.95), 0 2px 2px #000;
-        pointer-events: none;
-        opacity: 0;
-        transition: opacity 0.15s ease;
-      }
-      @media (max-width: 720px) {
-        #shooter-hud-bottom {
-          left: 14px;
-          right: 14px;
-          bottom: 168px;
+      @media (pointer: coarse) {
+        #touch-ui {
+          display: block;
         }
+      }
+      body.touch #touch-ui {
+        display: block;
       }
       #joy {
         position: fixed;
@@ -567,16 +478,14 @@
     <div id="hud">
       <div id="hud-obj">Find the Chapel Key</div>
       <div id="hud-enemy" data-state="patrol">
-        <span class="dot"></span><span class="lbl">ALPHA MUTANT · ROAMING</span
+        <span class="dot"></span><span class="lbl">AGATHA · CALM</span
         ><span class="dist">--m</span>
       </div>
       <div id="noise-wrap">
         <span id="noise-label">NOISE</span>
         <div id="noise-meter"><div id="noise-fill"></div></div>
       </div>
-      <div id="hud-kills" style="padding:4px 10px;border:1px solid rgba(248,113,113,0.55);border-radius:4px;background:rgba(40,10,10,0.75);color:#fca5a5;font-size:13px;letter-spacing:0.08em;">KILLS: 0 / 8</div>
       <div id="hud-key">KEY: —</div>
-      <button id="btn-pause-hud" type="button" style="pointer-events:auto;cursor:pointer;padding:4px 10px;border:1px solid rgba(255,177,78,0.55);border-radius:4px;background:rgba(20,28,36,0.85);color:#e8dcc4;font-family:inherit;font-size:12px;">❚❚ PAUSE</button>
     </div>
     <div id="crosshair" class="hidden"></div>
     <div id="banner" class="hidden"></div>
@@ -586,15 +495,17 @@
     <div id="jumpscare"></div>
 
     <div id="menu" class="screen">
-      <h1>CRIMSON OUTBREAK</h1>
+      <h1>ASHES OF ST. VERMILION</h1>
       <p id="menu-intro">
-        Quarantine Sector 7 has fallen to the Bloodfang strain. Wield your 3D Tactical Arsenal, detonate Biohazard Barrels, land critical Headshots, and purge the horde to unlock the North Extraction Gate.
+        The convent school burned. The chapel keeps its dead. Find the Chapel
+        Key and finish what the fire started.
       </p>
       <button id="btn-start" class="btn" type="button">
-        DEPLOY TO SECTOR 7
+        ENTER THE CONVENT
       </button>
       <p class="controls">
-        WASD move · Mouse aim · CLICK / SPACE / FIRE shoot · RIGHT-CLICK / ADS zoom · R reload · 1/2/3 weapon · E interact · P pause
+        WASD move · Mouse look · SHIFT run (loud) · C crouch (quiet) · T torch ·
+        E interact · ESC pause
       </p>
     </div>
 
@@ -628,7 +539,7 @@
         />
       </div>
       <div class="opt-row">
-        <label for="opt-difficulty">Horde</label>
+        <label for="opt-difficulty">Agatha</label>
         <select id="opt-difficulty">
           <option value="Easy">Easy</option>
           <option value="Normal" selected>Normal</option>
@@ -642,7 +553,7 @@
 
     <div id="clear" class="screen hidden">
       <h2>STAGE CLEAR</h2>
-      <p>Quarantine Sector 7 purged! The North Extraction Gate opens to safety.</p>
+      <p>The chapel door swings open. Agatha's whispers fade behind you.</p>
       <div id="clear-time">TIME 00:00</div>
       <div class="btn-row">
         <button id="btn-restart-clear" class="btn" type="button">
@@ -653,7 +564,7 @@
     </div>
 
     <div id="gameover" class="screen hidden" role="dialog" aria-modal="true">
-      <h1>OVERRUN BY THE HORDE</h1>
+      <h1>PAKDA GAYA</h1>
       <div class="go-face">
         <img
           id="go-face-img"
@@ -662,47 +573,25 @@
         />
       </div>
       <div id="go-sub" class="go-sub">Survived 00:00 · Normal</div>
-      <p id="go-line" class="go-line">The Bloodfang horde overwhelmed your position.</p>
+      <p id="go-line" class="go-line">Agatha ne tumhe pakad liya.</p>
       <div class="btn-row">
         <button id="btn-go-retry" class="btn" type="button">TRY AGAIN</button>
         <button id="btn-go-menu" class="btn" type="button">MENU</button>
       </div>
     </div>
 
-    <div id="hitmarker">✕</div>
-    <div id="combat-popup"></div>
-
-    <div id="shooter-hud-bottom">
-      <div class="sh-card">
-        <div style="font-size:11px;letter-spacing:0.12em;color:#94a3b8;">ARMOR / VITAL SIGNS</div>
-        <div style="display:flex;align-items:center;gap:8px;margin-top:2px;">
-          <span id="val-hp" style="font-size:18px;font-weight:bold;color:#34d399;">100 HP</span>
-          <div id="hp-bar-outer"><div id="hp-bar-fill"></div></div>
-        </div>
-      </div>
-      <div class="sh-card" style="text-align:right;border-color:rgba(56,249,212,0.5);">
-        <div id="val-weapon" style="font-size:12px;letter-spacing:0.12em;color:#38f9d4;font-weight:bold;">M4-X PULSE CARBINE</div>
-        <div id="val-ammo" style="font-size:20px;font-weight:bold;color:#fff;letter-spacing:0.08em;">30 / 120</div>
-        <div style="font-size:10px;color:#94a3b8;letter-spacing:0.06em;">[1] CARBINE · [2] SHOTGUN · [3] RAILGUN · [R] RELOAD</div>
-      </div>
-    </div>
-
     <div id="touch-ui">
       <div id="joy"><div id="joy-knob"></div></div>
-      <div class="touch-col" style="right:16px;bottom:18px;display:grid;grid-template-columns:64px 82px;gap:10px;align-items:center;">
-        <button id="btn-ads" class="touch-btn" type="button">🎯 ADS</button>
-        <button id="btn-fire" class="touch-btn" type="button">🔥 FIRE</button>
-        <button id="btn-reload" class="touch-btn" type="button">RELOAD</button>
-        <button id="btn-weapon" class="touch-btn" type="button">WEAPON</button>
-        <button id="btn-torch" class="touch-btn on" type="button">TORCH</button>
+      <div class="touch-col">
         <button id="btn-act" class="touch-btn" type="button">USE</button>
+        <button id="btn-crouch" class="touch-btn" type="button">CROUCH</button>
+        <button id="btn-torch" class="touch-btn on" type="button">TORCH</button>
       </div>
     </div>
 
     <script src="/studio/vendor/three.min.js" defer></script>
     <script src="/studio/vendor/GLTFLoader.js" defer></script>
     <script src="/studio/vendor/DRACOLoader.js" defer></script>
-    <script src="/studio/vendor/RGBELoader.js" defer></script>
     <script src="/studio/vendor/CopyShader.js" defer></script>
     <script src="/studio/vendor/LuminosityHighPassShader.js" defer></script>
     <script src="/studio/vendor/EffectComposer.js" defer></script>

@@ -1,24 +1,5 @@
 [
   {
-    "id": "game_1793679153102_17eff3",
-    "title": "Ashes of St. Vermilion \u2014 Stage 3",
-    "prompt": "",
-    "biome": "gothic-horror",
-    "metaModel": "hand-made",
-    "enrichmentModel": null,
-    "objective": "",
-    "createdAt": "2026-11-03T04:12:33.129Z",
-    "updatedAt": "2026-11-04T06:59:34.732Z",
-    "playUrl": "/studio/games/game_1793679153102_17eff3/index.html",
-    "imageUrl": "/studio/games/game_1793679153102_17eff3/assets/concept.png",
-    "files": {
-      "html": "index.html",
-      "manifest": "manifest.json",
-      "unity": [],
-      "js": "game.js"
-    }
-  },
-  {
     "id": "game_1793765457616_e50387",
     "title": "Crimson Outbreak: Quarantine Sector 7",
     "prompt": "3D First-Person Zombie Shooter Survival: wield M4-X Pulse Carbine, M870 Shotgun & Bio-Railcannon against Bloodfang zombies and the Undead Butcher Boss",
@@ -27,9 +8,28 @@
     "enrichmentModel": null,
     "objective": "Purge Infected (0/8), detonate Biohazard Barrels & unlock the North Extraction Gate",
     "createdAt": "2026-11-04T04:10:57.720Z",
-    "updatedAt": "2026-11-04T06:31:06.808Z",
+    "updatedAt": "2026-11-04T08:56:36.202Z",
     "playUrl": "/studio/games/game_1793765457616_e50387/index.html",
     "imageUrl": "/studio/games/game_1793765457616_e50387/assets/concept.png",
+    "files": {
+      "html": "index.html",
+      "manifest": "manifest.json",
+      "unity": [],
+      "js": "game.js"
+    }
+  },
+  {
+    "id": "game_1793679153102_17eff3",
+    "title": "Ashes of St. Vermilion — Stage 3",
+    "prompt": "3D Gothic Survival Horror inside St. Vermilion Convent: evade Mother Agatha using stealth, lantern management & distractions to unlock the Chapel Gate",
+    "biome": "gothic-horror",
+    "metaModel": "hand-made",
+    "enrichmentModel": null,
+    "objective": "Find the Chapel Key in Classroom B & unlock the South Chapel Gate without being caught by Mother Agatha",
+    "createdAt": "2026-11-03T04:12:33.129Z",
+    "updatedAt": "2026-11-04T03:20:36.261Z",
+    "playUrl": "/studio/games/game_1793679153102_17eff3/index.html",
+    "imageUrl": "/studio/games/game_1793679153102_17eff3/assets/concept.png?v=stv3",
     "files": {
       "html": "index.html",
       "manifest": "manifest.json",
