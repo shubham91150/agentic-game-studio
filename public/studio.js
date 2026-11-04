@@ -1151,7 +1151,8 @@
   }
   if (sidebarNavSkills) {
     sidebarNavSkills.addEventListener("click", function () {
-      setSidebarSection(activeSidebarSection === "skills" ? null : "skills");
+      closeSidebar();
+      openSkillsModal();
     });
   }
   if (sidebarNavSysdesign) {
@@ -1211,6 +1212,94 @@
   if (tabPreview) tabPreview.addEventListener("click", layoutPipelineModal);
   document.addEventListener("keydown", function (event) {
     if (event.key === "Escape") closePipelineModal();
+  });
+  var skillsModal = document.getElementById("skills-modal");
+  var skillsOverlay = document.getElementById("skills-overlay");
+  var skillsClose = document.getElementById("skills-close");
+  var skillsGrid = document.getElementById("skills-grid");
+  var skillsActiveCount = document.getElementById("skills-active-count");
+  var GEAR_SVG =
+    '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>';
+  var BOOK_SVG =
+    '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>';
+  function toggleSkill(id) {
+    if (!id) return;
+    if (activeSkills.indexOf(id) === -1) {
+      activeSkills.push(id);
+    } else {
+      activeSkills = activeSkills.filter(function (x) {
+        return x !== id;
+      });
+    }
+    if (typeof renderSkillChips === "function") renderSkillChips();
+    if (typeof renderPlusMenu === "function") renderPlusMenu();
+    renderSkillsGrid();
+    if (typeof renderSidebarSkills === "function") renderSidebarSkills();
+  }
+  function renderSkillsGrid() {
+    if (!skillsGrid) return;
+    skillsGrid.innerHTML = "";
+    var onCount = 0;
+    SIDEBAR_SKILLS.forEach(function (sk) {
+      var isOn = activeSkills.indexOf(sk.id) !== -1;
+      if (isOn) onCount++;
+      var card = document.createElement("div");
+      card.className = "sk-card" + (isOn ? " active" : "");
+      var icon = document.createElement("span");
+      icon.className = "sk-card-icon";
+      icon.innerHTML = BOOK_SVG;
+      card.appendChild(icon);
+      var body = document.createElement("div");
+      body.className = "sk-card-body";
+      var nm = document.createElement("span");
+      nm.className = "sk-card-name";
+      nm.textContent = sk.name;
+      nm.innerHTML += GEAR_SVG;
+      var by = document.createElement("span");
+      by.className = "sk-card-by";
+      by.textContent = "by studio — " + sk.desc;
+      body.appendChild(nm);
+      body.appendChild(by);
+      card.appendChild(body);
+      var btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "sk-use-btn";
+      btn.textContent = isOn ? "Active ✓" : "Use skill";
+      btn.addEventListener("click", function (ev) {
+        ev.stopPropagation();
+        toggleSkill(sk.id);
+      });
+      card.appendChild(btn);
+      card.addEventListener("click", function () {
+        toggleSkill(sk.id);
+      });
+      skillsGrid.appendChild(card);
+    });
+    if (skillsActiveCount) {
+      skillsActiveCount.textContent =
+        onCount + " of " + SIDEBAR_SKILLS.length + " active";
+    }
+  }
+  function openSkillsModal() {
+    pausePreviewGame();
+    renderSkillsGrid();
+    if (skillsModal) {
+      skillsModal.classList.remove("hidden");
+      skillsModal.setAttribute("aria-hidden", "false");
+    }
+    if (skillsOverlay) skillsOverlay.classList.remove("hidden");
+  }
+  function closeSkillsModal() {
+    if (skillsModal) {
+      skillsModal.classList.add("hidden");
+      skillsModal.setAttribute("aria-hidden", "true");
+    }
+    if (skillsOverlay) skillsOverlay.classList.add("hidden");
+  }
+  if (skillsClose) skillsClose.addEventListener("click", closeSkillsModal);
+  if (skillsOverlay) skillsOverlay.addEventListener("click", closeSkillsModal);
+  document.addEventListener("keydown", function (event) {
+    if (event.key === "Escape") closeSkillsModal();
   });
   function triggerSidebarNewChat() {
     closeSidebar();
@@ -2609,7 +2698,9 @@
           desc: "Model Context Protocol server connection.",
           docs: "https://modelcontextprotocol.io",
           auth: srv.url ? "OAuth" : "None",
-          url: srv.url || (srv.command ? srv.command + " " + (srv.args || []).join(" ") : ""),
+          url:
+            srv.url ||
+            (srv.command ? srv.command + " " + (srv.args || []).join(" ") : ""),
         };
         var currentAuth = meta.auth || "None";
 
@@ -2643,7 +2734,8 @@
           bImg.alt = srv.name;
           brandIcon.appendChild(bImg);
         } else {
-          brandIcon.style.background = "hsl(" + hueFromId(srv.name) + ", 65%, 45%)";
+          brandIcon.style.background =
+            "hsl(" + hueFromId(srv.name) + ", 65%, 45%)";
           var bLetter = document.createElement("span");
           bLetter.style.color = "#ffffff";
           bLetter.style.fontWeight = "700";
@@ -2695,7 +2787,11 @@
         var urlInp = document.createElement("input");
         urlInp.className = "mcp-modal-input";
         urlInp.type = "text";
-        urlInp.value = srv.url || (srv.command ? srv.command + " " + (srv.args || []).join(" ") : meta.url);
+        urlInp.value =
+          srv.url ||
+          (srv.command
+            ? srv.command + " " + (srv.args || []).join(" ")
+            : meta.url);
         urlField.appendChild(urlLbl);
         urlField.appendChild(urlInp);
         dialog.appendChild(urlField);
@@ -2726,7 +2822,8 @@
             }
           });
           if (opt === "OAuth") {
-            infoBox.textContent = "You'll be redirected to authorize after saving this MCP";
+            infoBox.textContent =
+              "You'll be redirected to authorize after saving this MCP";
             if (submitBtn) submitBtn.textContent = "Authorize";
           } else if (opt === "Bearer") {
             infoBox.innerHTML =
@@ -2737,7 +2834,8 @@
               '<input class="mcp-modal-input" type="text" placeholder="Header: Value" style="width:100%" />';
             if (submitBtn) submitBtn.textContent = "Save";
           } else {
-            infoBox.textContent = "No authentication required for this MCP connection.";
+            infoBox.textContent =
+              "No authentication required for this MCP connection.";
             if (submitBtn) submitBtn.textContent = "Connect";
           }
         }
@@ -2745,7 +2843,8 @@
         authOptions.forEach(function (opt) {
           var btn = document.createElement("button");
           btn.type = "button";
-          btn.className = "mcp-modal-tab" + (opt === currentAuth ? " active" : "");
+          btn.className =
+            "mcp-modal-tab" + (opt === currentAuth ? " active" : "");
           btn.textContent = opt;
           btn.addEventListener("click", function () {
             updateAuthView(opt);
@@ -2769,7 +2868,8 @@
         submitBtn = document.createElement("button");
         submitBtn.type = "button";
         submitBtn.className = "mcp-modal-btn-submit";
-        submitBtn.textContent = currentAuth === "OAuth" ? "Authorize" : "Connect";
+        submitBtn.textContent =
+          currentAuth === "OAuth" ? "Authorize" : "Connect";
 
         function closeModal() {
           window.removeEventListener("keydown", onKey);
