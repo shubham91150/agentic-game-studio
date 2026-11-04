@@ -404,6 +404,14 @@
         /* x */
       }
     }
+    /* Subagent D: the KINDLING veil (index.html) has no other owner —
+     * drop it the moment any overlay state paints. */
+    try {
+      var l = $("loading");
+      if (l) l.classList.add("hidden");
+    } catch (err) {
+      /* x */
+    }
   }
 
   /* Stage 2+3 helper: jumpscare red-vignette overlay on/off. */
@@ -473,6 +481,52 @@
   }
 
   function resetRun() {
+    /* Subagent D: Hollow Lantern run reset — lives, checkpoint, win
+     * flag, crumble/mover dynamics, shard visuals, wraith zone. */
+    if (platformMode()) {
+      timerMs = 0;
+      keys = {};
+      alertTick = 0;
+      platLives = 3;
+      platWon = false;
+      platCheckpoint = null;
+      platZone = 0;
+      platCamInit = false;
+      platPosCache = null;
+      platHudT = 99;
+      try {
+        if (window.Levels && window.Levels.resetDynamics) {
+          window.Levels.resetDynamics();
+        }
+      } catch (eDyn) {
+        /* x */
+      }
+      try {
+        if (window.Levels && window.Levels.resetOrbs) window.Levels.resetOrbs();
+      } catch (eOrb) {
+        /* x */
+      }
+      try {
+        if (platCtl) platCtl.reset();
+      } catch (eCtl) {
+        /* x */
+      }
+      try {
+        if (platWraith) {
+          if (platWraith.rehome) platWraith.rehome(ZONE_WPS[0]);
+          else platWraith.reset();
+        }
+      } catch (eWr) {
+        /* x */
+      }
+      try {
+        if (vfx && vfx.reset) vfx.reset();
+      } catch (eVfx) {
+        /* x */
+      }
+      platHud();
+      return;
+    }
     timerMs = 0;
     keyFound = false;
     /* HN2: search spots reset to unsearched with the rest of run state. */
@@ -603,10 +657,23 @@
     state = "playing";
     if (player) player.setEnabled(true);
     show("playing");
-    requestLock();
+    /* Subagent D: side-view needs no pointer lock; greet with the zone hint. */
+    if (!platformMode()) requestLock();
     if (UI && UI.banner) {
       try {
-        UI.banner(Story.OBJECTIVES[0] || "", 5000);
+        if (platformMode()) {
+          var hint0 = "Follow the fireflies. Mind the still water.";
+          try {
+            if (window.Levels && window.Levels.zones && window.Levels.zones[0]) {
+              hint0 = window.Levels.zones[0].hint || hint0;
+            }
+          } catch (eHint) {
+            /* default stands */
+          }
+          UI.banner(hint0, 5000);
+        } else {
+          UI.banner(Story.OBJECTIVES[0] || "", 5000);
+        }
       } catch (err) {
         /* x */
       }
@@ -646,7 +713,7 @@
     }
     if (player) player.setEnabled(true);
     show("playing");
-    requestLock();
+    if (!platformMode()) requestLock();
   }
 
   function restartGame() {
@@ -673,7 +740,7 @@
     state = "playing";
     if (player) player.setEnabled(true);
     show("playing");
-    requestLock();
+    if (!platformMode()) requestLock();
   }
 
   function syncTouchBtn() {
@@ -1040,6 +1107,11 @@
   }
 
   function doInteract() {
+    /* Subagent C additive: E rings the soul bell in platform mode. */
+    if (platformMode()) {
+      if (state === "playing") platRingBell();
+      return;
+    }
     if (state !== "playing" || jumpscare || !player || !tmpV) return;
     /* HN2: hidden E always steps out (never grabs key/door remotely). */
     if (isHiddenNow()) {
@@ -1230,6 +1302,17 @@
   }
 
   function step(dt) {
+    /* Subagent C additive: platformer layer owns the fixed step when
+     * the platform build opts in; horror path below is untouched. */
+    if (platformMode()) {
+      timerMs += dt * 1000;
+      try {
+        platTick(dt);
+      } catch (err) {
+        /* x */
+      }
+      return;
+    }
     var input = buildInput();
     timerMs += dt * 1000;
     if (player) {
@@ -1289,6 +1372,39 @@
       dist: (typeof esCache !== "undefined" && esCache.dist) || 99,
       survivalSec: Math.round(timerMs / 1000)
     };
+    /* Subagent D: the wisp sends its own telemetry (zone/orbs/hearts/
+     * wraith) so the director never answers with convent-horror lines. */
+    var platMode = false;
+    try {
+      platMode = platformMode();
+    } catch (ePM) {
+      platMode = false;
+    }
+    if (platMode) {
+      var pZone = "Whispering Roots";
+      var pOrbs = 0;
+      var pWraith = 99;
+      try {
+        if (window.Levels && window.Levels.zones && window.Levels.zones[platZone]) {
+          pZone = window.Levels.zones[platZone].name || pZone;
+        }
+        if (platCtl) pOrbs = platCtl.state().orbs || 0;
+        if (platWraith) pWraith = platWraith.getState().dist;
+      } catch (eTel) {
+        /* defaults stand */
+      }
+      body = {
+        mode: "platform",
+        room: pZone,
+        zone: pZone,
+        orbs: pOrbs,
+        lives: platLives,
+        won: !!platWon,
+        enemyState: "WRAITH",
+        dist: pWraith,
+        survivalSec: Math.round(timerMs / 1000)
+      };
+    }
     aiPollBusy = true;
     fetch("/api/studio/ai/director", {
       method: "POST",
@@ -1310,16 +1426,56 @@
           world.applyAiEnvironment(order);
         }
       } catch (eEnv) { /* AI env cosmetic */ }
+      /* Subagent D: convent-horror outputs stay in St. Vermilion —
+       * the platformer only takes lore / wraith-boost / weather below. */
       try {
-        if (UI && typeof UI.aiPill === "function") {
+        if (!platMode && UI && typeof UI.aiPill === "function") {
           UI.aiPill(order.tactic || "stalk_shadow", order.envEvent || "storm_surge");
         }
       } catch (ePill) { /* x */ }
       try {
-        if (order.whisper && UI && UI.banner) {
+        if (!platMode && order.whisper && UI && UI.banner) {
           UI.banner(order.whisper, 6000);
         }
       } catch (eWh) { /* x */ }
+      /* Subagent C additive: platformer director lines — Hindi/English
+       * lore caption, wraith speed hook, and weather events
+       * (spore_bloom / eclipse_mist / updraft_surge) forwarded to the
+       * world hook when present. All fail-soft offline. */
+      try {
+        if (order.lore && UI && UI.lore) {
+          UI.lore(order.lore, 6000);
+        }
+      } catch (eLore) { /* x */ }
+      try {
+        if (order.alertBoost && platWraith && platWraith.setDirectorBoost) {
+          var ab = +order.alertBoost || 0;
+          if (ab > 0) platWraith.setDirectorBoost(1 + Math.min(1.5, ab / 60), 8);
+        }
+      } catch (eBoost) { /* x */ }
+      try {
+        var pev = order.envEvent;
+        if (
+          pev === "spore_bloom" ||
+          pev === "eclipse_mist" ||
+          pev === "updraft_surge"
+        ) {
+          if (window.StV_Weather && typeof window.StV_Weather.apply === "function") {
+            window.StV_Weather.apply(order);
+          } else if (UI && UI.aiPill) {
+            UI.aiPill(order.tactic || "drift", pev);
+          }
+          if (UI && UI.lore && !order.lore) {
+            var wlore =
+              pev === "spore_bloom"
+                ? "Spore bloom… bijas tair rahe hain. (the spores drift)"
+                : pev === "eclipse_mist"
+                  ? "Eclipse mist… andhera gehra ho raha hai. (darkness deepens)"
+                  : "Updraft surge… hawa upar uthati hai! (the wind lifts!)";
+            UI.lore(wlore, 5000);
+          }
+        }
+      } catch (eWx) { /* x */ }
       try { window.__stvLastAiOrder = order; } catch (eDbg) { /* x */ }
     }).catch(function () {
       aiPollBusy = false; // offline/rate-limited: play on silently
@@ -1536,6 +1692,798 @@
   var lastT = 0;
   var pausedRendered = false;
   var loopPaused = false;
+  /* Subagent C additive: real-time hit-stop (timeScale dip that never
+   * breaks the fixed 1/60 step) + platformer-layer runtime state.
+   * Everything defaults OFF so the horror loop is byte-identical. */
+  var hitStopT = 0;
+  var hitSlow = 1;
+  var platCtl = null;
+  var platWraith = null;
+  var platJumpQueued = false;
+  var platDashQueued = false;
+  var platGhostGold = false;
+  var platSparkT = 0;
+  var platCamX = 0;
+  var platCamY = 1;
+  var platCamInit = false;
+  var platVis = null;
+  /* Subagent D integration: Hollow Lantern run state. */
+  var platPosCache = null;
+  var platCheckpoint = null;
+  var platLives = 3;
+  var platWon = false;
+  var platZone = 0;
+  var platHudT = 99;
+  var heroRig = null;
+  var wraithRig = null;
+  var ZONE_WPS = [
+    [
+      [-6, 1.6],
+      [10, 1.6],
+      [24, 4],
+      [36, 6],
+    ],
+    [
+      [50, 4],
+      [66, 5],
+      [88, 6],
+      [100, 9],
+    ],
+    [
+      [110, 6],
+      [126, 11],
+      [138, 18],
+      [147, 25],
+    ],
+  ];
+
+  /* 35ms hit-stop: freeze sim briefly, restore on real-time expiry.
+   * Newest call owns the restore (overlapping hits never cut short). */
+  function triggerHitStop(ms, slow) {
+    var d = typeof ms === "number" && isFinite(ms) ? ms / 1000 : 0.035;
+    if (d < 0.005) d = 0.005;
+    if (d > 0.25) d = 0.25;
+    hitStopT = Math.max(hitStopT, d);
+    hitSlow = typeof slow === "number" && isFinite(slow) ? slow : 0.05;
+    if (hitSlow < 0) hitSlow = 0;
+    if (hitSlow > 1) hitSlow = 1;
+  }
+
+  try {
+    window.__stvHitStop = triggerHitStop;
+  } catch (err) {
+    /* x */
+  }
+
+  /* Platformer layer engages ONLY when the platform build opts in:
+   * window.__stvPlatformMode === true + StV_Platformer present. */
+  function platformMode() {
+    try {
+      return (
+        window.__stvPlatformMode === true && !!window.StV_Platformer
+      );
+    } catch (err) {
+      return false;
+    }
+  }
+
+  function platEnsure() {
+    if (platCtl || !platformMode()) return platCtl;
+    try {
+      platCtl = window.StV_Platformer.create();
+      if (window.StV_Wraith) {
+        /* Subagent D: zone-1 patrol; platTick rehomes per zone. */
+        platWraith = window.StV_Wraith.create({
+          waypoints: ZONE_WPS[0]
+        });
+      }
+      platCtl.onJump = function (jx, jy, kind) {
+        try {
+          if (Audio8 && Audio8.platJump) Audio8.platJump();
+          if (vfx && vfx.dustPuff) vfx.dustPuff(jx, jy - 0.3, 0, kind === "double" ? 5 : 3);
+        } catch (err) {
+          /* x */
+        }
+      };
+      platCtl.onLand = function (vy) {
+        try {
+          var hard = vy < -14;
+          if (Audio8 && Audio8.platLand) Audio8.platLand(hard);
+          if (vfx && vfx.dustPuff && camera) {
+            var p = platCtl.pos();
+            vfx.dustPuff(p.x, p.y - 0.3, 0, hard ? 7 : 4);
+          }
+          if (hard && vfx && vfx.addTrauma) vfx.addTrauma(0.18);
+        } catch (err) {
+          /* x */
+        }
+      };
+      platCtl.onDash = function (dx, dy, ddx, ddy) {
+        try {
+          if (Audio8 && Audio8.dashWhoosh) Audio8.dashWhoosh();
+          if (vfx && vfx.dashGhostBurst) {
+            platGhostGold = !platGhostGold;
+            vfx.dashGhostBurst(dx, dy, 0, ddx, ddy, platGhostGold);
+          }
+          if (vfx && vfx.addTrauma) vfx.addTrauma(0.12);
+        } catch (err) {
+          /* x */
+        }
+      };
+      platCtl.onDashGhost = function (gx, gy) {
+        try {
+          if (vfx && vfx.dashGhost) {
+            platGhostGold = !platGhostGold;
+            vfx.dashGhost(gx, gy, 0, platGhostGold);
+          }
+        } catch (err) {
+          /* x */
+        }
+      };
+      platCtl.onWallSlide = function (sx, sy, dir) {
+        platSparkT -= 1 / 60;
+        if (platSparkT > 0) return;
+        platSparkT = 0.09;
+        try {
+          if (vfx && vfx.wallSparks) vfx.wallSparks(sx, sy, 0, dir);
+        } catch (err) {
+          /* x */
+        }
+      };
+      platCtl.onWallJump = function (wx, wy) {
+        try {
+          if (Audio8 && Audio8.platJump) Audio8.platJump();
+          if (vfx && vfx.dustPuff) vfx.dustPuff(wx, wy, 0, 4);
+        } catch (err) {
+          /* x */
+        }
+      };
+      /* Ori reset: 35ms hit-stop + shockwave ring + bell + refill. */
+      platCtl.onReset = function (lx, ly) {
+        try {
+          triggerHitStop(35, 0.05);
+          if (vfx && vfx.shockwave) {
+            vfx.shockwave(lx, ly, 0, 0x9fe8ff);
+            vfx.shockwave(lx, ly, 0, 0xffcf6e);
+          }
+          if (Audio8 && Audio8.lanternBell) Audio8.lanternBell();
+          if (vfx && vfx.addTrauma) vfx.addTrauma(0.1);
+          platHud();
+        } catch (err) {
+          /* x */
+        }
+      };
+      platCtl.onOrb = function (ox, oy, idx) {
+        try {
+          if (Audio8 && Audio8.orbChime) Audio8.orbChime(idx);
+          if (vfx && vfx.dustPuff) vfx.dustPuff(ox, oy, 0, 5);
+          /* Subagent D: hide the collected shard sprite. */
+          try {
+            if (window.Levels && window.Levels.collectOrbAt) {
+              window.Levels.collectOrbAt(ox, oy);
+            }
+          } catch (eShard) {
+            /* x */
+          }
+          platHud();
+          platMood();
+        } catch (err) {
+          /* x */
+        }
+      };
+      /* Subagent D: hazards cost a heart and respawn at checkpoint. */
+      platCtl.onHazard = function () {
+        try {
+          platDie("hazard");
+        } catch (err) {
+          /* x */
+        }
+      };
+      platCtl.onStep = function () {
+        try {
+          if (Audio8 && Audio8.footstep) Audio8.footstep(false, false);
+        } catch (err) {
+          /* x */
+        }
+      };
+      platHud();
+      platMood();
+      platFallbackVisuals();
+      if (UI && UI.platformerTouch) {
+        try {
+          UI.platformerTouch();
+        } catch (err) {
+          /* x */
+        }
+      }
+      /* Subagent D: hidden QA hooks (screenshots, playtest warps).
+       * No UI, no gameplay effect unless called. */
+      try {
+        window.__stvPlatDebug = {
+          state: function () {
+            return platCtl ? platCtl.state() : null;
+          },
+          teleport: function (x, y) {
+            if (!platCtl || !platCtl.teleport) return false;
+            platCtl.teleport(x, y);
+            try {
+              if (world && world.rig) {
+                world.rig.focus.x = x;
+                world.rig.focus.y = y + 2;
+                world.rig.lockedY = y + 2;
+              }
+            } catch (eRig) {
+              /* x */
+            }
+            return true;
+          },
+          dash: function () {
+            platDashQueued = true;
+            return true;
+          },
+          jump: function () {
+            platJumpQueued = true;
+            return true;
+          },
+          zone: function () {
+            return platZone;
+          },
+          won: function () {
+            return !!platWon;
+          }
+        };
+      } catch (err) {
+        /* debug hook optional */
+      }
+    } catch (err) {
+      platCtl = null;
+    }
+    return platCtl;
+  }
+
+  /* Subagent D: Hollow Light HUD — drive the native index.html chips
+   * (shards / hearts / timer / dash cooldown) as the single HUD. The
+   * StV-shell pip calls stay as no-op-safe fallbacks (their nodes are
+   * never created here, so no duplicate readouts appear). */
+  function platHud() {
+    try {
+      if (platCtl) {
+        var st = platCtl.state();
+        var total = 16;
+        try {
+          var D = window.StV_Platformer.levelData();
+          if (D && D.orbs) total = D.orbs.length;
+        } catch (eD) {
+          /* 16 stands */
+        }
+        var sh = $("val-shards");
+        if (sh) sh.textContent = st.orbs + " / " + total;
+        var hh = $("val-hearts");
+        if (hh) hh.textContent = String(platLives);
+        var tt = $("val-timer");
+        if (tt) tt.textContent = fmtPlatClock(timerMs);
+        var di = $("dash-indicator");
+        if (di) {
+          if (st.dashReady) di.classList.remove("cooldown");
+          else di.classList.add("cooldown");
+        }
+      }
+      if (platCtl && UI) {
+        var st2 = platCtl.state();
+        if (UI.setDash) UI.setDash(st2.dashReady ? 1 : 0, 1);
+        if (UI.setOrbs) UI.setOrbs(st2.orbs);
+      }
+    } catch (err) {
+      /* x */
+    }
+  }
+
+  function fmtPlatClock(ms) {
+    var t = Math.max(0, ms / 1000);
+    var mins = Math.floor(t / 60);
+    var secs = Math.floor(t % 60);
+    var tenth = Math.floor((t % 1) * 10);
+    return (
+      (mins < 10 ? "0" : "") +
+      mins +
+      ":" +
+      (secs < 10 ? "0" : "") +
+      secs +
+      "." +
+      tenth
+    );
+  }
+
+  /* Subagent D: lose a heart, respawn at the last checkpoint (full
+   * orb restore — forgiving by design); 0 hearts => game-over card. */
+  function platDie(cause) {
+    platLives = Math.max(0, platLives - 1);
+    try {
+      if (vfx) {
+        if (cause === "hazard" && vfx.flashLightning) vfx.flashLightning();
+        if (vfx.addTrauma) vfx.addTrauma(0.5);
+      }
+    } catch (err) {
+      /* x */
+    }
+    if (platLives <= 0) {
+      state = "gameover";
+      try {
+        exitLock();
+      } catch (err) {
+        /* x */
+      }
+      try {
+        var orbs = platCtl ? platCtl.state().orbs : 0;
+        var gs = $("gameover-stats");
+        if (gs) {
+          gs.textContent =
+            "Shards " +
+            orbs +
+            " · Survived " +
+            fmtPlatClock(timerMs) +
+            (cause === "wraith"
+              ? " · The wraith caught you… (phir se!)"
+              : " · The dark stings… (dard hua!)");
+        }
+        var gt = $("gameover-title");
+        if (gt) gt.textContent = "THE LIGHT FADES";
+      } catch (err) {
+        /* x */
+      }
+      show("gameover");
+      try {
+        if (Audio8 && Audio8.suspendAll) Audio8.suspendAll();
+      } catch (err) {
+        /* x */
+      }
+      platHud();
+      return;
+    }
+    try {
+      if (UI && UI.banner) {
+        UI.banner(
+          cause === "wraith"
+            ? "The wraith caught you… (phir se!)"
+            : "The dark stings… (dard hua!)",
+          2500,
+        );
+      }
+    } catch (err) {
+      /* x */
+    }
+    try {
+      if (window.Levels && window.Levels.resetOrbs) {
+        window.Levels.resetOrbs();
+      }
+      if (platCtl) {
+        if (platCheckpoint) {
+          platCtl.reset(platCheckpoint.x, platCheckpoint.y + 1.2);
+        } else {
+          platCtl.reset();
+        }
+      }
+      if (platWraith) platWraith.reset();
+    } catch (err) {
+      /* x */
+    }
+    platHud();
+  }
+
+  /* Subagent D: live solid under a foot point (movers/crumbles included). */
+  function platSolidUnder(x, fy) {
+    try {
+      var list =
+        (world && world.solids) ||
+        (window.Levels && window.Levels.getSolids
+          ? window.Levels.getSolids()
+          : null);
+      if (!list) return null;
+      for (var i = 0; i < list.length; i++) {
+        var s = list[i];
+        if (!s || s.active === false) continue;
+        if (x >= s.x0 && x <= s.x1 && Math.abs(s.y1 - fy) < 0.6) return s;
+      }
+    } catch (err) {
+      /* x */
+    }
+    return null;
+  }
+
+  function makeGlowBillboard(color, size) {
+    var tex = null;
+    try {
+      if (window.Levels && window.Levels.makeGlowSprite) {
+        tex = window.Levels.makeGlowSprite(
+          "rgba(255,255,255,1)",
+          "rgba(255,255,255,0)",
+        );
+      }
+    } catch (err) {
+      tex = null;
+    }
+    var m = new THREE.SpriteMaterial({
+      map: tex,
+      color: color,
+      transparent: true,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+    });
+    var s = new THREE.Sprite(m);
+    s.scale.set(size, size, 1);
+    return s;
+  }
+
+  /* Subagent D: wisp + wraith actors — real .glb (A's kit), radial glow
+   * billboard until the model lands. Follows physics every step. */
+  function platActorLoad(rig, url, fitSize, glowColor, glowSize) {
+    var done = false;
+    function place(root) {
+      if (done) return;
+      done = true;
+      try {
+        if (root) {
+          if (window.Levels && window.Levels.fitGlb) {
+            window.Levels.fitGlb(root, fitSize, null);
+          }
+          rig.group.add(root);
+        } else {
+          throw new Error("glb missing");
+        }
+      } catch (err) {
+        try {
+          rig.group.add(makeGlowBillboard(glowColor, glowSize));
+        } catch (e2) {
+          /* x */
+        }
+      }
+    }
+    try {
+      if (window.Levels && window.Levels.loadGlb) {
+        window.Levels.loadGlb(
+          url,
+          function (r) {
+            place(r);
+          },
+          function () {
+            place(null);
+          },
+        );
+      } else if (window.THREE && window.THREE.GLTFLoader) {
+        new window.THREE.GLTFLoader().load(
+          url,
+          function (g) {
+            place((g && (g.scene || g)) || null);
+          },
+          undefined,
+          function () {
+            place(null);
+          },
+        );
+      } else {
+        place(null);
+      }
+    } catch (err) {
+      place(null);
+    }
+  }
+
+  function platActors() {
+    if (!platformMode() || !platCtl || !scene || !window.THREE) return;
+    try {
+      if (!heroRig) {
+        heroRig = { group: new THREE.Group() };
+        scene.add(heroRig.group);
+        var heroUrl = "./assets/spirit_hero.glb";
+        try {
+          if (window.Levels && window.Levels.ASSETS && window.Levels.ASSETS.hero) {
+            heroUrl = window.Levels.ASSETS.hero;
+          }
+        } catch (eH) {
+          /* default stands */
+        }
+        platActorLoad(heroRig, heroUrl, 1.15, 0x9fe8ff, 1.7);
+      }
+      if (!wraithRig) {
+        wraithRig = { group: new THREE.Group() };
+        scene.add(wraithRig.group);
+        platActorLoad(
+          wraithRig,
+          "./assets/shadow_wraith.glb",
+          1.35,
+          0xff5a6e,
+          1.9,
+        );
+      }
+      var p = platCtl.pos();
+      var st = platCtl.state();
+      var bob = 0;
+      try {
+        bob =
+          Math.sin(elapsed * 8) * 0.03 * Math.min(1, Math.abs(st.vx) / 7);
+      } catch (eBob) {
+        bob = 0;
+      }
+      heroRig.group.position.set(p.x, p.y - 0.1 + bob, 0.6);
+      heroRig.group.scale.x = st.face >= 0 ? 1 : -1;
+      try {
+        if (platWraith && wraithRig) {
+          var ws = platWraith.getState();
+          wraithRig.group.visible = true;
+          wraithRig.group.position.set(ws.x, ws.gy, 0.6);
+          wraithRig.group.scale.x = ws.face >= 0 ? 1 : -1;
+        } else if (wraithRig) {
+          wraithRig.group.visible = false;
+        }
+      } catch (eW) {
+        /* x */
+      }
+    } catch (err) {
+      /* actors cosmetic */
+    }
+  }
+
+  function platMood() {
+    try {
+      if (!Audio8 || !Audio8.setPlatformMood || !platCtl) return;
+      var n = platCtl.state().orbs;
+      Audio8.setPlatformMood(n >= 4 ? "ascent" : n >= 2 ? "clockwork" : "calm");
+    } catch (err) {
+      /* x */
+    }
+  }
+
+  /* E in platform mode: ring the soul bell (swing + chord + caption). */
+  function platRingBell() {
+    try {
+      if (window.Levels && window.Levels.ringBell) window.Levels.ringBell();
+      if (Audio8 && Audio8.lanternBell) Audio8.lanternBell();
+      if (UI && UI.lore) UI.lore("Ghanti baji… the lanterns listen. (E)", 2500);
+    } catch (err) {
+      /* x */
+    }
+  }
+
+  /* Defensive fallback course visuals (PlaneGeometry PBR slabs +
+   * THREE.Points orbs/lanterns; zero banned primitives). Only builds
+   * when the platform level provides no visuals of its own. */
+  function platFallbackVisuals() {
+    if (platVis) return;
+    /* Subagent D: the Levels world ships full visuals — fallback slabs
+     * only exist for the standalone fallback course. */
+    try {
+      if (world && world.rig) {
+        platVis = { group: null, skipped: true };
+        return;
+      }
+    } catch (err) {
+      /* x */
+    }
+    try {
+      var T = window.THREE;
+      var scene = window.__stvScene || (world && world.scene) || null;
+      if (!T || !scene || !window.StV_Platformer) return;
+      var D = window.StV_Platformer.levelData();
+      var group = new T.Group();
+      var rockMat = null;
+      try {
+        if (window.WorldRealism && window.WorldRealism.createProceduralPBRMaterial) {
+          rockMat = window.WorldRealism.createProceduralPBRMaterial("rock", {});
+        } else {
+          rockMat = new T.MeshStandardMaterial({ color: 0x4a4f55, roughness: 0.9 });
+        }
+      } catch (err) {
+        rockMat = new T.MeshStandardMaterial({ color: 0x4a4f55, roughness: 0.9 });
+      }
+      var k;
+      for (k = 0; k < D.solids.length; k++) {
+        var s = D.solids[k];
+        var w = s.x1 - s.x0;
+        var h = s.y1 - s.y0;
+        if (!(w > 0) || !(h > 0)) continue;
+        var top = new T.Mesh(new T.PlaneGeometry(w, 0.6), rockMat);
+        top.rotation.x = -Math.PI / 2;
+        top.position.set((s.x0 + s.x1) / 2, s.y1, 0);
+        top.receiveShadow = true;
+        group.add(top);
+        var face = new T.Mesh(new T.PlaneGeometry(w, Math.min(1.2, h + 0.6)), rockMat);
+        face.position.set((s.x0 + s.x1) / 2, s.y1 - Math.min(1.2, h + 0.6) / 2, 0.3);
+        group.add(face);
+      }
+      scene.add(group);
+      platVis = { group: group };
+    } catch (err) {
+      platVis = null;
+    }
+  }
+
+  function platTick(dt) {
+    var ctl = platEnsure();
+    if (!ctl) return;
+    var left = !!(keys.KeyA || keys.ArrowLeft);
+    var right = !!(keys.KeyD || keys.ArrowRight);
+    var up = !!(keys.KeyW || keys.ArrowUp || keys.Space);
+    var down = !!(keys.KeyS || keys.ArrowDown);
+    var jp = platJumpQueued;
+    var dp = platDashQueued;
+    platJumpQueued = false;
+    platDashQueued = false;
+    try {
+      ctl.step(dt, {
+        move: (right ? 1 : 0) - (left ? 1 : 0),
+        jumpPressed: jp,
+        jumpHeld: up,
+        dashPressed: dp,
+        dashX: (right ? 1 : 0) - (left ? 1 : 0),
+        dashY: (up ? 1 : 0) - (down ? 1 : 0)
+      });
+    } catch (err) {
+      /* x */
+    }
+    /* Subagent D: cache the live sample for the camera rig, then run
+     * world dynamics (crumble triggers, mover carry, checkpoints,
+     * zone handoff, goal bell). */
+    try {
+      var pst = ctl.state();
+      platPosCache = {
+        x: pst.x,
+        y: pst.y,
+        vx: pst.vx,
+        vy: pst.vy,
+        grounded: pst.grounded
+      };
+      var under = platSolidUnder(pst.x, pst.y - 0.4);
+      if (under && under.type === "crumble" && window.Levels && window.Levels.stepOn) {
+        try {
+          window.Levels.stepOn(under.id);
+        } catch (eStep) {
+          /* x */
+        }
+      }
+      if (under && under.type === "moving" && (under.dx || under.dy) && ctl.nudge) {
+        try {
+          ctl.nudge(under.dx, under.dy);
+        } catch (eCarry) {
+          /* x */
+        }
+      }
+    } catch (err) {
+      /* x */
+    }
+    /* Subagent D: zone handoff — the wraith rehomes to the wisp's zone. */
+    try {
+      if (window.Levels && window.Levels.zoneAt && platWraith && platCtl) {
+        var zn = window.Levels.zoneAt(platCtl.state().x);
+        if (zn !== platZone) {
+          platZone = zn;
+          if (platWraith.rehome) {
+            platWraith.rehome(ZONE_WPS[zn] || ZONE_WPS[0]);
+          }
+          var zh =
+            window.Levels.zones && window.Levels.zones[zn]
+              ? window.Levels.zones[zn]
+              : null;
+          if (zh && UI && UI.banner) {
+            UI.banner(zh.name + " — " + zh.hint, 4200);
+          }
+        }
+      }
+    } catch (err) {
+      /* x */
+    }
+    /* Subagent D: checkpoints + summit goal. */
+    try {
+      if (platCtl && window.Levels) {
+        var cst = platCtl.state();
+        if (window.Levels.CHECKPOINTS) {
+          var cps = window.Levels.CHECKPOINTS;
+          for (var ci = 0; ci < cps.length; ci++) {
+            var cp = cps[ci];
+            if (
+              (!platCheckpoint || cp.x > platCheckpoint.x) &&
+              cst.x > cp.x - 1 &&
+              Math.abs(cst.y - (cp.y + 1)) < 3
+            ) {
+              platCheckpoint = { x: cp.x, y: cp.y };
+              if (UI && UI.banner) {
+                UI.banner("Checkpoint — the light remembers.", 2200);
+              }
+            }
+          }
+        }
+        if (!platWon && window.Levels.GOAL) {
+          var G = window.Levels.GOAL;
+          if (
+            cst.x >= G.x0 &&
+            cst.x <= G.x1 &&
+            cst.y >= G.y0 &&
+            cst.y <= G.y1
+          ) {
+            platWon = true;
+            if (window.Levels.ringBell) window.Levels.ringBell();
+            if (Audio8 && Audio8.lanternBell) Audio8.lanternBell();
+            if (vfx && vfx.shockwave) {
+              vfx.shockwave(cst.x, cst.y, 0, 0x9fe8ff);
+              vfx.shockwave(cst.x, cst.y, 0, 0xffcf6e);
+            }
+            if (UI && UI.banner) {
+              UI.banner(
+                "The sanctuary bell rings — the Hollow Lantern is lit!",
+                6000,
+              );
+            }
+            if (UI && UI.lore) {
+              UI.lore("Ghanti baj gayi… ujala laut aaya. (the light returns)", 6000);
+            }
+            if (Audio8 && Audio8.setPlatformMood) {
+              Audio8.setPlatformMood("ascent");
+            }
+          }
+        }
+      }
+    } catch (err) {
+      /* x */
+    }
+    /* Shadow wraith hunt + catch check (0.7m). */
+    try {
+      if (platWraith) {
+        var p = ctl.pos();
+        platWraith.update(dt, p.x, p.y);
+        var ws = platWraith.getState();
+        if (ws.dist < 0.7) {
+          /* Subagent D: a catch costs a heart (game over at zero). */
+          platDie("wraith");
+        }
+      }
+    } catch (err) {
+      /* x */
+    }
+    /* Side-view follow camera (FPS rig retakes it when horror runs). */
+    try {
+      /* Subagent D: the Levels CameraRig owns the camera when the real
+       * world is up (z=16, look-ahead, platform-lock, trauma); this
+       * fallback only serves the standalone fallback course. */
+      if (camera && !(world && world.rig)) {
+        var cp2 = ctl.pos();
+        var st2 = ctl.state();
+        if (!platCamInit) {
+          platCamX = cp2.x;
+          platCamY = cp2.y + 1;
+          platCamInit = true;
+        }
+        var kb = 1 - Math.exp(-6 * dt);
+        platCamX += (cp2.x + st2.face * 1.2 - platCamX) * kb;
+        platCamY += (cp2.y + 1.0 - platCamY) * kb;
+        camera.position.set(platCamX, platCamY, 9.5);
+        camera.lookAt(platCamX, platCamY - 0.2, 0);
+      }
+    } catch (err) {
+      /* x */
+    }
+    /* Subagent D: wisp + wraith actors track physics every step. */
+    try {
+      platActors();
+    } catch (err) {
+      /* x */
+    }
+    /* Subagent D: HUD + timer at 4Hz (no per-frame DOM churn). */
+    try {
+      platHudT += dt;
+      if (platHudT >= 0.25) {
+        platHudT = 0;
+        platHud();
+      }
+    } catch (err) {
+      /* x */
+    }
+    if (vfx && camera) {
+      try {
+        vfx.update(dt, camera);
+      } catch (err) {
+        /* x */
+      }
+    }
+  }
 
   function frame(now) {
     if (!started || !renderer) return;
@@ -1562,14 +2510,29 @@
     /* World ambience runs in every state except paused. */
     if (state !== "paused" && world && world.update) {
       try {
-        world.update(raw, elapsed);
+        /* Subagent D: feed the camera rig the live wisp sample (one
+         * frame stale — platTick refreshes the cache right after). */
+        if (platformMode() && platPosCache) {
+          world.update(raw, elapsed, platPosCache);
+        } else {
+          world.update(raw, elapsed);
+        }
       } catch (err) {
         /* x */
       }
     }
 
     if (state === "playing") {
-      acc += raw;
+      /* Subagent C additive: hit-stop dips accumulation in real time;
+       * idle (hitStopT==0, hitSlow==1) is exactly the old `acc += raw`. */
+      if (hitStopT > 0) {
+        hitStopT -= raw;
+        if (hitStopT <= 0) {
+          hitStopT = 0;
+          hitSlow = 1;
+        }
+      }
+      acc += raw * hitSlow;
       var n = 0;
       while (acc >= FIXED && n < MAX_STEPS) {
         step(FIXED);
@@ -1781,6 +2744,16 @@
         }
         keys[c] = true;
         if (ev.repeat) return;
+        /* Subagent C additive: platformer edge queue (A/D+arrows move,
+         * W/Space jump, Shift/K dash). Horror keys map is untouched. */
+        if (platformMode()) {
+          if (c === "Space" || c === "KeyW" || c === "ArrowUp") {
+            platJumpQueued = true;
+          }
+          if (c === "ShiftLeft" || c === "ShiftRight" || c === "KeyK") {
+            platDashQueued = true;
+          }
+        }
         if (c === "Escape" || c === "KeyP") togglePause();
         else if (c === "KeyE") doInteract();
         else if (c === "KeyC") toggleCrouch();
@@ -1877,6 +2850,16 @@
   }
 
   function boot() {
+    /* Subagent D: this shell now ships the Hollow Lantern platformer.
+     * When the StV horror world is absent but Levels exists, opt the
+     * platformer layer in BEFORE anything consults platformMode(). */
+    try {
+      if (!window.StV_Levels && window.Levels && window.Levels.buildWorld) {
+        window.__stvPlatformMode = true;
+      }
+    } catch (err) {
+      /* horror path stands */
+    }
     if (!window.THREE) {
       var msg = "THREE failed to load — check vendor script tags.";
       try {
@@ -1916,6 +2899,14 @@
     try {
       scene.fog = new THREE.FogExp2(0x060a0e, 0.045);
       scene.userData.renderer = renderer;
+    } catch (err) {
+      /* x */
+    }
+    /* Subagent D: the horror shell's dense fog (0.045) would drown the
+     * side-view world (camera z=16, backdrop z=-28) in grey soup —
+     * platform mode breathes cavern air instead. */
+    try {
+      if (platformMode()) scene.fog = new THREE.FogExp2(0x0a2022, 0.0045);
     } catch (err) {
       /* x */
     }
@@ -1961,6 +2952,25 @@
         world = null;
       }
     }
+    /* Subagent D: Hollow Lantern world (B) + orb shard layer. The rig
+     * owns the camera; game.js feeds it the live player sample. */
+    if (!world && platformMode() && window.Levels && window.Levels.buildWorld) {
+      try {
+        world = window.Levels.buildWorld(scene, camera, renderer);
+        try {
+          if (window.Levels.buildOrbLayer) window.Levels.buildOrbLayer(scene);
+        } catch (eOrb) {
+          /* shards cosmetic */
+        }
+      } catch (err) {
+        try {
+          console.error("[hollow] buildWorld failed", err);
+        } catch (e) {
+          /* x */
+        }
+        world = null;
+      }
+    }
     if (!world) {
       world = {
         colliders: [],
@@ -1977,7 +2987,9 @@
     bounds = world.bounds || bounds;
     spawn = world.spawn || spawn;
 
-    if (window.StV_Player) {
+    /* Subagent D: no FPS torch rig or camera-child lantern in the
+     * side-view platformer — the spirit wisp is the player. */
+    if (window.StV_Player && !platformMode()) {
       try {
         player = window.StV_Player.create(camera, colliders, bounds);
         player.setSensitivity(settings.sensitivity);
@@ -2020,7 +3032,9 @@
 
     /* Stage 2+3: Mother Agatha. The game boots without her rather than
      * crashing when the enemy module is missing. */
-    if (window.StV_Enemy) {
+    /* Subagent D: Mother Agatha stays in St. Vermilion — the shadow
+     * wraith (StV_Wraith, created per-zone in platEnsure) hunts here. */
+    if (window.StV_Enemy && !platformMode()) {
       try {
         enemy = window.StV_Enemy.create(scene, colliders, bounds, player);
         if (enemy) {
@@ -2070,6 +3084,12 @@
           onTorch: toggleTorch,
           onCrouch: toggleCrouch,
           onAct: doInteract,
+          onJump: function () {
+            platJumpQueued = true;
+          },
+          onDash: function () {
+            platDashQueued = true;
+          },
           onVolume: function (v) {
             if (typeof v === "number" && isFinite(v)) {
               settings.volume = Math.min(1, Math.max(0, v));
@@ -2158,8 +3178,12 @@
       }
     }
 
-    renderTitle();
-    renderIntroCards();
+    /* Subagent D: Hollow Light ships its own menu title + story line
+     * in index.html — the StV fallback must not overwrite them. */
+    if (!platformMode()) {
+      renderTitle();
+      renderIntroCards();
+    }
     resetRun();
     if (player) player.setEnabled(false);
     syncTouchBtn();

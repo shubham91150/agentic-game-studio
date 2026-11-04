@@ -42,6 +42,7 @@
   var sendSfx = null;
   var sendVox = null;
   var noiseBuf = null;
+  var orbStep = 0; /* Subagent C: pentatonic orb-chime combo counter. */
   var rainG = null;
   var washG = null;
   var ambientOn = false;
@@ -662,6 +663,13 @@
   }
 
   function schedNextWhisper() {
+    /* Subagent D: Agatha's auto-whispers (voice + toast captions) belong
+     * to the convent — the Hollow Lantern platformer stays silent. */
+    try {
+      if (window.__stvPlatformMode === true) return;
+    } catch (err) {
+      /* horror path stands */
+    }
     if (whisperTimer) {
       try {
         clearTimeout(whisperTimer);
@@ -1260,6 +1268,182 @@
         wg.connect(tail);
         sw.start(t, Math.random() * 1.2);
         sw.stop(t + 0.3);
+      } catch (err) {
+        /* ignore */
+      }
+    },
+
+    /* Subagent C additive: platformer mood crossfade reusing the
+     * adaptive 3-tier BGM (Calm -> Clockwork Tension -> Ascent Climax).
+     * Calm 0.06 / clockwork 0.55 / ascent 0.95 threat mapping. */
+    setPlatformMood: function (mood) {
+      var m = String(mood || "calm").toLowerCase();
+      var v = 0.06;
+      if (m === "clockwork" || m === "tension") v = 0.55;
+      else if (m === "ascent" || m === "climax" || m === "chase") v = 0.95;
+      alert01 = clamp01(v);
+      ensureBgm();
+      applyThreat();
+      return alert01;
+    },
+
+    /* Orb pickup: pentatonic chime C5 D5 E5 G5 A5 C6. 3-part voice:
+     * noise tick transient + sine fundamental + octave shimmer. The
+     * step arg climbs the scale; omitted => internal combo counter. */
+    orbChime: function (step) {
+      if (!ctx || !noiseBuf || muted || suspended) return;
+      var scale = [523.25, 587.33, 659.25, 783.99, 880.0, 1046.5];
+      var s = typeof step === "number" && isFinite(step) ? step : orbStep;
+      if (typeof step !== "number") orbStep++;
+      var f = scale[((s % 6) + 6) % 6];
+      try {
+        var t = ctx.currentTime;
+        var tick = ctx.createBufferSource();
+        tick.buffer = noiseBuf;
+        var hp = ctx.createBiquadFilter();
+        hp.type = "highpass";
+        hp.frequency.value = 6000;
+        var tg = ctx.createGain();
+        tg.gain.setValueAtTime(0.1, t);
+        tg.gain.exponentialRampToValueAtTime(0.001, t + 0.02);
+        tick.connect(hp);
+        hp.connect(tg);
+        tg.connect(busSfx);
+        tick.start(t, Math.random() * 1.5);
+        tick.stop(t + 0.04);
+        var o = ctx.createOscillator();
+        o.type = "sine";
+        o.frequency.value = f;
+        var g = ctx.createGain();
+        g.gain.setValueAtTime(0.001, t);
+        g.gain.exponentialRampToValueAtTime(0.32, t + 0.008);
+        g.gain.exponentialRampToValueAtTime(0.001, t + 0.5);
+        o.connect(g);
+        g.connect(busSfx);
+        o.start(t);
+        o.stop(t + 0.55);
+        var sh = ctx.createOscillator();
+        sh.type = "sine";
+        sh.frequency.value = f * 2;
+        var sg2 = ctx.createGain();
+        sg2.gain.setValueAtTime(0.001, t);
+        sg2.gain.exponentialRampToValueAtTime(0.08, t + 0.01);
+        sg2.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
+        sh.connect(sg2);
+        sg2.connect(busSfx);
+        sh.start(t);
+        sh.stop(t + 0.35);
+      } catch (err) {
+        /* ignore */
+      }
+    },
+
+    /* Soul-lantern reset: warm C-major bell chord + shimmer partial,
+     * staggered 0/12/24/36ms micro-attacks, 0.9s decay. */
+    lanternBell: function () {
+      if (!ctx || !noiseBuf || muted || suspended) return;
+      try {
+        var t = ctx.currentTime;
+        var parts = [523.25, 659.25, 783.99, 2114.0];
+        var amps = [0.26, 0.2, 0.16, 0.05];
+        var ats = [0, 0.012, 0.024, 0.036];
+        for (var i = 0; i < parts.length; i++) {
+          var o = ctx.createOscillator();
+          o.type = "sine";
+          o.frequency.value = parts[i];
+          var g = ctx.createGain();
+          var at = t + ats[i];
+          g.gain.setValueAtTime(0.001, at);
+          g.gain.exponentialRampToValueAtTime(amps[i], at + 0.006);
+          g.gain.exponentialRampToValueAtTime(0.001, at + 0.9);
+          o.connect(g);
+          g.connect(busSfx);
+          o.start(at);
+          o.stop(at + 0.95);
+        }
+      } catch (err) {
+        /* ignore */
+      }
+    },
+
+    /* Air-dash whoosh: bandpass noise sweep 500 -> 2600Hz, 0.16s. */
+    dashWhoosh: function () {
+      if (!ctx || !noiseBuf || muted || suspended) return;
+      try {
+        var t = ctx.currentTime;
+        var n = ctx.createBufferSource();
+        n.buffer = noiseBuf;
+        n.playbackRate.value = 1.4;
+        var bp = ctx.createBiquadFilter();
+        bp.type = "bandpass";
+        bp.Q.value = 1.1;
+        bp.frequency.setValueAtTime(500, t);
+        bp.frequency.exponentialRampToValueAtTime(2600, t + 0.13);
+        var g = ctx.createGain();
+        g.gain.setValueAtTime(0.001, t);
+        g.gain.exponentialRampToValueAtTime(0.5, t + 0.03);
+        g.gain.exponentialRampToValueAtTime(0.001, t + 0.18);
+        n.connect(bp);
+        bp.connect(g);
+        g.connect(busSfx);
+        n.start(t, Math.random() * 1.5);
+        n.stop(t + 0.22);
+      } catch (err) {
+        /* ignore */
+      }
+    },
+
+    /* Platformer jump blip: 300 -> 620Hz sine sweep + airy puff. */
+    platJump: function () {
+      if (!ctx || !noiseBuf || muted || suspended) return;
+      try {
+        var t = ctx.currentTime;
+        var o = ctx.createOscillator();
+        o.type = "sine";
+        o.frequency.setValueAtTime(300, t);
+        o.frequency.exponentialRampToValueAtTime(620, t + 0.1);
+        var g = ctx.createGain();
+        g.gain.setValueAtTime(0.22, t);
+        g.gain.exponentialRampToValueAtTime(0.001, t + 0.14);
+        o.connect(g);
+        g.connect(busSfx);
+        o.start(t);
+        o.stop(t + 0.16);
+      } catch (err) {
+        /* ignore */
+      }
+    },
+
+    /* Platformer landing: 140 -> 55Hz thud + filtered scuff. */
+    platLand: function (hard) {
+      if (!ctx || !noiseBuf || muted || suspended) return;
+      try {
+        var t = ctx.currentTime;
+        var amp = hard ? 0.5 : 0.28;
+        var o = ctx.createOscillator();
+        o.type = "sine";
+        o.frequency.setValueAtTime(140 * jitter12(), t);
+        o.frequency.exponentialRampToValueAtTime(55, t + 0.08);
+        var g = ctx.createGain();
+        g.gain.setValueAtTime(amp, t);
+        g.gain.exponentialRampToValueAtTime(0.001, t + 0.11);
+        o.connect(g);
+        g.connect(busSfx);
+        o.start(t);
+        o.stop(t + 0.13);
+        var n = ctx.createBufferSource();
+        n.buffer = noiseBuf;
+        var lp = ctx.createBiquadFilter();
+        lp.type = "lowpass";
+        lp.frequency.value = 900;
+        var ng = ctx.createGain();
+        ng.gain.setValueAtTime(amp * 0.5, t);
+        ng.gain.exponentialRampToValueAtTime(0.001, t + 0.07);
+        n.connect(lp);
+        lp.connect(ng);
+        ng.connect(busSfx);
+        n.start(t, Math.random() * 1.5);
+        n.stop(t + 0.09);
       } catch (err) {
         /* ignore */
       }

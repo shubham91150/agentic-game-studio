@@ -1,0 +1,18 @@
+{
+  "id": "game_1793765457616_e50387",
+  "title": "Veil of the Hollow Lantern",
+  "prompt": "Ori/Hollow Knight 2D precision platformer: guide the last wisp through Whispering Roots, Clockwork Aqueducts and Belltower Chasm",
+  "biome": "bioluminescent-cavern",
+  "metaModel": "hand-made",
+  "enrichmentModel": null,
+  "objective": "Gather 16 light shards, outrun the shadow wraith, ring the sanctuary bell",
+  "createdAt": "2026-11-04T04:10:57.720Z",
+  "playUrl": "/studio/games/game_1793765457616_e50387/index.html",
+  "imageUrl": "/studio/games/game_1793765457616_e50387/assets/concept.png",
+  "files": {
+    "html": "index.html",
+    "manifest": "manifest.json",
+    "unity": [],
+    "js": "game.js"
+  }
+}

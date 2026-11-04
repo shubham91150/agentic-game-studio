@@ -6,15 +6,16 @@
       name="viewport"
       content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"
     />
-    <title>Ashes of St. Vermilion — Stage 3</title>
+    <title>Hollow Light — Whispering Roots</title>
     <link rel="icon" href="data:," />
     <style>
       :root {
-        --amber: #ffb14e;
-        --amber-dim: #8a5a24;
-        --teal: #1a2b3a;
-        --ink: rgba(3, 5, 7, 0.92);
-        --paper: #e8dcc4;
+        --glow: #7df9d4;
+        --glow-dim: #2e8f76;
+        --gold: #ffd98a;
+        --ink: rgba(2, 8, 10, 0.88);
+        --paper: #e9f5ef;
+        --panel: rgba(4, 14, 16, 0.78);
       }
       * {
         box-sizing: border-box;
@@ -25,9 +26,9 @@
         padding: 0;
         width: 100%;
         height: 100%;
-        background: #030507;
+        background: #020608;
         color: var(--paper);
-        font-family: Georgia, "Times New Roman", serif;
+        font-family: "Avenir Next", "Segoe UI", system-ui, sans-serif;
         overflow: hidden;
         touch-action: none;
         -webkit-user-select: none;
@@ -51,423 +52,250 @@
         right: 0;
         display: flex;
         align-items: center;
-        gap: 12px;
+        gap: 14px;
         padding: 10px 14px;
         pointer-events: none;
         z-index: 5;
-        background: linear-gradient(
-          to bottom,
-          rgba(0, 0, 0, 0.55),
-          rgba(0, 0, 0, 0)
-        );
+        font-variant-numeric: tabular-nums;
       }
-      #hud-obj {
-        font-size: 15px;
-        letter-spacing: 0.06em;
-        color: var(--paper);
-        flex: 1;
-      }
-      #hud-key {
-        font-size: 13px;
-        letter-spacing: 0.1em;
-        color: var(--amber);
-        border: 1px solid var(--amber-dim);
-        border-radius: 4px;
-        padding: 4px 10px;
-        white-space: nowrap;
-      }
-      #noise-wrap {
+      .hud-chip {
+        background: var(--panel);
+        border: 1px solid rgba(125, 249, 212, 0.28);
+        border-radius: 10px;
+        padding: 6px 12px;
+        font-size: 14px;
+        letter-spacing: 0.04em;
         display: flex;
         align-items: center;
-        gap: 6px;
+        gap: 8px;
+        box-shadow: 0 0 18px rgba(125, 249, 212, 0.12);
       }
-      #noise-label {
-        font-size: 11px;
-        letter-spacing: 0.14em;
-        color: #9ab;
-      }
-      #noise-meter {
-        width: 110px;
-        height: 10px;
-        border: 1px solid #557;
-        border-radius: 5px;
-        background: rgba(0, 0, 0, 0.6);
-        overflow: hidden;
-      }
-      #noise-fill {
-        height: 100%;
-        width: 0%;
-        background: linear-gradient(to right, #3d6b4f, #c9a13b, #c0392b);
-        transition: width 120ms linear;
-      }
-      #crosshair {
-        position: fixed;
-        left: 50%;
-        top: 50%;
-        width: 6px;
-        height: 6px;
-        margin: -3px 0 0 -3px;
+      .hud-chip .dot {
+        width: 9px;
+        height: 9px;
         border-radius: 50%;
-        background: rgba(232, 220, 196, 0.75);
-        z-index: 5;
+        background: var(--glow);
+        box-shadow: 0 0 8px var(--glow);
+      }
+      #dash-indicator {
+        border-color: rgba(255, 217, 138, 0.4);
+      }
+      #dash-indicator .dot {
+        background: var(--gold);
+        box-shadow: 0 0 8px var(--gold);
+      }
+      #dash-indicator.cooldown {
+        opacity: 0.45;
+      }
+      #checkpoint-banner {
+        position: fixed;
+        top: 64px;
+        left: 50%;
+        transform: translateX(-50%) translateY(-8px);
+        background: var(--panel);
+        border: 1px solid rgba(125, 249, 212, 0.35);
+        border-radius: 12px;
+        padding: 8px 20px;
+        font-size: 15px;
+        letter-spacing: 0.08em;
+        opacity: 0;
+        transition: opacity 0.35s ease, transform 0.35s ease;
+        z-index: 6;
         pointer-events: none;
+      }
+      #checkpoint-banner.show {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
       }
       #banner {
         position: fixed;
         left: 50%;
-        top: 22%;
+        bottom: 118px;
         transform: translateX(-50%);
-        max-width: 82%;
-        padding: 10px 22px;
-        z-index: 6;
         background: var(--ink);
-        border: 1px solid var(--amber-dim);
-        border-radius: 6px;
-        color: var(--amber);
-        font-size: 17px;
-        letter-spacing: 0.08em;
+        border: 1px solid rgba(125, 249, 212, 0.3);
+        border-radius: 12px;
+        padding: 10px 22px;
+        font-size: 15px;
+        letter-spacing: 0.05em;
+        z-index: 6;
+        pointer-events: none;
+        max-width: min(92vw, 560px);
         text-align: center;
-        pointer-events: none;
       }
-      #prompt {
-        position: fixed;
-        left: 50%;
-        bottom: 24%;
-        transform: translateX(-50%);
-        padding: 6px 16px;
-        z-index: 5;
-        font-size: 15px;
-        letter-spacing: 0.08em;
-        color: #fff;
-        background: rgba(0, 0, 0, 0.55);
-        border-radius: 4px;
-        border: 1px solid #667;
-        pointer-events: none;
-      }
-      #debug {
-        position: fixed;
-        left: 8px;
-        bottom: 8px;
-        z-index: 7;
-        font-family: monospace;
-        font-size: 12px;
-        color: #7fd;
-        background: rgba(0, 0, 0, 0.6);
-        padding: 4px 8px;
-        border-radius: 4px;
-        pointer-events: none;
-        white-space: pre;
-      }
-      #flash {
-        position: fixed;
-        inset: 0;
-        z-index: 4;
-        pointer-events: none;
-        background: #cfe4ff;
-        opacity: 0;
-      }
-      /* Stage 2 additive: jumpscare red vignette + Agatha HUD + gameover. */
-      #jumpscare {
-        position: fixed;
-        inset: 0;
-        z-index: 9;
-        pointer-events: none;
-        background: radial-gradient(
-          ellipse at 50% 50%,
-          rgba(120, 0, 0, 0.25) 30%,
-          rgba(160, 0, 0, 0.75) 100%
-        );
-        opacity: 0;
-        transition: opacity 180ms linear;
-      }
-      #jumpscare.on {
-        opacity: 1;
-      }
-      #hud-enemy {
-        display: flex;
-        align-items: center;
-        gap: 7px;
-        font-size: 12px;
-        letter-spacing: 0.1em;
-        white-space: nowrap;
-        border: 1px solid #557;
-        border-radius: 4px;
-        padding: 4px 10px;
-        color: #7dff9a;
-        background: rgba(0, 0, 0, 0.55);
-      }
-      #hud-enemy .dot {
-        width: 9px;
-        height: 9px;
-        border-radius: 50%;
-        background: #7dff9a;
-      }
-      #hud-enemy[data-state="suspicious"] {
-        color: #ffd23f;
-        border-color: #8a7324;
-      }
-      #hud-enemy[data-state="suspicious"] .dot {
-        background: #ffd23f;
-      }
-      #hud-enemy[data-state="search"] {
-        color: #ff9a3c;
-        border-color: #8a5a24;
-      }
-      #hud-enemy[data-state="search"] .dot {
-        background: #ff9a3c;
-      }
-      #hud-enemy[data-state="chase"] {
-        color: #ff4d4d;
-        border-color: #8a2424;
-      }
-      #hud-enemy[data-state="chase"] .dot {
-        background: #ff4d4d;
-        animation: go-pulse 0.7s infinite alternate;
-      }
-      #hud-enemy[data-state="caught"] {
-        color: #ff4d4d;
-        border-color: #8a2424;
-      }
-      #hud-enemy[data-state="caught"] .dot {
-        background: #ff4d4d;
-      }
-      @keyframes go-pulse {
-        from {
-          opacity: 1;
-          transform: scale(1);
-        }
-        to {
-          opacity: 0.45;
-          transform: scale(1.35);
-        }
-      }
-      #gameover h1 {
-        color: #ff4d4d;
-      }
-      #gameover {
-        gap: 8px;
-      }
-      .go-face {
-        display: flex;
-        justify-content: center;
-        max-height: 34vh;
-      }
-      .go-face img {
-        width: auto;
-        height: auto;
-        max-width: min(280px, 56vw);
-        max-height: 34vh;
-        object-fit: contain;
-        border-radius: 8px;
-        border: 1px solid #8a2424;
-        box-shadow: 0 0 34px rgba(255, 60, 40, 0.35);
-      }
-      .go-sub {
-        font-size: 18px;
-        color: #fff;
-        letter-spacing: 0.1em;
-      }
-      .go-line {
-        font-size: 14px;
-        color: #c66;
-        font-style: italic;
-      }
-      .btn:disabled {
-        opacity: 0.4;
-        cursor: wait;
-      }
-      .hidden {
-        display: none !important;
-      }
-
-      /* ---------- Menu overlays ---------- */
-      .screen {
-        position: fixed;
-        inset: 0;
-        z-index: 10;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        gap: 12px;
-        text-align: center;
-        padding: 24px;
-        background: radial-gradient(
-          ellipse at 50% 35%,
-          rgba(26, 43, 58, 0.96),
-          rgba(3, 5, 7, 0.98)
-        );
-      }
-      .screen h1 {
-        margin: 0;
-        font-size: clamp(30px, 6vw, 58px);
-        font-weight: normal;
-        letter-spacing: 0.12em;
-        color: var(--amber);
-        text-shadow:
-          0 0 24px rgba(255, 145, 60, 0.35),
-          0 2px 0 #000;
-      }
-      .screen h2 {
-        margin: 0 0 6px;
-        font-size: clamp(24px, 4.5vw, 40px);
-        font-weight: normal;
-        letter-spacing: 0.14em;
-        color: var(--amber);
-      }
-      .screen p {
-        margin: 4px 0;
-        font-size: 16px;
-        line-height: 1.5;
-        color: #cbbf9f;
-        max-width: 560px;
-      }
-      .screen .controls {
-        font-size: 13px;
-        color: #8fa0ad;
-        letter-spacing: 0.04em;
-      }
-      .btn {
-        font-family: inherit;
-        font-size: 17px;
-        letter-spacing: 0.12em;
-        color: var(--paper);
-        background: rgba(60, 36, 14, 0.85);
-        border: 1px solid var(--amber-dim);
-        border-radius: 6px;
-        padding: 12px 34px;
-        margin-top: 8px;
-        cursor: pointer;
-        min-height: 48px;
-      }
-      .btn:hover,
-      .btn:focus-visible {
-        background: rgba(120, 70, 22, 0.9);
-        color: #fff;
-        outline: none;
-      }
-      .btn-row {
-        display: flex;
-        gap: 10px;
-        flex-wrap: wrap;
-        justify-content: center;
-      }
-      .opt-row {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        margin-top: 6px;
-        font-size: 15px;
-        color: #cbbf9f;
-      }
-      .opt-row label {
-        min-width: 110px;
-        text-align: right;
-        letter-spacing: 0.08em;
-      }
-      .opt-row input[type="range"] {
-        width: 180px;
-        accent-color: var(--amber);
-      }
-      .opt-row select {
-        font-family: inherit;
-        font-size: 15px;
-        color: var(--paper);
-        background: #111;
-        border: 1px solid var(--amber-dim);
-        border-radius: 4px;
-        padding: 6px 10px;
-      }
-      #clear-time {
-        font-size: 20px;
-        color: #fff;
-        letter-spacing: 0.1em;
-      }
-
-      /* ---------- Touch UI ---------- */
-      #touch-ui {
+      #banner.hidden {
         display: none;
       }
-      @media (pointer: coarse) {
-        #touch-ui {
-          display: block;
-        }
-      }
-      body.touch #touch-ui {
-        display: block;
-      }
-      #joy {
+
+      /* ---------- Overlays ---------- */
+      .overlay {
         position: fixed;
-        left: 22px;
-        bottom: 22px;
-        width: 128px;
-        height: 128px;
-        border: 2px solid rgba(255, 177, 78, 0.4);
-        border-radius: 50%;
-        background: rgba(0, 0, 0, 0.35);
-        z-index: 8;
-      }
-      #joy-knob {
-        position: absolute;
-        left: 50%;
-        top: 50%;
-        width: 56px;
-        height: 56px;
-        margin: -28px 0 0 -28px;
-        border-radius: 50%;
-        background: rgba(255, 177, 78, 0.55);
-        border: 2px solid rgba(255, 177, 78, 0.8);
-      }
-      .touch-col {
-        position: fixed;
-        right: 18px;
-        bottom: 22px;
-        z-index: 8;
+        inset: 0;
         display: flex;
-        flex-direction: column;
-        gap: 12px;
+        align-items: center;
+        justify-content: center;
+        background: radial-gradient(
+          ellipse at center,
+          rgba(2, 10, 12, 0.55) 0%,
+          rgba(1, 4, 5, 0.92) 100%
+        );
+        z-index: 10;
       }
-      .touch-btn {
-        width: 68px;
-        height: 68px;
-        border-radius: 50%;
-        font-family: inherit;
-        font-size: 12px;
-        letter-spacing: 0.06em;
-        color: var(--paper);
-        background: rgba(20, 28, 36, 0.75);
-        border: 2px solid rgba(255, 177, 78, 0.5);
+      .overlay.hidden {
+        display: none;
       }
-      .touch-btn.on {
-        background: rgba(120, 70, 22, 0.85);
-        color: #fff;
+      .card {
+        background: var(--panel);
+        border: 1px solid rgba(125, 249, 212, 0.35);
+        border-radius: 16px;
+        padding: 28px 34px;
+        max-width: min(92vw, 480px);
+        text-align: center;
+        box-shadow: 0 0 60px rgba(125, 249, 212, 0.14);
+      }
+      .card h1 {
+        margin: 0 0 6px;
+        font-size: 30px;
+        font-weight: 600;
+        letter-spacing: 0.12em;
+        color: var(--glow);
+        text-shadow: 0 0 22px rgba(125, 249, 212, 0.5);
+      }
+      .card h2 {
+        margin: 0 0 10px;
+        font-size: 22px;
+        font-weight: 600;
+        letter-spacing: 0.1em;
+        color: var(--gold);
+      }
+      .card p {
+        margin: 8px 0;
+        font-size: 14px;
+        line-height: 1.55;
+        color: #c4d8d0;
+      }
+      .card .keys {
+        font-size: 12.5px;
+        color: #8fb3a7;
+        letter-spacing: 0.03em;
+      }
+      .btn {
+        display: inline-block;
+        margin-top: 14px;
+        padding: 12px 34px;
+        font-size: 16px;
+        letter-spacing: 0.1em;
+        color: #03211a;
+        background: linear-gradient(180deg, #9dffdf, #5fe3b8);
+        border: none;
+        border-radius: 12px;
+        cursor: pointer;
+        box-shadow: 0 0 26px rgba(125, 249, 212, 0.4);
+      }
+      .btn:active {
+        transform: scale(0.96);
+      }
+      .btn.ghost {
+        background: transparent;
+        color: var(--glow);
+        border: 1px solid rgba(125, 249, 212, 0.5);
+        box-shadow: none;
+        margin-left: 8px;
       }
 
-      /* ---------- Narrow screens: keep one-line HUD ---------- */
+      /* ---------- Touch controls (>=44px targets) ---------- */
+      #touch-controls {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        display: none;
+        justify-content: space-between;
+        align-items: flex-end;
+        padding: 0 14px calc(14px + env(safe-area-inset-bottom, 0px));
+        z-index: 8;
+        pointer-events: none;
+      }
+      body.touch #touch-controls {
+        display: flex;
+      }
+      #dpad {
+        display: grid;
+        grid-template-columns: 56px 56px 56px;
+        grid-template-rows: 56px 56px;
+        gap: 6px;
+        pointer-events: auto;
+      }
+      #btn-actions {
+        display: flex;
+        gap: 10px;
+        pointer-events: auto;
+      }
+      .tbtn {
+        min-width: 56px;
+        min-height: 56px;
+        border-radius: 14px;
+        border: 1px solid rgba(125, 249, 212, 0.4);
+        background: rgba(4, 16, 18, 0.6);
+        color: var(--glow);
+        font-size: 13px;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        backdrop-filter: blur(2px);
+      }
+      .tbtn:active {
+        background: rgba(125, 249, 212, 0.25);
+        transform: scale(0.94);
+      }
+      #btn-jump,
+      #btn-dash,
+      #btn-act {
+        width: 64px;
+        height: 64px;
+        border-radius: 50%;
+      }
+      #btn-dash {
+        color: var(--gold);
+        border-color: rgba(255, 217, 138, 0.5);
+      }
+      #btn-left {
+        grid-column: 1;
+        grid-row: 2;
+      }
+      #btn-right {
+        grid-column: 3;
+        grid-row: 2;
+      }
+      #btn-down {
+        grid-column: 2;
+        grid-row: 2;
+      }
+      #loading {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #020608;
+        z-index: 20;
+        font-size: 15px;
+        letter-spacing: 0.2em;
+        color: var(--glow-dim);
+      }
+      #loading.hidden {
+        display: none;
+      }
       @media (max-width: 640px) {
+        .hud-chip {
+          font-size: 12px;
+          padding: 5px 9px;
+        }
         #hud {
           gap: 8px;
-          padding: 8px 10px;
-        }
-        #hud-obj {
-          font-size: 12px;
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
-        }
-        #noise-meter {
-          width: 64px;
-        }
-        #hud-key {
-          font-size: 11px;
-          padding: 3px 7px;
-        }
-        #hud-enemy {
-          font-size: 10px;
-          padding: 3px 7px;
-        }
-        #hud-enemy .dist {
-          display: none;
+          padding: 8px;
         }
       }
     </style>
@@ -476,122 +304,59 @@
     <div id="canvas-container"></div>
 
     <div id="hud">
-      <div id="hud-obj">Find the Chapel Key</div>
-      <div id="hud-enemy" data-state="patrol">
-        <span class="dot"></span><span class="lbl">AGATHA · CALM</span
-        ><span class="dist">--m</span>
-      </div>
-      <div id="noise-wrap">
-        <span id="noise-label">NOISE</span>
-        <div id="noise-meter"><div id="noise-fill"></div></div>
-      </div>
-      <div id="hud-key">KEY: —</div>
+      <div class="hud-chip"><span class="dot"></span><span id="val-shards">0 / 0</span></div>
+      <div class="hud-chip"><span id="val-hearts">3</span><span>hearts</span></div>
+      <div class="hud-chip"><span id="val-timer">00:00.0</span></div>
+      <div class="hud-chip" id="dash-indicator"><span class="dot"></span><span>dash</span></div>
     </div>
-    <div id="crosshair" class="hidden"></div>
+    <div id="checkpoint-banner"></div>
     <div id="banner" class="hidden"></div>
-    <div id="prompt" class="hidden"></div>
-    <div id="debug" class="hidden"></div>
-    <div id="flash"></div>
-    <div id="jumpscare"></div>
 
-    <div id="menu" class="screen">
-      <h1>ASHES OF ST. VERMILION</h1>
-      <p id="menu-intro">
-        The convent school burned. The chapel keeps its dead. Find the Chapel
-        Key and finish what the fire started.
-      </p>
-      <button id="btn-start" class="btn" type="button">
-        ENTER THE CONVENT
-      </button>
-      <p class="controls">
-        WASD move · Mouse look · SHIFT run (loud) · C crouch (quiet) · T torch ·
-        E interact · ESC pause
-      </p>
-    </div>
-
-    <div id="pause" class="screen hidden">
-      <h2>PAUSED</h2>
-      <div class="btn-row">
-        <button id="btn-resume" class="btn" type="button">RESUME</button>
-        <button id="btn-restart" class="btn" type="button">RESTART</button>
-        <button id="btn-quit" class="btn" type="button">QUIT TO MENU</button>
-      </div>
-      <div class="opt-row">
-        <label for="opt-volume">Volume</label>
-        <input id="opt-volume" type="range" min="0" max="100" value="80" />
-      </div>
-      <div class="opt-row">
-        <label for="opt-quality">Quality</label>
-        <select id="opt-quality">
-          <option value="low">Low</option>
-          <option value="medium" selected>Medium</option>
-          <option value="high">High</option>
-        </select>
-      </div>
-      <div class="opt-row">
-        <label for="opt-sensitivity">Sensitivity</label>
-        <input
-          id="opt-sensitivity"
-          type="range"
-          min="20"
-          max="200"
-          value="100"
-        />
-      </div>
-      <div class="opt-row">
-        <label for="opt-difficulty">Agatha</label>
-        <select id="opt-difficulty">
-          <option value="Easy">Easy</option>
-          <option value="Normal" selected>Normal</option>
-          <option value="Hard">Hard</option>
-        </select>
-      </div>
-      <div class="btn-row">
-        <button id="btn-mute" class="btn" type="button">MUTE: OFF</button>
+    <div id="menu" class="overlay">
+      <div class="card">
+        <h1>HOLLOW LIGHT</h1>
+        <p id="story-line">Guide the last wisp through the Whispering Roots, the Clockwork Aqueducts, and the Belltower Chasm.</p>
+        <p class="keys">Move: A/D or arrows &middot; Jump: Space/W &middot; Dash: Shift/K &middot; Act: E/J &middot; Pause: P</p>
+        <button class="btn" id="btn-start" type="button">BEGIN</button>
+        <button class="btn ghost" id="btn-mute" type="button">SOUND ON</button>
       </div>
     </div>
 
-    <div id="clear" class="screen hidden">
-      <h2>STAGE CLEAR</h2>
-      <p>The chapel door swings open. Agatha's whispers fade behind you.</p>
-      <div id="clear-time">TIME 00:00</div>
-      <div class="btn-row">
-        <button id="btn-restart-clear" class="btn" type="button">
-          PLAY AGAIN
-        </button>
-        <button id="btn-menu-clear" class="btn" type="button">MENU</button>
+    <div id="pause" class="overlay hidden">
+      <div class="card">
+        <h2>PAUSED</h2>
+        <p>The forest holds its breath.</p>
+        <button class="btn" id="btn-resume" type="button">RESUME</button>
+        <button class="btn ghost" id="btn-restart" type="button">RESTART</button>
       </div>
     </div>
 
-    <div id="gameover" class="screen hidden" role="dialog" aria-modal="true">
-      <h1>PAKDA GAYA</h1>
-      <div class="go-face">
-        <img
-          id="go-face-img"
-          src="/studio/uploads/agatha_concept.webp"
-          alt="Mother Agatha"
-        />
-      </div>
-      <div id="go-sub" class="go-sub">Survived 00:00 · Normal</div>
-      <p id="go-line" class="go-line">Agatha ne tumhe pakad liya.</p>
-      <div class="btn-row">
-        <button id="btn-go-retry" class="btn" type="button">TRY AGAIN</button>
-        <button id="btn-go-menu" class="btn" type="button">MENU</button>
+    <div id="gameover" class="overlay hidden">
+      <div class="card">
+        <h2 id="gameover-title">THE LIGHT FADES</h2>
+        <p id="gameover-stats"></p>
+        <button class="btn" id="btn-again" type="button">TRY AGAIN</button>
       </div>
     </div>
 
-    <div id="touch-ui">
-      <div id="joy"><div id="joy-knob"></div></div>
-      <div class="touch-col">
-        <button id="btn-act" class="touch-btn" type="button">USE</button>
-        <button id="btn-crouch" class="touch-btn" type="button">CROUCH</button>
-        <button id="btn-torch" class="touch-btn on" type="button">TORCH</button>
+    <div id="touch-controls">
+      <div id="dpad">
+        <div class="tbtn" id="btn-left">◀</div>
+        <div class="tbtn" id="btn-down">▼</div>
+        <div class="tbtn" id="btn-right">▶</div>
+      </div>
+      <div id="btn-actions">
+        <div class="tbtn" id="btn-act">ACT</div>
+        <div class="tbtn" id="btn-dash">DASH</div>
+        <div class="tbtn" id="btn-jump">JUMP</div>
       </div>
     </div>
+
+    <div id="loading">KINDLING&nbsp;THE&nbsp;LIGHT…</div>
 
     <script src="/studio/vendor/three.min.js" defer></script>
     <script src="/studio/vendor/GLTFLoader.js" defer></script>
-    <script src="/studio/vendor/DRACOLoader.js" defer></script>
+    <script src="/studio/vendor/RGBELoader.js" defer></script>
     <script src="/studio/vendor/CopyShader.js" defer></script>
     <script src="/studio/vendor/LuminosityHighPassShader.js" defer></script>
     <script src="/studio/vendor/EffectComposer.js" defer></script>
@@ -599,13 +364,11 @@
     <script src="/studio/vendor/ShaderPass.js" defer></script>
     <script src="/studio/vendor/UnrealBloomPass.js" defer></script>
     <script src="/studio/vendor/world_realism.js" defer></script>
-    <script src="./story.js" defer></script>
-    <script src="./save.js" defer></script>
     <script src="./levels.js" defer></script>
     <script src="./player.js" defer></script>
     <script src="./enemy.js" defer></script>
-    <script src="./audio.js" defer></script>
     <script src="./vfx.js" defer></script>
+    <script src="./audio.js" defer></script>
     <script src="./ui.js" defer></script>
     <script src="./game.js" defer></script>
   </body>
