@@ -147,3 +147,36 @@ The commit message for UI work must name the skill(s) applied.
      1. *What did I actually do in this stage?*
      2. *Is it 100% faithful to our goal with zero shortcuts, or did I fake/reuse anything?*
    - Never advance to the next stage until the current stage passes 100% honest visual confirmation.
+
+
+## ⏳ MANDATORY 6-STAGE TODO-DRIVEN GAME ENGINEERING PROTOCOL (5-HOUR BUDGET — NEVER BUILD IN ONE SHOT)
+
+**CRITICAL RULE: A game must NEVER be built in a single rushed pass. The agent has a full ~5-hour (`18,000,000 ms`) engineering budget and MUST build every game across 6 sequential, verified stages tracked in `BUILD_TODO.md`:**
+
+- **STAGE 1 — Deep Research, Reference Concept & `BUILD_TODO.md` Creation**:
+  1. Research real AAA genre references (web search + generate a visual target reference image with `Muse Image 1.0` `make-image.js`).
+  2. Write a comprehensive `BUILD_TODO.md` breaking the entire project into Stages 1–6 with granular `[ ]` checkboxes for every asset, shader, mechanic, sound bus, and control.
+  3. **Gate 1 Confirmation**: Confirm the reference image and `BUILD_TODO.md` match the user's vision before touching any 3D assets or code.
+
+- **STAGE 2 — Dedicated 3D Asset Curation, Preparation & Isolated Visual Audit (`0%` Game Logic Yet)**:
+  1. Discover, fetch, and prepare all required 3D `.glb` assets (Photogrammetry scans from Polyhaven, pre-rigged/animated characters, weapons, and props).
+  2. Render EVERY character, enemy, weapon, and hero prop in an isolated inspection scene first.
+  3. **Gate 2 Confirmation**: Visually inspect the rendered asset screenshots. Reject any broken UVs, missing textures, A-pose mannequins, or primitive fakes immediately. Do NOT start Stage 3 until 100% of 3D assets pass visual audit and are checked off in `BUILD_TODO.md`.
+
+- **STAGE 3 — 3D World Architecture, PBR Surfaces, Sky & Post-Processing (`levels.js`)**:
+  1. Build the 3D world layout, 1K normal-mapped PBR surfaces, HDRI/sky, volumetric fog, `UnrealBloomPass`, 3D `InstancedMesh` foliage, and collision bounds.
+  2. **Gate 3 Confirmation**: Render the world from multiple camera angles and verify lighting, atmosphere, and 60-FPS frame time before adding gameplay entities.
+
+- **STAGE 4 — Core Player Controller, Physics, Camera & Viewmodel Feel (`player.js`)**:
+  1. Implement and tune movement physics, collision resolution, camera inertia/bob, and first/third-person viewmodels.
+  2. **Gate 4 Confirmation**: Test movement, collision, and viewmodel orientation in headless Chromium and check off Stage 4 in `BUILD_TODO.md`.
+
+- **STAGE 5 — Enemy AI, Systemic Gameplay Loop, 4-Bus Spatial Audio & Full Desktop/Mobile UI (`enemy.js`, `game.js`, `audio.js`, `ui.js`)**:
+  1. Implement enemy AI (HFSM + pathfinding + skeletal `AnimationMixer` transitions), combat/stealth interactions, 4-bus Cathedral Reverb WebAudio, Live Meta AI Director hook, and always-visible desktop + mobile controls.
+  2. **Gate 5 Confirmation**: Verify all animations, sound triggers, and HUD readouts.
+
+- **STAGE 6 — End-to-End Playtest, Hardened Visual QA Gate (`maxAllowedPrimitives = 0`) & Final Sign-Off**:
+  1. Run `node src/verifier/visual_qa_gate.js` (`maxAllowedPrimitives = 0` — strict zero tolerance on primitive boxes/cones/cylinders/spheres).
+  2. Run automated Playwright playtests verifying every keyboard, mouse, and on-screen touch button, 60-FPS real-time clock speed, and win/loss states.
+  3. Confirm every `[x]` item in `BUILD_TODO.md` is completed with zero shortcuts.
+

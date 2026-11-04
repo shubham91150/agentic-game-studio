@@ -370,7 +370,7 @@ export class AgentRunner {
   runMuseCLI(
     runDir,
     taskPrompt,
-    { timeoutMs = 180000, model, useGvisor = false } = {},
+    { timeoutMs = Number(process.env.MUSE_AGENT_TIMEOUT_MS || 5 * 60 * 60 * 1000), model, useGvisor = false } = {},
   ) {
     return new Promise((resolve) => {
       const gvisor = shouldUseGvisor(useGvisor);
@@ -398,7 +398,7 @@ export class AgentRunner {
             "--reasoning-effort",
             "medium",
             "--max-model-steps",
-            "4",
+            "64",
             "--api-key-stdin",
             "--disable-sandbox",
             "--disable-approval",
@@ -799,7 +799,7 @@ export class AgentRunner {
           : "");
       cli = await this.runMuseCLI(runDir, cliTask, {
         model: cliModel,
-        timeoutMs: 240000,
+        timeoutMs: Number(process.env.MUSE_AGENT_TIMEOUT_MS || 5 * 60 * 60 * 1000),
         useGvisor: Boolean(opts.useGvisor),
       });
 
