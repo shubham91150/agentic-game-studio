@@ -1,0 +1,47 @@
+1
+00:00:00,000 --> 00:00:37,000
+This is Agentic Game Studio. Type a sentence,
+and a playable 3D game builds itself, live, in your browser.
+
+2
+00:00:12,000 --> 00:00:37,000
+On the left, a real Muse Code agent works inside the VM terminal.
+It researches the genre, writes a stage-by-stage build plan,
+then executes it: architecture, assets, world, gameplay, audio, verification.
+
+3
+00:00:28,000 --> 00:00:37,000
+The sidebar holds your projects, resumable terminal sessions,
+eight toggleable agent skills, and the full system-design pipeline.
+
+4
+00:00:38,000 --> 00:01:05,000
+Everything runs on Meta's AI stack. Muse Wonder designs the game.
+Muse Spark enriches the assets. Muse Image paints the concept art.
+Sam segments it, Sam 3D reconstructs it, and the Muse Code CLI assembles it all.
+
+5
+00:00:55,000 --> 00:01:05,000
+Judge builds execute inside a locked-down Google gVisor sandbox.
+Every build must pass a zero-tolerance visual QA gate.
+
+6
+00:01:11,000 --> 00:01:25,000
+Meet Mother Agatha — the stalker haunting our flagship game.
+Segmented by Sam 3.1, bound to a twenty-bone Blender armature,
+driven by baked idle and walk animations.
+
+7
+00:01:31,000 --> 00:01:54,000
+Our flagship: a gothic stealth-horror game built from nineteen
+real photogrammetry scans. A live Meta AI director whispers
+tactics every fourteen seconds.
+
+8
+00:01:47,000 --> 00:01:54,000
+Find the chapel key. Hide in the wardrobe. Unlock the chapel door.
+
+9
+00:02:20,000 --> 00:02:38,000
+Nothing here is a claim without evidence. Type a sentence.
+Play a 3D game. That is Agentic Game Studio.
