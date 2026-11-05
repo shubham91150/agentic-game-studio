@@ -13,7 +13,7 @@
     />
     <title>Agentic Game Studio</title>
     <link rel="stylesheet" href="/studio/fonts/fonts.css" />
-    <link rel="stylesheet" href="/studio/app.css?v=24" />
+    <link rel="stylesheet" href="/studio/app.css?v=25" />
     <link rel="manifest" href="/studio/manifest.webmanifest" />
     <link rel="apple-touch-icon" href="/studio/icon.svg" />
     <link
@@ -1184,15 +1184,44 @@
 
                 <div class="bar-right">
                   <label class="sr-only" for="scope-select">Build scope</label>
-                  <select
-                    id="scope-select"
-                    class="picker picker-ghost"
-                    title="Build scope"
-                  >
-                    <option value="game" selected>Game</option>
-                    <option value="model">3D Model</option>
-                    <option value="image">Image</option>
-                  </select>
+                  <div class="scope-wrap">
+                    <select
+                      id="scope-select"
+                      class="sr-only"
+                      title="Build scope"
+                      tabindex="-1"
+                      aria-hidden="true"
+                    >
+                      <option value="game" selected>Game</option>
+                      <option value="model">3D Model</option>
+                      <option value="image">Image</option>
+                    </select>
+                    <button
+                      type="button"
+                      class="scope-btn"
+                      id="scope-btn"
+                      aria-haspopup="listbox"
+                      aria-expanded="false"
+                      title="Build scope"
+                    >
+                      <span class="scope-label" id="scope-label">Game</span>
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                        <path d="m6 9 6 6 6-6" />
+                      </svg>
+                    </button>
+                    <div class="scope-menu hidden" id="scope-menu" role="listbox" aria-label="Build scope">
+                      <div class="model-item is-selected" role="option" data-value="game" aria-selected="true">
+                        <span>Game</span>
+                        <span class="tick">✓</span>
+                      </div>
+                      <div class="model-item" role="option" data-value="model" aria-selected="false">
+                        <span>3D Model</span>
+                      </div>
+                      <div class="model-item" role="option" data-value="image" aria-selected="false">
+                        <span>Image</span>
+                      </div>
+                    </div>
+                  </div>
                   <button
                     type="button"
                     id="mic-btn"
@@ -1416,6 +1445,6 @@
           </div>
         </section>
       </div>
-    <script src="/studio/studio.js?v=24"></script>
+    <script src="/studio/studio.js?v=25"></script>
   </body>
 </html>

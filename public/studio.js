@@ -2273,6 +2273,86 @@
     });
   }
 
+  // Scope picker (Game, 3D Model, Image) matching model dropdown
+  var scopeBtn = document.getElementById("scope-btn");
+  var scopeLabel = document.getElementById("scope-label");
+  var scopeMenu = document.getElementById("scope-menu");
+
+  function isScopeOpen() {
+    return !!scopeMenu && !scopeMenu.classList.contains("hidden");
+  }
+
+  function setScopeOpen(open) {
+    if (!scopeMenu || !scopeBtn) return;
+    if (open) {
+      closePlusMenu();
+      closeModelMenu();
+    }
+    scopeMenu.classList.toggle("hidden", !open);
+    scopeBtn.setAttribute("aria-expanded", open ? "true" : "false");
+  }
+
+  function closeScopeMenu() {
+    setScopeOpen(false);
+  }
+
+  function syncScopeLabel() {
+    if (!scopeEl || !scopeLabel) return;
+    var opt = scopeEl.options[scopeEl.selectedIndex];
+    scopeLabel.textContent = opt ? opt.text : "Game";
+  }
+
+  if (scopeMenu && scopeEl) {
+    scopeMenu.querySelectorAll(".model-item").forEach(function (item) {
+      item.addEventListener("click", function (ev) {
+        ev.stopPropagation();
+        var val = item.getAttribute("data-value");
+        scopeEl.value = val;
+        scopeEl.dispatchEvent(new Event("change", { bubbles: true }));
+        syncScopeLabel();
+        scopeMenu.querySelectorAll(".model-item").forEach(function (other) {
+          var sel = other === item;
+          other.setAttribute("aria-selected", sel ? "true" : "false");
+          var oldTick = other.querySelector(".tick");
+          if (oldTick) oldTick.remove();
+          if (sel) {
+            var tick = document.createElement("span");
+            tick.className = "tick";
+            tick.textContent = "✓";
+            other.appendChild(tick);
+          }
+        });
+        closeScopeMenu();
+        if (scopeBtn) scopeBtn.focus();
+      });
+    });
+
+    if (scopeBtn) {
+      scopeBtn.addEventListener("click", function (ev) {
+        ev.stopPropagation();
+        var open = !isScopeOpen();
+        setScopeOpen(open);
+      });
+    }
+
+    document.addEventListener("click", function (ev) {
+      if (
+        isScopeOpen() &&
+        !scopeMenu.contains(ev.target) &&
+        ev.target !== scopeBtn &&
+        !scopeBtn.contains(ev.target)
+      ) {
+        closeScopeMenu();
+      }
+    });
+
+    document.addEventListener("keydown", function (ev) {
+      if (ev.key === "Escape" && isScopeOpen()) closeScopeMenu();
+    });
+
+    syncScopeLabel();
+  }
+
   // + menu: v0-style icon rows with inline expanders (file, image,
   // skills, instructions, MCPs — all loaded live from backend)
   function closePlusMenu() {

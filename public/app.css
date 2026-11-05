@@ -1276,6 +1276,68 @@ button.icon-btn {
   transform: rotate(180deg);
 }
 
+.scope-wrap {
+  position: relative;
+  flex: 0 0 auto;
+}
+
+.scope-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: 0;
+  border-radius: var(--r-pill);
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.4;
+  padding: 5px 8px;
+  cursor: pointer;
+  transition:
+    color var(--dur-fast) ease,
+    background-color var(--dur-fast) ease;
+}
+
+.scope-btn:hover {
+  background: var(--surface-2);
+  color: var(--ink);
+}
+
+.scope-btn svg {
+  flex: 0 0 auto;
+  transition: transform var(--dur-fast) ease;
+}
+
+.scope-btn[aria-expanded="true"] svg {
+  transform: rotate(180deg);
+}
+
+.scope-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.scope-menu {
+  position: absolute;
+  right: 0;
+  left: auto;
+  bottom: calc(100% + 8px);
+  z-index: 200;
+  width: 140px;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  background: #121212;
+  box-shadow:
+    0 8px 24px rgba(0, 0, 0, 0.55),
+    0 0 0 1px rgba(255, 255, 255, 0.04);
+  padding: 5px;
+}
+
 .model-label {
   overflow: hidden;
   text-overflow: ellipsis;
